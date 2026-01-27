@@ -1,0 +1,205 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum AccountPrivacy {
+  PRIVATE
+  PUBLIC
+}
+
+enum Visibility {
+  FOLLOWERS
+  PUBLIC
+}
+
+enum AuthProvider {
+  GOOGLE
+  APPLE
+  FACEBOOK
+}
+
+model User {
+  id        String         @id @default(cuid())
+
+  // OAuth-first: may be missing depending on provider / user onboarding
+  email     String?        @unique
+
+  // Classic login later (optional)
+  password  String?
+
+  handle    String         @unique
+  name      String
+  avatarUrl String?
+  privacy   AccountPrivacy @default(PRIVATE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // OAuth provider accounts
+  accounts  AuthAccount[]
+
+  posts     Post[]
+  reviews   Review[]
+  comments  Comment[]
+  likes     Like[]
+
+  followers Follow[] @relation("followers")
+  following Follow[] @relation("following")
+}
+
+model AuthAccount {
+  id             String       @id @default(cuid())
+  userId         String
+  provider       AuthProvider
+  providerUserId String       // stable unique id from provider (e.g. "sub")
+  email          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("following", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("followers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followingId])
+}
+
+model Course {
+  id         String  @id @default(cuid())
+  name       String
+  city       String?
+  postalCode String?
+  region     String? // Kanton/Bundesland
+  country    String  // CH | DE | AT
+  lat        Float
+  lon        Float
+
+  // Optional: PostGIS point for fast geo queries (radius, nearest, etc.)
+  // If you add this, you should also add a GiST index below.
+  location   Unsupported("geography(Point,4326)")?
+
+  // Metadata (optional but practical)
+  holes       Int?
+  par         Int?
+  website     String?
+  phone       String?
+  description String?
+
+  // Import + data quality
+  source     String   @default("csv")  // csv | osm | manual
+  osmId      String?                  // e.g. "123456789"
+  verified   Boolean  @default(false)
+  active     Boolean  @default(true)
+
+  posts   Post[]
+  reviews Review[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([country, name, lat, lon], name: "course_unique_import_key")
+  @@index([country])
+
+  // Optional: only if you use "location"
+  @@index([location], type: Gist)
+}
+
+model Post {
+  id         String     @id @default(cuid())
+  userId     String
+  courseId   String
+  content    String
+  visibility Visibility @default(FOLLOWERS)
+
+  // optional aber empfehlenswert:
+  lat        Float?
+  lon        Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  comments Comment[]
+  likes    Like[]
+  images   PostImage[]
+
+  @@index([courseId, createdAt])
+  @@index([lat, lon])
+}
+
+
+
+model PostImage {
+  id     String @id @default(cuid())
+  postId String
+  url    String
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+}
+
+model Review {
+  id       String @id @default(cuid())
+  userId   String
+  courseId String
+
+  overall      Int
+  maintenance  Int?
+  layout       Int?
+  value        Int?
+  organization Int?
+  scenery      Int?
+
+  text      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([courseId])
+}
