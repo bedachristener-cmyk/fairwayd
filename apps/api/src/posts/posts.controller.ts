@@ -1,29 +1,90 @@
-import { Body, Controller, Get, Post, Req, UseGuards, Param } from "@nestjs/common";
-import { AuthGuard } from "@nestjs/passport";
-import { PostsService } from "./posts.service";
-import { CreatePostDto } from "./dto/create-post.dto";
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { PostsService } from './posts.service';
+import { Visibility } from '@prisma/client';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
-@Controller("posts")
+type CreatePostBody = {
+  courseId: string;
+  content: string;
+  visibility?: Visibility;
+};
+
+function safeFileName(original: string) {
+  const ext = extname(original || '').toLowerCase() || '.jpg';
+  const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `${id}${ext}`;
+}
+
+@Controller('posts')
 export class PostsController {
   constructor(private readonly posts: PostsService) {}
 
-  @UseGuards(AuthGuard("jwt"))
+  // ✅ PUBLIC FEED (latest posts everywhere)
+  @Get('feed')
+  async feed(
+    @Query('take') takeStr?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const take = takeStr ? Number(takeStr) : undefined;
+    return this.posts.getPublicFeed({ take, cursor });
+  }
+
+  // ✅ PUBLIC: posts for a specific course (used when clicking a golf club)
+  @Get('course/:courseId')
+  async byCourse(
+    @Param('courseId') courseId: string,
+    @Query('take') takeStr?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const take = takeStr ? Number(takeStr) : undefined;
+    return this.posts.getPostsByCourse({ courseId, take, cursor });
+  }
+
+  // ✅ PRIVATE: current user's posts
+  @UseGuards(AuthGuard('jwt'))
+  @Get('me')
+  async me(@Req() req: any, @Query('take') takeStr?: string) {
+    const take = takeStr ? Number(takeStr) : 50;
+    const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
+    return this.posts.getMyPosts(userId, take);
+  }
+
+  // ✅ PRIVATE: create a post (supports optional image upload)
+  @UseGuards(AuthGuard('jwt'))
   @Post()
-  async create(@Req() req: any, @Body() body: CreatePostDto) {
-    return this.posts.create(req.user.userId, body);
-  }
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: 'uploads',
+        filename: (_req, file, cb) => cb(null, safeFileName(file.originalname)),
+      }),
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    }),
+  )
+  async create(
+    @Req() req: any,
+    @Body() body: CreatePostBody,
+    @UploadedFile() image?: Express.Multer.File,
+  ) {
+    const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
 
-  @UseGuards(AuthGuard("jwt"))
-  @Get("feed")
-  async feed(@Req() req: any) {
-    return this.posts.feed(req.user.userId);
-  }
+    // for multipart/form-data, body fields are strings
+    const imageUrl = image ? `/uploads/${image.filename}` : undefined;
 
-  @UseGuards(AuthGuard("jwt"))
-  @Get("course/:courseId")
-  async forCourse(@Req() req: any, @Param("courseId") courseId: string) {
-    return this.posts.forCourse(req.user.userId, courseId);
+    return this.posts.createPost(userId, body, imageUrl);
   }
 }
-
-
