@@ -43,6 +43,15 @@ export default function GoogleLoginButton() {
 
           const credential = resp?.credential;
           if (!credential) throw new Error("No Google credential received");
+          try {
+            const payload = JSON.parse(atob(credential.split(".")[1]));
+            console.log("GOOGLE aud:", payload?.aud);
+            console.log("GOOGLE iss:", payload?.iss);
+            console.log("GOOGLE azp:", payload?.azp);
+            console.log("GOOGLE exp:", payload?.exp);
+          } catch (e) {
+            console.log("Failed to decode google credential", e);
+          }
 
           const r = await fetch(`${API_BASE}/auth/oauth`, {
             method: "POST",

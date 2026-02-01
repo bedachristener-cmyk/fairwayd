@@ -4,6 +4,7 @@ import { useSelectedCourse } from "../state/SelectedCourseContext";
 import type { Marker as LeafletMarker } from "leaflet";
 import L from "leaflet";
 import { API_BASE } from "../api/base";
+import { useAuth } from "../auth/AuthContext";
 
 type PostImage = { id: string; url: string };
 
@@ -23,8 +24,6 @@ type Post = {
   };
   images?: PostImage[];
 };
-
-// const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
 const DEFAULT_CENTER = { lat: 47.5596, lon: 7.5886 }; // Basel
 
@@ -122,6 +121,7 @@ function PillButton({
         cursor: disabled ? "default" : "pointer",
         fontWeight: 800,
       }}
+      type="button"
     >
       {children}
     </button>
@@ -147,6 +147,21 @@ function RecenterMap({
 export default function FeedPage() {
   const { selectedCourse, clearSelectedCourse, setSelectedCourse } =
     useSelectedCourse();
+
+  // Auth token (prefer AuthContext, fallback to legacy localStorage keys)
+  const auth = useAuth() as any;
+  const tokenFromContext: string =
+    (auth?.token as string) ||
+    (auth?.jwt as string) ||
+    (auth?.accessToken as string) ||
+    "";
+
+  const tokenFromStorage =
+    localStorage.getItem("token") ||
+    localStorage.getItem("fairwayd_token") ||
+    "";
+
+  const token = tokenFromContext || tokenFromStorage;
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [center, setCenter] = useState<{ lat: number; lon: number }>(
@@ -225,7 +240,11 @@ export default function FeedPage() {
       const url = new URL(base);
       if (cursor) url.searchParams.set("cursor", cursor);
 
-      const res = await fetch(url.toString());
+      const headers: HeadersInit = token
+        ? { Authorization: `Bearer ${token}` }
+        : {};
+
+      const res = await fetch(url.toString(), { headers });
       if (!res.ok) {
         const text = await res.text().catch(() => "");
         throw new Error(`HTTP ${res.status} ${res.statusText} ${text}`.trim());
@@ -256,7 +275,7 @@ export default function FeedPage() {
     setNextCursor(null);
     loadFeed();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCourse?.id]);
+  }, [selectedCourse?.id, token]);
 
   const focusCourse = (courseId: string) => {
     const p = posts.find((x) => x.course.id === courseId);
@@ -269,11 +288,6 @@ export default function FeedPage() {
       m?.openPopup();
     }, 80);
   };
-
-  const token =
-    localStorage.getItem("token") ||
-    localStorage.getItem("fairwayd_token") ||
-    "";
 
   const submitPost = async () => {
     const text = draft.trim();
@@ -328,7 +342,7 @@ export default function FeedPage() {
     }
   };
 
-  // ✅ IMPORTANT: markers in small map
+  // markers in small map:
   // - Always show selectedCourse marker (even if no posts exist yet)
   // - Plus newest post markers for other courses
   const selectedCourseMarker =
@@ -485,7 +499,12 @@ export default function FeedPage() {
             ref={textareaRef}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="What’s your golf moment?"
+            disabled={!selectedCourse || posting}
+            placeholder={
+              selectedCourse
+                ? "What’s your golf moment?"
+                : "Select a course on the map to post…"
+            }
             rows={3}
             style={{
               width: "100%",
@@ -496,6 +515,7 @@ export default function FeedPage() {
               fontFamily: "system-ui",
               fontSize: 14,
               outline: "none",
+              opacity: !selectedCourse ? 0.65 : 1,
             }}
           />
 
@@ -520,7 +540,7 @@ export default function FeedPage() {
               onChange={(e) =>
                 setVisibility(e.target.value as "PUBLIC" | "FOLLOWERS")
               }
-              disabled={posting}
+              disabled={posting || !selectedCourse}
               style={{
                 padding: "8px 10px",
                 borderRadius: 12,

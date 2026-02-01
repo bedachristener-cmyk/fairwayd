@@ -4,7 +4,15 @@ import LoginPanel from "../components/LoginPanel";
 
 export default function LandingPage() {
   const nav = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
+
+  const goProtected = (path: string) => {
+    if (!isAuthenticated) {
+      nav("/");
+      return;
+    }
+    nav(path);
+  };
 
   return (
     <div
@@ -51,8 +59,11 @@ export default function LandingPage() {
             </button>
 
             <button
-              style={ghostBtn}
-              onClick={() => nav(isAuthenticated ? "/feed" : "/")}
+              style={{
+                ...ghostBtn,
+                opacity: isAuthenticated ? 1 : 0.6,
+              }}
+              onClick={() => goProtected("/feed")}
               type="button"
               title={isAuthenticated ? "Open feed" : "Login needed"}
             >
@@ -60,8 +71,11 @@ export default function LandingPage() {
             </button>
 
             <button
-              style={ghostBtn}
-              onClick={() => nav(isAuthenticated ? "/profile" : "/")}
+              style={{
+                ...ghostBtn,
+                opacity: isAuthenticated ? 1 : 0.6,
+              }}
+              onClick={() => goProtected("/profile")}
               type="button"
               title={isAuthenticated ? "Open profile" : "Login needed"}
             >
@@ -84,8 +98,16 @@ export default function LandingPage() {
               <div style={{ fontWeight: 900, marginBottom: 8 }}>
                 You’re logged in
               </div>
+
               <div style={{ fontSize: 13, opacity: 0.8, lineHeight: 1.4 }}>
-                Du kannst direkt in den Feed oder zu deinem Profil.
+                {user?.handle ? (
+                  <>
+                    Eingeloggt als <strong>{user.handle}</strong>. Du kannst
+                    direkt in den Feed oder zu deinem Profil.
+                  </>
+                ) : (
+                  <>Du kannst direkt in den Feed oder zu deinem Profil.</>
+                )}
               </div>
 
               <div
@@ -103,6 +125,7 @@ export default function LandingPage() {
                 >
                   Open feed
                 </button>
+
                 <button
                   style={ghostBtn}
                   onClick={() => nav("/profile")}
@@ -110,6 +133,7 @@ export default function LandingPage() {
                 >
                   Profile
                 </button>
+
                 <button
                   style={ghostBtn}
                   onClick={() => nav("/map")}
@@ -117,11 +141,21 @@ export default function LandingPage() {
                 >
                   Map
                 </button>
+
+                <button
+                  style={dangerBtn}
+                  onClick={() => {
+                    logout();
+                    nav("/");
+                  }}
+                  type="button"
+                >
+                  Logoff
+                </button>
               </div>
 
               <div style={{ marginTop: 12, fontSize: 12, opacity: 0.7 }}>
-                Logout kannst du (falls vorhanden) im LoginPanel oder im Header
-                machen.
+                (MVP) Logout ist hier auf Landing erreichbar.
               </div>
             </div>
           )}
@@ -135,8 +169,11 @@ export default function LandingPage() {
               </button>
 
               <button
-                style={listBtn}
-                onClick={() => nav(isAuthenticated ? "/feed" : "/")}
+                style={{
+                  ...listBtn,
+                  opacity: isAuthenticated ? 1 : 0.6,
+                }}
+                onClick={() => goProtected("/feed")}
                 type="button"
                 title={isAuthenticated ? "Open feed" : "Login needed"}
               >
@@ -144,8 +181,11 @@ export default function LandingPage() {
               </button>
 
               <button
-                style={listBtn}
-                onClick={() => nav(isAuthenticated ? "/profile" : "/")}
+                style={{
+                  ...listBtn,
+                  opacity: isAuthenticated ? 1 : 0.6,
+                }}
+                onClick={() => goProtected("/profile")}
                 type="button"
                 title={isAuthenticated ? "Open profile" : "Login needed"}
               >
@@ -203,6 +243,16 @@ const ghostBtn: React.CSSProperties = {
   border: "1px solid rgba(0,0,0,0.12)",
   background: "white",
   color: "#111",
+  padding: "10px 14px",
+  borderRadius: 999,
+  fontWeight: 900,
+  cursor: "pointer",
+};
+
+const dangerBtn: React.CSSProperties = {
+  border: "1px solid rgba(227, 51, 51, 0.35)",
+  background: "white",
+  color: "#e33",
   padding: "10px 14px",
   borderRadius: 999,
   fontWeight: 900,
