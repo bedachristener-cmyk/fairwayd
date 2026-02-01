@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import GoogleLoginButton from "./GoogleLoginButton";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 const STORAGE_KEY = "fairwayd_token";
@@ -96,8 +95,6 @@ export default function LoginPanel() {
 
       {/* Google / OAuth buttons */}
       <div style={{ display: "grid", gap: 10 }}>
-        <GoogleLoginButton />
-
         {/* placeholders for later */}
         <button type="button" disabled style={oauthDisabledBtn}>
           Continue with Apple (soon)
