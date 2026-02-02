@@ -378,87 +378,10 @@ export default function FeedPage() {
           }}
         >
           <strong>Error:</strong> {err}
-          <div style={{ marginTop: 6, opacity: 0.75 }}>API: {API_BASE}</div>
         </div>
       )}
 
-      <Card
-        title="Map"
-        right={
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <span style={{ fontSize: 12, opacity: 0.65 }}>API {API_BASE}</span>
-            <PillButton
-              onClick={() => loadFeed()}
-              disabled={loading || posting}
-            >
-              {loading ? "Loading..." : "Reload"}
-            </PillButton>
-          </div>
-        }
-      >
-        <div style={{ height: 320, borderRadius: 14, overflow: "hidden" }}>
-          <MapContainer
-            center={[center.lat, center.lon]}
-            zoom={13}
-            style={{ height: "100%", width: "100%" }}
-          >
-            <TileLayer
-              attribution="&copy; OpenStreetMap contributors"
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-
-            <RecenterMap lat={center.lat} lon={center.lon} zoom={13} />
-
-            {markers.map((p: any) => (
-              <Marker
-                key={p.course.id}
-                position={[p.course.lat, p.course.lon]}
-                icon={golfIcon}
-                ref={(ref) => {
-                  markerRefs.current[p.course.id] = (ref as any) ?? null;
-                }}
-                eventHandlers={{
-                  click: () => {
-                    setSelectedCourse({
-                      id: p.course.id,
-                      name: p.course.name,
-                      lat: p.course.lat,
-                      lon: p.course.lon,
-                    });
-                    setCenter({ lat: p.course.lat, lon: p.course.lon });
-                    setTimeout(
-                      () => markerRefs.current[p.course.id]?.openPopup(),
-                      60,
-                    );
-                  },
-                }}
-              >
-                <Popup>
-                  <strong>{p.course.name}</strong>
-                  {p.content ? (
-                    <>
-                      <br />
-                      Latest post: @{p.user.handle}
-                      <br />
-                      {p.content}
-                    </>
-                  ) : (
-                    <>
-                      <br />
-                      No posts yet.
-                    </>
-                  )}
-                </Popup>
-              </Marker>
-            ))}
-          </MapContainer>
-        </div>
-
-        <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>
-          Tipp: Klick einen Marker → setzt den Course Filter.
-        </div>
-      </Card>
-
+      {/* 🔥 FEED FIRST (Social feeling) */}
       <Card
         title="Feed"
         right={
@@ -482,6 +405,7 @@ export default function FeedPage() {
           )
         }
       >
+        {/* --- COMPOSE BOX --- */}
         <div
           style={{
             padding: 12,
@@ -491,9 +415,46 @@ export default function FeedPage() {
             marginBottom: 12,
           }}
         >
-          <div style={{ fontWeight: 900, marginBottom: 8 }}>
-            {selectedCourse ? "Create post" : "Select a course to post"}
-          </div>
+          {selectedCourse && (
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "8px 14px",
+                borderRadius: 999,
+                background: "rgba(0,0,0,.06)",
+                border: "1px solid rgba(0,0,0,.1)",
+                fontWeight: 800,
+                marginBottom: 10,
+              }}
+            >
+              ⛳ {selectedCourse.name}
+              <button
+                onClick={() => {
+                  clearSelectedCourse();
+                  setCenter(DEFAULT_CENTER);
+                }}
+                style={{
+                  border: 0,
+                  background: "transparent",
+                  cursor: "pointer",
+                  fontWeight: 900,
+                  fontSize: 14,
+                  opacity: 0.6,
+                }}
+                title="Clear course"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          {!selectedCourse && (
+            <div style={{ fontWeight: 900, marginBottom: 8, opacity: 0.6 }}>
+              Select a course on the map to post
+            </div>
+          )}
 
           <textarea
             ref={textareaRef}
@@ -540,7 +501,7 @@ export default function FeedPage() {
               onChange={(e) =>
                 setVisibility(e.target.value as "PUBLIC" | "FOLLOWERS")
               }
-              disabled={posting || !selectedCourse}
+              disabled={!selectedCourse || posting}
               style={{
                 padding: "8px 10px",
                 borderRadius: 12,
@@ -564,9 +525,6 @@ export default function FeedPage() {
 
           {preview && (
             <div style={{ marginTop: 10 }}>
-              <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>
-                Preview
-              </div>
               <img
                 src={preview}
                 alt="preview"
@@ -576,19 +534,11 @@ export default function FeedPage() {
                   border: "1px solid rgba(0,0,0,.08)",
                 }}
               />
-              <div style={{ marginTop: 6 }}>
-                <PillButton onClick={() => setFile(null)} disabled={posting}>
-                  Remove photo
-                </PillButton>
-              </div>
             </div>
           )}
         </div>
 
-        {posts.length === 0 && !loading && (
-          <div style={{ fontSize: 13, opacity: 0.75 }}>No posts yet.</div>
-        )}
-
+        {/* --- POSTS --- */}
         <div style={{ display: "grid", gap: 10 }}>
           {posts.map((p) => (
             <div
@@ -609,47 +559,37 @@ export default function FeedPage() {
                 });
                 focusCourse(p.course.id);
               }}
-              title="Filter + Zoom to course"
             >
-              <div style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
-                <div style={{ fontWeight: 900 }}>{p.course.name}</div>
-                <div style={{ fontSize: 12, opacity: 0.7 }}>
-                  @{p.user.handle}
-                </div>
-                <div style={{ marginLeft: "auto", fontSize: 12, opacity: 0.6 }}>
-                  {new Date(p.createdAt).toLocaleString()}
-                </div>
-              </div>
-
-              <div style={{ marginTop: 6, fontSize: 14 }}>{p.content}</div>
+              <div style={{ fontWeight: 900 }}>{p.course.name}</div>
+              <div style={{ fontSize: 12, opacity: 0.7 }}>@{p.user.handle}</div>
+              <div style={{ marginTop: 6 }}>{p.content}</div>
 
               {p.images?.[0]?.url && (
-                <div style={{ marginTop: 10 }}>
-                  <img
-                    src={`${API_BASE}${p.images[0].url}`}
-                    alt="post"
-                    style={{
-                      maxWidth: "100%",
-                      borderRadius: 12,
-                      border: "1px solid rgba(0,0,0,.08)",
-                    }}
-                  />
-                </div>
+                <img
+                  src={`${API_BASE}${p.images[0].url}`}
+                  style={{ marginTop: 10, borderRadius: 12, maxWidth: "100%" }}
+                />
               )}
             </div>
           ))}
         </div>
+      </Card>
 
-        {nextCursor && (
-          <div style={{ marginTop: 12 }}>
-            <PillButton
-              onClick={() => loadFeed(nextCursor)}
-              disabled={loading || posting}
-            >
-              {loading ? "Loading..." : "Load more"}
-            </PillButton>
-          </div>
-        )}
+      {/* 🗺️ MINI MAP SECONDARY */}
+      <Card title="Map">
+        <div style={{ height: 180, borderRadius: 14, overflow: "hidden" }}>
+          <MapContainer
+            center={[center.lat, center.lon]}
+            zoom={13}
+            style={{ height: "100%", width: "100%" }}
+          >
+            <TileLayer
+              attribution="&copy; OpenStreetMap contributors"
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <RecenterMap lat={center.lat} lon={center.lon} zoom={13} />
+          </MapContainer>
+        </div>
       </Card>
     </div>
   );
