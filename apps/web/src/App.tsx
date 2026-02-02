@@ -21,9 +21,9 @@ export default function App() {
             {/* Public landing (no shell) */}
             <Route path="/" element={<LandingPage />} />
 
-            {/* Shell layout */}
+            {/* Everything inside the shell */}
             <Route element={<AppShell />}>
-              {/* Public map inside shell */}
+              {/* Public map */}
               <Route path="/map" element={<CoursesMap />} />
 
               {/* Protected feed */}
@@ -36,7 +36,7 @@ export default function App() {
                 }
               />
 
-              {/* Protected compose (legacy / optional) */}
+              {/* Optional legacy compose */}
               <Route
                 path="/compose/:courseId"
                 element={
@@ -46,7 +46,7 @@ export default function App() {
                 }
               />
 
-              {/* Protected profile */}
+              {/* Profile placeholder */}
               <Route
                 path="/profile"
                 element={

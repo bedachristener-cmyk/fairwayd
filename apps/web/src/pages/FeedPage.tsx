@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
 import type { Marker as LeafletMarker } from "leaflet";
-import L from "leaflet";
+
 import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
+import { createPortal } from "react-dom";
 
 type PostImage = { id: string; url: string };
 
@@ -25,7 +25,14 @@ type Post = {
   images?: PostImage[];
 };
 
-const DEFAULT_CENTER = { lat: 47.5596, lon: 7.5886 }; // Basel
+type Course = {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+};
+
+const DEFAULT_CENTER = { lat: 47.5596, lon: 7.5886 }; // Basel (fallback)
 
 const golfIcon = L.divIcon({
   className: "golf-marker",
@@ -139,14 +146,61 @@ function RecenterMap({
 }) {
   const map = useMap();
   useEffect(() => {
-    map.setView([lat, lon], zoom);
+    map.flyTo([lat, lon], zoom, { duration: 0.8 });
   }, [lat, lon, zoom, map]);
+  return null;
+}
+
+function FitBounds({
+  points,
+  maxZoom = 10,
+}: {
+  points: Array<{ lat: number; lon: number }>;
+  maxZoom?: number;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!points || points.length === 0) return;
+
+    const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lon]));
+    map.fitBounds(bounds, { padding: [20, 20] });
+
+    const z = map.getZoom();
+    if (z > maxZoom) map.setZoom(maxZoom);
+  }, [map, points, maxZoom]);
+
   return null;
 }
 
 export default function FeedPage() {
   const { selectedCourse, clearSelectedCourse, setSelectedCourse } =
     useSelectedCourse();
+
+  // Responsive: desktop-only rail logic
+  const [isDesktop, setIsDesktop] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(min-width: 900px)").matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mq = window.matchMedia("(min-width: 900px)");
+    const onChange = () => setIsDesktop(mq.matches);
+
+    // Safari compatibility
+    if ("addEventListener" in mq) mq.addEventListener("change", onChange);
+    else mq.addListener(onChange);
+
+    setIsDesktop(mq.matches);
+
+    return () => {
+      if ("removeEventListener" in mq)
+        mq.removeEventListener("change", onChange);
+      else mq.removeListener(onChange);
+    };
+  }, []);
 
   // Auth token (prefer AuthContext, fallback to legacy localStorage keys)
   const auth = useAuth() as any;
@@ -164,6 +218,7 @@ export default function FeedPage() {
   const token = tokenFromContext || tokenFromStorage;
 
   const [posts, setPosts] = useState<Post[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [center, setCenter] = useState<{ lat: number; lon: number }>(
     DEFAULT_CENTER,
   );
@@ -182,6 +237,46 @@ export default function FeedPage() {
 
   const markerRefs = useRef<Record<string, LeafletMarker | null>>({});
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Infinite scroll sentinel + guard against double-loads
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const loadingMoreRef = useRef(false);
+
+  // Optional: use browser geolocation to set initial center (Basel remains fallback)
+  useEffect(() => {
+    if (selectedCourse) return;
+    if (!navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        if (Number.isFinite(lat) && Number.isFinite(lon)) {
+          setCenter({ lat, lon });
+        }
+      },
+      () => {
+        // ignore (denied/unavailable)
+      },
+      { enableHighAccuracy: false, timeout: 3000, maximumAge: 60_000 },
+    );
+  }, [selectedCourse]);
+
+  // Load courses once (your /courses returns an array)
+  useEffect(() => {
+    const loadCourses = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/courses`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const items: Course[] = Array.isArray(data) ? data : [];
+        setCourses(items);
+      } catch {
+        // ignore
+      }
+    };
+    loadCourses();
+  }, []);
 
   // newest post per course (dedup markers)
   const newestPostByCourse = useMemo(() => {
@@ -209,14 +304,98 @@ export default function FeedPage() {
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
-  // When selectedCourse has lat/lon (coming from CoursesMap), center small map
+  // Selected course marker (even if no posts exist yet)
+  const selectedCourseMarker =
+    selectedCourse?.id && selectedCourse.lat && selectedCourse.lon
+      ? {
+          course: {
+            id: selectedCourse.id,
+            name: selectedCourse.name ?? selectedCourse.id,
+            lat: selectedCourse.lat,
+            lon: selectedCourse.lon,
+          },
+          user: { handle: "" },
+          content: "",
+        }
+      : null;
+
+  // Marker source priority:
+  // 1) selectedCourse marker + other post markers
+  // 2) post markers (if feed has posts)
+  // 3) course markers (fallback if no posts)
+  const markers = selectedCourseMarker
+    ? [
+        selectedCourseMarker,
+        ...newestPostByCourse.filter((p) => p.course.id !== selectedCourse?.id),
+      ]
+    : newestPostByCourse.length > 0
+      ? newestPostByCourse
+      : courses.map((c) => ({
+          course: c,
+          user: { handle: "" },
+          content: "",
+        }));
+
+  const loadFeed = useCallback(
+    async (cursor?: string) => {
+      setLoading(true);
+      setErr(null);
+
+      try {
+        const base = selectedCourse?.id
+          ? `${API_BASE}/posts/course/${selectedCourse.id}`
+          : `${API_BASE}/posts/feed`;
+
+        const url = new URL(base);
+        if (cursor) url.searchParams.set("cursor", cursor);
+
+        const headers: HeadersInit = token
+          ? { Authorization: `Bearer ${token}` }
+          : {};
+
+        const res = await fetch(url.toString(), { headers });
+        if (!res.ok) {
+          const text = await res.text().catch(() => "");
+          throw new Error(
+            `HTTP ${res.status} ${res.statusText} ${text}`.trim(),
+          );
+        }
+
+        const data = await res.json();
+        const items: Post[] = Array.isArray(data?.items) ? data.items : [];
+
+        // Only adjust center if no selectedCourse is active and we got items
+        if (!cursor && items.length > 0 && !selectedCourse?.id) {
+          setCenter({ lat: items[0].course.lat, lon: items[0].course.lon });
+        }
+
+        setPosts((prev) => (cursor ? [...prev, ...items] : items));
+        setNextCursor(data?.nextCursor ?? null);
+      } catch (e: any) {
+        setErr(e?.message ?? "Unknown error");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [selectedCourse?.id, token],
+  );
+
+  // Reload feed when selectedCourse or token changes
+  useEffect(() => {
+    setPosts([]);
+    setNextCursor(null);
+    loadingMoreRef.current = false;
+    loadFeed();
+  }, [loadFeed]);
+
+  // When selectedCourse changes, center map + open popup if marker exists
   useEffect(() => {
     if (selectedCourse?.lat && selectedCourse?.lon) {
       setCenter({ lat: selectedCourse.lat, lon: selectedCourse.lon });
       setTimeout(() => {
         const m = markerRefs.current[selectedCourse.id];
         m?.openPopup();
-      }, 80);
+      }, 120);
     }
   }, [selectedCourse?.id, selectedCourse?.lat, selectedCourse?.lon]);
 
@@ -228,54 +407,33 @@ export default function FeedPage() {
     }, 120);
   }, [selectedCourse?.id]);
 
-  const loadFeed = async (cursor?: string) => {
-    setLoading(true);
-    setErr(null);
-
-    try {
-      const base = selectedCourse?.id
-        ? `${API_BASE}/posts/course/${selectedCourse.id}`
-        : `${API_BASE}/posts/feed`;
-
-      const url = new URL(base);
-      if (cursor) url.searchParams.set("cursor", cursor);
-
-      const headers: HeadersInit = token
-        ? { Authorization: `Bearer ${token}` }
-        : {};
-
-      const res = await fetch(url.toString(), { headers });
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(`HTTP ${res.status} ${res.statusText} ${text}`.trim());
-      }
-
-      const data = await res.json();
-      const items: Post[] = Array.isArray(data?.items) ? data.items : [];
-
-      if (
-        !cursor &&
-        items.length > 0 &&
-        !(selectedCourse?.lat && selectedCourse?.lon)
-      ) {
-        setCenter({ lat: items[0].course.lat, lon: items[0].course.lon });
-      }
-
-      setPosts((prev) => (cursor ? [...prev, ...items] : items));
-      setNextCursor(data?.nextCursor ?? null);
-    } catch (e: any) {
-      setErr(e?.message ?? "Unknown error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Infinite scroll: when sentinel becomes visible, load next page
   useEffect(() => {
-    setPosts([]);
-    setNextCursor(null);
-    loadFeed();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCourse?.id, token]);
+    const el = loadMoreRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (!first.isIntersecting) return;
+
+        if (!nextCursor) return;
+        if (loading) return;
+        if (posting) return;
+        if (loadingMoreRef.current) return;
+
+        loadingMoreRef.current = true;
+
+        loadFeed(nextCursor).finally(() => {
+          loadingMoreRef.current = false;
+        });
+      },
+      { root: null, threshold: 0.2 },
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [nextCursor, loading, posting, loadFeed]);
 
   const focusCourse = (courseId: string) => {
     const p = posts.find((x) => x.course.id === courseId);
@@ -286,7 +444,7 @@ export default function FeedPage() {
     setTimeout(() => {
       const m = markerRefs.current[courseId];
       m?.openPopup();
-    }, 80);
+    }, 120);
   };
 
   const submitPost = async () => {
@@ -334,6 +492,7 @@ export default function FeedPage() {
 
       setPosts([]);
       setNextCursor(null);
+      loadingMoreRef.current = false;
       await loadFeed();
     } catch (e: any) {
       setErr(e?.message ?? "Failed to post");
@@ -342,30 +501,23 @@ export default function FeedPage() {
     }
   };
 
-  // markers in small map:
-  // - Always show selectedCourse marker (even if no posts exist yet)
-  // - Plus newest post markers for other courses
-  const selectedCourseMarker =
-    selectedCourse?.id && selectedCourse.lat && selectedCourse.lon
-      ? {
-          course: {
-            id: selectedCourse.id,
-            name: selectedCourse.name ?? selectedCourse.id,
-            lat: selectedCourse.lat,
-            lon: selectedCourse.lon,
-          },
-          user: { handle: "" },
-          content: "",
-        }
+  // ✅ Portal target in AppShell Right rail
+  const rightRailSlot =
+    typeof document !== "undefined"
+      ? document.getElementById("right-rail-slot")
       : null;
 
-  const markers = [
-    ...(selectedCourseMarker ? [selectedCourseMarker] : []),
-    ...newestPostByCourse.filter((p) => p.course.id !== selectedCourse?.id),
-  ];
-
   return (
-    <div style={{ display: "grid", gap: 12 }}>
+    <div style={{ display: "grid", gap: 12, minWidth: 0 }}>
+      {/* ✅ Desktop: render MapCard into Right rail via Portal */}
+      {isDesktop && rightRailSlot
+        ? createPortal(
+            <div style={{ position: "sticky", top: 12 }}>{MapCard}</div>,
+            rightRailSlot,
+          )
+        : null}
+
+      {/* FEED (Main column only — AppShell handles columns) */}
       {err && (
         <div
           style={{
@@ -381,7 +533,6 @@ export default function FeedPage() {
         </div>
       )}
 
-      {/* 🔥 FEED FIRST (Social feeling) */}
       <Card
         title="Feed"
         right={
@@ -540,6 +691,12 @@ export default function FeedPage() {
 
         {/* --- POSTS --- */}
         <div style={{ display: "grid", gap: 10 }}>
+          {!loading && posts.length === 0 && (
+            <div style={{ padding: 12, opacity: 0.7 }}>
+              No posts yet — pick a course and create the first one.
+            </div>
+          )}
+
           {posts.map((p) => (
             <div
               key={p.id}
@@ -559,6 +716,7 @@ export default function FeedPage() {
                 });
                 focusCourse(p.course.id);
               }}
+              title="Zoom map to this course"
             >
               <div style={{ fontWeight: 900 }}>{p.course.name}</div>
               <div style={{ fontSize: 12, opacity: 0.7 }}>@{p.user.handle}</div>
@@ -567,30 +725,28 @@ export default function FeedPage() {
               {p.images?.[0]?.url && (
                 <img
                   src={`${API_BASE}${p.images[0].url}`}
-                  style={{ marginTop: 10, borderRadius: 12, maxWidth: "100%" }}
+                  alt="post"
+                  style={{
+                    marginTop: 10,
+                    borderRadius: 12,
+                    maxWidth: "100%",
+                  }}
                 />
               )}
             </div>
           ))}
+
+          {/* Infinite scroll sentinel */}
+          <div ref={loadMoreRef} style={{ height: 24 }} />
+          {nextCursor && (
+            <div style={{ textAlign: "center", opacity: 0.6, fontSize: 12 }}>
+              {loading ? "Loading more..." : "Scroll to load more"}
+            </div>
+          )}
         </div>
       </Card>
 
-      {/* 🗺️ MINI MAP SECONDARY */}
-      <Card title="Map">
-        <div style={{ height: 180, borderRadius: 14, overflow: "hidden" }}>
-          <MapContainer
-            center={[center.lat, center.lon]}
-            zoom={13}
-            style={{ height: "100%", width: "100%" }}
-          >
-            <TileLayer
-              attribution="&copy; OpenStreetMap contributors"
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <RecenterMap lat={center.lat} lon={center.lon} zoom={13} />
-          </MapContainer>
-        </div>
-      </Card>
+      {/* MOBILE: Map appears below feed (optional) */}
     </div>
   );
 }
