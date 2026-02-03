@@ -1,5 +1,5 @@
-import { Injectable } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class FeedService {
@@ -17,14 +17,16 @@ export class FeedService {
     // 2) get recent posts (a bit more than needed, then dedup by course)
     const posts = await this.prisma.post.findMany({
       where: { userId: { in: ids } },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
       take: 200,
       select: {
         id: true,
         courseId: true,
         content: true,
         createdAt: true,
-        user: { select: { id: true, handle: true, name: true, avatarUrl: true } },
+        user: {
+          select: { id: true, handle: true, name: true, avatarUrl: true },
+        },
       },
     });
 
@@ -36,7 +38,12 @@ export class FeedService {
         id: string;
         content: string;
         createdAt: Date;
-        user: { id: string; handle: string; name: string | null; avatarUrl: string | null };
+        user: {
+          id: string;
+          handle: string | null;
+          name: string | null;
+          avatarUrl: string | null;
+        };
       };
     }> = [];
 

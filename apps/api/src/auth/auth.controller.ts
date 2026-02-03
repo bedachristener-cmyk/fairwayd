@@ -6,13 +6,13 @@ import {
   Req,
   UseGuards,
   BadRequestException,
-} from "@nestjs/common";
-import { AuthService } from "./auth.service";
-import { JwtAuthGuard } from "./jwt-auth.guard";
+} from '@nestjs/common';
+import { AuthService } from './auth.service';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
-export type OAuthProvider = "GOOGLE" | "APPLE" | "FACEBOOK";
+export type OAuthProvider = 'GOOGLE' | 'APPLE' | 'FACEBOOK';
 
-@Controller("auth")
+@Controller('auth')
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
@@ -20,7 +20,7 @@ export class AuthController {
    * Return current user from JWT
    */
   @UseGuards(JwtAuthGuard)
-  @Get("me")
+  @Get('me')
   me(@Req() req: any) {
     return req.user;
   }
@@ -31,7 +31,7 @@ export class AuthController {
    * - APPLE:  expects idToken (later)
    * - FACEBOOK: expects accessToken (later)
    */
-  @Post("oauth")
+  @Post('oauth')
   async oauth(
     @Body()
     body: {
@@ -41,7 +41,7 @@ export class AuthController {
     },
   ) {
     if (!body?.provider) {
-      throw new BadRequestException("Missing OAuth provider");
+      throw new BadRequestException('Missing OAuth provider');
     }
 
     return this.auth.loginWithOAuth(body);
@@ -53,16 +53,16 @@ export class AuthController {
    * - { credential: string }  (Google Identity Services)
    * - { idToken: string }
    */
-  @Post("google")
+  @Post('google')
   async google(@Body() body: { credential?: string; idToken?: string }) {
     const idToken = body?.idToken ?? body?.credential;
 
     if (!idToken) {
-      throw new BadRequestException("Missing Google idToken");
+      throw new BadRequestException('Missing Google idToken');
     }
 
     return this.auth.loginWithOAuth({
-      provider: "GOOGLE",
+      provider: 'GOOGLE',
       idToken,
     });
   }
@@ -70,8 +70,10 @@ export class AuthController {
   /**
    * Dev-only login (local/dev environments)
    */
-  @Post("dev")
+  @Post('dev')
   async dev(@Body() body: { handle?: string }) {
-    return this.auth.devLogin(body?.handle);
+    const handle = body?.handle?.trim();
+    if (!handle) throw new BadRequestException('Missing handle');
+    return this.auth.devLogin(handle);
   }
 }

@@ -31,10 +31,15 @@ model User {
   // Classic login later (optional)
   password  String?
 
-  handle    String         @unique
-  name      String
+  // Onboarding/Profile (optional until completed)
+  handle    String?        @unique
+  name      String?
   avatarUrl String?
   privacy   AccountPrivacy @default(PRIVATE)
+
+  // Legal gating
+  termsAcceptedAt DateTime?
+  termsVersion    String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
