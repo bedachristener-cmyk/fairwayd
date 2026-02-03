@@ -8,6 +8,7 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  Param,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -27,6 +28,9 @@ function safeExt(original: string) {
 export class UsersController {
   constructor(private readonly users: UsersService) {}
 
+  // ---------------------------------------------------------
+  // Current user (used by onboarding)
+  // ---------------------------------------------------------
   @UseGuards(AuthGuard('jwt'))
   @Get('me')
   async me(@Req() req: any) {
@@ -68,7 +72,7 @@ export class UsersController {
   }
 
   // ---------------------------------------------------------
-  // Avatar upload (already existed)
+  // Avatar upload
   // ---------------------------------------------------------
   @UseGuards(AuthGuard('jwt'))
   @Post('me/avatar')
@@ -104,5 +108,26 @@ export class UsersController {
 
     const avatarUrl = `/uploads/avatars/${file.filename}`;
     return this.users.setAvatar(req.user.userId, avatarUrl);
+  }
+
+  // ---------------------------------------------------------
+  // Profile by handle (authenticated for now)
+  // Wichtig: nach 'me' definieren, sonst wuerde "me" als :handle matchen
+  // ---------------------------------------------------------
+  @UseGuards(AuthGuard('jwt'))
+  @Get(':handle')
+  async getByHandle(@Param('handle') handle: string) {
+    return this.users.getByHandle(handle);
+  }
+
+  // ---------------------------------------------------------
+  // Posts by handle (viewer aware)
+  // - self: PUBLIC + FOLLOWERS
+  // - others: PUBLIC only
+  // ---------------------------------------------------------
+  @UseGuards(AuthGuard('jwt'))
+  @Get(':handle/posts')
+  async getPostsByHandle(@Req() req: any, @Param('handle') handle: string) {
+    return this.users.getPostsByHandle(req.user.userId, handle);
   }
 }

@@ -1,0 +1,425 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { API_BASE } from "../api/base";
+import { useAuth } from "../auth/AuthContext";
+import { useMe } from "../auth/useMe";
+
+type PostImage = { id: string; url: string };
+
+type ProfileUser = {
+  id: string;
+  handle: string;
+  name: string | null;
+  avatarUrl: string | null;
+  privacy?: string | null;
+  createdAt?: string;
+};
+
+type Post = {
+  id: string;
+  content: string;
+  createdAt: string;
+  visibility?: "PUBLIC" | "FOLLOWERS";
+  course: {
+    id: string;
+    name: string;
+    lat: number;
+    lon: number;
+  };
+  user: {
+    id: string;
+    handle: string;
+    avatarUrl?: string | null;
+  };
+  images?: PostImage[];
+};
+
+function Card({
+  title,
+  children,
+  right,
+}: {
+  title: string;
+  children: React.ReactNode;
+  right?: React.ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        background: "white",
+        borderRadius: 16,
+        boxShadow: "0 2px 16px rgba(0,0,0,.06)",
+        padding: 12,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 10,
+        }}
+      >
+        <div style={{ fontWeight: 900 }}>{title}</div>
+        <div style={{ marginLeft: "auto" }}>{right}</div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function PillButton({
+  children,
+  onClick,
+  disabled,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        padding: "8px 14px",
+        borderRadius: 999,
+        border: "1px solid rgba(0,0,0,.12)",
+        background: disabled ? "rgba(0,0,0,.06)" : "#111",
+        color: disabled ? "rgba(0,0,0,.55)" : "white",
+        cursor: disabled ? "default" : "pointer",
+        fontWeight: 800,
+      }}
+      type="button"
+    >
+      {children}
+    </button>
+  );
+}
+
+function AvatarCircle({
+  handle,
+  avatarUrl,
+}: {
+  handle: string;
+  avatarUrl?: string | null;
+}) {
+  const letter = (handle || "?").slice(0, 1).toUpperCase();
+
+  if (avatarUrl) {
+    return (
+      <img
+        src={`${API_BASE}${avatarUrl}`}
+        alt="avatar"
+        style={{
+          width: 56,
+          height: 56,
+          borderRadius: 999,
+          objectFit: "cover",
+          border: "1px solid rgba(0,0,0,.12)",
+        }}
+      />
+    );
+  }
+
+  return (
+    <div
+      style={{
+        width: 56,
+        height: 56,
+        borderRadius: 999,
+        background: "rgba(0,0,0,.06)",
+        border: "1px solid rgba(0,0,0,.10)",
+        display: "grid",
+        placeItems: "center",
+        fontWeight: 900,
+      }}
+      title="Avatar placeholder"
+    >
+      {letter}
+    </div>
+  );
+}
+
+function prettyDate(d?: string) {
+  if (!d) return "";
+  const t = new Date(d);
+  if (Number.isNaN(t.getTime())) return "";
+  return t.toLocaleDateString();
+}
+
+export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
+  const nav = useNavigate();
+  const loc = useLocation();
+  const params = useParams();
+
+  // Auth token (same fallback logic as FeedPage)
+  const auth = useAuth() as any;
+  const tokenFromContext: string =
+    (auth?.token as string) ||
+    (auth?.jwt as string) ||
+    (auth?.accessToken as string) ||
+    "";
+
+  const tokenFromStorage =
+    localStorage.getItem("token") ||
+    localStorage.getItem("fairwayd_token") ||
+    "";
+
+  const token = tokenFromContext || tokenFromStorage;
+
+  // For onboarding / self identity
+  const { me, loading: meLoading, err: meErr } = useMe(true);
+
+  const targetHandle = useMemo(() => {
+    if (mode === "handle") return (params.handle ?? "").trim().toLowerCase();
+    return (me?.handle ?? "").trim().toLowerCase();
+  }, [mode, params.handle, me?.handle]);
+
+  const isSelf = useMemo(() => {
+    if (!me?.handle) return false;
+    return me.handle.trim().toLowerCase() === targetHandle;
+  }, [me?.handle, targetHandle]);
+
+  const [profile, setProfile] = useState<ProfileUser | null>(null);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const loadProfile = useCallback(async () => {
+    if (!targetHandle) return;
+
+    // For mode=me, we can use the already-fetched /users/me info as profile base
+    // (still load posts from backend if endpoint exists)
+    if (mode === "me") {
+      if (meLoading) return;
+      if (meErr) {
+        setErr(`Failed to load /users/me ${meErr}`);
+        return;
+      }
+      if (!me) return;
+
+      setProfile({
+        id: me.id,
+        handle: me.handle,
+        name: me.name ?? null,
+        avatarUrl: me.avatarUrl ?? null,
+        privacy: (me as any).privacy ?? null,
+        createdAt: (me as any).createdAt,
+      });
+    }
+
+    if (!token) {
+      setErr("Missing auth token. Please login again.");
+      return;
+    }
+
+    setLoading(true);
+    setErr(null);
+
+    try {
+      const headers: HeadersInit = { Authorization: `Bearer ${token}` };
+
+      if (mode === "handle") {
+        const [uRes, pRes] = await Promise.all([
+          fetch(`${API_BASE}/users/${encodeURIComponent(targetHandle)}`, {
+            headers,
+          }),
+          fetch(`${API_BASE}/users/${encodeURIComponent(targetHandle)}/posts`, {
+            headers,
+          }),
+        ]);
+
+        if (!uRes.ok) {
+          const t = await uRes.text().catch(() => "");
+          throw new Error(
+            `Profile endpoint failed. Expected GET /users/:handle. HTTP ${uRes.status} ${uRes.statusText} ${t}`.trim(),
+          );
+        }
+        if (!pRes.ok) {
+          const t = await pRes.text().catch(() => "");
+          throw new Error(
+            `Posts endpoint failed. Expected GET /users/:handle/posts. HTTP ${pRes.status} ${pRes.statusText} ${t}`.trim(),
+          );
+        }
+
+        const u = (await uRes.json()) as ProfileUser;
+        const p = (await pRes.json()) as Post[];
+
+        setProfile(u);
+        setPosts(Array.isArray(p) ? p : []);
+      } else {
+        // mode=me: try to load posts for own handle if backend provides it
+        const pRes = await fetch(
+          `${API_BASE}/users/${encodeURIComponent(targetHandle)}/posts`,
+          { headers },
+        );
+
+        if (pRes.ok) {
+          const p = (await pRes.json()) as Post[];
+          setPosts(Array.isArray(p) ? p : []);
+        } else {
+          // Not fatal for MVP
+          setPosts([]);
+        }
+      }
+    } catch (e: any) {
+      setErr(e?.message ?? "Failed to load profile");
+    } finally {
+      setLoading(false);
+    }
+  }, [mode, targetHandle, token, me, meLoading, meErr]);
+
+  useEffect(() => {
+    setProfile(null);
+    setPosts([]);
+    setErr(null);
+
+    if (!targetHandle) return;
+    loadProfile();
+  }, [targetHandle, loadProfile]);
+
+  const title = useMemo(() => {
+    if (profile?.handle) return `@${profile.handle}`;
+    return targetHandle ? `@${targetHandle}` : "Profile";
+  }, [profile?.handle, targetHandle]);
+
+  const backTo = (loc.state as any)?.from || "/feed";
+
+  return (
+    <div style={{ display: "grid", gap: 12, minWidth: 0 }}>
+      {err && (
+        <div
+          style={{
+            padding: 10,
+            borderRadius: 12,
+            background: "#ffe8e8",
+            border: "1px solid rgba(0,0,0,.08)",
+            fontFamily: "system-ui",
+            fontSize: 13,
+          }}
+        >
+          <strong>Error:</strong> {err}
+        </div>
+      )}
+
+      <Card
+        title={title}
+        right={
+          <div style={{ display: "flex", gap: 8 }}>
+            <PillButton onClick={() => nav(backTo)} disabled={loading}>
+              Back
+            </PillButton>
+
+            {isSelf ? (
+              <PillButton
+                onClick={() => nav("/onboarding/profile")}
+                disabled={loading}
+              >
+                Edit
+              </PillButton>
+            ) : (
+              <PillButton
+                onClick={() => nav("/profile")}
+                disabled={loading || !me?.handle}
+              >
+                My Profile
+              </PillButton>
+            )}
+          </div>
+        }
+      >
+        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <AvatarCircle
+            handle={profile?.handle ?? targetHandle ?? "?"}
+            avatarUrl={profile?.avatarUrl}
+          />
+
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 900, fontSize: 16 }}>
+              {profile?.name?.trim() ? profile.name : "—"}
+            </div>
+
+            <div style={{ fontSize: 12, opacity: 0.7 }}>
+              {profile?.createdAt
+                ? `Member since ${prettyDate(profile.createdAt)}`
+                : ""}
+            </div>
+
+            {isSelf ? (
+              <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>
+                This is you
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </Card>
+
+      <Card
+        title="Posts"
+        right={
+          <div style={{ fontSize: 12, opacity: 0.65 }}>
+            {loading ? "Loading..." : `${posts.length} posts`}
+          </div>
+        }
+      >
+        {!loading && posts.length === 0 && (
+          <div style={{ padding: 12, opacity: 0.7 }}>No posts yet.</div>
+        )}
+
+        <div style={{ display: "grid", gap: 10 }}>
+          {posts.map((p) => (
+            <div
+              key={p.id}
+              style={{
+                padding: 12,
+                borderRadius: 14,
+                background: "rgba(0,0,0,.04)",
+                border: "1px solid rgba(0,0,0,.06)",
+              }}
+            >
+              <div style={{ fontWeight: 900 }}>{p.course.name}</div>
+              <div style={{ fontSize: 12, opacity: 0.7 }}>
+                @{p.user.handle} · {new Date(p.createdAt).toLocaleString()}
+                {p.visibility ? ` · ${p.visibility}` : ""}
+              </div>
+
+              <div style={{ marginTop: 6, whiteSpace: "pre-wrap" }}>
+                {p.content}
+              </div>
+
+              {p.images?.[0]?.url && (
+                <img
+                  src={`${API_BASE}${p.images[0].url}`}
+                  alt="post"
+                  style={{
+                    marginTop: 10,
+                    borderRadius: 12,
+                    maxWidth: "100%",
+                    border: "1px solid rgba(0,0,0,.06)",
+                  }}
+                />
+              )}
+
+              <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+                <PillButton
+                  onClick={() => nav(`/compose/${p.course.id}`)}
+                  disabled={loading}
+                >
+                  Post to this course
+                </PillButton>
+
+                <PillButton
+                  onClick={() => nav(`/u/${encodeURIComponent(p.user.handle)}`)}
+                  disabled={loading}
+                >
+                  Open author
+                </PillButton>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
 import type { Marker as LeafletMarker } from "leaflet";
+import { useNavigate } from "react-router-dom";
 
 import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
@@ -174,6 +175,8 @@ function FitBounds({
 }
 
 export default function FeedPage() {
+  const nav = useNavigate();
+
   const { selectedCourse, clearSelectedCourse, setSelectedCourse } =
     useSelectedCourse();
 
@@ -719,7 +722,33 @@ export default function FeedPage() {
               title="Zoom map to this course"
             >
               <div style={{ fontWeight: 900 }}>{p.course.name}</div>
-              <div style={{ fontSize: 12, opacity: 0.7 }}>@{p.user.handle}</div>
+
+              {/* ✅ @handle: stop bubbling early so Card onClick doesn't swallow it */}
+              <a
+                href={`/u/${encodeURIComponent(p.user.handle)}`}
+                onMouseDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  nav(`/u/${encodeURIComponent(p.user.handle)}`);
+                }}
+                style={{
+                  fontSize: 12,
+                  opacity: 0.85,
+                  fontWeight: 900,
+                  textDecoration: "underline",
+                  display: "inline-block",
+                  cursor: "pointer",
+                  position: "relative",
+                  zIndex: 5,
+                  color: "inherit",
+                }}
+                title="Open profile"
+              >
+                @{p.user.handle}
+              </a>
+
               <div style={{ marginTop: 6 }}>{p.content}</div>
 
               {p.images?.[0]?.url && (

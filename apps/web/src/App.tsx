@@ -6,6 +6,7 @@ import {
   useLocation,
   useNavigate,
 } from "react-router-dom";
+
 import CoursesMap from "./components/CoursesMap";
 import { AuthProvider } from "./auth/AuthContext";
 import ProtectedRoute from "./auth/ProtectedRoute";
@@ -20,9 +21,8 @@ import { useMe } from "./auth/useMe";
 import TermsGate from "./onboarding/TermsGate";
 import ProfileSetup from "./onboarding/ProfileSetup";
 
-function ProfilePlaceholder() {
-  return <div style={{ padding: 16, fontWeight: 900 }}>Profile (Step 4)</div>;
-}
+// NEW
+import ProfilePage from "./pages/ProfilePage";
 
 /**
  * Wrap any protected page with this:
@@ -33,15 +33,12 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
   const loc = useLocation();
   const { me, loading, err } = useMe(true);
 
-  // While loading first time
   if (loading && !me) {
     return (
       <div style={{ padding: 16, fontFamily: "system-ui" }}>Loading...</div>
     );
   }
 
-  // If /users/me failed (token invalid etc.) -> let ProtectedRoute handle auth;
-  // but show error to debug if it happens.
   if (err && !me) {
     return (
       <div style={{ padding: 16, fontFamily: "system-ui", color: "crimson" }}>
@@ -52,14 +49,12 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
 
   if (!me) return null;
 
-  // Gate 1: Terms first
   if (!me.termsAcceptedAt) {
     return (
       <Navigate to="/onboarding/terms" state={{ from: loc.pathname }} replace />
     );
   }
 
-  // Gate 2: Profile completion
   if (!me.handle || !me.avatarUrl) {
     return (
       <Navigate
@@ -73,11 +68,6 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-/**
- * Page wrapper: Terms
- * - after accept -> refresh /users/me
- * - then route to profile gate (if needed) or back to where user came from
- */
 function TermsGatePage() {
   const nav = useNavigate();
   const loc: any = useLocation();
@@ -88,25 +78,17 @@ function TermsGatePage() {
   const afterAccepted = async () => {
     await refresh();
 
-    // After refresh, decide next step
-    // If profile still incomplete -> go profile setup
     if (!me?.handle || !me?.avatarUrl) {
       nav("/onboarding/profile", { replace: true, state: { from } });
       return;
     }
 
-    // Otherwise go back to where user came from, or default feed
     nav(from || "/feed", { replace: true });
   };
 
   return <TermsGate onAccepted={afterAccepted} />;
 }
 
-/**
- * Page wrapper: Profile setup
- * - after save -> refresh /users/me
- * - then go back to where user came from (or /feed)
- */
 function ProfileSetupPage() {
   const nav = useNavigate();
   const loc: any = useLocation();
@@ -186,23 +168,32 @@ export default function App() {
                 }
               />
 
-              {/* Profile placeholder */}
+              {/* Profile (self) */}
               <Route
                 path="/profile"
                 element={
                   <ProtectedRoute>
                     <OnboardingGuard>
-                      <ProfilePlaceholder />
+                      <ProfilePage mode="me" />
+                    </OnboardingGuard>
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Profile by handle */}
+              <Route
+                path="/u/:handle"
+                element={
+                  <ProtectedRoute>
+                    <OnboardingGuard>
+                      <ProfilePage mode="handle" />
                     </OnboardingGuard>
                   </ProtectedRoute>
                 }
               />
             </Route>
 
-            {/* Convenience */}
             <Route path="/home" element={<Navigate to="/map" replace />} />
-
-            {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </SelectedCourseProvider>
