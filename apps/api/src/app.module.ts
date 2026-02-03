@@ -20,6 +20,9 @@ import { UsersModule } from './users/users.module';
     CoursesModule,
     PostsModule,
     FeedModule,
+    UsersModule, // ✅ IMPORTANT: register /users routes
   ],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}

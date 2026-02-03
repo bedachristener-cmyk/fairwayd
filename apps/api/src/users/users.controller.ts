@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Get,
   Post,
@@ -16,8 +17,9 @@ import { UsersService } from './users.service';
 
 function safeExt(original: string) {
   const ext = extname(original || '').toLowerCase();
-  if (ext === '.jpg' || ext === '.jpeg' || ext === '.png' || ext === '.webp')
+  if (ext === '.jpg' || ext === '.jpeg' || ext === '.png' || ext === '.webp') {
     return ext;
+  }
   return '';
 }
 
@@ -31,6 +33,43 @@ export class UsersController {
     return this.users.getMe(req.user.userId);
   }
 
+  // ---------------------------------------------------------
+  // Terms acceptance
+  // ---------------------------------------------------------
+  @UseGuards(AuthGuard('jwt'))
+  @Post('me/accept-terms')
+  async acceptTerms(@Req() req: any, @Body() body: { termsVersion?: string }) {
+    // default version if frontend doesn't send one
+    const version = (body?.termsVersion ?? 'v1').trim();
+    if (!version) throw new BadRequestException('Missing termsVersion');
+    return this.users.acceptTerms(req.user.userId, version);
+  }
+
+  // ---------------------------------------------------------
+  // Profile setup (handle + optional name)
+  // ---------------------------------------------------------
+  @UseGuards(AuthGuard('jwt'))
+  @Post('me/profile')
+  async updateProfile(
+    @Req() req: any,
+    @Body() body: { handle?: string; name?: string | null },
+  ) {
+    const handle = body?.handle?.trim();
+    if (!handle) throw new BadRequestException('Missing handle');
+
+    // Keep name optional; trim if provided
+    const name =
+      typeof body?.name === 'string' ? body.name.trim() : (body?.name ?? null);
+
+    return this.users.updateProfile(req.user.userId, {
+      handle,
+      name,
+    });
+  }
+
+  // ---------------------------------------------------------
+  // Avatar upload (already existed)
+  // ---------------------------------------------------------
   @UseGuards(AuthGuard('jwt'))
   @Post('me/avatar')
   @UseInterceptors(

@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 type Me = {
   id: string;
@@ -12,7 +18,7 @@ type AuthState = {
   token: string | null;
   user: Me | null;
   loading: boolean;
-  isAuthenticated: boolean; // ✅ will be token-based (stable)
+  isAuthenticated: boolean;
   login: (token: string) => void;
   logout: () => void;
   refreshMe: () => Promise<void>;
@@ -20,8 +26,8 @@ type AuthState = {
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
-const STORAGE_KEY = "fairwayd_token";
-const FALLBACK_KEYS = ["token", "jwt", "access_token"]; // ✅ helps if old key was used
+export const STORAGE_KEY = "fairwayd_token";
+const FALLBACK_KEYS = ["token", "jwt", "access_token"];
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
 function loadTokenFromStorage() {
@@ -53,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(STORAGE_KEY, t);
   };
 
+  // Optional: keep for debugging / legacy screens
   const refreshMe = async () => {
     if (!token) {
       setUser(null);
@@ -64,31 +71,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // ✅ If /auth/me is not ready yet or fails, don't instantly kick user out.
+      // If this endpoint isn't fully wired, don't break the session;
+      // onboarding uses /users/me anyway.
       if (!res.ok) {
-        setUser(null);
         return;
       }
 
       const data = await res.json();
       setUser(data);
     } catch {
-      setUser(null);
+      // don't hard-clear user; token is source of truth
+      return;
     }
   };
 
-  // ✅ Restore token once on boot
+  // Restore token once on boot
   useEffect(() => {
     try {
       const saved = loadTokenFromStorage();
       setToken(saved);
     } finally {
-      // We are "ready" to render protected routes (token might be null, that's fine)
       setLoading(false);
     }
   }, []);
 
-  // ✅ Optionally load user info in background when token exists
+  // If token changes: clear stale user; optionally refresh background
   useEffect(() => {
     if (!token) {
       setUser(null);
@@ -103,13 +110,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       token,
       user,
       loading,
-      // ✅ STABLE: allow access if token exists (prevents redirect loops)
       isAuthenticated: !!token,
       login,
       logout,
       refreshMe,
     }),
-    [token, user, loading]
+    [token, user, loading],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
