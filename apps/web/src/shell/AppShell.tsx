@@ -2,10 +2,14 @@ import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import RightRail from "./RightRail";
 import BottomTabs from "./BottomTabs";
+import TopRail from "./TopRail";
 
 export default function AppShell() {
   return (
-    <div style={{ minHeight: "100vh", background: "#f5f6f8" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
+      {/* Top rail */}
+      <TopRail />
+
       {/* Desktop layout */}
       <div
         style={{
@@ -23,10 +27,11 @@ export default function AppShell() {
 
         <main
           style={{
-            background: "white",
+            background: "var(--card)",
             borderRadius: 16,
-            boxShadow: "0 2px 14px rgba(0,0,0,0.06)",
-            minHeight: "calc(100vh - 32px)",
+            border: "1px solid var(--border)",
+            boxShadow: "0 8px 28px rgba(0,0,0,0.35)",
+            minHeight: "calc(100vh - 32px - 60px)", // minus padding and TopRail
             overflow: "hidden",
           }}
         >

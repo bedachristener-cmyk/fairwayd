@@ -9,7 +9,6 @@ export default function Sidebar() {
 
   const goProtected = (path: string) => {
     if (!isAuthenticated) {
-      // no /login route yet -> send to landing
       nav("/");
       return;
     }
@@ -22,23 +21,28 @@ export default function Sidebar() {
         position: "sticky",
         top: 16,
         alignSelf: "start",
-        background: "white",
+        background: "var(--card)",
         borderRadius: 16,
-        boxShadow: "0 2px 14px rgba(0,0,0,0.06)",
+        border: "1px solid var(--border)",
+        boxShadow: "0 4px 22px rgba(0,0,0,0.35)",
         padding: 16,
+        color: "var(--text)",
       }}
     >
-      <div style={{ fontWeight: 900, fontSize: 18, marginBottom: 12 }}>
+      <div
+        style={{
+          fontWeight: 900,
+          fontSize: 20,
+          marginBottom: 18,
+          color: "var(--green)",
+          letterSpacing: 0.5,
+        }}
+      >
         Fairwayd
       </div>
 
-      <nav style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <button
-          onClick={() => go("/map")}
-          style={btnStyle}
-          type="button"
-          title="Open map"
-        >
+      <nav style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <button onClick={() => go("/map")} style={btnStyle} type="button">
           🗺️ Map
         </button>
 
@@ -46,10 +50,9 @@ export default function Sidebar() {
           onClick={() => goProtected("/feed")}
           style={{
             ...btnStyle,
-            opacity: isAuthenticated ? 1 : 0.6,
+            opacity: isAuthenticated ? 1 : 0.5,
           }}
           type="button"
-          title={isAuthenticated ? "Open feed" : "Login required"}
         >
           📰 Feed
         </button>
@@ -58,17 +61,16 @@ export default function Sidebar() {
           onClick={() => goProtected("/profile")}
           style={{
             ...btnStyle,
-            opacity: isAuthenticated ? 1 : 0.6,
+            opacity: isAuthenticated ? 1 : 0.5,
           }}
           type="button"
-          title={isAuthenticated ? "Open profile" : "Login required"}
         >
           👤 Profile
         </button>
       </nav>
 
-      <div style={{ marginTop: 16, fontSize: 12, opacity: 0.7 }}>
-        MVP shell. Right rail + tabs are placeholders.
+      <div style={{ marginTop: 20, fontSize: 12, color: "var(--sub)" }}>
+        Golf social. Simple & fast.
       </div>
     </div>
   );
@@ -77,10 +79,11 @@ export default function Sidebar() {
 const btnStyle: React.CSSProperties = {
   textAlign: "left",
   width: "100%",
-  border: "1px solid rgba(0,0,0,0.08)",
-  background: "white",
-  padding: "10px 12px",
+  border: "1px solid var(--border)",
+  background: "var(--muted)",
+  padding: "12px 14px",
   borderRadius: 12,
   cursor: "pointer",
   fontWeight: 700,
+  color: "var(--text)",
 };

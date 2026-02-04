@@ -1,89 +1,98 @@
-html, body, #root {
+/* ================= THEME VARIABLES ================= */
+
+/* DARK (default) */
+html[data-theme="dark"] {
+  --bg: #052235; /* fast schwarz */
+  --card: #1f2122; /* dunkles grau */
+  --muted: #1f252b; /* etwas heller */
+  --border: #2a323a; /* klar sichtbare borders */
+  --text: #e9eef2; /* helles grau */
+  --sub: #8b98a5; /* secondary text */
+  --green: #27c46b;
+}
+
+/* LIGHT */
+html[data-theme="light"] {
+  --bg: #f4f6f8; /* sehr hell */
+  --card: #ffffff; /* rein weiss */
+  --muted: #eef1f4; /* helles grau */
+  --border: rgba(0, 0, 0, 0.12);
+  --text: #111111;
+  --sub: rgba(0, 0, 0, 0.6);
+  --green: #1f8a3b;
+}
+
+/* FORREST */
+html[data-theme="forest"] {
+  --bg: #0c1511;
+  --card: #16221c;
+  --muted: #1d2d25;
+  --border: #2e4438;
+  --text: #e6f3ea;
+  --sub: #9fbaa8;
+  --green: #3ddc84;
+}
+
+/* VINTAGE */
+html[data-theme="sepia"] {
+  --bg: #f4ecd8;
+  --card: #fff8e7;
+  --muted: #efe2c6;
+  --border: #d8c7a3;
+  --text: #3b2f1e;
+  --sub: #7a6a4a;
+  --green: #7a9d54;
+}
+html[data-theme="ocean"] {
+  --bg: #061018;
+  --card: #0b1f2c;
+  --muted: #0e2736;
+  --border: rgba(255, 255, 255, 0.1);
+  --text: #e6f4ff;
+  --sub: rgba(230, 244, 255, 0.7);
+  --brand: #27c46b; /* Fairwayd green */
+  --brand2: #2ea8ff; /* ocean accent */
+}
+
+html[data-theme="sunset"] {
+  --bg: #12080a;
+  --card: #1c0f12;
+  --muted: #241317;
+  --border: rgba(255, 255, 255, 0.1);
+  --text: #ffecec;
+  --sub: rgba(255, 236, 236, 0.7);
+  --brand: #27c46b; /* Fairwayd green bleibt */
+  --brand2: #ff7a3d; /* warm accent */
+}
+
+/* fallback if attribute missing */
+:root {
+  --bg: #0e1113;
+  --card: #171b1f;
+  --muted: #1f252b;
+  --border: #2a323a;
+  --text: #e9eef2;
+  --sub: #8b98a5;
+  --green: #27c46b;
+}
+
+/* ================= BASE ================= */
+
+html,
+body,
+#root {
   height: 100%;
   margin: 0;
-}
-
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-  display: block; /* wichtig: kein flex */
-}
-
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+  background: var(--bg);
+  color: var(--text);
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
 }
 
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
 }
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-}
-/* Leaflet fixes (Tailwind/Global CSS can break map tiles) */
-.leaflet-container {
-  height: 100%;
-  width: 100%;
-}
-
-.leaflet-container img {
-  max-width: none !important;
-}
-
-.leaflet-tile {
-  max-width: none !important;
-  max-height: none !important;
-}
-
-

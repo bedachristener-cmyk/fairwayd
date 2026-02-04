@@ -3,6 +3,12 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
 import { useMe } from "../auth/useMe";
+import {
+  getInitialTheme,
+  setTheme,
+  THEMES,
+  type ThemeName,
+} from "../theme/theme";
 
 type PostImage = { id: string; url: string };
 
@@ -46,9 +52,10 @@ function Card({
   return (
     <div
       style={{
-        background: "white",
+        background: "var(--card)",
+        border: "1px solid var(--border)",
         borderRadius: 16,
-        boxShadow: "0 2px 16px rgba(0,0,0,.06)",
+        boxShadow: "0 10px 30px rgba(0,0,0,.35)",
         padding: 12,
       }}
     >
@@ -60,7 +67,7 @@ function Card({
           marginBottom: 10,
         }}
       >
-        <div style={{ fontWeight: 900 }}>{title}</div>
+        <div style={{ fontWeight: 900, color: "var(--text)" }}>{title}</div>
         <div style={{ marginLeft: "auto" }}>{right}</div>
       </div>
       {children}
@@ -84,9 +91,9 @@ function PillButton({
       style={{
         padding: "8px 14px",
         borderRadius: 999,
-        border: "1px solid rgba(0,0,0,.12)",
-        background: disabled ? "rgba(0,0,0,.06)" : "#111",
-        color: disabled ? "rgba(0,0,0,.55)" : "white",
+        border: "1px solid var(--border)",
+        background: disabled ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.18)",
+        color: disabled ? "rgba(255,255,255,0.55)" : "var(--text)",
         cursor: disabled ? "default" : "pointer",
         fontWeight: 800,
       }}
@@ -116,7 +123,7 @@ function AvatarCircle({
           height: 56,
           borderRadius: 999,
           objectFit: "cover",
-          border: "1px solid rgba(0,0,0,.12)",
+          border: "1px solid var(--border)",
         }}
       />
     );
@@ -128,11 +135,12 @@ function AvatarCircle({
         width: 56,
         height: 56,
         borderRadius: 999,
-        background: "rgba(0,0,0,.06)",
-        border: "1px solid rgba(0,0,0,.10)",
+        background: "rgba(0,0,0,.18)",
+        border: "1px solid var(--border)",
         display: "grid",
         placeItems: "center",
         fontWeight: 900,
+        color: "var(--text)",
       }}
       title="Avatar placeholder"
     >
@@ -148,12 +156,52 @@ function prettyDate(d?: string) {
   return t.toLocaleDateString();
 }
 
+/** Simple + reliable theme picker (buttons) */
+function ThemePicker() {
+  const [theme, setThemeState] = useState<ThemeName>(() => getInitialTheme());
+
+  useEffect(() => {
+    setTheme(theme);
+  }, [theme]);
+
+  return (
+    <Card title="Theme">
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {THEMES.map((tName) => (
+          <button
+            key={tName}
+            type="button"
+            onClick={() => setThemeState(tName)}
+            style={{
+              border: "1px solid var(--border)",
+              background:
+                theme === tName ? "rgba(39,196,107,0.22)" : "rgba(0,0,0,0.18)",
+              color: "var(--text)",
+              borderRadius: 10,
+              padding: "6px 10px",
+              cursor: "pointer",
+              fontWeight: 900,
+              fontSize: 12,
+              minWidth: 86,
+            }}
+          >
+            {tName.toUpperCase()}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ marginTop: 8, fontSize: 12, color: "var(--sub)" }}>
+        Current: <b style={{ color: "var(--text)" }}>{theme}</b>
+      </div>
+    </Card>
+  );
+}
+
 export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
   const nav = useNavigate();
   const loc = useLocation();
   const params = useParams();
 
-  // Auth token (same fallback logic as FeedPage)
   const auth = useAuth() as any;
   const tokenFromContext: string =
     (auth?.token as string) ||
@@ -168,18 +216,12 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
   const token = tokenFromContext || tokenFromStorage;
 
-  // For onboarding / self identity
   const { me, loading: meLoading, err: meErr } = useMe(true);
 
   const targetHandle = useMemo(() => {
     if (mode === "handle") return (params.handle ?? "").trim().toLowerCase();
     return (me?.handle ?? "").trim().toLowerCase();
   }, [mode, params.handle, me?.handle]);
-
-  const isSelf = useMemo(() => {
-    if (!me?.handle) return false;
-    return me.handle.trim().toLowerCase() === targetHandle;
-  }, [me?.handle, targetHandle]);
 
   const [profile, setProfile] = useState<ProfileUser | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -189,8 +231,6 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
   const loadProfile = useCallback(async () => {
     if (!targetHandle) return;
 
-    // For mode=me, we can use the already-fetched /users/me info as profile base
-    // (still load posts from backend if endpoint exists)
     if (mode === "me") {
       if (meLoading) return;
       if (meErr) {
@@ -249,17 +289,17 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
         setProfile(u);
         setPosts(Array.isArray(p) ? p : []);
       } else {
-        // mode=me: try to load posts for own handle if backend provides it
         const pRes = await fetch(
           `${API_BASE}/users/${encodeURIComponent(targetHandle)}/posts`,
-          { headers },
+          {
+            headers,
+          },
         );
 
         if (pRes.ok) {
           const p = (await pRes.json()) as Post[];
           setPosts(Array.isArray(p) ? p : []);
         } else {
-          // Not fatal for MVP
           setPosts([]);
         }
       }
@@ -274,7 +314,6 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
     setProfile(null);
     setPosts([]);
     setErr(null);
-
     if (!targetHandle) return;
     loadProfile();
   }, [targetHandle, loadProfile]);
@@ -293,10 +332,11 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
           style={{
             padding: 10,
             borderRadius: 12,
-            background: "#ffe8e8",
-            border: "1px solid rgba(0,0,0,.08)",
+            background: "rgba(255,80,80,0.12)",
+            border: "1px solid rgba(255,80,80,0.25)",
             fontFamily: "system-ui",
             fontSize: 13,
+            color: "var(--text)",
           }}
         >
           <strong>Error:</strong> {err}
@@ -311,7 +351,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
               Back
             </PillButton>
 
-            {isSelf ? (
+            {mode === "me" ? (
               <PillButton
                 onClick={() => nav("/onboarding/profile")}
                 disabled={loading}
@@ -336,35 +376,34 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
           />
 
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 900, fontSize: 16 }}>
+            <div
+              style={{ fontWeight: 900, fontSize: 16, color: "var(--text)" }}
+            >
               {profile?.name?.trim() ? profile.name : "—"}
             </div>
 
-            <div style={{ fontSize: 12, opacity: 0.7 }}>
+            <div style={{ fontSize: 12, color: "var(--sub)" }}>
               {profile?.createdAt
                 ? `Member since ${prettyDate(profile.createdAt)}`
                 : ""}
             </div>
-
-            {isSelf ? (
-              <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>
-                This is you
-              </div>
-            ) : null}
           </div>
         </div>
       </Card>
 
+      {/* ✅ Theme selection only in own profile (/profile) */}
+      {mode === "me" ? <ThemePicker /> : null}
+
       <Card
         title="Posts"
         right={
-          <div style={{ fontSize: 12, opacity: 0.65 }}>
+          <div style={{ fontSize: 12, color: "var(--sub)" }}>
             {loading ? "Loading..." : `${posts.length} posts`}
           </div>
         }
       >
         {!loading && posts.length === 0 && (
-          <div style={{ padding: 12, opacity: 0.7 }}>No posts yet.</div>
+          <div style={{ padding: 12, color: "var(--sub)" }}>No posts yet.</div>
         )}
 
         <div style={{ display: "grid", gap: 10 }}>
@@ -374,12 +413,13 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
               style={{
                 padding: 12,
                 borderRadius: 14,
-                background: "rgba(0,0,0,.04)",
-                border: "1px solid rgba(0,0,0,.06)",
+                background: "rgba(0,0,0,.10)",
+                border: "1px solid var(--border)",
+                color: "var(--text)",
               }}
             >
               <div style={{ fontWeight: 900 }}>{p.course.name}</div>
-              <div style={{ fontSize: 12, opacity: 0.7 }}>
+              <div style={{ fontSize: 12, color: "var(--sub)" }}>
                 @{p.user.handle} · {new Date(p.createdAt).toLocaleString()}
                 {p.visibility ? ` · ${p.visibility}` : ""}
               </div>
@@ -396,12 +436,19 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                     marginTop: 10,
                     borderRadius: 12,
                     maxWidth: "100%",
-                    border: "1px solid rgba(0,0,0,.06)",
+                    border: "1px solid var(--border)",
                   }}
                 />
               )}
 
-              <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+              <div
+                style={{
+                  marginTop: 10,
+                  display: "flex",
+                  gap: 8,
+                  flexWrap: "wrap",
+                }}
+              >
                 <PillButton
                   onClick={() => nav(`/compose/${p.course.id}`)}
                   disabled={loading}

@@ -21,9 +21,9 @@ const golfIcon = L.divIcon({
     width: 22px;
     height: 22px;
     border-radius: 999px;
-    background: #1f8a3b;
-    box-shadow: 0 2px 10px rgba(0,0,0,.25);
-    border: 2px solid white;
+    background: #27c46b;
+    box-shadow: 0 4px 14px rgba(0,0,0,.55);
+    border: 2px solid rgba(0,0,0,.35);
   "></div>
   `,
   iconSize: [22, 22],
@@ -101,14 +101,17 @@ export default function RightRail() {
         position: "sticky",
         top: 16,
         alignSelf: "start",
-        background: "white",
+        background: "var(--card)",
         borderRadius: 16,
-        boxShadow: "0 2px 14px rgba(0,0,0,0.06)",
+        border: "1px solid var(--border)",
+        boxShadow: "0 4px 22px rgba(0,0,0,0.35)",
         padding: 16,
+        color: "var(--text)",
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ fontWeight: 900 }}>Map</div>
+
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
           <Link
             to="/map"
@@ -116,11 +119,12 @@ export default function RightRail() {
               ...pill,
               marginTop: 0,
               textDecoration: "none",
-              color: "inherit",
+              color: "var(--text)",
             }}
           >
             Open
           </Link>
+
           {selectedCourse ? (
             <button
               type="button"
@@ -132,7 +136,7 @@ export default function RightRail() {
                 ...pill,
                 marginTop: 0,
                 cursor: "pointer",
-                background: "rgba(0,0,0,.03)",
+                background: "var(--muted)",
               }}
               title="Clear selected course"
             >
@@ -143,11 +147,12 @@ export default function RightRail() {
       </div>
 
       {selectedCourse ? (
-        <div style={{ marginTop: 8, fontSize: 13, opacity: 0.85 }}>
-          <b>Selected:</b> {selectedCourse.name ?? selectedCourse.id}
+        <div style={{ marginTop: 10, fontSize: 13, color: "var(--sub)" }}>
+          <b style={{ color: "var(--text)" }}>Selected:</b>{" "}
+          {selectedCourse.name ?? selectedCourse.id}
         </div>
       ) : (
-        <div style={{ marginTop: 8, fontSize: 13, opacity: 0.75 }}>
+        <div style={{ marginTop: 10, fontSize: 13, color: "var(--sub)" }}>
           Select a course by clicking a marker (or open the full map).
         </div>
       )}
@@ -158,7 +163,8 @@ export default function RightRail() {
           height: 220,
           borderRadius: 14,
           overflow: "hidden",
-          border: "1px solid rgba(0,0,0,0.08)",
+          border: "1px solid var(--border)",
+          background: "rgba(0,0,0,0.25)",
         }}
       >
         <MapContainer
@@ -204,7 +210,7 @@ export default function RightRail() {
 
       <div style={{ marginTop: 14 }}>
         <div style={{ fontWeight: 900, marginBottom: 8 }}>Context</div>
-        <div style={{ fontSize: 13, opacity: 0.8, lineHeight: 1.4 }}>
+        <div style={{ fontSize: 13, color: "var(--sub)", lineHeight: 1.4 }}>
           Spater: Trending courses, friends activity, suggestions.
         </div>
 
@@ -222,8 +228,9 @@ const pill: React.CSSProperties = {
   marginTop: 8,
   padding: "10px 12px",
   borderRadius: 999,
-  border: "1px solid rgba(0,0,0,0.08)",
+  border: "1px solid var(--border)",
   fontWeight: 700,
   fontSize: 12,
   background: "transparent",
+  color: "var(--text)",
 };
