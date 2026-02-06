@@ -78,8 +78,6 @@ function TermsGatePage() {
   const afterAccepted = async () => {
     await refresh();
 
-    // NOTE: use the refreshed "me" on next render
-    // If you want to be ultra-safe, you can re-check via refresh return value later.
     if (!me?.handle || !me?.avatarUrl) {
       nav("/onboarding/profile", { replace: true, state: { from } });
       return;
