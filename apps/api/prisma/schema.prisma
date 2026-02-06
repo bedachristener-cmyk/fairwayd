@@ -22,31 +22,30 @@ enum AuthProvider {
   FACEBOOK
 }
 
+enum CourseAccess {
+  PUBLIC
+  PRIVATE
+  RESORT
+  MUNICIPAL
+  SEMI_PRIVATE
+}
+
 model User {
   id        String         @id @default(cuid())
-
-  // OAuth-first: may be missing depending on provider / user onboarding
   email     String?        @unique
-
-  // Classic login later (optional)
   password  String?
-
-  // Onboarding/Profile (optional until completed)
   handle    String?        @unique
   name      String?
   avatarUrl String?
   privacy   AccountPrivacy @default(PRIVATE)
 
-  // Legal gating
   termsAcceptedAt DateTime?
   termsVersion    String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // OAuth provider accounts
   accounts  AuthAccount[]
-
   posts     Post[]
   reviews   Review[]
   comments  Comment[]
@@ -60,12 +59,12 @@ model AuthAccount {
   id             String       @id @default(cuid())
   userId         String
   provider       AuthProvider
-  providerUserId String       // stable unique id from provider (e.g. "sub")
+  providerUserId String
   email          String?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerUserId])
   @@index([userId])
@@ -89,25 +88,22 @@ model Course {
   name       String
   city       String?
   postalCode String?
-  region     String? // Kanton/Bundesland
-  country    String  // CH | DE | AT
+  region     String?
+  country    String
   lat        Float
   lon        Float
 
-  // Optional: PostGIS point for fast geo queries (radius, nearest, etc.)
-  // If you add this, you should also add a GiST index below.
   location   Unsupported("geography(Point,4326)")?
 
-  // Metadata (optional but practical)
   holes       Int?
   par         Int?
+  access      CourseAccess?
   website     String?
   phone       String?
   description String?
 
-  // Import + data quality
-  source     String   @default("csv")  // csv | osm | manual
-  osmId      String?                  // e.g. "123456789"
+  source     String   @default("csv")
+  osmId      String?
   verified   Boolean  @default(false)
   active     Boolean  @default(true)
 
@@ -118,9 +114,12 @@ model Course {
   updatedAt DateTime @updatedAt
 
   @@unique([country, name, lat, lon], name: "course_unique_import_key")
-  @@index([country])
 
-  // Optional: only if you use "location"
+  @@index([country])
+  @@index([country, region])
+  @@index([city])
+  @@index([access])
+  @@index([holes])
   @@index([location], type: Gist)
 }
 
@@ -131,9 +130,8 @@ model Post {
   content    String
   visibility Visibility @default(FOLLOWERS)
 
-  // optional aber empfehlenswert:
-  lat        Float?
-  lon        Float?
+  lat Float?
+  lon Float?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -148,8 +146,6 @@ model Post {
   @@index([courseId, createdAt])
   @@index([lat, lon])
 }
-
-
 
 model PostImage {
   id     String @id @default(cuid())

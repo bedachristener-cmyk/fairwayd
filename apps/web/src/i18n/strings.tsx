@@ -27,6 +27,13 @@ export const STRINGS = {
     profile_avatar_label: "Avatar (jpg/png/webp)",
     profile_save: "Save & Continue",
     profile_saving: "Saving...",
+    // course picker
+    course_choose: "Choose course",
+    course_search_placeholder: "Search…",
+    course_clear_selection: "Clear selection",
+    course_min_chars: "Type at least 2 characters…",
+    course_searching: "Searching…",
+    course_no_results: "No results.",
   },
 
   de: {
@@ -53,6 +60,12 @@ export const STRINGS = {
     profile_avatar_label: "Avatar (jpg/png/webp)",
     profile_save: "Speichern & weiter",
     profile_saving: "Speichern...",
+    course_choose: "Platz auswählen",
+    course_search_placeholder: "Suchen…",
+    course_clear_selection: "Auswahl löschen",
+    course_min_chars: "Mindestens 2 Buchstaben eingeben…",
+    course_searching: "Suche…",
+    course_no_results: "Kein Treffer.",
   },
 
   fr: {
@@ -79,6 +92,12 @@ export const STRINGS = {
     profile_avatar_label: "Avatar (jpg/png/webp)",
     profile_save: "Enregistrer & continuer",
     profile_saving: "Enregistrement...",
+    course_choose: "Choisir un parcours",
+    course_search_placeholder: "Rechercher…",
+    course_clear_selection: "Effacer la sélection",
+    course_min_chars: "Saisissez au moins 2 caractères…",
+    course_searching: "Recherche…",
+    course_no_results: "Aucun résultat.",
   },
 
   it: {
@@ -104,6 +123,12 @@ export const STRINGS = {
     profile_avatar_label: "Avatar (jpg/png/webp)",
     profile_save: "Salva & continua",
     profile_saving: "Salvataggio...",
+    course_choose: "Scegli un campo",
+    course_search_placeholder: "Cerca…",
+    course_clear_selection: "Cancella selezione",
+    course_min_chars: "Inserisci almeno 2 caratteri…",
+    course_searching: "Ricerca…",
+    course_no_results: "Nessun risultato.",
   },
 
   es: {
@@ -130,6 +155,12 @@ export const STRINGS = {
     profile_avatar_label: "Avatar (jpg/png/webp)",
     profile_save: "Guardar y continuar",
     profile_saving: "Guardando...",
+    course_choose: "Elegir campo",
+    course_search_placeholder: "Buscar…",
+    course_clear_selection: "Borrar selección",
+    course_min_chars: "Introduce al menos 2 caracteres…",
+    course_searching: "Buscando…",
+    course_no_results: "Sin resultados.",
   },
 } as const;
 

@@ -4,6 +4,7 @@ import { useSelectedCourse } from "../state/SelectedCourseContext";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
+import CourseDropdown, { type CourseLite } from "../components/CourseDropdown";
 
 // ====== TYPES ======
 type PostImage = { id: string; url: string };
@@ -87,6 +88,7 @@ function PillButton({
 }
 
 // ====== MODAL (Desktop centered / Mobile Drawer) ======
+// (bleibt drin, wird aber nicht mehr verwendet)
 
 function Modal({
   open,
@@ -223,16 +225,7 @@ export default function FeedPage() {
   );
   const [err, setErr] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
-
-  // ====== COURSE PICKER STATE ======
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [courseQuery, setCourseQuery] = useState("");
-  const courseInputRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    if (!pickerOpen) return;
-    setTimeout(() => courseInputRef.current?.focus(), 30);
-  }, [pickerOpen]);
+  const draftRef = useRef<HTMLTextAreaElement | null>(null);
 
   // ====== LOAD COURSES (robust) ======
   useEffect(() => {
@@ -285,6 +278,16 @@ export default function FeedPage() {
   useEffect(() => {
     loadFeed();
   }, [loadFeed]);
+
+  useEffect(() => {
+    if (!selectedCourse) return;
+
+    const t = window.setTimeout(() => {
+      draftRef.current?.focus();
+    }, 50);
+
+    return () => window.clearTimeout(t);
+  }, [selectedCourse]);
 
   // ====== POST (optimistic + replace with server response) ======
   const submitPost = async () => {
@@ -362,69 +365,14 @@ export default function FeedPage() {
     }
   };
 
-  // ====== FILTERED COURSES FOR PICKER ======
-  const filteredCourses = useMemo(() => {
-    const q = courseQuery.trim().toLowerCase();
-    if (!q) return courses.slice(0, 50);
-    return courses.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 50);
-  }, [courses, courseQuery]);
+  // ====== COURSES FOR DROPDOWN ======
+  const coursesLite: CourseLite[] = useMemo(
+    () => courses.map((c) => ({ id: c.id, name: c.name })),
+    [courses],
+  );
 
   return (
     <>
-      {/* ===== COURSE PICKER MODAL ===== */}
-      <Modal open={pickerOpen} onClose={() => setPickerOpen(false)}>
-        <div style={{ fontWeight: 900, marginBottom: 10 }}>Choose a course</div>
-
-        <input
-          ref={courseInputRef}
-          placeholder="Search course..."
-          value={courseQuery}
-          onChange={(e) => setCourseQuery(e.target.value)}
-          style={{
-            width: "100%",
-            padding: 10,
-            borderRadius: 12,
-            border: "1px solid var(--border)",
-            marginBottom: 12,
-            background: "var(--muted)",
-            color: "var(--text)",
-          }}
-        />
-
-        <div style={{ display: "grid", gap: 6 }}>
-          {filteredCourses.map((c) => (
-            <div
-              key={c.id}
-              onClick={() => {
-                setSelectedCourse(c);
-                setPickerOpen(false);
-              }}
-              style={{
-                padding: 10,
-                borderRadius: 12,
-                cursor: "pointer",
-                border: "1px solid var(--border)",
-                background: "var(--card)",
-                fontWeight: 700,
-              }}
-              title="Select course"
-            >
-              ⛳ {c.name}
-            </div>
-          ))}
-
-          {filteredCourses.length === 0 ? (
-            <div style={{ padding: 10, color: "var(--sub)", fontSize: 13 }}>
-              No matching courses.
-            </div>
-          ) : null}
-        </div>
-
-        <div style={{ marginTop: 12, fontSize: 12, color: "var(--sub)" }}>
-          Tip: press ESC to close.
-        </div>
-      </Modal>
-
       {/* ===== FEED UI ===== */}
       <div style={{ display: "grid", gap: 12 }}>
         {err && (
@@ -454,54 +402,26 @@ export default function FeedPage() {
           >
             {/* Course Row */}
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              {selectedCourse ? (
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 8,
-                    alignItems: "center",
-                    fontWeight: 900,
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {/* Dropdown under the chip */}
+                <CourseDropdown
+                  courses={coursesLite}
+                  selectedCourseId={selectedCourse?.id ?? null}
+                  onSelect={(id) => {
+                    const c = courses.find((x) => x.id === id);
+                    if (c) setSelectedCourse(c);
                   }}
-                >
-                  ⛳ {selectedCourse.name}
-                  <button
-                    onClick={() => setPickerOpen(true)}
-                    style={{
-                      border: 0,
-                      background: "transparent",
-                      cursor: "pointer",
-                      textDecoration: "underline",
-                      color: "var(--text)",
-                      fontWeight: 900,
-                    }}
-                    type="button"
-                    title="Change course"
-                  >
-                    Change
-                  </button>
-                  <button
-                    onClick={() => clearSelectedCourse()}
-                    style={{
-                      border: 0,
-                      background: "transparent",
-                      cursor: "pointer",
-                      fontWeight: 900,
-                      color: "var(--text)",
-                    }}
-                    type="button"
-                    title="Clear course"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ) : (
-                <PillButton
-                  onClick={() => setPickerOpen(true)}
-                  disabled={posting}
-                >
-                  Choose course
-                </PillButton>
-              )}
+                  onClear={() => clearSelectedCourse()}
+                  placeholder="Choose course"
+                />
+
+                {/* Optional tiny hint if no course */}
+                {!selectedCourse ? (
+                  <div style={{ fontSize: 12, color: "var(--sub)" }}>
+                    Pick a course before posting.
+                  </div>
+                ) : null}
+              </div>
 
               <div style={{ marginLeft: "auto" }}>
                 <select
@@ -526,6 +446,7 @@ export default function FeedPage() {
             </div>
 
             <textarea
+              ref={draftRef}
               value={draft}
               onChange={(e) => {
                 setDraft(e.target.value);

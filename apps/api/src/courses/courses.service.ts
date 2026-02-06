@@ -1,6 +1,6 @@
-import { Injectable, BadRequestException } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
-import { Prisma } from "@prisma/client";
+import { Injectable, BadRequestException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class CoursesService {
@@ -9,11 +9,110 @@ export class CoursesService {
   async findAll() {
     return this.prisma.course.findMany();
   }
-  
+
   async getById(id: string) {
-	return this.prisma.course.findUnique({
-	where: { id },
-	});
+    return this.prisma.course.findUnique({
+      where: { id },
+    });
+  }
+
+  // ------------------------------------------------------------
+  // NEW: Typeahead search for dropdown (q + optional filters)
+  // ------------------------------------------------------------
+  async search(params: {
+    q: string;
+    country?: string;
+    region?: string;
+    take: number;
+  }) {
+    const q = (params.q || '').trim();
+    const take = Math.max(5, Math.min(50, params.take || 20));
+
+    if (q.length < 2) {
+      return { items: [] };
+    }
+
+    const items = await this.prisma.course.findMany({
+      where: {
+        AND: [
+          { active: true },
+          params.country ? { country: params.country } : {},
+          params.region ? { region: params.region } : {},
+          { name: { contains: q, mode: 'insensitive' } },
+        ],
+      },
+      take,
+      orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        city: true,
+        postalCode: true,
+        region: true,
+        country: true,
+        lat: true,
+        lon: true,
+        holes: true,
+        access: true,
+        website: true,
+      },
+    });
+
+    return { items };
+  }
+
+  // ------------------------------------------------------------
+  // NEW: Courses in current map bounds (rectangle)
+  // ------------------------------------------------------------
+  async inBounds(params: {
+    minLat: number;
+    maxLat: number;
+    minLon: number;
+    maxLon: number;
+    country?: string;
+    region?: string;
+    take: number;
+  }) {
+    const minLat = Math.min(params.minLat, params.maxLat);
+    const maxLat = Math.max(params.minLat, params.maxLat);
+    const minLon = Math.min(params.minLon, params.maxLon);
+    const maxLon = Math.max(params.minLon, params.maxLon);
+
+    const take = Math.max(50, Math.min(5000, params.take || 1000));
+
+    if (
+      !Number.isFinite(minLat) ||
+      !Number.isFinite(maxLat) ||
+      !Number.isFinite(minLon) ||
+      !Number.isFinite(maxLon)
+    ) {
+      throw new BadRequestException('Invalid bounds');
+    }
+
+    const items = await this.prisma.course.findMany({
+      where: {
+        AND: [
+          { active: true },
+          params.country ? { country: params.country } : {},
+          params.region ? { region: params.region } : {},
+          { lat: { gte: minLat, lte: maxLat } },
+          { lon: { gte: minLon, lte: maxLon } },
+        ],
+      },
+      take,
+      select: {
+        id: true,
+        name: true,
+        lat: true,
+        lon: true,
+        country: true,
+        region: true,
+        holes: true,
+        access: true,
+      },
+    });
+
+    return { items };
   }
 
   async findNearby(params: { lat: number; lon: number; radiusM: number }) {
@@ -21,7 +120,7 @@ export class CoursesService {
     const radiusM = Math.max(1000, Math.min(200000, params.radiusM || 50000));
 
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-      throw new BadRequestException("Invalid lat/lon");
+      throw new BadRequestException('Invalid lat/lon');
     }
 
     const latRadius = radiusM / 111_320;
@@ -65,7 +164,8 @@ export class CoursesService {
         ) AS "distanceM"
       FROM "Course" c
       WHERE
-        c."lat" BETWEEN ${minLat} AND ${maxLat}
+        c."active" = true
+        AND c."lat" BETWEEN ${minLat} AND ${maxLat}
         AND c."lon" BETWEEN ${minLon} AND ${maxLon}
       ORDER BY "distanceM" ASC
     `);

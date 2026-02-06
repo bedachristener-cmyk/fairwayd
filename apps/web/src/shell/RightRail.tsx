@@ -15,20 +15,40 @@ type Course = {
 const DEFAULT_CENTER = { lat: 47.5596, lon: 7.5886 }; // Basel fallback
 
 const golfIcon = L.divIcon({
-  className: "golf-marker",
+  className: "",
   html: `
-  <div style="
-    width: 22px;
-    height: 22px;
-    border-radius: 999px;
-    background: #27c46b;
-    box-shadow: 0 4px 14px rgba(0,0,0,.55);
-    border: 2px solid rgba(0,0,0,.35);
-  "></div>
-  `,
-  iconSize: [22, 22],
-  iconAnchor: [11, 11],
-  popupAnchor: [0, -12],
+    <div style="
+    width:18px;
+    height:18px;
+    border-radius:999px;
+    background:rgba(0,255,128,.95);
+    border:2px solid rgba(01, 15, 15, 0.65);
+    box-shadow:0 6px 18px rgba(0,255,128,.35);
+    position:relative;
+  ">
+    <div style="
+      position:absolute;
+      left:7px;
+      top:3px;
+      width:2px;
+      height:10px;
+      background:black;
+    "></div>
+    <div style="
+      position:absolute;
+      left:9px;
+      top:3px;
+      width:6px;
+      height:5px;
+      background:red;
+      clip-path: polygon(0 0, 100% 50%, 0 100%);
+    "></div>
+  </div>
+`,
+
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+  popupAnchor: [0, -10],
 });
 
 function RecenterMap({
