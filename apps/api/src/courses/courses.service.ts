@@ -17,7 +17,7 @@ export class CoursesService {
   }
 
   // ------------------------------------------------------------
-  // NEW: Typeahead search for dropdown (q + optional filters)
+  // Typeahead search for dropdown (q + optional filters)
   // ------------------------------------------------------------
   async search(params: {
     q: string;
@@ -62,7 +62,7 @@ export class CoursesService {
   }
 
   // ------------------------------------------------------------
-  // NEW: Courses in current map bounds (rectangle)
+  // Courses in current map bounds (rectangle)
   // ------------------------------------------------------------
   async inBounds(params: {
     minLat: number;
@@ -176,5 +176,35 @@ export class CoursesService {
       count: items.length,
       items,
     };
+  }
+
+  // ------------------------------------------------------------
+  // Course Follow
+  // ------------------------------------------------------------
+
+  async isFollowingCourse(userId: string, courseId: string) {
+    const row = await this.prisma.courseFollow.findUnique({
+      where: {
+        userId_courseId: { userId, courseId },
+      },
+      select: { id: true },
+    });
+    return !!row;
+  }
+
+  async followCourse(userId: string, courseId: string) {
+    // idempotent follow
+    await this.prisma.courseFollow.upsert({
+      where: { userId_courseId: { userId, courseId } },
+      update: {},
+      create: { userId, courseId },
+    });
+  }
+
+  async unfollowCourse(userId: string, courseId: string) {
+    // idempotent unfollow (avoid throwing if not found)
+    await this.prisma.courseFollow.deleteMany({
+      where: { userId, courseId },
+    });
   }
 }

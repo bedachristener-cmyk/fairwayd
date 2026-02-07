@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { API_BASE } from "../api/base";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
+import { useAuth } from "../auth/AuthContext";
 
 type Course = {
   id: string;
@@ -12,7 +13,7 @@ type Course = {
   lon: number;
 };
 
-const DEFAULT_CENTER = { lat: 47.5596, lon: 7.5886 }; // Basel fallback
+const DEFAULT_CENTER = { lat: 47.5596, lon: 7.5886 };
 
 const golfIcon = L.divIcon({
   className: "",
@@ -45,7 +46,6 @@ const golfIcon = L.divIcon({
     "></div>
   </div>
 `,
-
   iconSize: [18, 18],
   iconAnchor: [9, 9],
   popupAnchor: [0, -10],
@@ -71,47 +71,67 @@ export default function RightRail() {
   const { selectedCourse, clearSelectedCourse, setSelectedCourse } =
     useSelectedCourse();
 
+  const auth = useAuth() as any;
+  const token =
+    auth?.token ||
+    localStorage.getItem("fairwayd_token") ||
+    localStorage.getItem("token") ||
+    "";
+
   const [courses, setCourses] = useState<Course[]>([]);
   const [center, setCenter] = useState(DEFAULT_CENTER);
 
-  // Load courses once (for markers when no course selected)
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
+
   useEffect(() => {
     const load = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/courses`);
-        if (!res.ok) return;
-        const data = await res.json();
-        const items: Course[] = Array.isArray(data) ? data : [];
-        setCourses(items);
-      } catch {
-        // ignore
-      }
+      const res = await fetch(`${API_BASE}/courses`);
+      if (!res.ok) return;
+      setCourses(await res.json());
     };
     load();
   }, []);
 
-  // Update center when selected course changes
   useEffect(() => {
     if (selectedCourse?.lat && selectedCourse?.lon) {
       setCenter({ lat: selectedCourse.lat, lon: selectedCourse.lon });
     }
-  }, [selectedCourse?.id, selectedCourse?.lat, selectedCourse?.lon]);
+  }, [selectedCourse]);
 
-  // Marker list:
-  // - if selectedCourse exists -> only that marker
-  // - else -> show courses markers (cap to keep UI light)
+  useEffect(() => {
+    const run = async () => {
+      if (!selectedCourse?.id || !token) {
+        setIsFollowing(false);
+        return;
+      }
+      const res = await fetch(
+        `${API_BASE}/courses/${selectedCourse.id}/following`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      setIsFollowing(!!data?.following);
+    };
+    run();
+  }, [selectedCourse?.id, token]);
+
+  const toggleFollow = async () => {
+    if (!selectedCourse?.id) return;
+
+    const next = !isFollowing;
+    setIsFollowing(next);
+
+    await fetch(`${API_BASE}/courses/${selectedCourse.id}/follow`, {
+      method: next ? "POST" : "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  };
+
   const markers = useMemo(() => {
-    if (selectedCourse?.id && selectedCourse.lat && selectedCourse.lon) {
-      return [
-        {
-          id: selectedCourse.id,
-          name: selectedCourse.name ?? selectedCourse.id,
-          lat: selectedCourse.lat,
-          lon: selectedCourse.lon,
-        },
-      ];
+    if (selectedCourse) {
+      return [selectedCourse];
     }
-    // keep map light: show at most 80 markers
     return courses.slice(0, 80);
   }, [selectedCourse, courses]);
 
@@ -133,47 +153,53 @@ export default function RightRail() {
         <div style={{ fontWeight: 900 }}>Map</div>
 
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-          <Link
-            to="/map"
-            style={{
-              ...pill,
-              marginTop: 0,
-              textDecoration: "none",
-              color: "var(--text)",
-            }}
-          >
+          <Link to="/map" style={{ ...pill, textDecoration: "none" }}>
             Open
           </Link>
 
-          {selectedCourse ? (
+          {selectedCourse && (
             <button
-              type="button"
               onClick={() => {
                 clearSelectedCourse();
                 setCenter(DEFAULT_CENTER);
               }}
-              style={{
-                ...pill,
-                marginTop: 0,
-                cursor: "pointer",
-                background: "var(--muted)",
-              }}
-              title="Clear selected course"
+              style={{ ...pill }}
             >
               Clear
             </button>
-          ) : null}
+          )}
         </div>
       </div>
 
       {selectedCourse ? (
-        <div style={{ marginTop: 10, fontSize: 13, color: "var(--sub)" }}>
-          <b style={{ color: "var(--text)" }}>Selected:</b>{" "}
-          {selectedCourse.name ?? selectedCourse.id}
+        <div
+          style={{
+            marginTop: 10,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <div style={{ fontSize: 13 }}>
+            <b>Selected:</b> {selectedCourse.name}
+          </div>
+
+          <button
+            onClick={toggleFollow}
+            disabled={followBusy}
+            style={{
+              marginLeft: "auto",
+              ...pill,
+              background: isFollowing ? "rgba(0,255,128,.18)" : "var(--muted)",
+              fontWeight: 900,
+            }}
+          >
+            {isFollowing ? "✓ Following" : "+ Follow"}
+          </button>
         </div>
       ) : (
         <div style={{ marginTop: 10, fontSize: 13, color: "var(--sub)" }}>
-          Select a course by clicking a marker (or open the full map).
+          Select a course by clicking a marker.
         </div>
       )}
 
@@ -184,7 +210,6 @@ export default function RightRail() {
           borderRadius: 14,
           overflow: "hidden",
           border: "1px solid var(--border)",
-          background: "rgba(0,0,0,0.25)",
         }}
       >
         <MapContainer
@@ -197,7 +222,7 @@ export default function RightRail() {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
-          <RecenterMap lat={center.lat} lon={center.lon} zoom={12} />
+          <RecenterMap lat={center.lat} lon={center.lon} />
 
           {markers.map((c) => (
             <Marker
@@ -206,51 +231,26 @@ export default function RightRail() {
               icon={golfIcon}
               eventHandlers={{
                 click: () => {
-                  setSelectedCourse({
-                    id: c.id,
-                    name: c.name,
-                    lat: c.lat,
-                    lon: c.lon,
-                  });
+                  setSelectedCourse(c);
                 },
               }}
             >
               <Popup>
-                <div style={{ fontFamily: "system-ui" }}>
-                  <div style={{ fontWeight: 900 }}>{c.name}</div>
-                  <div style={{ marginTop: 6, fontSize: 12, opacity: 0.75 }}>
-                    Click to select
-                  </div>
-                </div>
+                <div style={{ fontWeight: 900 }}>{c.name}</div>
               </Popup>
             </Marker>
           ))}
         </MapContainer>
-      </div>
-
-      <div style={{ marginTop: 14 }}>
-        <div style={{ fontWeight: 900, marginBottom: 8 }}>Context</div>
-        <div style={{ fontSize: 13, color: "var(--sub)", lineHeight: 1.4 }}>
-          Spater: Trending courses, friends activity, suggestions.
-        </div>
-
-        <div style={{ marginTop: 12 }}>
-          <div style={pill}>⛳ Course filters (soon)</div>
-          <div style={pill}>👥 Friends (soon)</div>
-          <div style={pill}>🔥 Trending (soon)</div>
-        </div>
       </div>
     </div>
   );
 }
 
 const pill: React.CSSProperties = {
-  marginTop: 8,
-  padding: "10px 12px",
+  padding: "8px 12px",
   borderRadius: 999,
   border: "1px solid var(--border)",
-  fontWeight: 700,
-  fontSize: 12,
   background: "transparent",
   color: "var(--text)",
+  fontSize: 12,
 };

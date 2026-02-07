@@ -45,14 +45,17 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  accounts  AuthAccount[]
-  posts     Post[]
-  reviews   Review[]
-  comments  Comment[]
-  likes     Like[]
+  accounts AuthAccount[]
+  posts    Post[]
+  reviews  Review[]
+  comments Comment[]
+  likes    Like[]
 
   followers Follow[] @relation("followers")
   following Follow[] @relation("following")
+
+  // Courses this user follows
+  courseFollows CourseFollow[]
 }
 
 model AuthAccount {
@@ -93,7 +96,7 @@ model Course {
   lat        Float
   lon        Float
 
-  location   Unsupported("geography(Point,4326)")?
+  location Unsupported("geography(Point,4326)")?
 
   holes       Int?
   par         Int?
@@ -102,19 +105,21 @@ model Course {
   phone       String?
   description String?
 
-  source     String   @default("csv")
-  osmId      String?
-  verified   Boolean  @default(false)
-  active     Boolean  @default(true)
+  source   String  @default("csv")
+  osmId    String?
+  verified Boolean @default(false)
+  active   Boolean @default(true)
 
   posts   Post[]
   reviews Review[]
+
+  // Users following this course
+  followers CourseFollow[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([country, name, lat, lon], name: "course_unique_import_key")
-
   @@index([country])
   @@index([country, region])
   @@index([city])
@@ -180,6 +185,19 @@ model Like {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId])
+}
+
+model CourseFollow {
+  id        String   @id @default(cuid())
+  userId    String
+  courseId  String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([courseId])
 }
 
 model Review {
