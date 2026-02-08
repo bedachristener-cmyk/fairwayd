@@ -4,3 +4,7 @@ dist
 .env.*
 apps/**/node_modules
 apps/**/dist
+data/
+*.csv
+*.xlsx
+
