@@ -207,4 +207,30 @@ export class CoursesService {
       where: { userId, courseId },
     });
   }
+
+  async listFollowedCourses(userId: string) {
+    const rows = await this.prisma.courseFollow.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        course: {
+          select: {
+            id: true,
+            name: true,
+            lat: true,
+            lon: true,
+            city: true,
+            country: true,
+            region: true,
+            postalCode: true,
+            website: true,
+            holes: true,
+            access: true,
+          },
+        },
+      },
+    });
+
+    return rows.map((r) => r.course);
+  }
 }

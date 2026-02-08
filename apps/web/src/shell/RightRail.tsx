@@ -11,6 +11,12 @@ type Course = {
   name: string;
   lat: number;
   lon: number;
+
+  city?: string | null;
+  country?: string | null;
+  website?: string | null;
+  holes?: number | null;
+  access?: string | null;
 };
 
 const DEFAULT_CENTER = { lat: 47.5596, lon: 7.5886 };
@@ -67,16 +73,89 @@ function RecenterMap({
   return null;
 }
 
+function CourseBadge() {
+  return (
+    <span
+      title="Course"
+      style={{
+        width: 18,
+        height: 18,
+        borderRadius: 999,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "rgba(0,255,128,.95)",
+        border: "2px solid rgba(01, 15, 15, 0.65)",
+        boxShadow: "0 6px 18px rgba(0,255,128,.35)",
+        position: "relative",
+        flex: "0 0 auto",
+      }}
+    >
+      <span
+        style={{
+          position: "absolute",
+          left: 7,
+          top: 3,
+          width: 2,
+          height: 10,
+          background: "black",
+        }}
+      />
+      <span
+        style={{
+          position: "absolute",
+          left: 9,
+          top: 3,
+          width: 6,
+          height: 5,
+          background: "red",
+          clipPath: "polygon(0 0, 100% 50%, 0 100%)",
+        }}
+      />
+    </span>
+  );
+}
+
+function Row({ label, value }: { label: string; value?: React.ReactNode }) {
+  if (!value) return null;
+  return (
+    <div style={{ display: "flex", gap: 10, fontSize: 13 }}>
+      <div style={{ width: 84, color: "var(--sub)", fontWeight: 800 }}>
+        {label}
+      </div>
+      <div style={{ color: "var(--text)", fontWeight: 800 }}>{value}</div>
+    </div>
+  );
+}
+
+function AccessBadge({ access }: { access?: string | null }) {
+  if (!access) return null;
+  return (
+    <span
+      style={{
+        padding: "4px 10px",
+        borderRadius: 999,
+        border: "1px solid var(--border)",
+        background: "var(--muted)",
+        fontSize: 12,
+        fontWeight: 900,
+      }}
+    >
+      {String(access).toUpperCase()}
+    </span>
+  );
+}
+
+function parseCourseList(data: any): Course[] {
+  if (Array.isArray(data)) return data as Course[];
+  if (Array.isArray(data?.items)) return data.items as Course[];
+  return [];
+}
+
 export default function RightRail() {
   const { selectedCourse, clearSelectedCourse, setSelectedCourse } =
     useSelectedCourse();
-
-  const auth = useAuth() as any;
-  const token =
-    auth?.token ||
-    localStorage.getItem("fairwayd_token") ||
-    localStorage.getItem("token") ||
-    "";
+  const { token } = useAuth();
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [center, setCenter] = useState(DEFAULT_CENTER);
@@ -84,11 +163,20 @@ export default function RightRail() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
 
+  // NEW: count for /following button
+  const [followingCount, setFollowingCount] = useState<number | null>(null);
+
+  // Load some courses for markers (fallback)
   useEffect(() => {
     const load = async () => {
-      const res = await fetch(`${API_BASE}/courses`);
-      if (!res.ok) return;
-      setCourses(await res.json());
+      try {
+        const res = await fetch(`${API_BASE}/courses`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setCourses(Array.isArray(data) ? data : []);
+      } catch {
+        // ignore
+      }
     };
     load();
   }, []);
@@ -99,41 +187,136 @@ export default function RightRail() {
     }
   }, [selectedCourse]);
 
+  // Hydrate selected course with details if we only have id/name/lat/lon
+  useEffect(() => {
+    if (!selectedCourse?.id) return;
+    if (courses.length === 0) return;
+
+    const full = courses.find((c) => c.id === selectedCourse.id);
+    if (!full) return;
+
+    const missingDetails =
+      (selectedCourse.city == null && full.city != null) ||
+      (selectedCourse.country == null && full.country != null) ||
+      (selectedCourse.website == null && full.website != null) ||
+      (selectedCourse.holes == null && full.holes != null) ||
+      (selectedCourse.access == null && full.access != null);
+
+    if (!missingDetails) return;
+
+    setSelectedCourse({
+      ...selectedCourse,
+      ...full,
+    });
+  }, [selectedCourse?.id, selectedCourse, courses, setSelectedCourse]);
+
+  // NEW: Load count of followed courses (for button label)
+  useEffect(() => {
+    const run = async () => {
+      if (!token) {
+        setFollowingCount(null);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/courses/me/following`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          setFollowingCount(null);
+          return;
+        }
+        const data = await res.json();
+        const list = parseCourseList(data);
+        setFollowingCount(list.length);
+      } catch {
+        setFollowingCount(null);
+      }
+    };
+
+    run();
+  }, [token]);
+
+  // Following status for selected course
   useEffect(() => {
     const run = async () => {
       if (!selectedCourse?.id || !token) {
         setIsFollowing(false);
         return;
       }
-      const res = await fetch(
-        `${API_BASE}/courses/${selectedCourse.id}/following`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      if (!res.ok) return;
-      const data = await res.json();
-      setIsFollowing(!!data?.following);
+      try {
+        const res = await fetch(
+          `${API_BASE}/courses/${selectedCourse.id}/following`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        setIsFollowing(!!data?.following);
+      } catch {
+        // ignore
+      }
     };
     run();
   }, [selectedCourse?.id, token]);
 
   const toggleFollow = async () => {
-    if (!selectedCourse?.id) return;
+    if (!selectedCourse?.id || !token || followBusy) return;
 
-    const next = !isFollowing;
+    const prev = isFollowing;
+    const next = !prev;
+
+    // optimistic UI
     setIsFollowing(next);
-
-    await fetch(`${API_BASE}/courses/${selectedCourse.id}/follow`, {
-      method: next ? "POST" : "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
+    setFollowBusy(true);
+    setFollowingCount((n) => {
+      if (n == null) return n;
+      return next ? n + 1 : Math.max(0, n - 1);
     });
+
+    try {
+      const res = await fetch(
+        `${API_BASE}/courses/${selectedCourse.id}/follow`,
+        {
+          method: next ? "POST" : "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      if (!res.ok) {
+        // rollback
+        setIsFollowing(prev);
+        setFollowingCount((n) => {
+          if (n == null) return n;
+          return prev ? n + 1 : Math.max(0, n - 1);
+        });
+      }
+    } catch {
+      // rollback
+      setIsFollowing(prev);
+      setFollowingCount((n) => {
+        if (n == null) return n;
+        return prev ? n + 1 : Math.max(0, n - 1);
+      });
+    } finally {
+      setFollowBusy(false);
+    }
   };
 
   const markers = useMemo(() => {
-    if (selectedCourse) {
-      return [selectedCourse];
-    }
+    if (selectedCourse) return [selectedCourse];
     return courses.slice(0, 80);
   }, [selectedCourse, courses]);
+
+  const locationText = selectedCourse
+    ? [selectedCourse.city, selectedCourse.country].filter(Boolean).join(", ")
+    : "";
+
+  const websiteHost = selectedCourse?.website
+    ? selectedCourse.website.replace(/^https?:\/\//, "")
+    : "";
+
+  const followingLabel =
+    followingCount == null ? "Following" : `Following (${followingCount})`;
 
   return (
     <div
@@ -157,6 +340,10 @@ export default function RightRail() {
             Open
           </Link>
 
+          <Link to="/following" style={{ ...pill, textDecoration: "none" }}>
+            {followingLabel}
+          </Link>
+
           {selectedCourse && (
             <button
               onClick={() => {
@@ -164,6 +351,7 @@ export default function RightRail() {
                 setCenter(DEFAULT_CENTER);
               }}
               style={{ ...pill }}
+              type="button"
             >
               Clear
             </button>
@@ -171,37 +359,11 @@ export default function RightRail() {
         </div>
       </div>
 
-      {selectedCourse ? (
-        <div
-          style={{
-            marginTop: 10,
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-          }}
-        >
-          <div style={{ fontSize: 13 }}>
-            <b>Selected:</b> {selectedCourse.name}
-          </div>
-
-          <button
-            onClick={toggleFollow}
-            disabled={followBusy}
-            style={{
-              marginLeft: "auto",
-              ...pill,
-              background: isFollowing ? "rgba(0,255,128,.18)" : "var(--muted)",
-              fontWeight: 900,
-            }}
-          >
-            {isFollowing ? "✓ Following" : "+ Follow"}
-          </button>
-        </div>
-      ) : (
+      {!selectedCourse ? (
         <div style={{ marginTop: 10, fontSize: 13, color: "var(--sub)" }}>
           Select a course by clicking a marker.
         </div>
-      )}
+      ) : null}
 
       <div
         style={{
@@ -230,9 +392,7 @@ export default function RightRail() {
               position={[c.lat, c.lon]}
               icon={golfIcon}
               eventHandlers={{
-                click: () => {
-                  setSelectedCourse(c);
-                },
+                click: () => setSelectedCourse(c),
               }}
             >
               <Popup>
@@ -242,6 +402,83 @@ export default function RightRail() {
           ))}
         </MapContainer>
       </div>
+
+      {selectedCourse ? (
+        <div
+          style={{
+            marginTop: 12,
+            padding: 12,
+            borderRadius: 14,
+            border: "1px solid var(--border)",
+            background: "var(--muted)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <CourseBadge />
+            <div style={{ fontSize: 14, fontWeight: 950 }}>
+              {selectedCourse.name}
+            </div>
+          </div>
+
+          {selectedCourse.access ? (
+            <div style={{ marginTop: 6 }}>
+              <AccessBadge access={selectedCourse.access} />
+            </div>
+          ) : null}
+
+          <div style={{ marginTop: 8 }}>
+            <button
+              onClick={toggleFollow}
+              disabled={followBusy || !token}
+              style={{
+                ...pill,
+                width: "100%",
+                background: isFollowing ? "rgba(0,255,128,.18)" : "transparent",
+                fontWeight: 900,
+                opacity: !token ? 0.6 : 1,
+                cursor: !token ? "not-allowed" : "pointer",
+              }}
+              type="button"
+              title={!token ? "Please login" : "Follow course"}
+            >
+              {isFollowing ? "✓ Following" : "+ Follow"}
+            </button>
+          </div>
+
+          <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
+            <Row label="Ort" value={locationText || undefined} />
+
+            <Row
+              label="Web"
+              value={
+                selectedCourse.website ? (
+                  <a
+                    href={selectedCourse.website}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      color: "var(--text)",
+                      textDecoration: "underline",
+                      fontWeight: 900,
+                    }}
+                  >
+                    {websiteHost}
+                  </a>
+                ) : undefined
+              }
+            />
+
+            <Row
+              label="Löcher"
+              value={
+                typeof selectedCourse.holes === "number"
+                  ? String(selectedCourse.holes)
+                  : undefined
+              }
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -253,4 +490,5 @@ const pill: React.CSSProperties = {
   background: "transparent",
   color: "var(--text)",
   fontSize: 12,
+  fontWeight: 900,
 };

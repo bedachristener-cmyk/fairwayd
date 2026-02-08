@@ -149,6 +149,9 @@ export class UsersService {
     if (!user) throw new NotFoundException('User not found');
     return user;
   }
+  async findById(id: string) {
+    return this.prisma.user.findUnique({ where: { id } });
+  }
 
   async getPostsByHandle(viewerUserId: string, handle: string) {
     const safeHandle = normalizeHandle(handle);

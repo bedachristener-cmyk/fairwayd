@@ -89,14 +89,9 @@ export default function FeedPage() {
   const { selectedCourse, setSelectedCourse, clearSelectedCourse } =
     useSelectedCourse();
 
-  const auth = useAuth() as any;
-  const token =
-    (auth?.token as string) ||
-    localStorage.getItem("fairwayd_token") ||
-    localStorage.getItem("token") ||
-    "";
-
-  const handle = localStorage.getItem("fairwayd_handle") || "me";
+  const { token, user, loading, logout, isAuthenticated } = useAuth();
+  const handle =
+    user?.handle || localStorage.getItem("fairwayd_handle") || "me";
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -113,7 +108,7 @@ export default function FeedPage() {
 
   const draftRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // --- Load courses once (for dropdown)
+  // --- Load courses once (dropdown)
   useEffect(() => {
     const run = async () => {
       try {
@@ -141,28 +136,43 @@ export default function FeedPage() {
 
   // --- Load feed
   const loadFeed = useCallback(async () => {
+    if (!token) {
+      setPosts([]);
+      return;
+    }
+
     try {
       setErr(null);
-      const headers: HeadersInit = token
-        ? { Authorization: `Bearer ${token}` }
-        : {};
-      const res = await fetch(`${API_BASE}/posts/feed`, { headers });
+      const res = await fetch(`${API_BASE}/posts/feed`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        // Token ist ungültig (z.B. nach DB reset) => sauber abmelden
+        logout();
+        setPosts([]);
+        return;
+      }
+
       if (!res.ok) {
         const t = await res.text().catch(() => "");
         throw new Error(`HTTP ${res.status} ${res.statusText} ${t}`.trim());
       }
+
       const data = await res.json();
       setPosts(Array.isArray(data?.items) ? data.items : []);
     } catch (e: any) {
       setErr(e?.message ?? "Failed to load feed");
     }
-  }, [token]);
+  }, [token, logout]);
 
   useEffect(() => {
+    if (loading) return;
+    if (!isAuthenticated) return;
     loadFeed();
-  }, [loadFeed]);
+  }, [loading, isAuthenticated, loadFeed]);
 
-  // Focus composer when course gets selected (map/post click)
+  // Focus composer when course gets selected
   useEffect(() => {
     if (!selectedCourse) return;
     const t = window.setTimeout(() => {
@@ -229,6 +239,11 @@ export default function FeedPage() {
         body: fd,
       });
 
+      if (res.status === 401 || res.status === 403) {
+        logout();
+        throw new Error("Unauthorized. Please login again.");
+      }
+
       if (!res.ok) {
         const t = await res.text().catch(() => "");
         throw new Error(`HTTP ${res.status} ${res.statusText} ${t}`.trim());
@@ -252,6 +267,21 @@ export default function FeedPage() {
     }
   };
 
+  // While booting or not logged in
+  if (loading) return null;
+
+  if (!isAuthenticated) {
+    return (
+      <div style={{ display: "grid", gap: 12 }}>
+        <Card title="Feed">
+          <div style={{ color: "var(--sub)", fontSize: 13 }}>
+            Bitte neu einloggen (DB Reset hat den alten Token ungültig gemacht).
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "grid", gap: 12 }}>
       {err && (
@@ -271,12 +301,7 @@ export default function FeedPage() {
       <Card title="Feed">
         {/* ===== Sticky Composer ===== */}
         <div
-          style={{
-            position: "sticky",
-            top: 12,
-            zIndex: 20,
-            paddingBottom: 12,
-          }}
+          style={{ position: "sticky", top: 12, zIndex: 20, paddingBottom: 12 }}
         >
           <div
             style={{

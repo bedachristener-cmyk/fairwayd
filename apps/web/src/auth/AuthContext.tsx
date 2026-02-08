@@ -12,13 +12,14 @@ type Me = {
   name?: string | null;
   provider?: string | null;
   createdAt?: string;
+  avatarUrl?: string | null;
 };
 
 type AuthState = {
   token: string | null;
   user: Me | null;
   loading: boolean;
-  isAuthenticated: boolean;
+  isAuthenticated: boolean; // => token vorhanden (nicht "user geladen")
   login: (token: string) => void;
   logout: () => void;
   refreshMe: () => Promise<void>;
@@ -42,9 +43,14 @@ function loadTokenFromStorage() {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [token, setToken] = useState<string | null>(null);
+  // ✅ Token synchron initialisieren => kein Redirect-Race beim direkten Aufruf
+  const [token, setToken] = useState<string | null>(() =>
+    loadTokenFromStorage(),
+  );
   const [user, setUser] = useState<Me | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  // loading = "wir prüfen /users/me" (nur wenn token vorhanden)
+  const [loading, setLoading] = useState<boolean>(!!token);
 
   const logout = () => {
     setToken(null);
@@ -59,7 +65,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(STORAGE_KEY, t);
   };
 
-  // Optional: keep for debugging / legacy screens
   const refreshMe = async () => {
     if (!token) {
       setUser(null);
@@ -67,55 +72,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const res = await fetch(`${API_BASE}/auth/me`, {
+      const res = await fetch(`${API_BASE}/users/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // If this endpoint isn't fully wired, don't break the session;
-      // onboarding uses /users/me anyway.
-      if (!res.ok) {
+      // Token exists but no longer valid (e.g., DB reset => user missing)
+      if (res.status === 401 || res.status === 403) {
+        logout();
         return;
       }
 
-      const data = await res.json();
+      if (!res.ok) {
+        setUser(null);
+        return;
+      }
+
+      const data = (await res.json()) as Me;
       setUser(data);
     } catch {
-      // don't hard-clear user; token is source of truth
-      return;
+      setUser(null);
     }
   };
 
-  // Restore token once on boot
+  // ✅ Wenn token sich ändert: user laden/prüfen
   useEffect(() => {
-    try {
-      const saved = loadTokenFromStorage();
-      setToken(saved);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    let cancelled = false;
 
-  // If token changes: clear stale user; optionally refresh background
-  useEffect(() => {
-    if (!token) {
-      setUser(null);
-      return;
-    }
-    refreshMe();
+    (async () => {
+      if (!token) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      await refreshMe();
+      if (cancelled) return;
+      setLoading(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  // ✅ Authenticated = Token vorhanden.
+  // OnboardingGuard sorgt dann dafür, dass /users/me ok ist und Terms/Profile stimmen.
+  const isAuthenticated = !!token;
 
   const value = useMemo<AuthState>(
     () => ({
       token,
       user,
       loading,
-      isAuthenticated: !!token,
+      isAuthenticated,
       login,
       logout,
       refreshMe,
     }),
-    [token, user, loading],
+    [token, user, loading, isAuthenticated],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

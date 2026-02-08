@@ -1,19 +1,25 @@
+import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 
 export default function ProtectedRoute({
   children,
 }: {
-  children: JSX.Element;
+  children: React.ReactNode;
 }) {
-  const { loading, isAuthenticated } = useAuth();
   const loc = useLocation();
+  const { loading, isAuthenticated } = useAuth();
 
-  if (loading) return <div style={{ padding: 20 }}>Checking session…</div>;
+  // Wichtig: erst warten bis der Token aus localStorage restored ist
+  if (loading) {
+    return (
+      <div style={{ padding: 16, fontFamily: "system-ui" }}>Loading...</div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/" replace state={{ from: loc.pathname }} />;
   }
 
-  return children;
+  return <>{children}</>;
 }

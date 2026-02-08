@@ -1,6 +1,17 @@
-import { Controller, Get, Query, Param } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Query,
+  Param,
+  Post,
+  Delete,
+  Req,
+  UseGuards,
+  NotFoundException,
+} from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CoursesService } from './courses.service';
+import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('courses')
 @Controller('courses')
@@ -65,9 +76,74 @@ export class CoursesController {
     return this.coursesService.findNearby({ lat, lon, radiusM });
   }
 
+  // ------------------------------------------------------------------
+  // Current user's followed courses (JWT)
+  // IMPORTANT: must be BEFORE @Get(':id')
+  // ------------------------------------------------------------------
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('me/following')
+  @ApiOperation({ summary: 'List courses current user follows' })
+  async myFollowing(@Req() req: any) {
+    const userId = req?.user?.userId ?? req?.user?.id;
+    if (!userId) return { items: [] };
+
+    const items = await this.coursesService.listFollowedCourses(userId);
+    return { items };
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a course by id' })
   getById(@Param('id') id: string) {
     return this.coursesService.getById(id);
+  }
+
+  // ------------------------------------------------------------------
+  // Course Follow (JWT)
+  // ------------------------------------------------------------------
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get(':id/following')
+  @ApiOperation({ summary: 'Is current user following this course?' })
+  async isFollowing(@Req() req: any, @Param('id') courseId: string) {
+    const userId = req?.user?.userId ?? req?.user?.id;
+    if (!userId) return { following: false };
+
+    const exists = await this.coursesService.getById(courseId);
+    if (!exists) throw new NotFoundException('Course not found');
+
+    const following = await this.coursesService.isFollowingCourse(
+      userId,
+      courseId,
+    );
+    return { following };
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post(':id/follow')
+  @ApiOperation({ summary: 'Follow a course' })
+  async follow(@Req() req: any, @Param('id') courseId: string) {
+    const userId = req?.user?.userId ?? req?.user?.id;
+    if (!userId) return { ok: false };
+
+    const exists = await this.coursesService.getById(courseId);
+    if (!exists) throw new NotFoundException('Course not found');
+
+    await this.coursesService.followCourse(userId, courseId);
+    return { ok: true };
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Delete(':id/follow')
+  @ApiOperation({ summary: 'Unfollow a course' })
+  async unfollow(@Req() req: any, @Param('id') courseId: string) {
+    const userId = req?.user?.userId ?? req?.user?.id;
+    if (!userId) return { ok: false };
+
+    const exists = await this.coursesService.getById(courseId);
+    if (!exists) throw new NotFoundException('Course not found');
+
+    await this.coursesService.unfollowCourse(userId, courseId);
+    return { ok: true };
   }
 }

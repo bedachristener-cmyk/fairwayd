@@ -21,8 +21,9 @@ import { useMe } from "./auth/useMe";
 import TermsGate from "./onboarding/TermsGate";
 import ProfileSetup from "./onboarding/ProfileSetup";
 
-// NEW
+// Pages
 import ProfilePage from "./pages/ProfilePage";
+import FollowingCoursesPage from "./pages/FollowingCoursesPage"; // ✅ NEW
 
 /**
  * Wrap any protected page with this:
@@ -151,6 +152,18 @@ export default function App() {
                   <ProtectedRoute>
                     <OnboardingGuard>
                       <FeedPage />
+                    </OnboardingGuard>
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* ✅ NEW: Following courses */}
+              <Route
+                path="/following"
+                element={
+                  <ProtectedRoute>
+                    <OnboardingGuard>
+                      <FollowingCoursesPage />
                     </OnboardingGuard>
                   </ProtectedRoute>
                 }

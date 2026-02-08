@@ -15,14 +15,11 @@ if (!process.env.DATABASE_URL) {
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 
+// IMPORTANT: pass adapter into PrismaClient
 const prisma = new PrismaClient({
   adapter,
   log: ['error'],
 });
-
-// Prisma braucht bei dir eine nicht-leere Options-Struktur.
-// Wir geben eine harmlose Option mit, DB-URL kommt aus DATABASE_URL.
-const prisma = new PrismaClient({ log: ['error'] });
 
 function norm(v: any): string {
   return String(v ?? '').trim();
@@ -46,8 +43,7 @@ function toAccess(v: any): CourseAccess | null {
   const s = norm(v).toUpperCase();
   if (!s) return null;
 
-  // NOTE: Diese Enum-Namen (PUBLIC/PRIVATE/...) muessen zu deinem Prisma enum CourseAccess passen.
-  // Wenn dein Enum anders heisst, schick mir kurz den enum-Block, dann passe ich es 1:1 an.
+  // Map common values to your enum
   if (s === 'PUBLIC' || s === 'ÖFFENTLICH' || s === 'OEFFENTLICH')
     return CourseAccess.PUBLIC as any;
   if (s === 'PRIVATE' || s === 'PRIVAT') return CourseAccess.PRIVATE as any;
@@ -68,6 +64,12 @@ async function main() {
   }
 
   const filePath = path.resolve(fileArg);
+  if (!fs.existsSync(filePath)) {
+    console.error(`File not found: ${filePath}`);
+    process.exit(1);
+  }
+
+  console.log(`Reading CSV: ${filePath}`);
   const csv = fs.readFileSync(filePath, 'utf-8');
 
   const records = parse(csv, {
@@ -77,10 +79,14 @@ async function main() {
     trim: true,
   }) as Array<Record<string, any>>;
 
+  console.log(`Parsed records: ${records.length}`);
+
   let upserted = 0;
   let skipped = 0;
 
-  for (const r of records) {
+  for (let i = 0; i < records.length; i++) {
+    const r = records[i];
+
     const country = norm(r.country);
     const name = norm(r.name);
     const city = norm(r.city) || null;
@@ -99,44 +105,59 @@ async function main() {
       continue;
     }
 
-    await prisma.course.upsert({
-      where: {
-        course_unique_import_key: {
+    try {
+      await prisma.course.upsert({
+        where: {
+          course_unique_import_key: {
+            country,
+            name,
+            lat,
+            lon,
+          },
+        },
+        create: {
           country,
           name,
+          city,
+          postalCode,
+          region,
           lat,
           lon,
+          holes,
+          access,
+          website,
+          source: 'csv',
+          verified: false,
+          active: true,
         },
-      },
-      create: {
-        country,
-        name,
-        city,
-        postalCode,
-        region,
-        lat,
-        lon,
-        holes,
-        access,
-        website,
-        source: 'csv',
-        verified: false,
-        active: true,
-      },
-      update: {
-        city,
-        postalCode,
-        region,
-        holes,
-        access,
-        website,
-        active: true,
-      },
-    });
+        update: {
+          city,
+          postalCode,
+          region,
+          holes,
+          access,
+          website,
+          active: true,
+        },
+      });
 
-    upserted++;
+      upserted++;
+
+      if (upserted % 1000 === 0) {
+        console.log(
+          `Upserted so far: ${upserted} (row ${i + 1}/${records.length})`,
+        );
+      }
+    } catch (e: any) {
+      console.error(
+        `Upsert failed at row ${i + 1} (country="${country}", name="${name}")`,
+        e?.message ?? e,
+      );
+      throw e;
+    }
   }
 
+  console.log(`Done.`);
   console.log(`Upserted: ${upserted}`);
   console.log(`Skipped (missing country/name/lat/lon): ${skipped}`);
 }
@@ -147,6 +168,10 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect();
-    await pool.end();
+    try {
+      await prisma.$disconnect();
+    } catch {}
+    try {
+      await pool.end();
+    } catch {}
   });
