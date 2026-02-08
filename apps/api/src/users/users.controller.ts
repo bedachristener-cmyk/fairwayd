@@ -4,16 +4,19 @@ import {
   Controller,
   Get,
   Post,
+  Delete,
   Req,
   UploadedFile,
   UseGuards,
   UseInterceptors,
   Param,
+  NotFoundException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 
 function safeExt(original: string) {
@@ -24,6 +27,8 @@ function safeExt(original: string) {
   return '';
 }
 
+@ApiTags('users')
+@ApiBearerAuth('jwt')
 @Controller('users')
 export class UsersController {
   constructor(private readonly users: UsersService) {}
@@ -34,7 +39,8 @@ export class UsersController {
   @UseGuards(AuthGuard('jwt'))
   @Get('me')
   async me(@Req() req: any) {
-    return this.users.getMe(req.user.userId);
+    const userId = req?.user?.userId ?? req?.user?.id;
+    return this.users.getMe(userId);
   }
 
   // ---------------------------------------------------------
@@ -43,10 +49,10 @@ export class UsersController {
   @UseGuards(AuthGuard('jwt'))
   @Post('me/accept-terms')
   async acceptTerms(@Req() req: any, @Body() body: { termsVersion?: string }) {
-    // default version if frontend doesn't send one
+    const userId = req?.user?.userId ?? req?.user?.id;
     const version = (body?.termsVersion ?? 'v1').trim();
     if (!version) throw new BadRequestException('Missing termsVersion');
-    return this.users.acceptTerms(req.user.userId, version);
+    return this.users.acceptTerms(userId, version);
   }
 
   // ---------------------------------------------------------
@@ -58,17 +64,15 @@ export class UsersController {
     @Req() req: any,
     @Body() body: { handle?: string; name?: string | null },
   ) {
+    const userId = req?.user?.userId ?? req?.user?.id;
+
     const handle = body?.handle?.trim();
     if (!handle) throw new BadRequestException('Missing handle');
 
-    // Keep name optional; trim if provided
     const name =
       typeof body?.name === 'string' ? body.name.trim() : (body?.name ?? null);
 
-    return this.users.updateProfile(req.user.userId, {
-      handle,
-      name,
-    });
+    return this.users.updateProfile(userId, { handle, name });
   }
 
   // ---------------------------------------------------------
@@ -82,11 +86,11 @@ export class UsersController {
         destination: 'uploads/avatars',
         filename: (req: any, file, cb) => {
           const ext = safeExt(file.originalname) || '.jpg';
-          const userId = req.user.userId;
+          const userId = req?.user?.userId ?? req?.user?.id;
           cb(null, `${userId}-${Date.now()}${ext}`);
         },
       }),
-      limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+      limits: { fileSize: 5 * 1024 * 1024 },
       fileFilter: (_req, file, cb) => {
         const ext = safeExt(file.originalname);
         if (!ext) {
@@ -104,30 +108,119 @@ export class UsersController {
     @Req() req: any,
     @UploadedFile() file?: Express.Multer.File,
   ) {
+    const userId = req?.user?.userId ?? req?.user?.id;
     if (!file) throw new BadRequestException("Missing file field 'avatar'");
 
     const avatarUrl = `/uploads/avatars/${file.filename}`;
-    return this.users.setAvatar(req.user.userId, avatarUrl);
+    return this.users.setAvatar(userId, avatarUrl);
+  }
+
+  // ---------------------------------------------------------
+  // FOLLOW (by userId) — avoid conflict with :handle routes
+  // ---------------------------------------------------------
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('id/:id/follow')
+  @ApiOperation({
+    summary: 'Follow or request to follow a user (private => pending)',
+  })
+  async followUser(@Req() req: any, @Param('id') targetUserId: string) {
+    const meId = req?.user?.userId ?? req?.user?.id;
+    if (!meId) throw new BadRequestException('Missing user id');
+
+    if (meId === targetUserId) {
+      throw new BadRequestException('Cannot follow yourself');
+    }
+
+    return this.users.followUser(meId, targetUserId);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Delete('id/:id/follow')
+  @ApiOperation({ summary: 'Unfollow user OR cancel follow request' })
+  async unfollowUser(@Req() req: any, @Param('id') targetUserId: string) {
+    const meId = req?.user?.userId ?? req?.user?.id;
+    if (!meId) throw new BadRequestException('Missing user id');
+
+    if (meId === targetUserId) {
+      throw new BadRequestException('Cannot unfollow yourself');
+    }
+
+    await this.users.unfollowUser(meId, targetUserId);
+    return { ok: true };
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('id/:id/following-status')
+  @ApiOperation({ summary: 'Get follow status for a target userId' })
+  async followingStatus(@Req() req: any, @Param('id') targetUserId: string) {
+    const meId = req?.user?.userId ?? req?.user?.id;
+    if (!meId) return { status: 'NONE' };
+
+    if (meId === targetUserId) return { status: 'SELF' };
+
+    const status = await this.users.getFollowStatus(meId, targetUserId);
+    return { status };
+  }
+
+  // ---------------------------------------------------------
+  // FOLLOW REQUESTS (for private accounts)
+  // ---------------------------------------------------------
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('me/follow-requests')
+  @ApiOperation({ summary: 'List pending follow requests for current user' })
+  async myFollowRequests(@Req() req: any) {
+    const meId = req?.user?.userId ?? req?.user?.id;
+    if (!meId) return { items: [] };
+
+    const items = await this.users.listMyFollowRequests(meId);
+    return { items };
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('me/follow-requests/:followerId/accept')
+  @ApiOperation({ summary: 'Accept a follow request' })
+  async acceptFollow(@Req() req: any, @Param('followerId') followerId: string) {
+    const meId = req?.user?.userId ?? req?.user?.id;
+    if (!meId) throw new BadRequestException('Missing user id');
+
+    const ok = await this.users.acceptFollowRequest(meId, followerId);
+    if (!ok) throw new NotFoundException('Request not found');
+
+    return { ok: true };
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('me/follow-requests/:followerId/reject')
+  @ApiOperation({ summary: 'Reject a follow request' })
+  async rejectFollow(@Req() req: any, @Param('followerId') followerId: string) {
+    const meId = req?.user?.userId ?? req?.user?.id;
+    if (!meId) throw new BadRequestException('Missing user id');
+
+    const ok = await this.users.rejectFollowRequest(meId, followerId);
+    if (!ok) throw new NotFoundException('Request not found');
+
+    return { ok: true };
   }
 
   // ---------------------------------------------------------
   // Profile by handle (authenticated for now)
-  // Wichtig: nach 'me' definieren, sonst wuerde "me" als :handle matchen
+  // Wichtig:
+  // - posts route BEFORE handle route
+  // - keep after "me" routes, otherwise "me" could match :handle
   // ---------------------------------------------------------
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get(':handle/posts')
+  async getPostsByHandle(@Req() req: any, @Param('handle') handle: string) {
+    const viewerId = req?.user?.userId ?? req?.user?.id;
+    return this.users.getPostsByHandle(viewerId, handle);
+  }
+
   @UseGuards(AuthGuard('jwt'))
   @Get(':handle')
   async getByHandle(@Param('handle') handle: string) {
     return this.users.getByHandle(handle);
-  }
-
-  // ---------------------------------------------------------
-  // Posts by handle (viewer aware)
-  // - self: PUBLIC + FOLLOWERS
-  // - others: PUBLIC only
-  // ---------------------------------------------------------
-  @UseGuards(AuthGuard('jwt'))
-  @Get(':handle/posts')
-  async getPostsByHandle(@Req() req: any, @Param('handle') handle: string) {
-    return this.users.getPostsByHandle(req.user.userId, handle);
   }
 }

@@ -1,10 +1,11 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { AccountPrivacy, FollowStatus, Prisma } from '@prisma/client';
 
 function normalizeHandle(input: string) {
   return (input ?? '')
@@ -18,6 +19,10 @@ function normalizeHandle(input: string) {
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
+
+  // =========================================================
+  // Me + profile basics
+  // =========================================================
 
   async getMe(userId: string) {
     const me = await this.prisma.user.findUnique({
@@ -149,6 +154,7 @@ export class UsersService {
     if (!user) throw new NotFoundException('User not found');
     return user;
   }
+
   async findById(id: string) {
     return this.prisma.user.findUnique({ where: { id } });
   }
@@ -183,5 +189,142 @@ export class UsersService {
         images: { select: { id: true, url: true } },
       },
     });
+  }
+
+  // =========================================================
+  // Follow (Instagram-style: PUBLIC => ACCEPTED, PRIVATE => PENDING)
+  // =========================================================
+
+  private async mustGetUserPrivacy(userId: string) {
+    const u = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        privacy: true,
+        handle: true,
+        name: true,
+        avatarUrl: true,
+      },
+    });
+    if (!u) throw new NotFoundException('User not found');
+    return u;
+  }
+
+  async followUser(meId: string, targetUserId: string) {
+    if (!meId || !targetUserId)
+      throw new BadRequestException('Missing user id');
+    if (meId === targetUserId)
+      throw new BadRequestException('Cannot follow yourself');
+
+    const target = await this.mustGetUserPrivacy(targetUserId);
+
+    const desiredStatus =
+      target.privacy === AccountPrivacy.PUBLIC
+        ? FollowStatus.ACCEPTED
+        : FollowStatus.PENDING;
+
+    // idempotent: if already exists, update status accordingly
+    // note: if target switches from PRIVATE -> PUBLIC, a new follow will become ACCEPTED
+    const row = await this.prisma.follow.upsert({
+      where: {
+        followerId_followingId: { followerId: meId, followingId: targetUserId },
+      },
+      update: {
+        status: desiredStatus,
+        decidedAt: desiredStatus === FollowStatus.ACCEPTED ? new Date() : null,
+      },
+      create: {
+        followerId: meId,
+        followingId: targetUserId,
+        status: desiredStatus,
+        decidedAt: desiredStatus === FollowStatus.ACCEPTED ? new Date() : null,
+      },
+      select: { status: true },
+    });
+
+    return { status: row.status };
+  }
+
+  async unfollowUser(meId: string, targetUserId: string) {
+    if (!meId || !targetUserId)
+      throw new BadRequestException('Missing user id');
+    if (meId === targetUserId)
+      throw new BadRequestException('Cannot unfollow yourself');
+
+    // deleteMany => idempotent (also cancels pending request)
+    await this.prisma.follow.deleteMany({
+      where: { followerId: meId, followingId: targetUserId },
+    });
+  }
+
+  async getFollowStatus(meId: string, targetUserId: string) {
+    const row = await this.prisma.follow.findUnique({
+      where: {
+        followerId_followingId: { followerId: meId, followingId: targetUserId },
+      },
+      select: { status: true },
+    });
+
+    if (!row) return 'NONE';
+    if (row.status === FollowStatus.PENDING) return 'PENDING';
+    if (row.status === FollowStatus.ACCEPTED) return 'ACCEPTED';
+    return 'NONE';
+  }
+
+  // =========================================================
+  // Follow requests (for the current user)
+  // =========================================================
+
+  async listMyFollowRequests(meId: string) {
+    const rows = await this.prisma.follow.findMany({
+      where: { followingId: meId, status: FollowStatus.PENDING },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        follower: {
+          select: {
+            id: true,
+            handle: true,
+            name: true,
+            avatarUrl: true,
+            privacy: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    return rows.map((r) => ({
+      followerId: r.followerId,
+      createdAt: r.createdAt,
+      follower: r.follower,
+    }));
+  }
+
+  async acceptFollowRequest(meId: string, followerId: string) {
+    const res = await this.prisma.follow.updateMany({
+      where: {
+        followingId: meId,
+        followerId,
+        status: FollowStatus.PENDING,
+      },
+      data: {
+        status: FollowStatus.ACCEPTED,
+        decidedAt: new Date(),
+      },
+    });
+
+    return res.count > 0;
+  }
+
+  async rejectFollowRequest(meId: string, followerId: string) {
+    const res = await this.prisma.follow.deleteMany({
+      where: {
+        followingId: meId,
+        followerId,
+        status: FollowStatus.PENDING,
+      },
+    });
+
+    return res.count > 0;
   }
 }

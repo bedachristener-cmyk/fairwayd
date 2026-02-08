@@ -55,8 +55,16 @@ async function bootstrap() {
   // Swagger
   const config = new DocumentBuilder()
     .setTitle('Fairwayd API')
-    .setDescription('Backend API for Fairwayd')
+    .setDescription('Fairwayd Backend API')
     .setVersion('1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+      },
+      'jwt', // <- Name der Security
+    )
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

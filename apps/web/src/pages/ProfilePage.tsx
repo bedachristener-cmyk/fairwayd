@@ -40,6 +40,8 @@ type Post = {
   images?: PostImage[];
 };
 
+type FollowUiStatus = "NONE" | "PENDING" | "ACCEPTED" | "SELF" | "UNKNOWN";
+
 function Card({
   title,
   children,
@@ -79,15 +81,20 @@ function PillButton({
   children,
   onClick,
   disabled,
+  title,
+  style,
 }: {
   children: React.ReactNode;
   onClick: () => void;
   disabled?: boolean;
+  title?: string;
+  style?: React.CSSProperties;
 }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
+      title={title}
       style={{
         padding: "8px 14px",
         borderRadius: 999,
@@ -96,6 +103,7 @@ function PillButton({
         color: disabled ? "rgba(255,255,255,0.55)" : "var(--text)",
         cursor: disabled ? "default" : "pointer",
         fontWeight: 800,
+        ...style,
       }}
       type="button"
     >
@@ -228,6 +236,138 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  // -------------------------
+  // Follow state (only on handle profile, not self)
+  // -------------------------
+  const [followStatus, setFollowStatus] = useState<FollowUiStatus>("UNKNOWN");
+  const [followBusy, setFollowBusy] = useState(false);
+
+  const isSelf = useMemo(() => {
+    if (!me?.id || !profile?.id) return false;
+    return me.id === profile.id;
+  }, [me?.id, profile?.id]);
+
+  const loadFollowStatus = useCallback(async () => {
+    if (!token) {
+      setFollowStatus("UNKNOWN");
+      return;
+    }
+    if (mode !== "handle") {
+      setFollowStatus("SELF");
+      return;
+    }
+    if (!profile?.id) return;
+    if (me?.id && profile.id === me.id) {
+      setFollowStatus("SELF");
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `${API_BASE}/users/id/${encodeURIComponent(profile.id)}/following-status`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (!res.ok) {
+        setFollowStatus("UNKNOWN");
+        return;
+      }
+      const data = await res.json();
+      const s = String(data?.status ?? "").toUpperCase();
+
+      if (s === "ACCEPTED") setFollowStatus("ACCEPTED");
+      else if (s === "PENDING") setFollowStatus("PENDING");
+      else if (s === "NONE") setFollowStatus("NONE");
+      else if (s === "SELF") setFollowStatus("SELF");
+      else setFollowStatus("UNKNOWN");
+    } catch {
+      setFollowStatus("UNKNOWN");
+    }
+  }, [API_BASE, token, mode, profile?.id, me?.id]);
+
+  const toggleFollow = useCallback(async () => {
+    if (!token) {
+      setErr("Missing auth token. Please login again.");
+      return;
+    }
+    if (mode !== "handle") return;
+    if (!profile?.id) return;
+    if (me?.id && profile.id === me.id) return;
+    if (followBusy) return;
+
+    const currently = followStatus;
+    const isActive = currently === "ACCEPTED" || currently === "PENDING";
+    const nextOptimistic: FollowUiStatus = isActive ? "NONE" : "PENDING";
+
+    setFollowBusy(true);
+    setErr(null);
+    setFollowStatus(nextOptimistic);
+
+    try {
+      const res = await fetch(
+        `${API_BASE}/users/id/${encodeURIComponent(profile.id)}/follow`,
+        {
+          method: isActive ? "DELETE" : "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      if (!res.ok) {
+        // revert
+        setFollowStatus(currently);
+        const t = await res.text().catch(() => "");
+        throw new Error(
+          `Follow request failed. HTTP ${res.status} ${res.statusText} ${t}`.trim(),
+        );
+      }
+
+      // POST returns { status }, DELETE returns { ok:true }.
+      // After POST, status may be ACCEPTED for public accounts.
+      if (!isActive) {
+        const data = await res.json().catch(() => null);
+        const s = String(data?.status ?? "").toUpperCase();
+        if (s === "ACCEPTED") setFollowStatus("ACCEPTED");
+        else if (s === "PENDING") setFollowStatus("PENDING");
+        else setFollowStatus("PENDING");
+      } else {
+        setFollowStatus("NONE");
+      }
+    } catch (e: any) {
+      setErr(e?.message ?? "Follow action failed");
+    } finally {
+      setFollowBusy(false);
+    }
+  }, [token, mode, profile?.id, me?.id, followBusy, followStatus]);
+
+  const followLabel = useMemo(() => {
+    if (isSelf) return null;
+    if (followStatus === "ACCEPTED") return "✓ Following";
+    if (followStatus === "PENDING") return "Requested";
+    if (followStatus === "NONE") return "+ Follow";
+    if (followStatus === "UNKNOWN") return "+ Follow";
+    return null;
+  }, [followStatus, isSelf]);
+
+  const followDisabled = useMemo(() => {
+    if (!token) return true;
+    if (followBusy) return true;
+    if (mode !== "handle") return true;
+    if (!profile?.id) return true;
+    if (isSelf) return true;
+    return false;
+  }, [token, followBusy, mode, profile?.id, isSelf]);
+
+  const followButtonStyle: React.CSSProperties = useMemo(() => {
+    const base: React.CSSProperties = {};
+    if (followStatus === "ACCEPTED") {
+      base.background = "rgba(39,196,107,0.22)";
+    } else if (followStatus === "PENDING") {
+      base.background = "rgba(255,255,255,0.08)";
+    } else {
+      base.background = "rgba(0,0,0,0.18)";
+    }
+    return base;
+  }, [followStatus]);
+
   const loadProfile = useCallback(async () => {
     if (!targetHandle) return;
 
@@ -314,9 +454,18 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
     setProfile(null);
     setPosts([]);
     setErr(null);
+    setFollowStatus("UNKNOWN");
     if (!targetHandle) return;
     loadProfile();
   }, [targetHandle, loadProfile]);
+
+  useEffect(() => {
+    // once profile id is known, load follow status
+    if (mode !== "handle") return;
+    if (!profile?.id) return;
+    if (!token) return;
+    loadFollowStatus();
+  }, [mode, profile?.id, token, loadFollowStatus]);
 
   const title = useMemo(() => {
     if (profile?.handle) return `@${profile.handle}`;
@@ -375,7 +524,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
             avatarUrl={profile?.avatarUrl}
           />
 
-          <div style={{ minWidth: 0 }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <div
               style={{ fontWeight: 900, fontSize: 16, color: "var(--text)" }}
             >
@@ -388,6 +537,28 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                 : ""}
             </div>
           </div>
+
+          {/* Follow Button (only when viewing someone else) */}
+          {mode === "handle" && !isSelf && followLabel ? (
+            <PillButton
+              onClick={toggleFollow}
+              disabled={followDisabled}
+              title={
+                followStatus === "PENDING"
+                  ? "Follow request sent (click to cancel)"
+                  : followStatus === "ACCEPTED"
+                    ? "Following (click to unfollow)"
+                    : "Follow"
+              }
+              style={{
+                ...followButtonStyle,
+                minWidth: 120,
+                textAlign: "center",
+              }}
+            >
+              {followBusy ? "..." : followLabel}
+            </PillButton>
+          ) : null}
         </div>
       </Card>
 

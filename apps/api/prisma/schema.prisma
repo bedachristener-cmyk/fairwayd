@@ -30,6 +30,12 @@ enum CourseAccess {
   SEMI_PRIVATE
 }
 
+enum FollowStatus {
+  PENDING
+  ACCEPTED
+}
+
+
 model User {
   id        String         @id @default(cuid())
   email     String?        @unique
@@ -74,17 +80,21 @@ model AuthAccount {
 }
 
 model Follow {
-  id          String   @id @default(cuid())
+  id          String       @id @default(cuid())
   followerId  String
   followingId String
-  createdAt   DateTime @default(now())
+  status      FollowStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
+  decidedAt   DateTime?
 
   follower  User @relation("following", fields: [followerId], references: [id], onDelete: Cascade)
   following User @relation("followers", fields: [followingId], references: [id], onDelete: Cascade)
 
   @@unique([followerId, followingId])
   @@index([followingId])
+  @@index([followingId, status])
 }
+
 
 model Course {
   id         String  @id @default(cuid())
