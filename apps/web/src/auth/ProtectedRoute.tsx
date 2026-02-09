@@ -8,16 +8,19 @@ export default function ProtectedRoute({
   children: React.ReactNode;
 }) {
   const loc = useLocation();
-  const { loading, isAuthenticated } = useAuth();
+  const { loading, isAuthenticated, token } = useAuth() as any;
 
-  // Wichtig: erst warten bis der Token aus localStorage restored ist
+  // 1) Warten bis AuthContext fertig ist (Token aus Storage geladen etc.)
   if (loading) {
     return (
       <div style={{ padding: 16, fontFamily: "system-ui" }}>Loading...</div>
     );
   }
 
-  if (!isAuthenticated) {
+  // 2) Erst danach entscheiden
+  const authed = isAuthenticated ?? !!token;
+
+  if (!authed) {
     return <Navigate to="/" replace state={{ from: loc.pathname }} />;
   }
 

@@ -1,3 +1,4 @@
+import React from "react";
 import {
   BrowserRouter,
   Routes,
@@ -15,6 +16,7 @@ import FeedPage from "./pages/FeedPage";
 import AppShell from "./shell/AppShell";
 import { SelectedCourseProvider } from "./state/SelectedCourseContext";
 import LandingPage from "./pages/LandingPage";
+import FollowRequestsPage from "./pages/FollowRequestsPage";
 
 // Onboarding (frontend)
 import { useMe } from "./auth/useMe";
@@ -23,7 +25,7 @@ import ProfileSetup from "./onboarding/ProfileSetup";
 
 // Pages
 import ProfilePage from "./pages/ProfilePage";
-import FollowingCoursesPage from "./pages/FollowingCoursesPage"; // ✅ NEW
+import FollowingCoursesPage from "./pages/FollowingCoursesPage";
 
 /**
  * Wrap any protected page with this:
@@ -74,17 +76,15 @@ function TermsGatePage() {
   const loc: any = useLocation();
   const from = loc?.state?.from as string | undefined;
 
-  const { me, refresh } = useMe(true);
+  const { refresh } = useMe(true);
 
+  // IMPORTANT:
+  // Don't use `me` here after `refresh()` (stale closure risk).
+  // Just refresh, then route to profile setup; the OnboardingGuard will
+  // let the user through if profile is already complete.
   const afterAccepted = async () => {
     await refresh();
-
-    if (!me?.handle || !me?.avatarUrl) {
-      nav("/onboarding/profile", { replace: true, state: { from } });
-      return;
-    }
-
-    nav(from || "/feed", { replace: true });
+    nav("/onboarding/profile", { replace: true, state: { from } });
   };
 
   return <TermsGate onAccepted={afterAccepted} />;
@@ -157,13 +157,25 @@ export default function App() {
                 }
               />
 
-              {/* ✅ NEW: Following courses */}
+              {/* Following courses */}
               <Route
                 path="/following"
                 element={
                   <ProtectedRoute>
                     <OnboardingGuard>
                       <FollowingCoursesPage />
+                    </OnboardingGuard>
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Follow Requests */}
+              <Route
+                path="/follow-requests"
+                element={
+                  <ProtectedRoute>
+                    <OnboardingGuard>
+                      <FollowRequestsPage />
                     </OnboardingGuard>
                   </ProtectedRoute>
                 }

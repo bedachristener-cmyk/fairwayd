@@ -1,22 +1,33 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { FollowStatus, Visibility } from '@prisma/client';
 
 @Injectable()
 export class FeedService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getCourseFeed(userId: string) {
-    // 1) follower scope: me + following
+    // 1) follower scope: me + ACCEPTED following only
     const following = await this.prisma.follow.findMany({
-      where: { followerId: userId },
+      where: { followerId: userId, status: FollowStatus.ACCEPTED },
       select: { followingId: true },
     });
 
-    const ids = [userId, ...following.map((f) => f.followingId)];
+    const followingIds = following.map((f) => f.followingId);
 
-    // 2) get recent posts (a bit more than needed, then dedup by course)
+    // 2) get recent posts:
+    // - my posts: all visibilities (incl PRIVATE)
+    // - following posts: only PUBLIC/FOLLOWERS
     const posts = await this.prisma.post.findMany({
-      where: { userId: { in: ids } },
+      where: {
+        OR: [
+          { userId }, // my posts (incl PRIVATE)
+          {
+            userId: { in: followingIds },
+            visibility: { in: [Visibility.PUBLIC, Visibility.FOLLOWERS] },
+          },
+        ],
+      },
       orderBy: { createdAt: 'desc' },
       take: 200,
       select: {

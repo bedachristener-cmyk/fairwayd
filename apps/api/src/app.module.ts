@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { PostsModule } from './posts/posts.module';
 import { FeedModule } from './feed/feed.module';
 import { UsersModule } from './users/users.module';
+import { FollowsModule } from './follows/follows.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { UsersModule } from './users/users.module';
     PostsModule,
     FeedModule,
     UsersModule, // ✅ IMPORTANT: register /users routes
+    FollowsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

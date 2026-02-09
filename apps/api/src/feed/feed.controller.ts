@@ -9,6 +9,8 @@ export class FeedController {
   @UseGuards(AuthGuard('jwt'))
   @Get()
   async getFeed(@Req() req: any) {
-    return this.feed.getCourseFeed(req.user.userId);
+    return this.feed.getCourseFeed(
+      req.user.userId ?? req.user.id ?? req.user.sub,
+    );
   }
 }

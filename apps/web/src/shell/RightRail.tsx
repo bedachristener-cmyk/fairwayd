@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
@@ -152,6 +152,28 @@ function parseCourseList(data: any): Course[] {
   return [];
 }
 
+function RequestsBadge({ n }: { n: number }) {
+  if (!n || n <= 0) return null;
+  return (
+    <span
+      style={{
+        marginLeft: 8,
+        padding: "2px 8px",
+        borderRadius: 999,
+        border: "1px solid rgba(0,255,128,.45)",
+        background: "rgba(0,255,128,.12)",
+        color: "var(--text)",
+        fontSize: 12,
+        fontWeight: 950,
+        lineHeight: "16px",
+      }}
+      title={`${n} pending requests`}
+    >
+      {n}
+    </span>
+  );
+}
+
 export default function RightRail() {
   const { selectedCourse, clearSelectedCourse, setSelectedCourse } =
     useSelectedCourse();
@@ -163,8 +185,9 @@ export default function RightRail() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
 
-  // NEW: count for /following button
   const [followingCount, setFollowingCount] = useState<number | null>(null);
+
+  const [requestCount, setRequestCount] = useState<number>(0);
 
   // Load some courses for markers (fallback)
   useEffect(() => {
@@ -210,7 +233,7 @@ export default function RightRail() {
     });
   }, [selectedCourse?.id, selectedCourse, courses, setSelectedCourse]);
 
-  // NEW: Load count of followed courses (for button label)
+  // Load count of followed courses (for button label)
   useEffect(() => {
     const run = async () => {
       if (!token) {
@@ -302,6 +325,40 @@ export default function RightRail() {
     }
   };
 
+  const loadRequestCount = useCallback(async () => {
+    if (!token) {
+      setRequestCount(0);
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/follows/requests/count`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const n = Number(data?.count ?? 0);
+      if (Number.isFinite(n)) setRequestCount(n);
+    } catch {
+      // ignore
+    }
+  }, [token]);
+
+  // Load + poll request count
+  useEffect(() => {
+    if (!token) {
+      setRequestCount(0);
+      return;
+    }
+
+    loadRequestCount();
+
+    const t = window.setInterval(() => {
+      loadRequestCount();
+    }, 20000);
+
+    return () => window.clearInterval(t);
+  }, [token, loadRequestCount]);
+
   const markers = useMemo(() => {
     if (selectedCourse) return [selectedCourse];
     return courses.slice(0, 80);
@@ -332,16 +389,13 @@ export default function RightRail() {
         color: "var(--text)",
       }}
     >
+      {/* Header: map actions only */}
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ fontWeight: 900 }}>Map</div>
 
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
           <Link to="/map" style={{ ...pill, textDecoration: "none" }}>
             Open
-          </Link>
-
-          <Link to="/following" style={{ ...pill, textDecoration: "none" }}>
-            {followingLabel}
           </Link>
 
           {selectedCourse && (
@@ -365,6 +419,7 @@ export default function RightRail() {
         </div>
       ) : null}
 
+      {/* Mini map */}
       <div
         style={{
           marginTop: 12,
@@ -401,6 +456,57 @@ export default function RightRail() {
             </Marker>
           ))}
         </MapContainer>
+      </div>
+
+      {/* Following sections under map */}
+      <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+        <div>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 900,
+              color: "var(--sub)",
+              marginBottom: 6,
+            }}
+          >
+            Courses
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Link to="/following" style={{ ...pill, textDecoration: "none" }}>
+              {followingLabel}
+            </Link>
+          </div>
+        </div>
+
+        <div>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 900,
+              color: "var(--sub)",
+              marginBottom: 6,
+            }}
+          >
+            People
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Link
+              to="/follow-requests"
+              style={{
+                ...pill,
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+              }}
+              onClick={() => {
+                // nice-to-have: refresh count when user goes to the page
+                loadRequestCount();
+              }}
+            >
+              Requests <RequestsBadge n={requestCount} />
+            </Link>
+          </div>
+        </div>
       </div>
 
       {selectedCourse ? (
