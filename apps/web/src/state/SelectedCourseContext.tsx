@@ -2,9 +2,19 @@ import { createContext, useContext, useMemo, useState } from "react";
 
 export type SelectedCourse = {
   id: string;
+
   name?: string;
   lat?: number;
   lon?: number;
+
+  // optional metadata (used by RightRail / details UI)
+  city?: string | null;
+  country?: string | null;
+  website?: string | null;
+  holes?: number | null;
+
+  // depending on your API naming this might be "access" string or enum-like
+  access?: string | null;
 } | null;
 
 type Ctx = {
