@@ -1,7 +1,17 @@
-import { getToken } from "../../../api/src/api";
-import { useMe } from "../../../api/src/auth/useMe";
+import React from "react";
 import TermsGate from "./TermsGate";
 import ProfileSetup from "./ProfileSetup";
+import { useMe } from "../auth/useMe";
+import { STORAGE_KEY } from "../auth/AuthContext";
+
+// Keep token read local to web-app (no cross-imports from apps/api)
+function getToken() {
+  try {
+    return localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
 
 export default function AppGate({ children }: { children: React.ReactNode }) {
   const token = getToken();
@@ -10,7 +20,9 @@ export default function AppGate({ children }: { children: React.ReactNode }) {
   const { me, loading, err, refresh } = useMe(isAuthed);
 
   if (!isAuthed) {
-    return null; // hier kommt bei dir wahrscheinlich die LoginPage oder DevLogin
+    // Here you can render your Login / DevLogin page if you have one.
+    // For now: render nothing (matches your previous behavior).
+    return null;
   }
 
   if (loading && !me) {
@@ -22,7 +34,7 @@ export default function AppGate({ children }: { children: React.ReactNode }) {
   if (err && !me) {
     return (
       <div style={{ padding: 24, fontFamily: "system-ui", color: "crimson" }}>
-        Failed to load user: {err}
+        Failed to load user: {String(err)}
       </div>
     );
   }
@@ -33,7 +45,11 @@ export default function AppGate({ children }: { children: React.ReactNode }) {
     return <TermsGate onAccepted={refresh} />;
   }
 
-  if (!me.handle || !me.avatarUrl) {
+  // Ensure string checks are safe
+  const handleOk = Boolean(me.handle && me.handle.trim().length > 0);
+  const avatarOk = Boolean(me.avatarUrl && me.avatarUrl.trim().length > 0);
+
+  if (!handleOk || !avatarOk) {
     return <ProfileSetup me={me} onDone={refresh} />;
   }
 
