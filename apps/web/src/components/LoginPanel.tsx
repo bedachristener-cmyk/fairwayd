@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import DevLogin from "./DevLogin";
-import GoogleLoginButton from "./GoogleLoginButton";
+import GoogleLoginButton from "../auth/oauth/GoogleLoginButton";
 
 function isLocalhost() {
   const h = window.location.hostname;
@@ -14,7 +14,6 @@ export default function LoginPanel() {
   const { login } = useAuth();
 
   const [msg, setMsg] = useState<string | null>(null);
-
   const showLocalOnly = useMemo(() => isLocalhost(), []);
 
   const onLoggedIn = (token: string) => {
@@ -52,7 +51,6 @@ export default function LoginPanel() {
 
       {showLocalOnly ? (
         <>
-          {/* Google login */}
           <div style={{ marginBottom: 12 }}>
             <GoogleLoginButton
               onToken={(token: string) => onLoggedIn(token)}
@@ -60,8 +58,7 @@ export default function LoginPanel() {
             />
           </div>
 
-          {/* Dev login fallback */}
-          <DevLogin onLoggedIn={(token) => onLoggedIn(token)} />
+          <DevLogin onLoggedIn={(token: string) => onLoggedIn(token)} />
 
           <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>
             Google Login is enabled on <strong>localhost</strong>. DevLogin is

@@ -174,6 +174,19 @@ function RequestsBadge({ n }: { n: number }) {
   );
 }
 
+// Narrowing helper: ensure we only render markers for courses that have coords
+function hasCoords(
+  c: any,
+): c is { id: string; name: string; lat: number; lon: number } {
+  return (
+    c &&
+    typeof c.id === "string" &&
+    typeof c.name === "string" &&
+    typeof c.lat === "number" &&
+    typeof c.lon === "number"
+  );
+}
+
 export default function RightRail() {
   const { selectedCourse, clearSelectedCourse, setSelectedCourse } =
     useSelectedCourse();
@@ -186,7 +199,6 @@ export default function RightRail() {
   const [followBusy, setFollowBusy] = useState(false);
 
   const [followingCount, setFollowingCount] = useState<number | null>(null);
-
   const [requestCount, setRequestCount] = useState<number>(0);
 
   // Load some courses for markers (fallback)
@@ -204,9 +216,12 @@ export default function RightRail() {
     load();
   }, []);
 
+  // Keep center in sync with selected course, but safe for optional coords
   useEffect(() => {
-    if (selectedCourse?.lat && selectedCourse?.lon) {
-      setCenter({ lat: selectedCourse.lat, lon: selectedCourse.lon });
+    const lat = (selectedCourse as any)?.lat;
+    const lon = (selectedCourse as any)?.lon;
+    if (typeof lat === "number" && typeof lon === "number") {
+      setCenter({ lat, lon });
     }
   }, [selectedCourse]);
 
@@ -219,16 +234,16 @@ export default function RightRail() {
     if (!full) return;
 
     const missingDetails =
-      (selectedCourse.city == null && full.city != null) ||
-      (selectedCourse.country == null && full.country != null) ||
-      (selectedCourse.website == null && full.website != null) ||
-      (selectedCourse.holes == null && full.holes != null) ||
-      (selectedCourse.access == null && full.access != null);
+      ((selectedCourse as any).city == null && full.city != null) ||
+      ((selectedCourse as any).country == null && full.country != null) ||
+      ((selectedCourse as any).website == null && full.website != null) ||
+      ((selectedCourse as any).holes == null && full.holes != null) ||
+      ((selectedCourse as any).access == null && full.access != null);
 
     if (!missingDetails) return;
 
     setSelectedCourse({
-      ...selectedCourse,
+      ...(selectedCourse as any),
       ...full,
     });
   }, [selectedCourse?.id, selectedCourse, courses, setSelectedCourse]);
@@ -268,10 +283,9 @@ export default function RightRail() {
         return;
       }
       try {
-        const res = await fetch(
-          `${API_BASE}/courses/${selectedCourse.id}/following`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
+        const res = await fetch(`${API_BASE}/courses/${selectedCourse.id}/following`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (!res.ok) return;
         const data = await res.json();
         setIsFollowing(!!data?.following);
@@ -297,13 +311,10 @@ export default function RightRail() {
     });
 
     try {
-      const res = await fetch(
-        `${API_BASE}/courses/${selectedCourse.id}/follow`,
-        {
-          method: next ? "POST" : "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const res = await fetch(`${API_BASE}/courses/${selectedCourse.id}/follow`, {
+        method: next ? "POST" : "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       if (!res.ok) {
         // rollback
@@ -360,241 +371,9 @@ export default function RightRail() {
   }, [token, loadRequestCount]);
 
   const markers = useMemo(() => {
-    if (selectedCourse) return [selectedCourse];
-    return courses.slice(0, 80);
-  }, [selectedCourse, courses]);
+    if (selectedCourse) {
+      return hasCoords(selectedCourse) ? [selectedCourse] : [];
+    }
+    return courses.filter(hasCoords).slice(0, 80);
 
-  const locationText = selectedCourse
-    ? [selectedCourse.city, selectedCourse.country].filter(Boolean).join(", ")
-    : "";
-
-  const websiteHost = selectedCourse?.website
-    ? selectedCourse.website.replace(/^https?:\/\//, "")
-    : "";
-
-  const followingLabel =
-    followingCount == null ? "Following" : `Following (${followingCount})`;
-
-  return (
-    <div
-      style={{
-        position: "sticky",
-        top: 16,
-        alignSelf: "start",
-        background: "var(--card)",
-        borderRadius: 16,
-        border: "1px solid var(--border)",
-        boxShadow: "0 4px 22px rgba(0,0,0,0.35)",
-        padding: 16,
-        color: "var(--text)",
-      }}
-    >
-      {/* Header: map actions only */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ fontWeight: 900 }}>Map</div>
-
-        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-          <Link to="/map" style={{ ...pill, textDecoration: "none" }}>
-            Open
-          </Link>
-
-          {selectedCourse && (
-            <button
-              onClick={() => {
-                clearSelectedCourse();
-                setCenter(DEFAULT_CENTER);
-              }}
-              style={{ ...pill }}
-              type="button"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-      </div>
-
-      {!selectedCourse ? (
-        <div style={{ marginTop: 10, fontSize: 13, color: "var(--sub)" }}>
-          Select a course by clicking a marker.
-        </div>
-      ) : null}
-
-      {/* Mini map */}
-      <div
-        style={{
-          marginTop: 12,
-          height: 220,
-          borderRadius: 14,
-          overflow: "hidden",
-          border: "1px solid var(--border)",
-        }}
-      >
-        <MapContainer
-          center={[center.lat, center.lon]}
-          zoom={12}
-          style={{ height: "100%", width: "100%" }}
-        >
-          <TileLayer
-            attribution="&copy; OpenStreetMap contributors"
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-
-          <RecenterMap lat={center.lat} lon={center.lon} />
-
-          {markers.map((c) => (
-            <Marker
-              key={c.id}
-              position={[c.lat, c.lon]}
-              icon={golfIcon}
-              eventHandlers={{
-                click: () => setSelectedCourse(c),
-              }}
-            >
-              <Popup>
-                <div style={{ fontWeight: 900 }}>{c.name}</div>
-              </Popup>
-            </Marker>
-          ))}
-        </MapContainer>
-      </div>
-
-      {/* Following sections under map */}
-      <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-        <div>
-          <div
-            style={{
-              fontSize: 12,
-              fontWeight: 900,
-              color: "var(--sub)",
-              marginBottom: 6,
-            }}
-          >
-            Courses
-          </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <Link to="/following" style={{ ...pill, textDecoration: "none" }}>
-              {followingLabel}
-            </Link>
-          </div>
-        </div>
-
-        <div>
-          <div
-            style={{
-              fontSize: 12,
-              fontWeight: 900,
-              color: "var(--sub)",
-              marginBottom: 6,
-            }}
-          >
-            People
-          </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <Link
-              to="/follow-requests"
-              style={{
-                ...pill,
-                textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center",
-              }}
-              onClick={() => {
-                // nice-to-have: refresh count when user goes to the page
-                loadRequestCount();
-              }}
-            >
-              Requests <RequestsBadge n={requestCount} />
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {selectedCourse ? (
-        <div
-          style={{
-            marginTop: 12,
-            padding: 12,
-            borderRadius: 14,
-            border: "1px solid var(--border)",
-            background: "var(--muted)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <CourseBadge />
-            <div style={{ fontSize: 14, fontWeight: 950 }}>
-              {selectedCourse.name}
-            </div>
-          </div>
-
-          {selectedCourse.access ? (
-            <div style={{ marginTop: 6 }}>
-              <AccessBadge access={selectedCourse.access} />
-            </div>
-          ) : null}
-
-          <div style={{ marginTop: 8 }}>
-            <button
-              onClick={toggleFollow}
-              disabled={followBusy || !token}
-              style={{
-                ...pill,
-                width: "100%",
-                background: isFollowing ? "rgba(0,255,128,.18)" : "transparent",
-                fontWeight: 900,
-                opacity: !token ? 0.6 : 1,
-                cursor: !token ? "not-allowed" : "pointer",
-              }}
-              type="button"
-              title={!token ? "Please login" : "Follow course"}
-            >
-              {isFollowing ? "✓ Following" : "+ Follow"}
-            </button>
-          </div>
-
-          <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
-            <Row label="Ort" value={locationText || undefined} />
-
-            <Row
-              label="Web"
-              value={
-                selectedCourse.website ? (
-                  <a
-                    href={selectedCourse.website}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{
-                      color: "var(--text)",
-                      textDecoration: "underline",
-                      fontWeight: 900,
-                    }}
-                  >
-                    {websiteHost}
-                  </a>
-                ) : undefined
-              }
-            />
-
-            <Row
-              label="Löcher"
-              value={
-                typeof selectedCourse.holes === "number"
-                  ? String(selectedCourse.holes)
-                  : undefined
-              }
-            />
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-const pill: React.CSSProperties = {
-  padding: "8px 12px",
-  borderRadius: 999,
-  border: "1px solid var(--border)",
-  background: "transparent",
-  color: "var(--text)",
-  fontSize: 12,
-  fontWeight: 900,
-};
+::contentReference[oaicite:0]{index=0}

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { useAuth } from "../auth/AuthContext";
+import React, { useEffect, useRef, useState } from "react";
+import { useAuth } from "../AuthContext";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
@@ -10,6 +10,11 @@ declare global {
   }
 }
 
+type Props = {
+  onToken?: (token: string) => void;
+  onError?: (message: string) => void;
+};
+
 async function waitForGoogle(timeoutMs = 8000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
@@ -19,7 +24,7 @@ async function waitForGoogle(timeoutMs = 8000) {
   return false;
 }
 
-export default function GoogleLoginButton() {
+export default function GoogleLoginButton({ onToken, onError }: Props) {
   const { login } = useAuth();
   const btnRef = useRef<HTMLDivElement | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -28,11 +33,16 @@ export default function GoogleLoginButton() {
   useEffect(() => {
     let cancelled = false;
 
+    const fail = (m: string) => {
+      setMsg(m);
+      onError?.(m);
+    };
+
     const init = async () => {
       setMsg(null);
 
       if (!GOOGLE_CLIENT_ID) {
-        setMsg("Missing VITE_GOOGLE_CLIENT_ID in frontend env (.env.local).");
+        fail("Missing VITE_GOOGLE_CLIENT_ID in Vercel env.");
         return;
       }
 
@@ -40,7 +50,9 @@ export default function GoogleLoginButton() {
       if (cancelled) return;
 
       if (!ok) {
-        setMsg('Google script not loaded. Check index.html has: <script src="https://accounts.google.com/gsi/client" async defer></script>');
+        fail(
+          'Google script not loaded. Ensure index.html includes: <script src="https://accounts.google.com/gsi/client" async defer></script>',
+        );
         return;
       }
 
@@ -53,22 +65,26 @@ export default function GoogleLoginButton() {
             try {
               setMsg(null);
               const idToken = resp?.credential;
-              if (!idToken) throw new Error("No credential (idToken) returned from Google.");
+              if (!idToken)
+                throw new Error(
+                  "No credential (idToken) returned from Google.",
+                );
 
               const res = await fetch(`${API_BASE}/auth/oauth`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  provider: "GOOGLE",
-                  idToken,
-                }),
+                body: JSON.stringify({ provider: "GOOGLE", idToken }),
               });
 
               if (!res.ok) {
                 let text = `POST /auth/oauth failed (${res.status})`;
                 try {
                   const j = await res.json();
-                  if (j?.message) text = typeof j.message === "string" ? j.message : JSON.stringify(j.message);
+                  if (j?.message)
+                    text =
+                      typeof j.message === "string"
+                        ? j.message
+                        : JSON.stringify(j.message);
                 } catch {
                   // ignore
                 }
@@ -79,15 +95,17 @@ export default function GoogleLoginButton() {
               const token = data?.token;
               if (!token) throw new Error("Backend returned no token.");
 
-              login(token);
+              // If caller wants the token, hand it out; otherwise login here.
+              if (onToken) onToken(token);
+              else login(token);
+
               setMsg("Logged in with Google ✅");
             } catch (e: any) {
-              setMsg(e?.message ?? String(e));
+              fail(e?.message ?? String(e));
             }
           },
         });
 
-        // Clear and render button
         btnRef.current.innerHTML = "";
         window.google.accounts.id.renderButton(btnRef.current, {
           theme: "outline",
@@ -98,7 +116,7 @@ export default function GoogleLoginButton() {
 
         setReady(true);
       } catch (e: any) {
-        setMsg(e?.message ?? String(e));
+        fail(e?.message ?? String(e));
       }
     };
 
@@ -106,12 +124,16 @@ export default function GoogleLoginButton() {
     return () => {
       cancelled = true;
     };
-  }, [login]);
+  }, [login, onToken, onError]);
 
   return (
     <div>
       <div ref={btnRef} />
-      {!ready && !msg && <div style={{ marginTop: 6, fontSize: 12, opacity: 0.7 }}>Loading Google button…</div>}
+      {!ready && !msg && (
+        <div style={{ marginTop: 6, fontSize: 12, opacity: 0.7 }}>
+          Loading Google button…
+        </div>
+      )}
       {msg && <div style={{ marginTop: 6, fontSize: 12 }}>{msg}</div>}
     </div>
   );

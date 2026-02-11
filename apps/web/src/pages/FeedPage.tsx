@@ -90,6 +90,7 @@ export default function FeedPage() {
     useSelectedCourse();
 
   const { token, user, loading, logout, isAuthenticated } = useAuth();
+
   const handle =
     user?.handle || localStorage.getItem("fairwayd_handle") || "me";
 
@@ -148,7 +149,7 @@ export default function FeedPage() {
       });
 
       if (res.status === 401 || res.status === 403) {
-        // Token ist ungültig (z.B. nach DB reset) => sauber abmelden
+        // Token is invalid (e.g. DB reset) => logout cleanly
         logout();
         setPosts([]);
         return;
@@ -187,10 +188,30 @@ export default function FeedPage() {
     [courses],
   );
 
+  // Helpers: selected course must have the full data for posting
+  const selectedName = selectedCourse?.name;
+  const selectedLat = selectedCourse?.lat;
+  const selectedLon = selectedCourse?.lon;
+
+  const selectedIsComplete =
+    Boolean(selectedCourse?.id) &&
+    typeof selectedName === "string" &&
+    selectedName.trim().length > 0 &&
+    typeof selectedLat === "number" &&
+    typeof selectedLon === "number";
+
   // --- Submit post (optimistic)
   const submitPost = async () => {
     if (!selectedCourse) {
       setErr("Choose a course first.");
+      return;
+    }
+
+    // Ensure we have strict required fields (prevents TS errors + runtime issues)
+    if (!selectedIsComplete) {
+      setErr(
+        "Selected course is missing details (name/coordinates). Please re-select the course.",
+      );
       return;
     }
 
@@ -216,9 +237,9 @@ export default function FeedPage() {
       visibility,
       course: {
         id: selectedCourse.id,
-        name: selectedCourse.name,
-        lat: selectedCourse.lat,
-        lon: selectedCourse.lon,
+        name: selectedName!, // safe because selectedIsComplete
+        lat: selectedLat!, // safe because selectedIsComplete
+        lon: selectedLon!, // safe because selectedIsComplete
       },
       user: { id: "me", handle },
       images: preview ? [{ id: "preview", url: preview }] : [],

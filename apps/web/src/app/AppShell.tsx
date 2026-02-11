@@ -1,7 +1,7 @@
 import { Outlet } from "react-router-dom";
-import Sidebar from "./Sidebar";
-import RightRail from "./RightRail";
-import BottomTabs from "./BottomTabs";
+import Sidebar from "../shell/Sidebar";
+import RightRail from "../shell/RightRail";
+import BottomTabs from "../shell/BottomTabs";
 
 export default function AppShell() {
   return (
