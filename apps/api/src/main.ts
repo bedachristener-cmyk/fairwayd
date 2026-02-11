@@ -27,10 +27,17 @@ async function bootstrap() {
     }),
   );
 
-  // CORS for Vite, LAN and ngrok
+  const frontendUrl = process.env.FRONTEND_URL; // in Railway später z.B. https://fairwayd.ch
+
+  // CORS for Vite, LAN and ngrok (+ optional prod frontend)
   app.enableCors({
     origin: (origin: string | undefined, cb: CorsCallback) => {
       if (!origin) return cb(null, true);
+
+      // allow configured frontend (prod)
+      if (frontendUrl && origin === frontendUrl) {
+        return cb(null, true);
+      }
 
       // localhost vite ports
       if (/^http:\/\/(localhost|127\.0\.0\.1):517[3-9]$/.test(origin)) {
@@ -63,15 +70,20 @@ async function bootstrap() {
         scheme: 'bearer',
         bearerFormat: 'JWT',
       },
-      'jwt', // <- Name der Security
+      'jwt',
     )
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  // Listen on all interfaces (important for LAN access)
-  await app.listen(3000, '0.0.0.0');
+  // Railway provides PORT; fallback for local dev
+  const port = Number(process.env.PORT) || 3000;
+
+  // Listen on all interfaces (important for containers/LAN)
+  await app.listen(port, '0.0.0.0');
+
+  console.log(`Fairwayd API listening on http://0.0.0.0:${port}`);
 }
 
 bootstrap().catch((err) => {
