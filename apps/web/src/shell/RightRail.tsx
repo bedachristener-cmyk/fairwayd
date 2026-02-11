@@ -25,33 +25,33 @@ const golfIcon = L.divIcon({
   className: "",
   html: `
     <div style="
-    width:18px;
-    height:18px;
-    border-radius:999px;
-    background:rgba(0,255,128,.95);
-    border:2px solid rgba(01, 15, 15, 0.65);
-    box-shadow:0 6px 18px rgba(0,255,128,.35);
-    position:relative;
-  ">
-    <div style="
-      position:absolute;
-      left:7px;
-      top:3px;
-      width:2px;
-      height:10px;
-      background:black;
-    "></div>
-    <div style="
-      position:absolute;
-      left:9px;
-      top:3px;
-      width:6px;
-      height:5px;
-      background:red;
-      clip-path: polygon(0 0, 100% 50%, 0 100%);
-    "></div>
-  </div>
-`,
+      width:18px;
+      height:18px;
+      border-radius:999px;
+      background:rgba(0,255,128,.95);
+      border:2px solid rgba(01, 15, 15, 0.65);
+      box-shadow:0 6px 18px rgba(0,255,128,.35);
+      position:relative;
+    ">
+      <div style="
+        position:absolute;
+        left:7px;
+        top:3px;
+        width:2px;
+        height:10px;
+        background:black;
+      "></div>
+      <div style="
+        position:absolute;
+        left:9px;
+        top:3px;
+        width:6px;
+        height:5px;
+        background:red;
+        clip-path: polygon(0 0, 100% 50%, 0 100%);
+      "></div>
+    </div>
+  `,
   iconSize: [18, 18],
   iconAnchor: [9, 9],
   popupAnchor: [0, -10],
@@ -174,7 +174,7 @@ function RequestsBadge({ n }: { n: number }) {
   );
 }
 
-// Narrowing helper: ensure we only render markers for courses that have coords
+// Ensure marker render only when we really have coordinates
 function hasCoords(
   c: any,
 ): c is { id: string; name: string; lat: number; lon: number } {
@@ -283,9 +283,10 @@ export default function RightRail() {
         return;
       }
       try {
-        const res = await fetch(`${API_BASE}/courses/${selectedCourse.id}/following`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetch(
+          `${API_BASE}/courses/${selectedCourse.id}/following`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
         if (!res.ok) return;
         const data = await res.json();
         setIsFollowing(!!data?.following);
@@ -311,10 +312,13 @@ export default function RightRail() {
     });
 
     try {
-      const res = await fetch(`${API_BASE}/courses/${selectedCourse.id}/follow`, {
-        method: next ? "POST" : "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `${API_BASE}/courses/${selectedCourse.id}/follow`,
+        {
+          method: next ? "POST" : "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       if (!res.ok) {
         // rollback
@@ -375,5 +379,239 @@ export default function RightRail() {
       return hasCoords(selectedCourse) ? [selectedCourse] : [];
     }
     return courses.filter(hasCoords).slice(0, 80);
+  }, [selectedCourse, courses]);
 
-::contentReference[oaicite:0]{index=0}
+  const locationText = selectedCourse
+    ? [(selectedCourse as any).city, (selectedCourse as any).country]
+        .filter(Boolean)
+        .join(", ")
+    : "";
+
+  const websiteHost = (selectedCourse as any)?.website
+    ? String((selectedCourse as any).website).replace(/^https?:\/\//, "")
+    : "";
+
+  const followingLabel =
+    followingCount == null ? "Following" : `Following (${followingCount})`;
+
+  return (
+    <div
+      style={{
+        position: "sticky",
+        top: 16,
+        alignSelf: "start",
+        background: "var(--card)",
+        borderRadius: 16,
+        border: "1px solid var(--border)",
+        boxShadow: "0 4px 22px rgba(0,0,0,0.35)",
+        padding: 16,
+        color: "var(--text)",
+      }}
+    >
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ fontWeight: 900 }}>Map</div>
+
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          <Link to="/map" style={{ ...pill, textDecoration: "none" }}>
+            Open
+          </Link>
+
+          {selectedCourse && (
+            <button
+              onClick={() => {
+                clearSelectedCourse();
+                setCenter(DEFAULT_CENTER);
+              }}
+              style={{ ...pill }}
+              type="button"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+
+      {!selectedCourse ? (
+        <div style={{ marginTop: 10, fontSize: 13, color: "var(--sub)" }}>
+          Select a course by clicking a marker.
+        </div>
+      ) : null}
+
+      {/* Mini map */}
+      <div
+        style={{
+          marginTop: 12,
+          height: 220,
+          borderRadius: 14,
+          overflow: "hidden",
+          border: "1px solid var(--border)",
+        }}
+      >
+        <MapContainer
+          center={[center.lat, center.lon]}
+          zoom={12}
+          style={{ height: "100%", width: "100%" }}
+        >
+          <TileLayer
+            attribution="&copy; OpenStreetMap contributors"
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+
+          <RecenterMap lat={center.lat} lon={center.lon} />
+
+          {markers.map((c) => (
+            <Marker
+              key={c.id}
+              position={[c.lat, c.lon]}
+              icon={golfIcon}
+              eventHandlers={{
+                click: () => setSelectedCourse(c as any),
+              }}
+            >
+              <Popup>
+                <div style={{ fontWeight: 900 }}>{c.name}</div>
+              </Popup>
+            </Marker>
+          ))}
+        </MapContainer>
+      </div>
+
+      {/* Sections under map */}
+      <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+        <div>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 900,
+              color: "var(--sub)",
+              marginBottom: 6,
+            }}
+          >
+            Courses
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Link to="/following" style={{ ...pill, textDecoration: "none" }}>
+              {followingLabel}
+            </Link>
+          </div>
+        </div>
+
+        <div>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 900,
+              color: "var(--sub)",
+              marginBottom: 6,
+            }}
+          >
+            People
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Link
+              to="/follow-requests"
+              style={{
+                ...pill,
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+              }}
+              onClick={() => loadRequestCount()}
+            >
+              Requests <RequestsBadge n={requestCount} />
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Selected course details */}
+      {selectedCourse ? (
+        <div
+          style={{
+            marginTop: 12,
+            padding: 12,
+            borderRadius: 14,
+            border: "1px solid var(--border)",
+            background: "var(--muted)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <CourseBadge />
+            <div style={{ fontSize: 14, fontWeight: 950 }}>
+              {(selectedCourse as any).name ?? "Course"}
+            </div>
+          </div>
+
+          {(selectedCourse as any).access ? (
+            <div style={{ marginTop: 6 }}>
+              <AccessBadge access={(selectedCourse as any).access} />
+            </div>
+          ) : null}
+
+          <div style={{ marginTop: 8 }}>
+            <button
+              onClick={toggleFollow}
+              disabled={followBusy || !token}
+              style={{
+                ...pill,
+                width: "100%",
+                background: isFollowing ? "rgba(0,255,128,.18)" : "transparent",
+                fontWeight: 900,
+                opacity: !token ? 0.6 : 1,
+                cursor: !token ? "not-allowed" : "pointer",
+              }}
+              type="button"
+              title={!token ? "Please login" : "Follow course"}
+            >
+              {isFollowing ? "✓ Following" : "+ Follow"}
+            </button>
+          </div>
+
+          <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
+            <Row label="Ort" value={locationText || undefined} />
+
+            <Row
+              label="Web"
+              value={
+                (selectedCourse as any).website ? (
+                  <a
+                    href={(selectedCourse as any).website}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      color: "var(--text)",
+                      textDecoration: "underline",
+                      fontWeight: 900,
+                    }}
+                  >
+                    {websiteHost}
+                  </a>
+                ) : undefined
+              }
+            />
+
+            <Row
+              label="Löcher"
+              value={
+                typeof (selectedCourse as any).holes === "number"
+                  ? String((selectedCourse as any).holes)
+                  : undefined
+              }
+            />
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+const pill: React.CSSProperties = {
+  padding: "8px 12px",
+  borderRadius: 999,
+  border: "1px solid var(--border)",
+  background: "transparent",
+  color: "var(--text)",
+  fontSize: 12,
+  fontWeight: 900,
+};
