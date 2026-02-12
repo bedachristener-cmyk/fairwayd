@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import LoginPanel from "../components/LoginPanel";
+import DevLogin from "../components/DevLogin";
 
 export default function LandingPage() {
   const nav = useNavigate();
@@ -160,7 +161,10 @@ export default function LandingPage() {
             </div>
           )}
 
-          {/* Optional quick links (small) */}
+          {/* Dev login (nur lokal/LAN sichtbar; rendert auf Vercel null) */}
+          <DevLogin />
+
+          {/* Optional quick links */}
           <div style={card}>
             <div style={{ fontWeight: 900, marginBottom: 10 }}>Quick links</div>
             <div style={{ display: "grid", gap: 10 }}>

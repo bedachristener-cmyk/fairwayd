@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { apiGet } from "../api/client";
+import DevLogin from "../components/DevLogin";
 
 type Post = {
   id: string;
@@ -76,21 +77,38 @@ export default function FeedPage() {
 
   return (
     <div style={{ padding: 20, fontFamily: "system-ui", maxWidth: 760 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+        }}
+      >
         <h2 style={{ margin: 0 }}>Feed</h2>
 
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={() => nav("/")} style={{ padding: "6px 10px" }}>
             ← Map
           </button>
-          <button onClick={load} disabled={busy} style={{ padding: "6px 10px" }}>
+          <button
+            onClick={load}
+            disabled={busy}
+            style={{ padding: "6px 10px" }}
+          >
             {busy ? "..." : "Reload"}
           </button>
         </div>
       </div>
 
       {err && (
-        <div style={{ marginTop: 12, padding: 10, background: "rgba(220,20,60,0.08)" }}>
+        <div
+          style={{
+            marginTop: 12,
+            padding: 10,
+            background: "rgba(220,20,60,0.08)",
+          }}
+        >
           <div style={{ fontWeight: 700 }}>Error</div>
           <div style={{ fontFamily: "monospace", fontSize: 12 }}>{err}</div>
         </div>
@@ -100,7 +118,14 @@ export default function FeedPage() {
         <div style={{ marginTop: 12, opacity: 0.75 }}>No posts yet.</div>
       )}
 
-      <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 12 }}>
+      <div
+        style={{
+          marginTop: 12,
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+        }}
+      >
         {sorted.map((p) => {
           const c = courseById.get(p.courseId);
           const courseLabel = c
@@ -118,7 +143,9 @@ export default function FeedPage() {
             >
               <div style={{ fontWeight: 800 }}>{courseLabel}</div>
 
-              <div style={{ marginTop: 8, whiteSpace: "pre-wrap" }}>{p.content}</div>
+              <div style={{ marginTop: 8, whiteSpace: "pre-wrap" }}>
+                {p.content}
+              </div>
 
               <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>
                 {p.visibility} • {formatWhen(p.createdAt)}
@@ -126,7 +153,9 @@ export default function FeedPage() {
 
               <div style={{ marginTop: 10 }}>
                 <button
-                  onClick={() => nav(`/compose?courseId=${encodeURIComponent(p.courseId)}`)}
+                  onClick={() =>
+                    nav(`/compose?courseId=${encodeURIComponent(p.courseId)}`)
+                  }
                   style={{ padding: "6px 10px" }}
                 >
                   Reply / Post there
