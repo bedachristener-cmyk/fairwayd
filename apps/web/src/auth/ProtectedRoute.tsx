@@ -21,7 +21,12 @@ export default function ProtectedRoute({
   const authed = isAuthenticated ?? !!token;
 
   if (!authed) {
-    return <Navigate to="/" replace state={{ from: loc.pathname }} />;
+    return (
+      <Navigate
+        to={`/?next=${encodeURIComponent(loc.pathname + loc.search)}`}
+        replace
+      />
+    );
   }
 
   return <>{children}</>;

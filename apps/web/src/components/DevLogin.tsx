@@ -68,7 +68,9 @@ export default function DevLogin({ onLoggedIn }: DevLoginProps) {
       onLoggedIn?.(token);
 
       // go to feed after login (facebook-like)
-      nav("/feed");
+      const params = new URLSearchParams(window.location.search);
+      const next = params.get("next");
+      nav(next || "/feed");
     } catch (e: any) {
       setMsg(e?.message ?? String(e));
     } finally {
