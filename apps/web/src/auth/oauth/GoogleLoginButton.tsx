@@ -24,6 +24,10 @@ async function waitForGoogle(timeoutMs = 8000) {
   return false;
 }
 
+function errMsg(e: unknown) {
+  return e instanceof Error ? e.message : String(e);
+}
+
 export default function GoogleLoginButton({ onToken, onError }: Props) {
   const { login } = useAuth();
   const btnRef = useRef<HTMLDivElement | null>(null);
@@ -40,9 +44,12 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
 
     const init = async () => {
       setMsg(null);
+      setReady(false);
 
       if (!GOOGLE_CLIENT_ID) {
-        fail("Missing VITE_GOOGLE_CLIENT_ID in Vercel env.");
+        fail(
+          "Google Login ist noch nicht konfiguriert (VITE_GOOGLE_CLIENT_ID fehlt).",
+        );
         return;
       }
 
@@ -51,7 +58,7 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
 
       if (!ok) {
         fail(
-          'Google script not loaded. Ensure index.html includes: <script src="https://accounts.google.com/gsi/client" async defer></script>',
+          'Google Script nicht geladen. Prüfe, ob in apps/web/index.html folgendes drin ist: <script src="https://accounts.google.com/gsi/client" async defer></script>',
         );
         return;
       }
@@ -80,11 +87,12 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
                 let text = `POST /auth/oauth failed (${res.status})`;
                 try {
                   const j = await res.json();
-                  if (j?.message)
+                  if (j?.message) {
                     text =
                       typeof j.message === "string"
                         ? j.message
                         : JSON.stringify(j.message);
+                  }
                 } catch {
                   // ignore
                 }
@@ -95,13 +103,12 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
               const token = data?.token;
               if (!token) throw new Error("Backend returned no token.");
 
-              // If caller wants the token, hand it out; otherwise login here.
               if (onToken) onToken(token);
               else login(token);
 
               setMsg("Logged in with Google ✅");
-            } catch (e: any) {
-              fail(e?.message ?? String(e));
+            } catch (e: unknown) {
+              fail(errMsg(e));
             }
           },
         });
@@ -115,8 +122,8 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
         });
 
         setReady(true);
-      } catch (e: any) {
-        fail(e?.message ?? String(e));
+      } catch (e: unknown) {
+        fail(errMsg(e));
       }
     };
 

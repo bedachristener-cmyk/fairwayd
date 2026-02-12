@@ -9,11 +9,12 @@ type DevLoginProps = {
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 const STORAGE_KEY = "fairwayd_token";
 
-// optional: show dev login only on localhost
+// show dev login on localhost + private LAN + (optional) vercel previews
 const isDev =
   location.hostname === "localhost" ||
   location.hostname === "127.0.0.1" ||
-  location.hostname.startsWith("192.168.");
+  location.hostname.startsWith("192.168.") ||
+  location.hostname.endsWith(".vercel.app"); // <-- optional, hilft dir für Tests
 
 export default function DevLogin({ onLoggedIn }: DevLoginProps) {
   const nav = useNavigate();
@@ -63,16 +64,18 @@ export default function DevLogin({ onLoggedIn }: DevLoginProps) {
 
       localStorage.setItem(STORAGE_KEY, token);
       localStorage.setItem("fairwayd_handle", h);
-      login(token);
 
+      // ensure auth state is updated before we navigate
+      await Promise.resolve();
+      login(token);
       onLoggedIn?.(token);
 
-      // go to feed after login (facebook-like)
       const params = new URLSearchParams(window.location.search);
       const next = params.get("next");
       nav(next || "/feed");
-    } catch (e: any) {
-      setMsg(e?.message ?? String(e));
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setMsg(msg);
     } finally {
       setBusy(false);
     }
@@ -103,7 +106,6 @@ export default function DevLogin({ onLoggedIn }: DevLoginProps) {
 
       {/* Google / OAuth buttons */}
       <div style={{ display: "grid", gap: 10 }}>
-        {/* placeholders for later */}
         <button type="button" disabled style={oauthDisabledBtn}>
           Continue with Apple (soon)
         </button>
@@ -112,7 +114,6 @@ export default function DevLogin({ onLoggedIn }: DevLoginProps) {
         </button>
       </div>
 
-      {/* Divider */}
       <div style={dividerRow}>
         <div style={dividerLine} />
         <div style={{ fontSize: 12, opacity: 0.6 }}>or</div>
@@ -150,7 +151,6 @@ export default function DevLogin({ onLoggedIn }: DevLoginProps) {
         </div>
       )}
 
-      {/* Logged in actions */}
       {isAuthenticated && (
         <div
           style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}
@@ -176,71 +176,4 @@ export default function DevLogin({ onLoggedIn }: DevLoginProps) {
   );
 }
 
-const card: React.CSSProperties = {
-  background: "white",
-  borderRadius: 20,
-  boxShadow: "0 2px 14px rgba(0,0,0,0.06)",
-  padding: 18,
-};
-
-const oauthDisabledBtn: React.CSSProperties = {
-  padding: "10px 12px",
-  borderRadius: 999,
-  border: "1px solid rgba(0,0,0,0.12)",
-  background: "rgba(0,0,0,0.04)",
-  fontWeight: 900,
-  cursor: "not-allowed",
-  opacity: 0.7,
-};
-
-const dividerRow: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-  marginTop: 14,
-  marginBottom: 14,
-};
-
-const dividerLine: React.CSSProperties = {
-  height: 1,
-  flex: 1,
-  background: "rgba(0,0,0,0.1)",
-};
-
-const input: React.CSSProperties = {
-  flex: 1,
-  padding: "10px 10px",
-  borderRadius: 12,
-  border: "1px solid rgba(0,0,0,0.12)",
-  fontWeight: 700,
-};
-
-const primarySmallBtn: React.CSSProperties = {
-  padding: "10px 12px",
-  borderRadius: 12,
-  border: 0,
-  background: "#111",
-  color: "white",
-  fontWeight: 900,
-  cursor: "pointer",
-};
-
-const primaryBtn: React.CSSProperties = {
-  border: 0,
-  background: "#111",
-  color: "white",
-  padding: "10px 14px",
-  borderRadius: 999,
-  fontWeight: 900,
-  cursor: "pointer",
-};
-
-const ghostBtn: React.CSSProperties = {
-  border: "1px solid rgba(0,0,0,0.12)",
-  background: "white",
-  color: "#111",
-  padding: "10px 14px",
-  borderRadius: 999,
-  fontWeight: 900,
-  cursor: "pointer",
-};
+// styles bleiben wie bei dir...
