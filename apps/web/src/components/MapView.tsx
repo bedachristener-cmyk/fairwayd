@@ -148,7 +148,7 @@ export default function MapView() {
   const nav = useNavigate();
 
   const [center, setCenter] = useState<[number, number]>([47.5596, 7.5886]);
-  const [radiusM, setRadiusM] = useState(50000);
+  const [radiusM] = useState(50000);
   const [courses, setCourses] = useState<CourseLite[]>([]);
   const [loadStatus, setLoadStatus] = useState("Loading courses...");
 

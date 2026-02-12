@@ -25,8 +25,9 @@ export function setToken(token: string | null) {
   localStorage.setItem(STORAGE_TOKEN_KEY, token);
 }
 
-function authHeaders(token: string | null) {
-  return token ? { Authorization: `Bearer ${token}` } : {};
+function authHeaders(token: string | null): HeadersInit {
+  if (!token) return {};
+  return { Authorization: `Bearer ${token}` };
 }
 
 async function throwNiceError(res: Response) {
@@ -37,7 +38,7 @@ async function throwNiceError(res: Response) {
 export async function apiGet<T>(path: string): Promise<T> {
   const token = getToken();
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { ...authHeaders(token) },
+    headers: authHeaders(token),
   });
 
   if (!res.ok) await throwNiceError(res);
@@ -46,12 +47,14 @@ export async function apiGet<T>(path: string): Promise<T> {
 
 export async function apiPostJson<T>(path: string, body: any): Promise<T> {
   const token = getToken();
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(token),
-    },
+    headers,
     body: JSON.stringify(body ?? {}),
   });
 
@@ -63,9 +66,7 @@ export async function apiPostForm<T>(path: string, form: FormData): Promise<T> {
   const token = getToken();
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
-    headers: {
-      ...authHeaders(token),
-    },
+    headers: authHeaders(token),
     body: form,
   });
 

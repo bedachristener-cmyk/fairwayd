@@ -8,13 +8,14 @@ export type FollowRequestItem = {
   createdAt?: string;
 };
 
-function authHeaders(token: string | null) {
-  return token ? { Authorization: `Bearer ${token}` } : {};
+function authHeaders(token: string | null): HeadersInit {
+  if (!token) return {};
+  return { Authorization: `Bearer ${token}` };
 }
 
 export async function fetchFollowRequests(token: string | null) {
   const res = await fetch(`${API_BASE}/users/me/follow-requests`, {
-    headers: { ...authHeaders(token) },
+    headers: authHeaders(token),
   });
   if (!res.ok) throw new Error(await res.text());
   return (await res.json()) as FollowRequestItem[];
@@ -28,7 +29,7 @@ export async function acceptFollowRequest(
     `${API_BASE}/users/me/follow-requests/${encodeURIComponent(
       followerId,
     )}/accept`,
-    { method: "POST", headers: { ...authHeaders(token) } },
+    { method: "POST", headers: authHeaders(token) },
   );
   if (!res.ok) throw new Error(await res.text());
 }
@@ -41,7 +42,7 @@ export async function rejectFollowRequest(
     `${API_BASE}/users/me/follow-requests/${encodeURIComponent(
       followerId,
     )}/reject`,
-    { method: "POST", headers: { ...authHeaders(token) } },
+    { method: "POST", headers: authHeaders(token) },
   );
   if (!res.ok) throw new Error(await res.text());
 }

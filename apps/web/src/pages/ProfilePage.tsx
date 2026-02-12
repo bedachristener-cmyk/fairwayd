@@ -381,7 +381,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
       setProfile({
         id: me.id,
-        handle: me.handle,
+        handle: me.handle ?? "",
         name: me.name ?? null,
         avatarUrl: me.avatarUrl ?? null,
         privacy: (me as any).privacy ?? null,

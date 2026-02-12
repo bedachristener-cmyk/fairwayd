@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
+type DevLoginProps = {
+  onLoggedIn?: (token: string) => void;
+};
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 const STORAGE_KEY = "fairwayd_token";
 
@@ -11,7 +15,7 @@ const isDev =
   location.hostname === "127.0.0.1" ||
   location.hostname.startsWith("192.168.");
 
-export default function LoginPanel() {
+export default function DevLogin({ onLoggedIn }: DevLoginProps) {
   const nav = useNavigate();
   const { loading, isAuthenticated, user, login, logout } = useAuth();
 
@@ -60,6 +64,8 @@ export default function LoginPanel() {
       localStorage.setItem(STORAGE_KEY, token);
       localStorage.setItem("fairwayd_handle", h);
       login(token);
+
+      onLoggedIn?.(token);
 
       // go to feed after login (facebook-like)
       nav("/feed");
