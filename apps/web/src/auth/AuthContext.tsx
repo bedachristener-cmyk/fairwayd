@@ -20,7 +20,7 @@ type AuthState = {
   user: Me | null;
   loading: boolean;
   isAuthenticated: boolean; // => token vorhanden (nicht "user geladen")
-  login: (token: string) => void;
+  login: (token: string, rememberMe?: boolean) => void;
   logout: () => void;
   refreshMe: () => Promise<void>;
 };
@@ -32,13 +32,17 @@ const FALLBACK_KEYS = ["token", "jwt", "access_token"];
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
 function loadTokenFromStorage() {
-  const direct = localStorage.getItem(STORAGE_KEY);
+  // 1) zuerst "offizieller" Key in local + session
+  const direct =
+    localStorage.getItem(STORAGE_KEY) ?? sessionStorage.getItem(STORAGE_KEY);
   if (direct && direct.trim()) return direct.trim();
 
+  // 2) fallback keys auch in local + session (für Altlasten)
   for (const k of FALLBACK_KEYS) {
-    const v = localStorage.getItem(k);
+    const v = localStorage.getItem(k) ?? sessionStorage.getItem(k);
     if (v && v.trim()) return v.trim();
   }
+
   return null;
 }
 
@@ -55,14 +59,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     setToken(null);
     setUser(null);
+
+    // Haupt-Token löschen
     localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_KEY);
+
+    // Alte Fallback-Keys ebenfalls löschen
+    for (const k of FALLBACK_KEYS) {
+      localStorage.removeItem(k);
+      sessionStorage.removeItem(k);
+    }
   };
 
-  const login = (newToken: string) => {
+  const login = (newToken: string, rememberMe = true) => {
     const t = newToken?.trim();
     if (!t) return;
+
     setToken(t);
-    localStorage.setItem(STORAGE_KEY, t);
+
+    if (rememberMe) {
+      localStorage.setItem(STORAGE_KEY, t);
+      sessionStorage.removeItem(STORAGE_KEY);
+    } else {
+      sessionStorage.setItem(STORAGE_KEY, t);
+      localStorage.removeItem(STORAGE_KEY);
+    }
   };
 
   const refreshMe = async () => {
