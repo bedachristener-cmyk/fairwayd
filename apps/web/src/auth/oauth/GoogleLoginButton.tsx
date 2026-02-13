@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { useAuth } from "../AuthContext";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
@@ -11,7 +10,7 @@ declare global {
 }
 
 type Props = {
-  onToken?: (token: string) => void;
+  onToken: (token: string) => void;
   onError?: (message: string) => void;
 };
 
@@ -29,7 +28,6 @@ function errMsg(e: unknown) {
 }
 
 export default function GoogleLoginButton({ onToken, onError }: Props) {
-  const { login } = useAuth();
   const btnRef = useRef<HTMLDivElement | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -72,10 +70,11 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
             try {
               setMsg(null);
               const idToken = resp?.credential;
-              if (!idToken)
+              if (!idToken) {
                 throw new Error(
                   "No credential (idToken) returned from Google.",
                 );
+              }
 
               const res = await fetch(`${API_BASE}/auth/oauth`, {
                 method: "POST",
@@ -103,9 +102,7 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
               const token = data?.token;
               if (!token) throw new Error("Backend returned no token.");
 
-              if (onToken) onToken(token);
-              else login(token);
-
+              onToken(token);
               setMsg("Logged in with Google ✅");
             } catch (e: unknown) {
               fail(errMsg(e));
@@ -117,8 +114,9 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
         window.google.accounts.id.renderButton(btnRef.current, {
           theme: "outline",
           size: "large",
-          text: "signin_with",
+          text: "continue_with",
           shape: "pill",
+          width: 320,
         });
 
         setReady(true);
@@ -131,7 +129,7 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [login, onToken, onError]);
+  }, [onToken, onError]);
 
   return (
     <div>
