@@ -202,13 +202,9 @@ export class AuthService {
     return clientId;
   }
 
-  private getGoogleClient(): OAuth2Client {
-    return new OAuth2Client();
-  }
-
   private async verifyGoogleIdToken(idToken: string) {
     const audience = this.getGoogleClientId();
-    const client = this.getGoogleClient();
+    const client = new OAuth2Client();
 
     try {
       const ticket = await client.verifyIdToken({
@@ -229,9 +225,17 @@ export class AuthService {
         avatarUrl: payload.picture ?? null,
       };
     } catch (e: any) {
-      const isProd = (process.env.NODE_ENV ?? 'development') === 'production';
+      // 🔍 Always log real error to Railway logs
+      console.error('[OAuth] Google verifyIdToken failed:', {
+        message: e?.message ?? String(e),
+        name: e?.name,
+        code: e?.code,
+      });
 
-      if (!isProd) {
+      const debugEnabled =
+        (process.env.OAUTH_DEBUG ?? 'false').toLowerCase() === 'true';
+
+      if (debugEnabled) {
         throw new BadRequestException(
           `Invalid Google token: ${e?.message ?? String(e)}`,
         );
