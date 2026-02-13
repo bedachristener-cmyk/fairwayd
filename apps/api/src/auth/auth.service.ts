@@ -13,8 +13,6 @@ type OAuthProvider = 'GOOGLE' | 'APPLE' | 'FACEBOOK';
 
 @Injectable()
 export class AuthService {
-  private googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
@@ -128,13 +126,12 @@ export class AuthService {
     let user = existing?.user;
 
     try {
-      // First login: create user WITHOUT handle
       if (!user) {
         user = await this.prisma.user.create({
           data: {
             email: profile.email ?? null,
             password: null,
-            handle: null, // <- handle comes later via ProfileSetup
+            handle: null,
             name: profile.name ?? null,
             avatarUrl: profile.avatarUrl ?? null,
             termsAcceptedAt: null,
@@ -149,7 +146,6 @@ export class AuthService {
           },
         });
       } else {
-        // Keep minimal profile data in sync
         const patch: any = {};
         if (!user.email && profile.email) patch.email = profile.email;
         if (!user.name && profile.name) patch.name = profile.name;
@@ -182,7 +178,7 @@ export class AuthService {
       token,
       user: {
         id: user.id,
-        handle: user.handle, // string | null
+        handle: user.handle,
         name: user.name,
         avatarUrl: user.avatarUrl,
         termsAcceptedAt: (user as any).termsAcceptedAt ?? null,
@@ -195,14 +191,33 @@ export class AuthService {
   // Provider verification
   // =========================================================
 
+  private getGoogleClientId(): string {
+    const raw = process.env.GOOGLE_CLIENT_ID ?? '';
+    const clientId = raw.trim();
+
+    if (!clientId) {
+      throw new BadRequestException('GOOGLE_CLIENT_ID is not set');
+    }
+
+    return clientId;
+  }
+
+  private getGoogleClient(): OAuth2Client {
+    return new OAuth2Client();
+  }
+
   private async verifyGoogleIdToken(idToken: string) {
+    const audience = this.getGoogleClientId();
+    const client = this.getGoogleClient();
+
     try {
-      const ticket = await this.googleClient.verifyIdToken({
+      const ticket = await client.verifyIdToken({
         idToken,
-        audience: process.env.GOOGLE_CLIENT_ID,
+        audience,
       });
 
       const payload = ticket.getPayload();
+
       if (!payload?.sub) {
         throw new Error('Missing sub');
       }
@@ -213,7 +228,15 @@ export class AuthService {
         name: payload.name ?? null,
         avatarUrl: payload.picture ?? null,
       };
-    } catch {
+    } catch (e: any) {
+      const isProd = (process.env.NODE_ENV ?? 'development') === 'production';
+
+      if (!isProd) {
+        throw new BadRequestException(
+          `Invalid Google token: ${e?.message ?? String(e)}`,
+        );
+      }
+
       throw new BadRequestException('Invalid Google token');
     }
   }
