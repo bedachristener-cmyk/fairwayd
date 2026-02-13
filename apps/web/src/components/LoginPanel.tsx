@@ -1,24 +1,32 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import DevLogin from "./DevLogin";
 import GoogleLoginButton from "../auth/oauth/GoogleLoginButton";
-
-function isLocalhost() {
-  const h = window.location.hostname;
-  return h === "localhost" || h === "127.0.0.1";
-}
 
 export default function LoginPanel() {
   const nav = useNavigate();
   const { login } = useAuth();
 
   const [msg, setMsg] = useState<string | null>(null);
-  const showLocalOnly = useMemo(() => isLocalhost(), []);
+  const [rememberMe, setRememberMe] = useState(true);
+
+  const googleConfigured = useMemo(() => {
+    // Vite ersetzt das zur Build-Zeit; wenn es fehlt, ist Google Login nicht konfiguriert
+    return !!import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  }, []);
+
+  useEffect(() => {
+    const savedRemember = localStorage.getItem("fairwayd_remember_me");
+    if (savedRemember != null) setRememberMe(savedRemember === "1");
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("fairwayd_remember_me", rememberMe ? "1" : "0");
+  }, [rememberMe]);
 
   const onLoggedIn = (token: string) => {
     setMsg(null);
-    login(token);
+    login(token, rememberMe);
     nav("/feed");
   };
 
@@ -31,7 +39,9 @@ export default function LoginPanel() {
         padding: 18,
       }}
     >
-      <div style={{ fontWeight: 900, marginBottom: 10 }}>Login</div>
+      <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 8 }}>
+        build {import.meta.env.MODE} / {window.location.origin}
+      </div>
 
       {msg && (
         <div
@@ -49,7 +59,27 @@ export default function LoginPanel() {
         </div>
       )}
 
-      {showLocalOnly ? (
+      {/* Remember me */}
+      <label
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          marginBottom: 12,
+          opacity: 0.85,
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={rememberMe}
+          onChange={(e) => setRememberMe(e.target.checked)}
+        />
+        <span style={{ fontSize: 12 }}>
+          Angemeldet bleiben (auf fremden PCs deaktivieren)
+        </span>
+      </label>
+
+      {googleConfigured ? (
         <>
           <div style={{ marginBottom: 12 }}>
             <GoogleLoginButton
@@ -58,20 +88,35 @@ export default function LoginPanel() {
             />
           </div>
 
-          <DevLogin onLoggedIn={(token: string) => onLoggedIn(token)} />
+          <button
+            type="button"
+            disabled
+            style={{
+              width: "100%",
+              padding: "10px 12px",
+              borderRadius: 999,
+              border: "1px solid rgba(0,0,0,0.18)",
+              background: "rgba(0,0,0,0.06)",
+              opacity: 0.7,
+              cursor: "not-allowed",
+              fontWeight: 800,
+            }}
+          >
+            Continue with Email (soon)
+          </button>
 
           <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>
-            Google Login is enabled on <strong>localhost</strong>. DevLogin is
-            available as fallback.
+            Google Login ist aktiv. Email Login kommt als Fallback.
           </div>
         </>
       ) : (
         <>
-          <div style={{ fontSize: 13, opacity: 0.8 }}>
-            Google Login is disabled on this host in dev.
+          <div style={{ fontSize: 13, opacity: 0.85 }}>
+            Google Login ist nicht konfiguriert.
           </div>
           <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>
-            Please open the app via <strong>http://localhost:5173</strong>.
+            Setze <strong>VITE_GOOGLE_CLIENT_ID</strong> im Web (Vercel / .env),
+            dann erscheint der Google Button.
           </div>
         </>
       )}
