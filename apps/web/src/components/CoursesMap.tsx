@@ -14,7 +14,6 @@ import DevLogin from "./DevLogin";
 import { useAuth } from "../auth/AuthContext";
 import { apiGet } from "../api/client";
 import CoursePopupActions from "./CoursePopupActions";
-import FeedBadge from "./FeedBadge";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
 
 type Course = {
@@ -306,7 +305,6 @@ export default function CoursesMap() {
   return (
     <div style={{ height: "100vh", position: "relative" }}>
       <DevLogin />
-      <FeedBadge />
       <LoggedInBadge isLoggedIn={isAuthenticated} />
 
       <MapContainer
