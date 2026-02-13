@@ -91,6 +91,10 @@ async function bootstrap() {
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
+  console.log(`OAUTH_DEBUG=${process.env.OAUTH_DEBUG}`);
+  console.log(
+    `GOOGLE_CLIENT_ID_PREFIX=${(process.env.GOOGLE_CLIENT_ID ?? '').trim().slice(0, 18)}...`,
+  );
 
   // ✅ Ensure preflight OPTIONS requests never 404 (e.g. /auth/oauth)
   // CORS headers will be applied by enableCors
