@@ -44,7 +44,14 @@ export class AuthController {
       throw new BadRequestException('Missing OAuth provider');
     }
 
-    return this.auth.loginWithOAuth(body);
+    // Normalize provider casing (defensive)
+    const provider = String(body.provider).toUpperCase() as OAuthProvider;
+
+    return this.auth.loginWithOAuth({
+      provider,
+      idToken: body.idToken,
+      accessToken: body.accessToken,
+    });
   }
 
   /**

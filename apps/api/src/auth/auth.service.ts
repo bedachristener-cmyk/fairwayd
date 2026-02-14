@@ -18,6 +18,9 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
+  // Keep one google client instance (less overhead)
+  private readonly googleClient = new OAuth2Client();
+
   // =========================================================
   // Public API
   // =========================================================
@@ -27,7 +30,7 @@ export class AuthService {
     idToken?: string;
     accessToken?: string;
   }) {
-    const { provider } = params;
+    const provider = (params.provider ?? '').toUpperCase() as OAuthProvider;
 
     if (provider === 'GOOGLE') {
       if (!params.idToken) {
@@ -149,9 +152,8 @@ export class AuthService {
         const patch: any = {};
         if (!user.email && profile.email) patch.email = profile.email;
         if (!user.name && profile.name) patch.name = profile.name;
-        if (!user.avatarUrl && profile.avatarUrl) {
+        if (!user.avatarUrl && profile.avatarUrl)
           patch.avatarUrl = profile.avatarUrl;
-        }
 
         if (Object.keys(patch).length > 0) {
           user = await this.prisma.user.update({
@@ -191,23 +193,23 @@ export class AuthService {
   // Provider verification
   // =========================================================
 
-  private getGoogleClientId(): string {
-    const raw = process.env.GOOGLE_CLIENT_ID ?? '';
-    const clientId = raw.trim();
+  private isDebugEnabled() {
+    return String(process.env.OAUTH_DEBUG ?? 'false').toLowerCase() === 'true';
+  }
 
+  private getGoogleClientId(): string {
+    const clientId = String(process.env.GOOGLE_CLIENT_ID ?? '').trim();
     if (!clientId) {
       throw new BadRequestException('GOOGLE_CLIENT_ID is not set');
     }
-
     return clientId;
   }
 
   private async verifyGoogleIdToken(idToken: string) {
     const audience = this.getGoogleClientId();
-    const client = new OAuth2Client();
 
     try {
-      const ticket = await client.verifyIdToken({
+      const ticket = await this.googleClient.verifyIdToken({
         idToken,
         audience,
       });
@@ -218,6 +220,29 @@ export class AuthService {
         throw new Error('Missing sub');
       }
 
+      // Robust audience check (some libs/versions can vary)
+      const audAny: any = (payload as any).aud;
+      const audOk =
+        typeof audAny === 'string'
+          ? audAny === audience
+          : Array.isArray(audAny)
+            ? audAny.includes(audience)
+            : false;
+
+      if (!audOk) {
+        throw new Error(`Audience mismatch aud=${JSON.stringify(audAny)}`);
+      }
+
+      if (this.isDebugEnabled()) {
+        console.log('[OAuth] Google verify OK', {
+          email: payload.email ?? null,
+          aud: audAny,
+          azp: (payload as any).azp,
+          expectedAudPrefix: audience.slice(0, 12) + '…',
+          node: process.version,
+        });
+      }
+
       return {
         providerUserId: payload.sub,
         email: payload.email ?? null,
@@ -225,19 +250,18 @@ export class AuthService {
         avatarUrl: payload.picture ?? null,
       };
     } catch (e: any) {
-      // 🔍 Always log real error to Railway logs
-      console.error('[OAuth] Google verifyIdToken failed:', {
+      // Always log real error to Railway logs (no token)
+      console.error('[OAuth] Google verifyIdToken failed', {
         message: e?.message ?? String(e),
         name: e?.name,
         code: e?.code,
+        expectedAudPrefix: audience ? audience.slice(0, 12) + '…' : null,
+        node: process.version,
       });
 
-      const debugEnabled =
-        (process.env.OAUTH_DEBUG ?? 'false').toLowerCase() === 'true';
-
-      if (debugEnabled) {
+      if (this.isDebugEnabled()) {
         throw new BadRequestException(
-          `Invalid Google token: ${e?.message ?? String(e)}`,
+          `Invalid Google token ${e?.message ?? String(e)}`,
         );
       }
 
@@ -246,24 +270,49 @@ export class AuthService {
   }
 
   private async verifyAppleIdToken(idToken: string) {
+    const appleAudience = process.env.APPLE_CLIENT_ID
+      ? String(process.env.APPLE_CLIENT_ID).trim()
+      : undefined;
+
+    if (!appleAudience) {
+      throw new BadRequestException('APPLE_CLIENT_ID is not set');
+    }
+
     const jwks = createRemoteJWKSet(
       new URL('https://appleid.apple.com/auth/keys'),
     );
 
-    const { payload } = await jwtVerify(idToken, jwks, {
-      audience: process.env.APPLE_CLIENT_ID,
-      issuer: 'https://appleid.apple.com',
-    });
+    try {
+      const { payload } = await jwtVerify(idToken, jwks, {
+        audience: appleAudience,
+        issuer: 'https://appleid.apple.com',
+      });
 
-    if (!payload.sub) {
+      if (!payload.sub) {
+        throw new BadRequestException('Invalid Apple token');
+      }
+
+      return {
+        providerUserId: String(payload.sub),
+        email: typeof payload.email === 'string' ? payload.email : null,
+        name: null,
+        avatarUrl: null,
+      };
+    } catch (e: any) {
+      console.error('[OAuth] Apple jwtVerify failed', {
+        message: e?.message ?? String(e),
+        name: e?.name,
+        code: e?.code,
+        node: process.version,
+      });
+
+      if (this.isDebugEnabled()) {
+        throw new BadRequestException(
+          `Invalid Apple token ${e?.message ?? String(e)}`,
+        );
+      }
+
       throw new BadRequestException('Invalid Apple token');
     }
-
-    return {
-      providerUserId: String(payload.sub),
-      email: typeof payload.email === 'string' ? payload.email : null,
-      name: null,
-      avatarUrl: null,
-    };
   }
 }
