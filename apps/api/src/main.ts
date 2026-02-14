@@ -46,57 +46,36 @@ async function bootstrap() {
     (process.env.ALLOW_VERCEL_PREVIEWS ?? 'true').toLowerCase() === 'true';
 
   app.enableCors({
-    origin: (origin: string | undefined, cb: CorsCallback) => {
+    origin: (origin: string | undefined, cb) => {
+      // Allow non-browser tools (Postman, curl)
       if (!origin) return cb(null, true);
 
-      const o = normalizeOrigin(origin);
+      try {
+        const host = new URL(origin).hostname;
 
-      // 1) Explicit production frontend
-      if (frontendUrl && o === frontendUrl) {
-        return cb(null, true);
-      }
-
-      // 2) Vercel production + preview deployments
-      if (allowVercelPreviews) {
-        try {
-          const host = new URL(o).hostname;
-
-          // allow *.vercel.app (production + previews)
-          if (host.endsWith('.vercel.app')) {
-            return cb(null, true);
-          }
-        } catch {
-          // ignore malformed origins
+        // 1️⃣ Allow main production frontend
+        if (host === 'fairwayd.vercel.app') {
+          return cb(null, true);
         }
+
+        // 2️⃣ Allow ALL Vercel deployments (preview + prod)
+        if (host.endsWith('.vercel.app')) {
+          return cb(null, true);
+        }
+
+        return cb(new Error('Not allowed by CORS'), false);
+      } catch {
+        return cb(new Error('Invalid origin'), false);
       }
-
-      // 3) Localhost (Vite dev)
-      if (/^http:\/\/(localhost|127\.0\.0\.1):517[3-9]$/i.test(o)) {
-        return cb(null, true);
-      }
-
-      // 4) LAN Vite
-      if (/^http:\/\/192\.168\.\d+\.\d+:5173$/i.test(o)) {
-        return cb(null, true);
-      }
-
-      // 5) ngrok dev frontends
-      if (/^https:\/\/[a-z0-9-]+\.ngrok-free\.dev$/i.test(o)) {
-        return cb(null, true);
-      }
-
-      const isProd = (process.env.NODE_ENV ?? 'development') === 'production';
-
-      if (isProd) {
-        console.warn(`CORS blocked origin: ${o}`);
-        return cb(null, false);
-      }
-
-      return cb(new Error(`CORS blocked for origin ${o}`), false);
     },
+
     credentials: true,
-    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+
     allowedHeaders: ['Content-Type', 'Authorization'],
+
+    exposedHeaders: ['Authorization'],
   });
 
   console.log(`OAUTH_DEBUG=${process.env.OAUTH_DEBUG}`);
