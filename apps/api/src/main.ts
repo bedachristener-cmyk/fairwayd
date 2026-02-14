@@ -101,7 +101,7 @@ async function bootstrap() {
   // IMPORTANT: Nest app itself has no app.options() type; use the underlying Express instance.
   // CORS headers are applied by enableCors above.
   const server = app.getHttpAdapter().getInstance();
-  server.options('*', (req: Request, res: Response) => {
+  server.options(/.*/, (req: Request, res: Response) => {
     res.sendStatus(204);
   });
 
