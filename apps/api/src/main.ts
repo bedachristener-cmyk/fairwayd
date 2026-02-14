@@ -14,6 +14,13 @@ function normalizeOrigin(origin: string) {
 }
 
 async function bootstrap() {
+  const raw = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL || '';
+  try {
+    const u = new URL(raw);
+    console.log('[DB]', { host: u.host, db: u.pathname.replace('/', '') });
+  } catch {
+    console.log('[DB] URL missing or invalid');
+  }
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   app.set('trust proxy', 1);
