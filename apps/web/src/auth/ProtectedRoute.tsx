@@ -8,19 +8,17 @@ export default function ProtectedRoute({
   children: React.ReactNode;
 }) {
   const loc = useLocation();
-  const { loading, isAuthenticated, token } = useAuth() as any;
+  const { loading, token } = useAuth();
 
-  // 1) Warten bis AuthContext fertig ist (Token aus Storage geladen etc.)
+  // solange wir initialisieren / me prüfen: nicht redirecten
   if (loading) {
     return (
       <div style={{ padding: 16, fontFamily: "system-ui" }}>Loading...</div>
     );
   }
 
-  // 2) Erst danach entscheiden
-  const authed = isAuthenticated ?? !!token;
-
-  if (!authed) {
+  // einzig verlässliches Kriterium hier: token vorhanden
+  if (!token) {
     return (
       <Navigate
         to={`/?next=${encodeURIComponent(loc.pathname + loc.search)}`}

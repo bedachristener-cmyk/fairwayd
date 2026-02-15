@@ -67,9 +67,19 @@ function RecenterMap({
   zoom?: number;
 }) {
   const map = useMap();
+
   useEffect(() => {
-    map.flyTo([lat, lon], zoom, { duration: 0.6 });
+    const safeLat = Number(lat);
+    const safeLon = Number(lon);
+
+    if (!Number.isFinite(safeLat) || !Number.isFinite(safeLon)) {
+      console.warn("RightRail skip flyTo invalid coords", { lat, lon });
+      return;
+    }
+
+    map.flyTo([safeLat, safeLon], zoom, { duration: 0.6 });
   }, [lat, lon, zoom, map]);
+
   return null;
 }
 

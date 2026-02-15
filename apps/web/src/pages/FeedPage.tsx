@@ -137,21 +137,17 @@ export default function FeedPage() {
 
   // --- Load feed
   const loadFeed = useCallback(async () => {
-    if (!token) {
-      setPosts([]);
-      return;
-    }
+    if (!token) return;
 
     try {
       setErr(null);
+
       const res = await fetch(`${API_BASE}/posts/feed`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (res.status === 401 || res.status === 403) {
-        // Token is invalid (e.g. DB reset) => logout cleanly
         logout();
-        setPosts([]);
         return;
       }
 
@@ -167,11 +163,12 @@ export default function FeedPage() {
     }
   }, [token, logout]);
 
+  // ✅ Load feed only when auth is ready AND token exists
   useEffect(() => {
     if (loading) return;
-    if (!isAuthenticated) return;
+    if (!token) return;
     loadFeed();
-  }, [loading, isAuthenticated, loadFeed]);
+  }, [loading, token, loadFeed]);
 
   // Focus composer when course gets selected
   useEffect(() => {
@@ -207,7 +204,6 @@ export default function FeedPage() {
       return;
     }
 
-    // Ensure we have strict required fields (prevents TS errors + runtime issues)
     if (!selectedIsComplete) {
       setErr(
         "Selected course is missing details (name/coordinates). Please re-select the course.",
@@ -237,9 +233,9 @@ export default function FeedPage() {
       visibility,
       course: {
         id: selectedCourse.id,
-        name: selectedName!, // safe because selectedIsComplete
-        lat: selectedLat!, // safe because selectedIsComplete
-        lon: selectedLon!, // safe because selectedIsComplete
+        name: selectedName!,
+        lat: selectedLat!,
+        lon: selectedLon!,
       },
       user: { id: "me", handle },
       images: preview ? [{ id: "preview", url: preview }] : [],
@@ -456,14 +452,18 @@ export default function FeedPage() {
                 border: "1px solid var(--border)",
                 cursor: "pointer",
               }}
-              onClick={() =>
+              onClick={() => {
+                const lat = Number(p.course.lat);
+                const lon = Number(p.course.lon);
+                if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+
                 setSelectedCourse({
                   id: p.course.id,
                   name: p.course.name,
-                  lat: p.course.lat,
-                  lon: p.course.lon,
-                })
-              }
+                  lat,
+                  lon,
+                });
+              }}
               title="Select this post's course"
             >
               <div style={{ fontWeight: 900 }}>{p.course.name}</div>

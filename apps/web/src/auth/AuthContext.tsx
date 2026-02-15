@@ -19,7 +19,7 @@ type AuthState = {
   token: string | null;
   user: Me | null;
   loading: boolean;
-  isAuthenticated: boolean; // => token vorhanden (nicht "user geladen")
+  isAuthenticated: boolean;
   login: (token: string, rememberMe?: boolean) => void;
   logout: () => void;
   refreshMe: () => Promise<void>;
@@ -29,15 +29,16 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 
 export const STORAGE_KEY = "fairwayd_token";
 const FALLBACK_KEYS = ["token", "jwt", "access_token"];
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
-function loadTokenFromStorage() {
-  // 1) zuerst "offizieller" Key in local + session
+function loadTokenFromStorage(): string | null {
+  // 1) offizieller Key in local + session
   const direct =
     localStorage.getItem(STORAGE_KEY) ?? sessionStorage.getItem(STORAGE_KEY);
   if (direct && direct.trim()) return direct.trim();
 
-  // 2) fallback keys auch in local + session (für Altlasten)
+  // 2) Altlasten / Fallback keys
   for (const k of FALLBACK_KEYS) {
     const v = localStorage.getItem(k) ?? sessionStorage.getItem(k);
     if (v && v.trim()) return v.trim();
@@ -47,57 +48,39 @@ function loadTokenFromStorage() {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // ✅ Token synchron initialisieren => kein Redirect-Race beim direkten Aufruf
   const [token, setToken] = useState<string | null>(() =>
     loadTokenFromStorage(),
   );
   const [user, setUser] = useState<Me | null>(null);
 
-  // loading = "wir prüfen /users/me" (nur wenn token vorhanden)
   const [loading, setLoading] = useState<boolean>(!!token);
 
   const logout = () => {
     setToken(null);
     setUser(null);
+    setLoading(false);
 
-    // Haupt-Token löschen
     localStorage.removeItem(STORAGE_KEY);
     sessionStorage.removeItem(STORAGE_KEY);
 
-    // Alte Fallback-Keys ebenfalls löschen
     for (const k of FALLBACK_KEYS) {
       localStorage.removeItem(k);
       sessionStorage.removeItem(k);
     }
   };
 
-  const login = (newToken: string, rememberMe = true) => {
-    const t = newToken?.trim();
-    if (!t) return;
-
-    setToken(t);
-
-    if (rememberMe) {
-      localStorage.setItem(STORAGE_KEY, t);
-      sessionStorage.removeItem(STORAGE_KEY);
-    } else {
-      sessionStorage.setItem(STORAGE_KEY, t);
-      localStorage.removeItem(STORAGE_KEY);
-    }
-  };
-
   const refreshMe = async () => {
-    if (!token) {
+    const t = token?.trim();
+    if (!t) {
       setUser(null);
       return;
     }
 
     try {
       const res = await fetch(`${API_BASE}/users/me`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${t}` },
       });
 
-      // Token exists but no longer valid (e.g., DB reset => user missing)
       if (res.status === 401 || res.status === 403) {
         logout();
         return;
@@ -115,7 +98,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // ✅ Wenn token sich ändert: user laden/prüfen
+  const login = (newToken: string, rememberMe = true) => {
+    const t = (newToken ?? "").trim();
+    if (!t) return;
+
+    // state zuerst
+    setToken(t);
+    setUser(null);
+    setLoading(true);
+
+    // cleanup / konsistent speichern
+    localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_KEY);
+    for (const k of FALLBACK_KEYS) {
+      localStorage.removeItem(k);
+      sessionStorage.removeItem(k);
+    }
+
+    const store = rememberMe ? localStorage : sessionStorage;
+    store.setItem(STORAGE_KEY, t);
+  };
+
+  // Wenn token gesetzt ist, user laden
   useEffect(() => {
     let cancelled = false;
 
@@ -138,8 +142,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  // ✅ Authenticated = Token vorhanden.
-  // OnboardingGuard sorgt dann dafür, dass /users/me ok ist und Terms/Profile stimmen.
   const isAuthenticated = !!token;
 
   const value = useMemo<AuthState>(

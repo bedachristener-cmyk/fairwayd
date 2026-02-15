@@ -85,6 +85,17 @@ const golfIcon = L.divIcon({
   popupAnchor: [0, -12],
 });
 
+function toFiniteNumber(v: unknown): number | null {
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function isFiniteLatLon(lat: unknown, lon: unknown): lat is number {
+  const a = toFiniteNumber(lat);
+  const b = toFiniteNumber(lon);
+  return a !== null && b !== null;
+}
+
 function useGeolocation() {
   const [pos, setPos] = useState<Geo | null>(null);
 
@@ -128,12 +139,30 @@ function FitToData({
     if (locked) return;
 
     if (userPos) {
-      map.setView([userPos.lat, userPos.lon], 10);
+      const lat = toFiniteNumber(userPos.lat);
+      const lon = toFiniteNumber(userPos.lon);
+      if (!Number.isFinite(lat as number) || !Number.isFinite(lon as number)) {
+        console.warn("FitToData skip setView invalid userPos", userPos);
+        return;
+      }
+      map.setView([lat as number, lon as number], 10);
       return;
     }
 
     if (courses.length > 0) {
-      map.setView([courses[0].lat, courses[0].lon], 8);
+      const first = courses[0];
+      const lat = toFiniteNumber(first?.lat);
+      const lon = toFiniteNumber(first?.lon);
+
+      if (!Number.isFinite(lat as number) || !Number.isFinite(lon as number)) {
+        console.warn(
+          "FitToData skip setView invalid first course coords",
+          first,
+        );
+        return;
+      }
+
+      map.setView([lat as number, lon as number], 8);
     }
   }, [userPos, courses, map, locked]);
 
@@ -160,7 +189,15 @@ function ZoomToCourse({
     const c = courses.find((x) => x.id === courseId);
     if (!c) return;
 
-    map.setView([c.lat, c.lon], 14, { animate: true });
+    const lat = toFiniteNumber(c.lat);
+    const lon = toFiniteNumber(c.lon);
+
+    if (!Number.isFinite(lat as number) || !Number.isFinite(lon as number)) {
+      console.warn("ZoomToCourse skip setView invalid course coords", c);
+      return;
+    }
+
+    map.setView([lat as number, lon as number], 14, { animate: true });
 
     onOpenCourse(courseId);
 
@@ -245,7 +282,9 @@ export default function CoursesMap() {
   };
 
   const center = useMemo<[number, number]>(() => {
-    return userPos ? [userPos.lat, userPos.lon] : [47.5596, 7.5886];
+    const lat = toFiniteNumber(userPos?.lat);
+    const lon = toFiniteNumber(userPos?.lon);
+    return lat !== null && lon !== null ? [lat, lon] : [47.5596, 7.5886];
   }, [userPos]);
 
   useEffect(() => {
@@ -333,13 +372,23 @@ export default function CoursesMap() {
           onOpenCourse={(id) => loadPostsForCourse(id, false)}
         />
 
-        {userPos && (
-          <CircleMarker center={[userPos.lat, userPos.lon]} radius={8}>
-            <Popup>Your location</Popup>
-          </CircleMarker>
-        )}
+        {userPos &&
+          Number.isFinite(userPos.lat) &&
+          Number.isFinite(userPos.lon) && (
+            <CircleMarker center={[userPos.lat, userPos.lon]} radius={8}>
+              <Popup>Your location</Popup>
+            </CircleMarker>
+          )}
 
         {courses.map((c) => {
+          const lat = toFiniteNumber(c.lat);
+          const lon = toFiniteNumber(c.lon);
+
+          // ✅ Wichtig: Marker mit NaN/NaN darf NIE gerendert werden (Leaflet crasht sonst)
+          if (lat === null || lon === null) {
+            return null;
+          }
+
           const busy = !!busyByCourse[c.id];
           const err = errByCourse[c.id];
           const loaded = postsByCourse[c.id] !== undefined;
@@ -348,7 +397,7 @@ export default function CoursesMap() {
           return (
             <Marker
               key={c.id}
-              position={[c.lat, c.lon]}
+              position={[lat, lon]}
               icon={golfIcon}
               ref={(r) => {
                 markerRefs.current[c.id] = (r as any) ?? null;
@@ -358,8 +407,8 @@ export default function CoursesMap() {
                   setSelectedCourse({
                     id: c.id,
                     name: c.name,
-                    lat: c.lat,
-                    lon: c.lon,
+                    lat,
+                    lon,
                   });
                   nav("/feed");
                 },
@@ -384,8 +433,8 @@ export default function CoursesMap() {
                         setSelectedCourse({
                           id: c.id,
                           name: c.name,
-                          lat: c.lat,
-                          lon: c.lon,
+                          lat,
+                          lon,
                         });
                         nav("/feed");
                       }}

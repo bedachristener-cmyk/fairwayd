@@ -27,6 +27,12 @@ function errMsg(e: unknown) {
   return e instanceof Error ? e.message : String(e);
 }
 
+function extractToken(data: any): string | null {
+  const t =
+    data?.token ?? data?.accessToken ?? data?.access_token ?? data?.jwt ?? null;
+  return typeof t === "string" && t.trim() ? t.trim() : null;
+}
+
 export default function GoogleLoginButton({ onToken, onError }: Props) {
   const btnRef = useRef<HTMLDivElement | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -69,6 +75,7 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
           callback: async (resp: any) => {
             try {
               setMsg(null);
+
               const idToken = resp?.credential;
               if (!idToken) {
                 throw new Error(
@@ -99,10 +106,27 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
               }
 
               const data = await res.json();
-              const token = data?.token;
-              if (!token) throw new Error("Backend returned no token.");
+
+              // Token robust auslesen (Backend kann verschiedene Keys liefern)
+              const token =
+                data?.token ??
+                data?.accessToken ??
+                data?.access_token ??
+                data?.jwt;
+
+              if (!token || typeof token !== "string") {
+                throw new Error("Backend returned no token.");
+              }
 
               onToken(token);
+              setMsg("Logged in with Google ✅");
+
+              const token = extractToken(data);
+              if (!token) throw new Error("Backend returned no token.");
+
+              // Wichtig: an Parent geben (AuthContext.login soll speichern)
+              onToken(token);
+
               setMsg("Logged in with Google ✅");
             } catch (e: unknown) {
               fail(errMsg(e));

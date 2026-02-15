@@ -218,8 +218,10 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
     "";
 
   const tokenFromStorage =
-    localStorage.getItem("token") ||
     localStorage.getItem("fairwayd_token") ||
+    sessionStorage.getItem("fairwayd_token") ||
+    localStorage.getItem("token") ||
+    sessionStorage.getItem("token") ||
     "";
 
   const token = tokenFromContext || tokenFromStorage;
