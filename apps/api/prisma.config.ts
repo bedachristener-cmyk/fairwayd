@@ -1,4 +1,5 @@
 import { defineConfig } from 'prisma/config';
+import path from 'node:path';
 
 const url = process.env.NEON_DATABASE_URL;
 if (!url) {
@@ -6,7 +7,9 @@ if (!url) {
 }
 
 export default defineConfig({
-  schema: 'apps/api/prisma/schema.prisma',
-  migrations: { path: 'apps/api/prisma/migrations' },
+  schema: path.resolve(process.cwd(), 'prisma/schema.prisma'),
+  migrations: {
+    path: path.resolve(process.cwd(), 'prisma/migrations'),
+  },
   datasource: { url },
 });

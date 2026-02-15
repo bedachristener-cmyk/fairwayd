@@ -3,6 +3,7 @@
     "@nestjs/platform-express": "^11.1.12",
     "leaflet": "^1.9.4",
     "multer": "^2.0.2",
+    "prisma": "^7.4.0",
     "react-leaflet": "^5.0.0"
   }
 }
