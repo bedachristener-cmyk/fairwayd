@@ -107,18 +107,14 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
 
               const data = await res.json();
 
-              // Token robust auslesen (Backend kann verschiedene Keys liefern)
-              const token =
-                data?.token ??
-                data?.accessToken ??
-                data?.access_token ??
-                data?.jwt;
-
-              if (!token || typeof token !== "string") {
+              const token = extractToken(data);
+              if (!token) {
                 throw new Error("Backend returned no token.");
               }
 
+              // Wichtig: an Parent geben (AuthContext.login soll speichern)
               onToken(token);
+
               setMsg("Logged in with Google ✅");
 
               const token = extractToken(data);
