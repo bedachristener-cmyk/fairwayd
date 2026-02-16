@@ -114,15 +114,6 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
 
               // Wichtig: an Parent geben (AuthContext.login soll speichern)
               onToken(token);
-
-              setMsg("Logged in with Google ✅");
-
-              const token = extractToken(data);
-              if (!token) throw new Error("Backend returned no token.");
-
-              // Wichtig: an Parent geben (AuthContext.login soll speichern)
-              onToken(token);
-
               setMsg("Logged in with Google ✅");
             } catch (e: unknown) {
               fail(errMsg(e));
