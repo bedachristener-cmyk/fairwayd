@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
+function normalizeApiBase(v: string | undefined | null) {
+  const s = (v ?? "").trim().replace(/\/+$/, "");
+  if (!s) return "http://localhost:3000";
+  if (/^https?:\/\//i.test(s)) return s;
+  // if someone configured only "fairwayd-xyz.up.railway.app", assume https
+  return `https://${s}`;
+}
+
+const API_BASE = normalizeApiBase(import.meta.env.VITE_API_BASE_URL);
+const GOOGLE_CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "").trim();
 
 declare global {
   interface Window {
@@ -31,6 +39,24 @@ function extractToken(data: any): string | null {
   const t =
     data?.token ?? data?.accessToken ?? data?.access_token ?? data?.jwt ?? null;
   return typeof t === "string" && t.trim() ? t.trim() : null;
+}
+
+async function readErrorMessage(res: Response) {
+  // Try JSON first, then fallback to text/status
+  try {
+    const j = await res.json();
+    if (j?.message) {
+      return typeof j.message === "string"
+        ? j.message
+        : JSON.stringify(j.message);
+    }
+    if (j?.error) return String(j.error);
+  } catch {
+    // ignore
+  }
+  const text = await res.text().catch(() => "");
+  const t = text.trim();
+  return t ? t : `${res.status} ${res.statusText}`;
 }
 
 export default function GoogleLoginButton({ onToken, onError }: Props) {
@@ -77,11 +103,10 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
               setMsg(null);
 
               const idToken = resp?.credential;
-              if (!idToken) {
+              if (!idToken)
                 throw new Error(
                   "No credential (idToken) returned from Google.",
                 );
-              }
 
               const res = await fetch(`${API_BASE}/auth/oauth`, {
                 method: "POST",
@@ -90,29 +115,14 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
               });
 
               if (!res.ok) {
-                let text = `POST /auth/oauth failed (${res.status})`;
-                try {
-                  const j = await res.json();
-                  if (j?.message) {
-                    text =
-                      typeof j.message === "string"
-                        ? j.message
-                        : JSON.stringify(j.message);
-                  }
-                } catch {
-                  // ignore
-                }
-                throw new Error(text);
+                const m = await readErrorMessage(res);
+                throw new Error(m);
               }
 
               const data = await res.json();
-
               const token = extractToken(data);
-              if (!token) {
-                throw new Error("Backend returned no token.");
-              }
+              if (!token) throw new Error("Backend returned no token.");
 
-              // Wichtig: an Parent geben (AuthContext.login soll speichern)
               onToken(token);
               setMsg("Logged in with Google ✅");
             } catch (e: unknown) {
