@@ -10,7 +10,7 @@ import {
 import { useSelectedCourse } from "../state/SelectedCourseContext";
 import { useNavigate } from "react-router-dom";
 import L from "leaflet";
-import CourseFollowButton from "../components/CourseFollowButton";
+import { CourseFollowButton } from "../components/CourseFollowButton";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
@@ -184,7 +184,12 @@ export default function MapView() {
                   </div>
 
                   <div style={{ marginTop: 10 }}>
-                    <CourseFollowButton courseId={c.id} />
+                    <CourseFollowButton
+                      isFollowing={false}
+                      disabled={true}
+                      onFollow={async () => {}}
+                      onUnfollow={async () => {}}
+                    />
                   </div>
                 </div>
               </Popup>
