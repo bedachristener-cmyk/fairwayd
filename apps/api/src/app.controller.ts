@@ -43,7 +43,7 @@ export class AppController {
 
     return {
       status: 'ok',
-      env: process.env.NODE_ENV ?? null,
+      env: process.env.NODE_ENV ?? 'development',
       mode: isProdLike ? 'neon' : 'local',
       dbHost,
       dbName,
