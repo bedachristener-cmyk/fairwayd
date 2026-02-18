@@ -1,5 +1,9 @@
 // web/src/api/client.ts
 import { API_BASE } from "./base";
+if (!/^https?:\/\//i.test(API_BASE)) {
+  // eslint-disable-next-line no-console
+  console.warn("API_BASE is not absolute. Check VITE_API_BASE_URL:", API_BASE);
+}
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 

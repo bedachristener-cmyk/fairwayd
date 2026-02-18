@@ -10,6 +10,7 @@ import {
 import { useSelectedCourse } from "../state/SelectedCourseContext";
 import { useNavigate } from "react-router-dom";
 import L from "leaflet";
+import CourseFollowButton from "../components/CourseFollowButton";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
@@ -57,32 +58,6 @@ type CourseLite = {
   country?: string;
   region?: string | null;
 };
-
-async function apiGetFollowing(courseId: string, token: string) {
-  const res = await fetch(`${API_BASE}/courses/${courseId}/following`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error(`GET following failed ${res.status}`);
-  return (await res.json()) as { following: boolean };
-}
-
-async function apiFollow(courseId: string, token: string) {
-  const res = await fetch(`${API_BASE}/courses/${courseId}/follow`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error(`POST follow failed ${res.status}`);
-  return (await res.json()) as { ok: boolean };
-}
-
-async function apiUnfollow(courseId: string, token: string) {
-  const res = await fetch(`${API_BASE}/courses/${courseId}/follow`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error(`DELETE follow failed ${res.status}`);
-  return (await res.json()) as { ok: boolean };
-}
 
 function CoursesByBoundsLoader({
   onStatus,
@@ -152,18 +127,6 @@ export default function MapView() {
   const [courses, setCourses] = useState<CourseLite[]>([]);
   const [loadStatus, setLoadStatus] = useState("Loading courses...");
 
-  // Follow UI state
-  const token = localStorage.getItem("fairwayd_token") || "";
-  const [followingByCourseId, setFollowingByCourseId] = useState<
-    Record<string, boolean>
-  >({});
-  const [busyByCourseId, setBusyByCourseId] = useState<Record<string, boolean>>(
-    {},
-  );
-  const [loadingFollowByCourseId, setLoadingFollowByCourseId] = useState<
-    Record<string, boolean>
-  >({});
-
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
       (pos) => setCenter([pos.coords.latitude, pos.coords.longitude]),
@@ -187,54 +150,6 @@ export default function MapView() {
     [setSelectedCourse, nav],
   );
 
-  const ensureFollowingLoaded = useCallback(
-    async (courseId: string) => {
-      if (!token) return;
-
-      if (followingByCourseId[courseId] !== undefined) return;
-      if (loadingFollowByCourseId[courseId]) return;
-
-      setLoadingFollowByCourseId((m) => ({ ...m, [courseId]: true }));
-
-      try {
-        const data = await apiGetFollowing(courseId, token);
-        setFollowingByCourseId((m) => ({ ...m, [courseId]: data.following }));
-      } catch {
-        // wenn Request fehlschlägt, setze bewusst false (nicht undefined)
-        setFollowingByCourseId((m) => ({ ...m, [courseId]: false }));
-      } finally {
-        setLoadingFollowByCourseId((m) => ({ ...m, [courseId]: false }));
-      }
-    },
-    [token, followingByCourseId, loadingFollowByCourseId],
-  );
-
-  const toggleFollow = useCallback(
-    async (courseId: string) => {
-      if (!token) return;
-
-      const current = !!followingByCourseId[courseId];
-      setBusyByCourseId((m) => ({ ...m, [courseId]: true }));
-
-      // optimistic
-      setFollowingByCourseId((m) => ({ ...m, [courseId]: !current }));
-
-      try {
-        if (current) {
-          await apiUnfollow(courseId, token);
-        } else {
-          await apiFollow(courseId, token);
-        }
-      } catch {
-        // revert on error
-        setFollowingByCourseId((m) => ({ ...m, [courseId]: current }));
-      } finally {
-        setBusyByCourseId((m) => ({ ...m, [courseId]: false }));
-      }
-    },
-    [token, followingByCourseId],
-  );
-
   return (
     <div style={{ height: "100vh" }}>
       <div style={{ padding: 8, color: "var(--text)" }}>{status}</div>
@@ -251,19 +166,8 @@ export default function MapView() {
         <CoursesByBoundsLoader onStatus={setLoadStatus} onItems={setCourses} />
 
         {courses.map((c) => {
-          const following = followingByCourseId[c.id];
-          const busy = !!busyByCourseId[c.id];
-          const loading = !!loadingFollowByCourseId[c.id];
-
           return (
-            <Marker
-              key={c.id}
-              position={[c.lat, c.lon]}
-              icon={courseIcon}
-              eventHandlers={{
-                click: () => ensureFollowingLoaded(c.id),
-              }}
-            >
+            <Marker key={c.id} position={[c.lat, c.lon]} icon={courseIcon}>
               <Popup>
                 <div style={{ minWidth: 220 }}>
                   <div
@@ -279,39 +183,8 @@ export default function MapView() {
                     {c.name}
                   </div>
 
-                  <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
-                    <button
-                      disabled={!token || busy || loading}
-                      onClick={() => toggleFollow(c.id)}
-                      style={{
-                        padding: "8px 12px",
-                        borderRadius: 999,
-                        border: "1px solid #ddd",
-                        background: following ? "black" : "white",
-                        color: following ? "white" : "black",
-                        cursor: !token ? "not-allowed" : "pointer",
-                        fontWeight: 700,
-                        opacity: loading ? 0.7 : 1,
-                      }}
-                    >
-                      {loading
-                        ? "Loading..."
-                        : following
-                          ? "Following"
-                          : "+ Follow"}
-                    </button>
-
-                    {!token ? (
-                      <span
-                        style={{
-                          fontSize: 12,
-                          opacity: 0.7,
-                          alignSelf: "center",
-                        }}
-                      >
-                        Login nötig
-                      </span>
-                    ) : null}
+                  <div style={{ marginTop: 10 }}>
+                    <CourseFollowButton courseId={c.id} />
                   </div>
                 </div>
               </Popup>
