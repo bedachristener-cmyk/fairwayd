@@ -82,6 +82,20 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
                   "No credential (idToken) returned from Google.",
                 );
               }
+              console.log(
+                "VITE_API_BASE_URL=",
+                import.meta.env.VITE_API_BASE_URL,
+              );
+              console.log(
+                "VITE_API_BASE_URL=",
+                import.meta.env.VITE_API_BASE_URL,
+              );
+
+              console.log(
+                "VITE_API_BASE_URL=",
+                import.meta.env.VITE_API_BASE_URL,
+              );
+              console.log("API_BASE=", API_BASE);
 
               const res = await fetch(`${API_BASE}/auth/oauth`, {
                 method: "POST",
@@ -121,7 +135,6 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
               onToken(token);
               setMsg("Logged in with Google ✅");
 
-              const token = extractToken(data);
               if (!token) throw new Error("Backend returned no token.");
 
               // Wichtig: an Parent geben (AuthContext.login soll speichern)

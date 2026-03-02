@@ -57,28 +57,21 @@ const golfIcon = L.divIcon({
   popupAnchor: [0, -10],
 });
 
-function RecenterMap({
-  lat,
-  lon,
-  zoom = 12,
-}: {
-  lat: number;
-  lon: number;
-  zoom?: number;
-}) {
+function RecenterMap({ lat, lng }: { lat?: number; lng?: number }) {
   const map = useMap();
 
   useEffect(() => {
-    const safeLat = Number(lat);
-    const safeLon = Number(lon);
-
-    if (!Number.isFinite(safeLat) || !Number.isFinite(safeLon)) {
-      console.warn("RightRail skip flyTo invalid coords", { lat, lon });
+    if (
+      typeof lat !== "number" ||
+      typeof lng !== "number" ||
+      Number.isNaN(lat) ||
+      Number.isNaN(lng)
+    ) {
       return;
     }
 
-    map.flyTo([safeLat, safeLon], zoom, { duration: 0.6 });
-  }, [lat, lon, zoom, map]);
+    map.setView([lat, lng], 10, { animate: true });
+  }, [lat, lng, map]);
 
   return null;
 }
@@ -468,7 +461,9 @@ export default function RightRail() {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
-          <RecenterMap lat={center.lat} lon={center.lon} />
+          {selectedCourse?.lat != null && selectedCourse?.lon != null && (
+            <RecenterMap lat={selectedCourse.lat} lng={selectedCourse.lon} />
+          )}
 
           {markers.map((c) => (
             <Marker
