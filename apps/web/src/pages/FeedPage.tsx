@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../api/base";
-const API_ORIGIN = API_BASE.replace(/\/api\/?$/, "");
-const fileUrl = (u: string) =>
-  u.startsWith("blob:") || u.startsWith("http") ? u : `${API_ORIGIN}${u}`;
+import { fileUrl } from "../api/fileUrl";
 import { useAuth } from "../auth/AuthContext";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
 import CourseDropdown, { type CourseLite } from "../components/CourseDropdown";
@@ -385,6 +383,7 @@ export default function FeedPage() {
               rows={3}
               style={{
                 width: "100%",
+                boxSizing: "border-box",
                 marginTop: 10,
                 borderRadius: 12,
                 border: "1px solid var(--border)",

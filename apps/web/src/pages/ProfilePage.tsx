@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { API_BASE } from "../api/base";
-const API_ORIGIN = API_BASE.replace(/\/api\/?$/, "");
-const fileUrl = (u: string) =>
-  !u ? "" : u.startsWith("http") ? u : `${API_ORIGIN}${u}`;
+import { fileUrl } from "../api/fileUrl";
 import { useAuth } from "../auth/AuthContext";
 import { useMe } from "../auth/useMe";
 import {
@@ -606,7 +604,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
               {p.images?.[0]?.url && (
                 <img
-                  src={`${API_BASE}${p.images[0].url}`}
+                  src={fileUrl(p.images[0].url)}
                   alt="post"
                   style={{
                     marginTop: 10,
