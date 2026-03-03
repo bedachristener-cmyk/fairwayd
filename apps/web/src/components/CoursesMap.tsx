@@ -9,8 +9,6 @@ import {
   CircleMarker,
   useMap,
 } from "react-leaflet";
-
-import DevLogin from "./DevLogin";
 import { useAuth } from "../auth/AuthContext";
 import { apiGet } from "../api/client";
 import CoursePopupActions from "./CoursePopupActions";
@@ -343,7 +341,6 @@ export default function CoursesMap() {
 
   return (
     <div style={{ height: "100vh", position: "relative" }}>
-      <DevLogin />
       <LoggedInBadge isLoggedIn={isAuthenticated} />
 
       <MapContainer

@@ -296,7 +296,10 @@ export class UsersService {
     return rows.map((r) => ({
       followerId: r.followerId,
       createdAt: r.createdAt,
-      follower: r.follower,
+
+      followerHandle: r.follower?.handle ?? null,
+      followerName: r.follower?.name ?? null,
+      followerAvatarUrl: r.follower?.avatarUrl ?? null,
     }));
   }
 

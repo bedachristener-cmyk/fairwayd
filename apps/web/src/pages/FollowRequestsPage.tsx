@@ -7,6 +7,7 @@ import {
   rejectFollowRequest,
   type FollowRequestItem,
 } from "../api/followRequests";
+import { fileUrl } from "../api/fileUrl";
 
 function Card({
   title,
@@ -40,7 +41,7 @@ function Avatar({ url, handle }: { url?: string | null; handle: string }) {
   if (url) {
     return (
       <img
-        src={url}
+        src={fileUrl(url)}
         alt={handle}
         style={{
           width: 44,
@@ -83,7 +84,7 @@ export default function FollowRequestsPage() {
     setErr(null);
     try {
       const data = await fetchFollowRequests(token);
-      setItems(data);
+      setItems(Array.isArray(data) ? data : (data?.items ?? []));
     } catch (e: any) {
       setErr(e?.message ?? String(e));
     } finally {
@@ -186,9 +187,13 @@ export default function FollowRequestsPage() {
           ) : (
             <div style={{ display: "grid", gap: 10 }}>
               {items.map((x) => {
+                const handle =
+                  x.followerHandle ||
+                  x.followerName ||
+                  x.followerId.slice(0, 8);
                 const label = x.followerName
-                  ? `${x.followerName} (@${x.followerHandle})`
-                  : `@${x.followerHandle}`;
+                  ? `${x.followerName} (@${handle})`
+                  : `@${handle}`;
                 const isBusy = busyId === x.followerId;
 
                 return (
@@ -205,14 +210,11 @@ export default function FollowRequestsPage() {
                     }}
                   >
                     <Link
-                      to={`/u/${x.followerHandle}`}
+                      to={`/u/${handle}`}
                       style={{ textDecoration: "none" }}
                       title="Zum Profil"
                     >
-                      <Avatar
-                        url={x.followerAvatarUrl}
-                        handle={x.followerHandle}
-                      />
+                      <Avatar url={x.followerAvatarUrl} handle={handle} />
                     </Link>
 
                     <div style={{ flex: 1, minWidth: 0 }}>
