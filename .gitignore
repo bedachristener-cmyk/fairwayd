@@ -7,4 +7,5 @@ apps/**/dist
 data/
 *.csv
 *.xlsx
+apps/api/uploads/
 
