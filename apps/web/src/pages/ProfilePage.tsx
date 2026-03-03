@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { API_BASE } from "../api/base";
+const API_ORIGIN = API_BASE.replace(/\/api\/?$/, "");
+const fileUrl = (u: string) =>
+  !u ? "" : u.startsWith("http") ? u : `${API_ORIGIN}${u}`;
 import { useAuth } from "../auth/AuthContext";
 import { useMe } from "../auth/useMe";
 import {
@@ -124,7 +127,7 @@ function AvatarCircle({
   if (avatarUrl) {
     return (
       <img
-        src={`${API_BASE}${avatarUrl}`}
+        src={fileUrl(avatarUrl)}
         alt="avatar"
         style={{
           width: 56,

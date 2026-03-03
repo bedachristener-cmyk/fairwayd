@@ -9,6 +9,9 @@ import {
   type ThemeName,
 } from "../theme/theme";
 import { API_BASE } from "../api/base";
+const API_ORIGIN = API_BASE.replace(/\/api\/?$/, "");
+const fileUrl = (u: string) =>
+  !u ? "" : u.startsWith("http") ? u : `${API_ORIGIN}${u}`;
 
 function initialsFromHandle(handle: string) {
   const h = (handle || "").trim();
@@ -42,10 +45,7 @@ export default function TopRail() {
     return me?.avatarUrl || auth?.user?.avatarUrl || auth?.me?.avatarUrl || "";
   }, [me?.avatarUrl, auth?.user?.avatarUrl, auth?.me?.avatarUrl]);
 
-  const avatarUrl =
-    rawAvatarUrl && rawAvatarUrl.startsWith("/")
-      ? `${API_BASE}${rawAvatarUrl}`
-      : rawAvatarUrl;
+  const avatarUrl = fileUrl(rawAvatarUrl);
 
   const initials = initialsFromHandle(handle);
 
