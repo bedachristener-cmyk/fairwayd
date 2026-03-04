@@ -14,10 +14,11 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
+import { memoryStorage } from 'multer';
 import { extname } from 'path';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
+import { uploadToR2 } from '../storage/r2.service';
 
 function safeExt(original: string) {
   const ext = extname(original || '').toLowerCase();
@@ -82,14 +83,7 @@ export class UsersController {
   @Post('me/avatar')
   @UseInterceptors(
     FileInterceptor('avatar', {
-      storage: diskStorage({
-        destination: 'uploads/avatars',
-        filename: (req: any, file, cb) => {
-          const ext = safeExt(file.originalname) || '.jpg';
-          const userId = req?.user?.userId ?? req?.user?.id;
-          cb(null, `${userId}-${Date.now()}${ext}`);
-        },
-      }),
+      storage: memoryStorage(),
       limits: { fileSize: 5 * 1024 * 1024 },
       fileFilter: (_req, file, cb) => {
         const ext = safeExt(file.originalname);
@@ -110,8 +104,20 @@ export class UsersController {
   ) {
     const userId = req?.user?.userId ?? req?.user?.id;
     if (!file) throw new BadRequestException("Missing file field 'avatar'");
+    if (!userId) throw new BadRequestException('Missing user id');
 
-    const avatarUrl = `/uploads/avatars/${file.filename}`;
+    const ext = (file.mimetype?.split('/')[1] || 'bin').replace(
+      /[^a-z0-9]/gi,
+      '',
+    );
+    const key = `avatars/${userId}-${Date.now()}.${ext}`;
+
+    const avatarUrl = await uploadToR2(
+      key,
+      file.buffer,
+      file.mimetype || 'application/octet-stream',
+    );
+
     return this.users.setAvatar(userId, avatarUrl);
   }
 
