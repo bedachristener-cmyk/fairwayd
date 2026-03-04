@@ -1,7 +1,5 @@
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-console.log('R2_ENDPOINT =', process.env.R2_ENDPOINT);
-console.log('R2_BUCKET =', process.env.R2_BUCKET);
-console.log('R2_PUBLIC_URL =', process.env.R2_PUBLIC_URL);
+
 const client = new S3Client({
   region: 'auto',
   endpoint: process.env.R2_ENDPOINT,

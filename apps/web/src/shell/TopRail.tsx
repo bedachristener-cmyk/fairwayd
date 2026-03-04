@@ -9,9 +9,8 @@ import {
   type ThemeName,
 } from "../theme/theme";
 import { API_BASE } from "../api/base";
+import { fileUrl } from "../api/fileUrl";
 const API_ORIGIN = API_BASE.replace(/\/api\/?$/, "");
-const fileUrl = (u: string) =>
-  !u ? "" : u.startsWith("http") ? u : `${API_ORIGIN}${u}`;
 
 function initialsFromHandle(handle: string) {
   const h = (handle || "").trim();
