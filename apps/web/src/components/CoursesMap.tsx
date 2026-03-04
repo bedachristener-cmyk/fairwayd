@@ -88,12 +88,6 @@ function toFiniteNumber(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function isFiniteLatLon(lat: unknown, lon: unknown): lat is number {
-  const a = toFiniteNumber(lat);
-  const b = toFiniteNumber(lon);
-  return a !== null && b !== null;
-}
-
 function useGeolocation() {
   const [pos, setPos] = useState<Geo | null>(null);
 

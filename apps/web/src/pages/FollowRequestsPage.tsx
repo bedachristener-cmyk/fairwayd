@@ -84,7 +84,12 @@ export default function FollowRequestsPage() {
     setErr(null);
     try {
       const data = await fetchFollowRequests(token);
-      setItems(Array.isArray(data) ? data : (data?.items ?? []));
+      const list = Array.isArray(data)
+        ? data
+        : Array.isArray((data as any)?.items)
+          ? (data as any).items
+          : [];
+      setItems(list);
     } catch (e: any) {
       setErr(e?.message ?? String(e));
     } finally {

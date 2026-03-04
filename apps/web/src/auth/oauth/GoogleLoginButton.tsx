@@ -27,12 +27,6 @@ function errMsg(e: unknown) {
   return e instanceof Error ? e.message : String(e);
 }
 
-function extractToken(data: any): string | null {
-  const t =
-    data?.token ?? data?.accessToken ?? data?.access_token ?? data?.jwt ?? null;
-  return typeof t === "string" && t.trim() ? t.trim() : null;
-}
-
 export default function GoogleLoginButton({ onToken, onError }: Props) {
   const btnRef = useRef<HTMLDivElement | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
