@@ -15,7 +15,9 @@ import { PostsService } from './posts.service';
 import { Visibility } from '@prisma/client';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
+import { memoryStorage } from 'multer';
 import { extname } from 'path';
+import { uploadToR2 } from '../storage/r2.service';
 
 type CreatePostBody = {
   courseId: string;
@@ -68,10 +70,7 @@ export class PostsController {
   @Post()
   @UseInterceptors(
     FileInterceptor('image', {
-      storage: diskStorage({
-        destination: 'uploads',
-        filename: (_req, file, cb) => cb(null, safeFileName(file.originalname)),
-      }),
+      storage: memoryStorage(),
       limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
     }),
   )
@@ -83,7 +82,20 @@ export class PostsController {
     const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
 
     // for multipart/form-data, body fields are strings
-    const imageUrl = image ? `/uploads/${image.filename}` : undefined;
+    let imageUrl: string | undefined = undefined;
+
+    if (image) {
+      const ext = (image.mimetype?.split('/')[1] || 'bin').replace(
+        /[^a-z0-9]/gi,
+        '',
+      );
+      const key = `posts/${userId}-${Date.now()}.${ext}`;
+      imageUrl = await uploadToR2(
+        key,
+        image.buffer,
+        image.mimetype || 'application/octet-stream',
+      );
+    }
 
     return this.posts.createPost(userId, body, imageUrl);
   }
