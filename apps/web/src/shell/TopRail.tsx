@@ -10,7 +10,6 @@ import {
 } from "../theme/theme";
 import { API_BASE } from "../api/base";
 import { fileUrl } from "../api/fileUrl";
-const API_ORIGIN = API_BASE.replace(/\/api\/?$/, "");
 
 function initialsFromHandle(handle: string) {
   const h = (handle || "").trim();
