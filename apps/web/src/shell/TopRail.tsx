@@ -8,7 +8,6 @@ import {
   toggleTheme,
   type ThemeName,
 } from "../theme/theme";
-import { API_BASE } from "../api/base";
 import { fileUrl } from "../api/fileUrl";
 
 function initialsFromHandle(handle: string) {
