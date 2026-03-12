@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
