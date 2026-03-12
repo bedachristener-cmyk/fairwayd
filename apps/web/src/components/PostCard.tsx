@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { fileUrl } from "../api/fileUrl";
 
 type PostImage = {
@@ -31,6 +32,7 @@ type PostCardProps = {
 };
 
 export default function PostCard({ post, isMobile }: PostCardProps) {
+  const [liked, setLiked] = useState(false);
   return (
     <div
       style={{
@@ -64,6 +66,54 @@ export default function PostCard({ post, isMobile }: PostCardProps) {
           }}
         />
       )}
+
+      {/* Like / Comment / Share */}
+      <div
+        style={{
+          display: "flex",
+          gap: 16,
+          alignItems: "center",
+          marginTop: 10,
+          fontSize: 14,
+        }}
+      >
+        <button
+          onClick={() => setLiked(!liked)}
+          style={{
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            color: liked ? "#ff4d6d" : "var(--text)",
+            fontWeight: 700,
+          }}
+        >
+          {liked ? "❤️ 1" : "♡ 0"}
+        </button>
+
+        <button
+          style={{
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            color: "var(--text)",
+            fontWeight: 700,
+          }}
+        >
+          💬 Comment
+        </button>
+
+        <button
+          style={{
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            color: "var(--text)",
+            fontWeight: 700,
+          }}
+        >
+          ↗ Share
+        </button>
+      </div>
     </div>
   );
 }
