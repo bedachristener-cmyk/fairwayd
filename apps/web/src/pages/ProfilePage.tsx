@@ -10,6 +10,7 @@ import {
   THEMES,
   type ThemeName,
 } from "../theme/theme";
+import PostCard from "../components/PostCard";
 
 type PostImage = { id: string; url: string };
 
@@ -586,64 +587,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
         <div style={{ display: "grid", gap: 10 }}>
           {posts.map((p) => (
-            <div
-              key={p.id}
-              style={{
-                padding: isMobile ? "6px 0" : 12,
-                borderRadius: isMobile ? 0 : 14,
-                background: isMobile ? "transparent" : "rgba(0,0,0,.10)",
-                border: isMobile ? "none" : "1px solid var(--border)",
-                borderBottom: isMobile ? "1px solid var(--border)" : undefined,
-                color: "var(--text)",
-              }}
-            >
-              <div style={{ fontWeight: 900 }}>{p.course.name}</div>
-              <div style={{ fontSize: 12, color: "var(--sub)" }}>
-                @{p.user.handle} · {new Date(p.createdAt).toLocaleString()}
-                {p.visibility ? ` · ${p.visibility}` : ""}
-              </div>
-
-              <div style={{ marginTop: 6, whiteSpace: "pre-wrap" }}>
-                {p.content}
-              </div>
-
-              {p.images?.[0]?.url && (
-                <img
-                  src={fileUrl(p.images[0].url)}
-                  alt="post"
-                  style={{
-                    marginTop: 10,
-                    borderRadius: isMobile ? 0 : 12,
-                    width: "100%",
-                    display: "block",
-                    border: isMobile ? "none" : "1px solid var(--border)",
-                  }}
-                />
-              )}
-
-              <div
-                style={{
-                  marginTop: 10,
-                  display: "flex",
-                  gap: 8,
-                  flexWrap: "wrap",
-                }}
-              >
-                <PillButton
-                  onClick={() => nav(`/compose/${p.course.id}`)}
-                  disabled={loading}
-                >
-                  Post to this course
-                </PillButton>
-
-                <PillButton
-                  onClick={() => nav(`/u/${encodeURIComponent(p.user.handle)}`)}
-                  disabled={loading}
-                >
-                  Open author
-                </PillButton>
-              </div>
-            </div>
+            <PostCard key={p.id} post={p} isMobile={isMobile} />
           ))}
         </div>
       </Card>

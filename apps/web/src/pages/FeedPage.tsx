@@ -5,6 +5,7 @@ import { fileUrl } from "../api/fileUrl";
 import { useAuth } from "../auth/AuthContext";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
 import CourseDropdown, { type CourseLite } from "../components/CourseDropdown";
+import PostCard from "../components/PostCard";
 
 type PostImage = { id: string; url: string };
 
@@ -411,6 +412,7 @@ export default function FeedPage() {
                 gap: 10,
                 alignItems: "center",
                 marginTop: 10,
+                flexWrap: isMobile ? "wrap" : "nowrap",
               }}
             >
               <input
@@ -458,14 +460,7 @@ export default function FeedPage() {
           {posts.map((p) => (
             <div
               key={p.id}
-              style={{
-                padding: isMobile ? "6px 0" : 12,
-                borderRadius: isMobile ? 0 : 14,
-                background: isMobile ? "transparent" : "var(--muted)",
-                border: isMobile ? "none" : "1px solid var(--border)",
-                borderBottom: isMobile ? "1px solid var(--border)" : undefined,
-                cursor: "pointer",
-              }}
+              style={{ cursor: "pointer" }}
               onClick={() => {
                 const lat = Number(p.course.lat);
                 const lon = Number(p.course.lon);
@@ -480,45 +475,7 @@ export default function FeedPage() {
               }}
               title="Select this post's course"
             >
-              <div style={{ fontWeight: 900 }}>{p.course.name}</div>
-
-              <a
-                href={`/u/${p.user.handle}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  nav(`/u/${encodeURIComponent(p.user.handle)}`);
-                }}
-                style={{
-                  fontSize: 12,
-                  fontWeight: 900,
-                  textDecoration: "underline",
-                  color: "var(--text)",
-                  display: "inline-block",
-                  marginTop: 2,
-                }}
-                title="Open profile"
-              >
-                @{p.user.handle}
-              </a>
-
-              <div style={{ marginTop: 6, whiteSpace: "pre-wrap" }}>
-                {p.content}
-              </div>
-
-              {p.images?.[0]?.url && (
-                <img
-                  src={fileUrl(p.images[0].url)}
-                  alt="post"
-                  style={{
-                    marginTop: isMobile ? 8 : 10,
-                    borderRadius: isMobile ? 0 : 12,
-                    width: "100%",
-                    display: "block",
-                    border: isMobile ? "none" : "1px solid var(--border)",
-                  }}
-                />
-              )}
+              <PostCard post={p} isMobile={isMobile} />
             </div>
           ))}
         </div>
