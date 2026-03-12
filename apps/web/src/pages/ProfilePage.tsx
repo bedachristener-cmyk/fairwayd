@@ -207,6 +207,7 @@ function ThemePicker() {
 }
 
 export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
+  const isMobile = window.innerWidth <= 980;
   const nav = useNavigate();
   const loc = useLocation();
   const params = useParams();
@@ -585,7 +586,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
             <div
               key={p.id}
               style={{
-                padding: 12,
+                padding: isMobile ? 0 : 12,
                 borderRadius: 14,
                 background: "rgba(0,0,0,.10)",
                 border: "1px solid var(--border)",
@@ -608,9 +609,10 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                   alt="post"
                   style={{
                     marginTop: 10,
-                    borderRadius: 12,
-                    maxWidth: "100%",
-                    border: "1px solid var(--border)",
+                    borderRadius: isMobile ? 0 : 12,
+                    width: "100%",
+                    display: "block",
+                    border: isMobile ? "none" : "1px solid var(--border)",
                   }}
                 />
               )}

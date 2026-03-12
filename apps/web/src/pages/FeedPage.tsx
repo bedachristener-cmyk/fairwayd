@@ -40,18 +40,28 @@ function Card({
   title: string;
   children: React.ReactNode;
 }) {
+  const isMobile = window.innerWidth <= 980;
+
   return (
     <div
       style={{
-        background: "var(--card)",
-        borderRadius: 16,
-        border: "1px solid var(--border)",
-        padding: 12,
+        background: isMobile ? "transparent" : "var(--card)",
+        borderRadius: isMobile ? 0 : 16,
+        border: isMobile ? "none" : "1px solid var(--border)",
+        padding: isMobile ? 0 : 12,
         color: "var(--text)",
       }}
     >
-      <div style={{ fontWeight: 900, marginBottom: 10 }}>{title}</div>
-      {children}
+      <div
+        style={{
+          fontWeight: 900,
+          marginBottom: 10,
+          padding: isMobile ? 12 : 0,
+        }}
+      >
+        {title}
+      </div>
+      <div style={{ padding: isMobile ? 0 : 0 }}>{children}</div>
     </div>
   );
 }
@@ -87,6 +97,7 @@ function PillButton({
 
 export default function FeedPage() {
   const nav = useNavigate();
+  const isMobile = window.innerWidth <= 980;
   const { selectedCourse, setSelectedCourse, clearSelectedCourse } =
     useSelectedCourse();
 
@@ -323,10 +334,10 @@ export default function FeedPage() {
         >
           <div
             style={{
-              padding: 12,
-              borderRadius: 14,
-              background: "var(--muted)",
-              border: "1px solid var(--border)",
+              padding: isMobile ? 0 : 12,
+              borderRadius: isMobile ? 0 : 14,
+              background: isMobile ? "transparent" : "var(--muted)",
+              border: isMobile ? "none" : "1px solid var(--border)",
             }}
           >
             {/* Course + visibility row */}
@@ -385,10 +396,10 @@ export default function FeedPage() {
                 width: "100%",
                 boxSizing: "border-box",
                 marginTop: 10,
-                borderRadius: 12,
-                border: "1px solid var(--border)",
+                borderRadius: isMobile ? 0 : 12,
+                border: isMobile ? "none" : "1px solid var(--border)",
                 padding: 10,
-                background: "var(--card)",
+                background: isMobile ? "transparent" : "var(--card)",
                 color: "var(--text)",
               }}
               disabled={posting}
@@ -448,10 +459,10 @@ export default function FeedPage() {
             <div
               key={p.id}
               style={{
-                padding: 12,
-                borderRadius: 14,
-                background: "var(--muted)",
-                border: "1px solid var(--border)",
+                padding: isMobile ? 0 : 12,
+                borderRadius: isMobile ? 0 : 14,
+                background: isMobile ? "transparent" : "var(--muted)",
+                border: isMobile ? "none" : "1px solid var(--border)",
                 cursor: "pointer",
               }}
               onClick={() => {
@@ -500,9 +511,10 @@ export default function FeedPage() {
                   alt="post"
                   style={{
                     marginTop: 10,
-                    borderRadius: 12,
-                    maxWidth: "100%",
-                    border: "1px solid var(--border)",
+                    borderRadius: isMobile ? 0 : 12,
+                    width: "100%",
+                    display: "block",
+                    border: isMobile ? "none" : "1px solid var(--border)",
                   }}
                 />
               )}

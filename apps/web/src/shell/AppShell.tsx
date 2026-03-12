@@ -17,7 +17,9 @@ export default function AppShell() {
         </div>
 
         <main className="fw-shell-main">
-          <Outlet />
+          <div className="fw-outlet">
+            <Outlet />
+          </div>
         </main>
 
         <div className="fw-desktop-only">

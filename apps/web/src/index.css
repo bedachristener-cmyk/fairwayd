@@ -35,7 +35,7 @@ html[data-theme="forest"] {
 
 /* VINTAGE */
 html[data-theme="sepia"] {
-  --bg: #f4ecd8;
+  --bg: #29251d;
   --card: #fff8e7;
   --muted: #efe2c6;
   --border: #d8c7a3;
@@ -55,10 +55,10 @@ html[data-theme="ocean"] {
 }
 
 html[data-theme="sunset"] {
-  --bg: #12080a;
-  --card: #1c0f12;
-  --muted: #241317;
-  --border: rgba(255, 255, 255, 0.1);
+  --bg: #ffffff;
+  --card: #0f101c;
+  --muted: #a52f1a;
+  --border: rgba(210, 154, 154, 0.152);
   --text: #ffecec;
   --sub: rgba(255, 236, 236, 0.7);
   --brand: #27c46b; /* Fairwayd green bleibt */
@@ -133,18 +133,138 @@ button {
   .fw-desktop-only {
     display: none;
   }
+
   .fw-mobile-only {
     display: block;
   }
 
   .fw-shell-grid {
     display: block;
-    padding: 12px;
+    padding: 0;
+    max-width: 100%;
   }
 
   .fw-shell-main {
     min-height: auto;
-    border-radius: 16px;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+  }
+
+  .fw-outlet {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .fw-outlet img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  body {
+    padding-bottom: 72px;
+  }
+}
+/* MOBILE FULL WIDTH FEED */
+
+@media (max-width: 980px) {
+  .fw-shell-grid {
+    padding: 0 !important;
+  }
+
+  .card,
+  .fw-card,
+  .profile-card,
+  .feed-card {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+}
+/* FORCE FULL WIDTH FEED ON MOBILE */
+
+@media (max-width: 980px) {
+  .fw-shell-grid {
+    padding: 0 !important;
+  }
+
+  .fw-shell-grid main > div > div > div {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+}
+/* MOBILE: remove card frames */
+
+@media (max-width: 980px) {
+  textarea,
+  select,
+  input,
+  button {
+    border-radius: 0 !important;
+  }
+
+  div[style*="border-radius"] {
+    border-radius: 0 !important;
+  }
+}
+/* MOBILE SOCIAL FEED */
+
+/* MOBILE SOCIAL FEED */
+
+@media (max-width: 980px) {
+  .fw-shell-grid {
+    display: block;
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .fw-shell-main {
+    width: 100%;
+    margin: 0;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    min-height: auto;
+  }
+
+  .fw-shell-main > div,
+  .fw-shell-main > div > div,
+  .fw-shell-main > div > div > div {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .fw-shell-main > div > div > div,
+  .fw-shell-main > div > div > div > div {
+    background: transparent !important;
+    border: none !important;
+  }
+
+  .fw-shell-main img {
+    width: 100% !important;
+    height: auto !important;
+    display: block;
+    border-radius: 0 !important;
   }
 
   body {
