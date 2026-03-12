@@ -459,10 +459,11 @@ export default function FeedPage() {
             <div
               key={p.id}
               style={{
-                padding: isMobile ? 0 : 12,
+                padding: isMobile ? "6px 0" : 12,
                 borderRadius: isMobile ? 0 : 14,
                 background: isMobile ? "transparent" : "var(--muted)",
                 border: isMobile ? "none" : "1px solid var(--border)",
+                borderBottom: isMobile ? "1px solid var(--border)" : undefined,
                 cursor: "pointer",
               }}
               onClick={() => {
@@ -510,7 +511,7 @@ export default function FeedPage() {
                   src={fileUrl(p.images[0].url)}
                   alt="post"
                   style={{
-                    marginTop: 10,
+                    marginTop: isMobile ? 8 : 10,
                     borderRadius: isMobile ? 0 : 12,
                     width: "100%",
                     display: "block",

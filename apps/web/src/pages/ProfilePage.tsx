@@ -52,14 +52,16 @@ function Card({
   children: React.ReactNode;
   right?: React.ReactNode;
 }) {
+  const isMobile = window.innerWidth <= 980;
+
   return (
     <div
       style={{
-        background: "var(--card)",
-        border: "1px solid var(--border)",
-        borderRadius: 16,
-        boxShadow: "0 10px 30px rgba(0,0,0,.35)",
-        padding: 12,
+        background: isMobile ? "transparent" : "var(--card)",
+        border: isMobile ? "none" : "1px solid var(--border)",
+        borderRadius: isMobile ? 0 : 16,
+        boxShadow: isMobile ? "none" : "0 10px 30px rgba(0,0,0,.35)",
+        padding: isMobile ? 0 : 12,
       }}
     >
       <div
@@ -68,12 +70,13 @@ function Card({
           alignItems: "center",
           gap: 10,
           marginBottom: 10,
+          padding: isMobile ? "6px 12px" : 0,
         }}
       >
         <div style={{ fontWeight: 900, color: "var(--text)" }}>{title}</div>
         <div style={{ marginLeft: "auto" }}>{right}</div>
       </div>
-      {children}
+      <div style={{ padding: isMobile ? 0 : 0 }}>{children}</div>
     </div>
   );
 }
@@ -586,10 +589,11 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
             <div
               key={p.id}
               style={{
-                padding: isMobile ? 0 : 12,
-                borderRadius: 14,
-                background: "rgba(0,0,0,.10)",
-                border: "1px solid var(--border)",
+                padding: isMobile ? "6px 0" : 12,
+                borderRadius: isMobile ? 0 : 14,
+                background: isMobile ? "transparent" : "rgba(0,0,0,.10)",
+                border: isMobile ? "none" : "1px solid var(--border)",
+                borderBottom: isMobile ? "1px solid var(--border)" : undefined,
                 color: "var(--text)",
               }}
             >
