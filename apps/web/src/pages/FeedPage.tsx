@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../api/base";
-import { fileUrl } from "../api/fileUrl";
 import { useAuth } from "../auth/AuthContext";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
 import CourseDropdown, { type CourseLite } from "../components/CourseDropdown";
@@ -97,7 +96,6 @@ function PillButton({
 }
 
 export default function FeedPage() {
-  const nav = useNavigate();
   const isMobile = window.innerWidth <= 980;
   const { selectedCourse, setSelectedCourse, clearSelectedCourse } =
     useSelectedCourse();
