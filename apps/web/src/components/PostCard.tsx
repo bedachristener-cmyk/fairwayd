@@ -33,10 +33,26 @@ type PostCardProps = {
 
 export default function PostCard({ post, isMobile }: PostCardProps) {
   const [liked, setLiked] = useState(false);
+  const [lastTap, setLastTap] = useState(0);
+  const [showHeart, setShowHeart] = useState(false);
+  const handleImageTap = () => {
+    const now = Date.now();
+
+    if (now - lastTap < 300) {
+      setLiked(true);
+      setShowHeart(true);
+
+      setTimeout(() => {
+        setShowHeart(false);
+      }, 700);
+    }
+
+    setLastTap(now);
+  };
   return (
     <div
       style={{
-        padding: isMobile ? "6px 0" : 12,
+        padding: isMobile ? 0 : 12,
         borderRadius: isMobile ? 0 : 14,
         background: isMobile ? "transparent" : "rgba(0,0,0,.10)",
         border: isMobile ? "none" : "1px solid var(--border)",
@@ -54,27 +70,51 @@ export default function PostCard({ post, isMobile }: PostCardProps) {
       <div style={{ marginTop: 6, whiteSpace: "pre-wrap" }}>{post.content}</div>
 
       {post.images?.[0]?.url && (
-        <img
-          src={fileUrl(post.images[0].url)}
-          alt="post"
+        <div
           style={{
+            position: "relative",
             marginTop: 10,
-            borderRadius: isMobile ? 0 : 12,
-            width: "100%",
-            display: "block",
-            border: isMobile ? "none" : "1px solid var(--border)",
           }}
-        />
+        >
+          <img
+            src={fileUrl(post.images[0].url)}
+            alt="post"
+            onClick={handleImageTap}
+            style={{
+              borderRadius: isMobile ? 0 : 12,
+              width: "100%",
+              display: "block",
+              border: isMobile ? "none" : "1px solid var(--border)",
+            }}
+          />
+
+          {showHeart && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 56,
+                pointerEvents: "none",
+              }}
+            >
+              ❤️
+            </div>
+          )}
+        </div>
       )}
 
       {/* Like / Comment / Share */}
       <div
         style={{
           display: "flex",
-          gap: 16,
+          gap: isMobile ? 8 : 12,
           alignItems: "center",
           marginTop: 10,
           fontSize: 14,
+          flexWrap: "wrap",
         }}
       >
         <button
@@ -85,6 +125,9 @@ export default function PostCard({ post, isMobile }: PostCardProps) {
             cursor: "pointer",
             color: liked ? "#ff4d6d" : "var(--text)",
             fontWeight: 700,
+            minWidth: isMobile ? 72 : "auto",
+            textAlign: "left",
+            padding: isMobile ? "6px 0" : 0,
           }}
         >
           {liked ? "❤️ 1" : "♡ 0"}
@@ -97,6 +140,9 @@ export default function PostCard({ post, isMobile }: PostCardProps) {
             cursor: "pointer",
             color: "var(--text)",
             fontWeight: 700,
+            minWidth: isMobile ? 72 : "auto",
+            textAlign: "left",
+            padding: isMobile ? "6px 0" : 0,
           }}
         >
           💬 Comment
@@ -109,9 +155,12 @@ export default function PostCard({ post, isMobile }: PostCardProps) {
             cursor: "pointer",
             color: "var(--text)",
             fontWeight: 700,
+            minWidth: isMobile ? 72 : "auto",
+            textAlign: "left",
+            padding: isMobile ? "6px 0" : 0,
           }}
         >
-          ↗ Share
+          🔗 Share
         </button>
       </div>
     </div>

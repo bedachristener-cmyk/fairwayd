@@ -503,7 +503,15 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
       <Card
         title={title}
         right={
-          <div style={{ display: "flex", gap: 8 }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              flexWrap: "wrap",
+              justifyContent: "flex-end",
+              maxWidth: "100%",
+            }}
+          >
             <PillButton onClick={() => nav(backTo)} disabled={loading}>
               Back
             </PillButton>
