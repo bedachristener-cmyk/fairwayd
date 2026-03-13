@@ -35,7 +35,10 @@ export default function PostCard({ post, isMobile }: PostCardProps) {
   const [liked, setLiked] = useState(false);
   const [lastTap, setLastTap] = useState(0);
   const [showHeart, setShowHeart] = useState(false);
-  const handleImageTap = () => {
+  const handleImageTap = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     const now = Date.now();
 
     if (now - lastTap < 300) {
