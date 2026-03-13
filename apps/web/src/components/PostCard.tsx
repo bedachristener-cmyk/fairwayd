@@ -83,6 +83,9 @@ export default function PostCard({ post, isMobile }: PostCardProps) {
             src={fileUrl(post.images[0].url)}
             alt="post"
             onClick={handleImageTap}
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = "none";
+            }}
             style={{
               borderRadius: isMobile ? 0 : 12,
               width: "100%",
