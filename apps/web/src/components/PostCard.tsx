@@ -35,6 +35,7 @@ export default function PostCard({ post, isMobile }: PostCardProps) {
   const [liked, setLiked] = useState(false);
   const [lastTap, setLastTap] = useState(0);
   const [showHeart, setShowHeart] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
   const handleImageTap = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -72,7 +73,7 @@ export default function PostCard({ post, isMobile }: PostCardProps) {
 
       <div style={{ marginTop: 6, whiteSpace: "pre-wrap" }}>{post.content}</div>
 
-      {post.images?.[0]?.url && (
+      {post.images?.[0] && !imageFailed && (
         <div
           style={{
             position: "relative",
@@ -83,9 +84,7 @@ export default function PostCard({ post, isMobile }: PostCardProps) {
             src={fileUrl(post.images[0].url)}
             alt="post"
             onClick={handleImageTap}
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).style.display = "none";
-            }}
+            onError={() => setImageFailed(true)}
             style={{
               borderRadius: isMobile ? 0 : 12,
               width: "100%",
