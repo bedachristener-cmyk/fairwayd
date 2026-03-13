@@ -8,7 +8,37 @@ import {
   THEMES,
   type ThemeName,
 } from "../theme/theme";
+async function resizeImage(file: File): Promise<File> {
+  const img = document.createElement("img");
+  const reader = new FileReader();
 
+  const dataUrl: string = await new Promise((resolve) => {
+    reader.onload = () => resolve(reader.result as string);
+    reader.readAsDataURL(file);
+  });
+
+  img.src = dataUrl;
+
+  await new Promise((resolve) => (img.onload = resolve));
+
+  const canvas = document.createElement("canvas");
+
+  const MAX_WIDTH = 1600;
+
+  const scale = Math.min(1, MAX_WIDTH / img.width);
+
+  canvas.width = img.width * scale;
+  canvas.height = img.height * scale;
+
+  const ctx = canvas.getContext("2d");
+  ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  const blob: Blob = await new Promise((resolve) =>
+    canvas.toBlob((b) => resolve(b!), "image/jpeg", 0.8),
+  );
+
+  return new File([blob], file.name, { type: "image/jpeg" });
+}
 function toFriendlyProfileError(e: any): string {
   const raw =
     (typeof e === "string" ? e : e?.message) ??
@@ -196,7 +226,13 @@ export default function ProfileSetup({
           <input
             type="file"
             accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              if (!f) return;
+
+              const resized = await resizeImage(f);
+              setFile(resized);
+            }}
             style={{ color: "var(--sub)" }}
           />
 
