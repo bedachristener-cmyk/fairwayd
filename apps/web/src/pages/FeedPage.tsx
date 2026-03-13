@@ -31,7 +31,35 @@ type Course = {
   lat: number;
   lon: number;
 };
+async function resizeImage(file: File): Promise<File> {
+  const img = document.createElement("img");
+  const reader = new FileReader();
 
+  const dataUrl: string = await new Promise((resolve) => {
+    reader.onload = () => resolve(reader.result as string);
+    reader.readAsDataURL(file);
+  });
+
+  img.src = dataUrl;
+  await new Promise((resolve) => (img.onload = resolve));
+
+  const canvas = document.createElement("canvas");
+
+  const MAX_WIDTH = 1600;
+  const scale = Math.min(1, MAX_WIDTH / img.width);
+
+  canvas.width = img.width * scale;
+  canvas.height = img.height * scale;
+
+  const ctx = canvas.getContext("2d");
+  ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  const blob: Blob = await new Promise((resolve) =>
+    canvas.toBlob((b) => resolve(b!), "image/jpeg", 0.8),
+  );
+
+  return new File([blob], file.name, { type: "image/jpeg" });
+}
 function Card({
   title,
   children,
@@ -258,7 +286,10 @@ export default function FeedPage() {
       fd.append("courseId", selectedCourse.id);
       fd.append("content", text);
       fd.append("visibility", visibility);
-      if (file) fd.append("image", file);
+      if (file) {
+        const resized = await resizeImage(file);
+        fd.append("image", resized);
+      }
 
       const res = await fetch(`${API_BASE}/posts`, {
         method: "POST",

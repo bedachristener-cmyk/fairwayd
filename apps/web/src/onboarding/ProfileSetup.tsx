@@ -230,7 +230,12 @@ export default function ProfileSetup({
               const f = e.target.files?.[0];
               if (!f) return;
 
+              console.log("original size", f.size);
+
               const resized = await resizeImage(f);
+
+              console.log("resized size", resized.size);
+
               setFile(resized);
             }}
             style={{ color: "var(--sub)" }}
