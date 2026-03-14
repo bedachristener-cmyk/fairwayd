@@ -120,6 +120,23 @@ button {
   min-height: calc(100vh - 32px - 60px);
   overflow: hidden;
 }
+.fw-shell-main--map {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  min-height: calc(100vh - 32px - 60px);
+  overflow: hidden;
+}
+
+.fw-outlet--map {
+  height: calc(100dvh - 32px - 60px);
+  min-height: calc(100dvh - 32px - 60px);
+}
+
+.fw-outlet--map > * {
+  height: 100%;
+  min-height: 100%;
+}
 
 /* Responsive helpers */
 .fw-desktop-only {
@@ -162,7 +179,7 @@ button {
     background: transparent;
   }
 
-  .fw-outlet img {
+  .fw-outlet img:not(.leaflet-tile) {
     width: 100%;
     height: auto;
     display: block;
@@ -189,7 +206,7 @@ button {
     margin-right: 0 !important;
   }
 
-  img {
+  img:not(.leaflet-tile) {
     width: 100%;
     height: auto;
     display: block;
@@ -222,8 +239,12 @@ button {
   div[style*="border-radius"] {
     border-radius: 0 !important;
   }
+
+  .golf-marker,
+  .golf-marker div {
+    border-radius: 999px !important;
+  }
 }
-/* MOBILE SOCIAL FEED */
 
 /* MOBILE SOCIAL FEED */
 
@@ -243,9 +264,10 @@ button {
     min-height: auto;
   }
 
-  .fw-shell-main > div,
-  .fw-shell-main > div > div,
-  .fw-shell-main > div > div > div {
+  /* FEED / CARDS – NOT MAP */
+  .fw-shell-main:not(.fw-shell-main--map) > div,
+  .fw-shell-main:not(.fw-shell-main--map) > div > div,
+  .fw-shell-main:not(.fw-shell-main--map) > div > div > div {
     width: 100% !important;
     max-width: 100% !important;
     margin-left: 0 !important;
@@ -254,8 +276,8 @@ button {
     box-shadow: none !important;
   }
 
-  .fw-shell-main > div > div > div,
-  .fw-shell-main > div > div > div > div {
+  .fw-shell-main:not(.fw-shell-main--map) > div > div > div,
+  .fw-shell-main:not(.fw-shell-main--map) > div > div > div > div {
     background: transparent !important;
     border: none !important;
   }
@@ -270,4 +292,123 @@ button {
   body {
     padding-bottom: 72px;
   }
+}
+@keyframes fwSkeleton {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+@media (max-width: 980px) {
+  .fw-shell-main--map {
+    min-height: calc(100dvh - 64px - 72px) !important;
+    height: calc(100dvh - 64px - 72px) !important;
+    overflow: hidden !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  .fw-outlet--map {
+    height: calc(100dvh - 64px - 72px) !important;
+    min-height: calc(100dvh - 64px - 72px) !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+  }
+
+  .fw-outlet--map > * {
+    height: 100% !important;
+    min-height: 100% !important;
+  }
+
+  .fw-outlet--map .leaflet-container {
+    height: 100% !important;
+    min-height: 100% !important;
+    width: 100% !important;
+  }
+}
+@media (max-width: 980px) {
+  .fw-shell-grid {
+    min-height: calc(100dvh - 64px - 72px) !important;
+  }
+
+  .fw-shell-main.fw-shell-main--map {
+    display: block !important;
+    width: 100% !important;
+    height: calc(100dvh - 64px - 72px) !important;
+    min-height: calc(100dvh - 64px - 72px) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  .fw-shell-main.fw-shell-main--map .fw-outlet.fw-outlet--map {
+    width: 100% !important;
+    height: calc(100dvh - 64px - 72px) !important;
+    min-height: calc(100dvh - 64px - 72px) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: transparent !important;
+  }
+
+  .fw-shell-main.fw-shell-main--map .fw-outlet.fw-outlet--map > * {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 100% !important;
+  }
+
+  .fw-shell-main.fw-shell-main--map .leaflet-container {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 100% !important;
+  }
+}
+@media (max-width: 980px) {
+  .fw-shell-main--map {
+    height: calc(100dvh - 64px - 72px) !important;
+    min-height: calc(100dvh - 64px - 72px) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    overflow: hidden !important;
+  }
+
+  .fw-outlet--map {
+    height: calc(100dvh - 64px - 72px) !important;
+    min-height: calc(100dvh - 64px - 72px) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+  }
+
+  .fw-outlet--map > * {
+    height: 100% !important;
+    min-height: 100% !important;
+  }
+
+  .fw-outlet--map .leaflet-container {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 100% !important;
+  }
+}
+
+.leaflet-container img.leaflet-tile {
+  width: 256px !important;
+  height: 256px !important;
+  max-width: none !important;
+  max-height: none !important;
+  display: block !important;
 }

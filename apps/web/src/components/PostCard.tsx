@@ -1,5 +1,10 @@
 import { useState } from "react";
 import { fileUrl } from "../api/fileUrl";
+import { API_BASE } from "../api/base";
+import { useAuth } from "../auth/AuthContext";
+function markImageLoaded(url: string) {
+  setLoadedImages((prev) => ({ ...prev, [url]: true }));
+}
 
 type PostImage = {
   url: string;
@@ -24,6 +29,7 @@ type Post = {
   user: PostUser;
   course: PostCourse;
   images?: PostImage[];
+  likes?: { userId: string }[];
 };
 
 type PostCardProps = {
@@ -32,26 +38,58 @@ type PostCardProps = {
 };
 
 export default function PostCard({ post, isMobile }: PostCardProps) {
-  const [liked, setLiked] = useState(false);
-  const [lastTap, setLastTap] = useState(0);
-  const [showHeart, setShowHeart] = useState(false);
-  const [imageFailed, setImageFailed] = useState(false);
-  const handleImageTap = (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const [loadedImages, setLoadedImages] = useState<Record<string, boolean>>({});
+  function markImageLoaded(url: string) {
+    setLoadedImages((prev) => ({ ...prev, [url]: true }));
+  }
+  const { token } = useAuth();
+  const [liked, setLiked] = useState(
+    post.likes?.some((l) => l.userId === token) ?? false,
+  );
+  const [likeCount, setLikeCount] = useState(post.likes?.length ?? 0);
+  const [likeBusy, setLikeBusy] = useState(false);
 
-    const now = Date.now();
+  const handleLikeClick = async () => {
+    console.log("LIKE CLICKED");
 
-    if (now - lastTap < 300) {
-      setLiked(true);
-      setShowHeart(true);
+    if (likeBusy) return;
 
-      setTimeout(() => {
-        setShowHeart(false);
-      }, 700);
+    try {
+      setLikeBusy(true);
+
+      const method = liked ? "DELETE" : "POST";
+
+      const res = await fetch(`${API_BASE}/posts/${post.id}/like`, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error(`Like request failed: ${res.status}`);
+      }
+
+      if (liked) {
+        setLiked(false);
+        setLikeCount((c) => Math.max(0, c - 1));
+      } else {
+        setLiked(true);
+        setLikeCount((c) => c + 1);
+      }
+
+      if (post.likes) {
+        if (!liked) {
+          post.likes.push({ userId: token });
+        } else {
+          post.likes = post.likes.filter((l) => l.userId !== token);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to toggle like", err);
+    } finally {
+      setLikeBusy(false);
     }
-
-    setLastTap(now);
   };
   return (
     <div
@@ -73,43 +111,63 @@ export default function PostCard({ post, isMobile }: PostCardProps) {
 
       <div style={{ marginTop: 6, whiteSpace: "pre-wrap" }}>{post.content}</div>
 
-      {post.images?.[0] && !imageFailed && (
+      {post.images?.length ? (
         <div
           style={{
-            position: "relative",
+            display: "grid",
+            gap: 8,
             marginTop: 10,
           }}
         >
-          <img
-            src={fileUrl(post.images[0].url)}
-            alt="post"
-            onClick={handleImageTap}
-            onError={() => setImageFailed(true)}
-            style={{
-              borderRadius: isMobile ? 0 : 12,
-              width: "100%",
-              display: "block",
-              border: isMobile ? "none" : "1px solid var(--border)",
-            }}
-          />
+          {post.images.map((img) => {
+            const src = fileUrl(img.url);
+            const isLoaded = !!loadedImages[img.url];
 
-          {showHeart && (
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 56,
-                pointerEvents: "none",
-              }}
-            >
-              ❤️
-            </div>
-          )}
+            return (
+              <div
+                key={img.url}
+                style={{
+                  position: "relative",
+                  overflow: "hidden",
+                  borderRadius: 14,
+                  background: "var(--muted)",
+                  minHeight: 120,
+                }}
+              >
+                {!isLoaded && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      background:
+                        "linear-gradient(90deg, var(--muted) 0%, var(--card) 50%, var(--muted) 100%)",
+                      backgroundSize: "200% 100%",
+                      animation: "fwSkeleton 1.2s ease-in-out infinite",
+                      zIndex: 2,
+                      pointerEvents: "none",
+                    }}
+                  />
+                )}
+
+                <img
+                  src={src}
+                  alt="Post image"
+                  loading="lazy"
+                  onLoad={() => markImageLoaded(img.url)}
+                  onError={() => markImageLoaded(img.url)}
+                  style={{
+                    width: "100%",
+                    display: "block",
+                    objectFit: "cover",
+                    opacity: isLoaded ? 1 : 0,
+                    transition: "opacity 220ms ease",
+                  }}
+                />
+              </div>
+            );
+          })}
         </div>
-      )}
+      ) : null}
 
       {/* Like / Comment / Share */}
       <div
@@ -123,7 +181,7 @@ export default function PostCard({ post, isMobile }: PostCardProps) {
         }}
       >
         <button
-          onClick={() => setLiked(!liked)}
+          onClick={handleLikeClick}
           style={{
             background: "transparent",
             border: "none",
@@ -135,7 +193,7 @@ export default function PostCard({ post, isMobile }: PostCardProps) {
             padding: isMobile ? "6px 0" : 0,
           }}
         >
-          {liked ? "❤️ 1" : "♡ 0"}
+          {liked ? "❤️" : "♡"} {likeCount}
         </button>
 
         <button

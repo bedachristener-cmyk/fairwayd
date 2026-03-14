@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -63,6 +64,20 @@ export class PostsController {
     const take = takeStr ? Number(takeStr) : 50;
     const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
     return this.posts.getMyPosts(userId, take);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post(':id/like')
+  async like(@Param('id') id: string, @Req() req: any) {
+    const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
+    return this.posts.likePost(id, userId);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Delete(':id/like')
+  async unlike(@Param('id') id: string, @Req() req: any) {
+    const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
+    return this.posts.unlikePost(id, userId);
   }
 
   // ✅ PRIVATE: create a post (supports optional image upload)

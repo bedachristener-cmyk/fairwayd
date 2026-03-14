@@ -49,38 +49,39 @@ const golfIcon = L.divIcon({
   className: "golf-marker",
   html: `
   <div style="
-    width: 22px;
-    height: 22px;
+    width: 18px;
+    height: 18px;
     border-radius: 999px;
     background: #1f8a3b;
-    box-shadow: 0 2px 10px rgba(0,0,0,.25);
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
     border: 2px solid white;
     position: relative;
+    box-sizing: border-box;
   ">
     <div style="
-      position:absolute;
-      left: 9px;
-      top: 4px;
+      position: absolute;
+      left: 5px;
+      top: 2px;
       width: 2px;
-      height: 16px;
+      height: 11px;
       background: white;
       border-radius: 2px;
     "></div>
     <div style="
-      position:absolute;
-      left: 11px;
-      top: 4px;
+      position: absolute;
+      left: 7px;
+      top: 2px;
       width: 0;
       height: 0;
-      border-top: 5px solid transparent;
-      border-bottom: 5px solid transparent;
-      border-left: 7px solid white;
+      border-top: 4px solid transparent;
+      border-bottom: 4px solid transparent;
+      border-left: 5px solid yellow;
     "></div>
   </div>
   `,
-  iconSize: [22, 22],
-  iconAnchor: [11, 11],
-  popupAnchor: [0, -12],
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+  popupAnchor: [0, -10],
 });
 
 function toFiniteNumber(v: unknown): number | null {
@@ -183,6 +184,7 @@ function ZoomToCourse({
 
     const lat = toFiniteNumber(c.lat);
     const lon = toFiniteNumber(c.lon);
+    console.log("COURSE DEBUG", c.name, "lat=", c.lat, "lon=", c.lon);
 
     if (!Number.isFinite(lat as number) || !Number.isFinite(lon as number)) {
       console.warn("ZoomToCourse skip setView invalid course coords", c);
@@ -252,6 +254,7 @@ export default function CoursesMap() {
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [mapStyle, setMapStyle] = useState<"map" | "satellite">("map");
 
   const [postsByCourse, setPostsByCourse] = useState<Record<string, Post[]>>(
     {},
@@ -265,7 +268,15 @@ export default function CoursesMap() {
     const sp = new URLSearchParams(location.search);
     return sp.get("courseId");
   }, [location.search]);
+  const tileUrl =
+    mapStyle === "satellite"
+      ? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+      : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 
+  const tileAttribution =
+    mapStyle === "satellite"
+      ? "&copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community"
+      : "&copy; OpenStreetMap contributors &copy; CARTO";
   const markerRefs = useRef<Record<string, L.Marker | null>>({});
 
   const stopBtn = (e: any) => {
@@ -334,19 +345,61 @@ export default function CoursesMap() {
   }
 
   return (
-    <div style={{ height: "100vh", position: "relative" }}>
+    <div style={{ height: "100%", position: "relative" }}>
       <LoggedInBadge isLoggedIn={isAuthenticated} />
 
+      <div
+        style={{
+          position: "absolute",
+          top: 12,
+          left: 12,
+          zIndex: 1000,
+          display: "flex",
+          gap: 8,
+          background: "rgba(255,255,255,0.92)",
+          padding: 6,
+          borderRadius: 999,
+          boxShadow: "0 2px 12px rgba(0,0,0,.15)",
+        }}
+      >
+        <button
+          onClick={() => setMapStyle("map")}
+          style={{
+            border: "none",
+            borderRadius: 999,
+            padding: "8px 12px",
+            cursor: "pointer",
+            fontWeight: 700,
+            background: mapStyle === "map" ? "#1f8a3b" : "transparent",
+            color: mapStyle === "map" ? "white" : "#111",
+          }}
+        >
+          Map
+        </button>
+
+        <button
+          onClick={() => setMapStyle("satellite")}
+          style={{
+            border: "none",
+            borderRadius: 999,
+            padding: "8px 12px",
+            cursor: "pointer",
+            fontWeight: 700,
+            background: mapStyle === "satellite" ? "#1f8a3b" : "transparent",
+            color: mapStyle === "satellite" ? "white" : "#111",
+          }}
+        >
+          Satellite
+        </button>
+      </div>
+
       <MapContainer
-        key="fairwayd-map"
+        key={mapStyle}
         center={center}
         zoom={8}
         style={{ height: "100%", width: "100%" }}
       >
-        <TileLayer
-          attribution="&copy; OpenStreetMap contributors &copy; CARTO"
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-        />
+        <TileLayer attribution={tileAttribution} url={tileUrl} />
 
         <FixLeafletSize />
 
@@ -412,6 +465,10 @@ export default function CoursesMap() {
                 <strong>{c.name}</strong>
                 <br />
                 {[c.city, c.region, c.country].filter(Boolean).join(", ")}
+                <br />
+                <span style={{ fontSize: 11, opacity: 0.7 }}>
+                  lat: {String(c.lat)} | lon: {String(c.lon)}
+                </span>
 
                 <CoursePopupActions courseId={c.id} />
 

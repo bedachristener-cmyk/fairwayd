@@ -35,6 +35,11 @@ export class PostsService {
           },
         },
         images: true,
+        likes: {
+          select: {
+            userId: true,
+          },
+        },
       },
     };
 
@@ -177,5 +182,54 @@ export class PostsService {
     } catch (e: any) {
       throw new BadRequestException(e?.message ?? 'Failed to create post');
     }
+  }
+  async likePost(postId: string, userId: string) {
+    const pid = postId?.trim();
+    const uid = userId?.trim();
+
+    if (!pid) throw new BadRequestException('Missing postId');
+    if (!uid) throw new BadRequestException('Missing userId');
+
+    const post = await this.prisma.post.findUnique({
+      where: { id: pid },
+      select: { id: true },
+    });
+
+    if (!post) {
+      throw new BadRequestException(`Unknown postId ${pid}`);
+    }
+
+    await this.prisma.like.upsert({
+      where: {
+        postId_userId: {
+          postId: pid,
+          userId: uid,
+        },
+      },
+      update: {},
+      create: {
+        postId: pid,
+        userId: uid,
+      },
+    });
+
+    return { ok: true };
+  }
+
+  async unlikePost(postId: string, userId: string) {
+    const pid = postId?.trim();
+    const uid = userId?.trim();
+
+    if (!pid) throw new BadRequestException('Missing postId');
+    if (!uid) throw new BadRequestException('Missing userId');
+
+    await this.prisma.like.deleteMany({
+      where: {
+        postId: pid,
+        userId: uid,
+      },
+    });
+
+    return { ok: true };
   }
 }
