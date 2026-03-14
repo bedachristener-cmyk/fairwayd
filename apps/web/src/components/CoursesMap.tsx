@@ -428,8 +428,37 @@ export default function CoursesMap() {
           const lat = toFiniteNumber(c.lat);
           const lon = toFiniteNumber(c.lon);
 
-          // ✅ Wichtig: Marker mit NaN/NaN darf NIE gerendert werden (Leaflet crasht sonst)
-          if (lat === null || lon === null) {
+          if (
+            lat == null ||
+            lon == null ||
+            !Number.isFinite(lat) ||
+            !Number.isFinite(lon) ||
+            lat < -90 ||
+            lat > 90 ||
+            lon < -180 ||
+            lon > 180
+          ) {
+            return null;
+          }
+
+          if (lat != null && lon != null) {
+            if (Math.abs(lat) > 90 && Math.abs(lon) <= 90) {
+              const tmp = lat;
+              lat = lon;
+              lon = tmp;
+            }
+          }
+
+          if (
+            lat == null ||
+            lon == null ||
+            !Number.isFinite(lat) ||
+            !Number.isFinite(lon) ||
+            lat < -90 ||
+            lat > 90 ||
+            lon < -180 ||
+            lon > 180
+          ) {
             return null;
           }
 
@@ -454,7 +483,7 @@ export default function CoursesMap() {
                     lat,
                     lon,
                   });
-                  nav("/feed");
+                  //nav("/feed");
                 },
                 popupopen: () => {
                   loadPostsForCourse(c.id, false);
@@ -466,8 +495,9 @@ export default function CoursesMap() {
                 <br />
                 {[c.city, c.region, c.country].filter(Boolean).join(", ")}
                 <br />
+
                 <span style={{ fontSize: 11, opacity: 0.7 }}>
-                  lat: {String(c.lat)} | lon: {String(c.lon)}
+                  {[c.city, c.region, c.country].filter(Boolean).join(", ")}
                 </span>
 
                 <CoursePopupActions courseId={c.id} />
@@ -484,7 +514,7 @@ export default function CoursesMap() {
                           lat,
                           lon,
                         });
-                        nav("/feed");
+                        //nav("/feed");
                       }}
                       style={{
                         fontSize: 12,
