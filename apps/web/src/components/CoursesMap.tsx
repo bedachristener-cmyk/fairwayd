@@ -441,14 +441,6 @@ export default function CoursesMap() {
             return null;
           }
 
-          if (lat != null && lon != null) {
-            if (Math.abs(lat) > 90 && Math.abs(lon) <= 90) {
-              const tmp = lat;
-              lat = lon;
-              lon = tmp;
-            }
-          }
-
           if (
             lat == null ||
             lon == null ||
