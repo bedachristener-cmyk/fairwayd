@@ -2,12 +2,9 @@ import { useState } from "react";
 import { fileUrl } from "../api/fileUrl";
 import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
-function markImageLoaded(url: string) {
-  setLoadedImages((prev) => ({ ...prev, [url]: true }));
-}
 
 type PostImage = {
-  url: string;
+  url: string | null;
 };
 
 type PostUser = {
@@ -38,13 +35,12 @@ type PostCardProps = {
 };
 
 export default function PostCard({ post, isMobile }: PostCardProps) {
-  const [loadedImages, setLoadedImages] = useState<Record<string, boolean>>({});
-  function markImageLoaded(url: string) {
-    setLoadedImages((prev) => ({ ...prev, [url]: true }));
-  }
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+
+  const currentUserId = user?.id ?? null;
+
   const [liked, setLiked] = useState(
-    post.likes?.some((l) => l.userId === token) ?? false,
+    post.likes?.some((l) => l.userId === currentUserId) ?? false,
   );
   const [likeCount, setLikeCount] = useState(post.likes?.length ?? 0);
   const [likeBusy, setLikeBusy] = useState(false);
@@ -52,7 +48,7 @@ export default function PostCard({ post, isMobile }: PostCardProps) {
   const handleLikeClick = async () => {
     console.log("LIKE CLICKED");
 
-    if (likeBusy) return;
+    if (likeBusy || !token) return;
 
     try {
       setLikeBusy(true);
@@ -77,20 +73,19 @@ export default function PostCard({ post, isMobile }: PostCardProps) {
         setLiked(true);
         setLikeCount((c) => c + 1);
       }
-
-      if (post.likes) {
-        if (!liked) {
-          post.likes.push({ userId: token });
-        } else {
-          post.likes = post.likes.filter((l) => l.userId !== token);
-        }
-      }
     } catch (err) {
       console.error("Failed to toggle like", err);
     } finally {
       setLikeBusy(false);
     }
   };
+
+  const validImages =
+    post.images?.filter(
+      (img): img is { url: string } =>
+        typeof img.url === "string" && img.url.length > 0,
+    ) ?? [];
+
   return (
     <div
       style={{
@@ -111,7 +106,7 @@ export default function PostCard({ post, isMobile }: PostCardProps) {
 
       <div style={{ marginTop: 6, whiteSpace: "pre-wrap" }}>{post.content}</div>
 
-      {post.images?.length ? (
+      {validImages.length > 0 ? (
         <div
           style={{
             display: "grid",
@@ -119,57 +114,32 @@ export default function PostCard({ post, isMobile }: PostCardProps) {
             marginTop: 10,
           }}
         >
-          {post.images.map((img) => {
-            const src = fileUrl(img.url);
-            const isLoaded = !!loadedImages[img.url];
-
-            return (
-              <div
-                key={img.url}
+          {validImages.map((img) => (
+            <div
+              key={img.url}
+              style={{
+                position: "relative",
+                overflow: "hidden",
+                borderRadius: 14,
+                background: "var(--muted)",
+                minHeight: 120,
+              }}
+            >
+              <img
+                src={fileUrl(img.url)}
+                alt="Post image"
+                loading="lazy"
                 style={{
-                  position: "relative",
-                  overflow: "hidden",
-                  borderRadius: 14,
-                  background: "var(--muted)",
-                  minHeight: 120,
+                  width: "100%",
+                  display: "block",
+                  objectFit: "cover",
                 }}
-              >
-                {!isLoaded && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      background:
-                        "linear-gradient(90deg, var(--muted) 0%, var(--card) 50%, var(--muted) 100%)",
-                      backgroundSize: "200% 100%",
-                      animation: "fwSkeleton 1.2s ease-in-out infinite",
-                      zIndex: 2,
-                      pointerEvents: "none",
-                    }}
-                  />
-                )}
-
-                <img
-                  src={src}
-                  alt="Post image"
-                  loading="lazy"
-                  onLoad={() => markImageLoaded(img.url)}
-                  onError={() => markImageLoaded(img.url)}
-                  style={{
-                    width: "100%",
-                    display: "block",
-                    objectFit: "cover",
-                    opacity: isLoaded ? 1 : 0,
-                    transition: "opacity 220ms ease",
-                  }}
-                />
-              </div>
-            );
-          })}
+              />
+            </div>
+          ))}
         </div>
       ) : null}
 
-      {/* Like / Comment / Share */}
       <div
         style={{
           display: "flex",
@@ -182,15 +152,17 @@ export default function PostCard({ post, isMobile }: PostCardProps) {
       >
         <button
           onClick={handleLikeClick}
+          disabled={likeBusy}
           style={{
             background: "transparent",
             border: "none",
-            cursor: "pointer",
+            cursor: likeBusy ? "default" : "pointer",
             color: liked ? "#ff4d6d" : "var(--text)",
             fontWeight: 700,
             minWidth: isMobile ? 72 : "auto",
             textAlign: "left",
             padding: isMobile ? "6px 0" : 0,
+            opacity: likeBusy ? 0.7 : 1,
           }}
         >
           {liked ? "❤️" : "♡"} {likeCount}
