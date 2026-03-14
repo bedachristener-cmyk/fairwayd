@@ -483,7 +483,7 @@ export default function CoursesMap() {
                     lat,
                     lon,
                   });
-                  //nav("/feed");
+                  nav("/feed");
                 },
                 popupopen: () => {
                   loadPostsForCourse(c.id, false);
@@ -514,7 +514,7 @@ export default function CoursesMap() {
                           lat,
                           lon,
                         });
-                        //nav("/feed");
+                        nav("/feed");
                       }}
                       style={{
                         fontSize: 12,
