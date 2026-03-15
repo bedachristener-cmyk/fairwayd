@@ -595,7 +595,7 @@ export default function CoursesMap() {
               <Popup>
                 <div
                   style={{
-                    width: 280,
+                    width: 300,
                     display: "flex",
                     flexDirection: "column",
                     gap: 10,
@@ -603,38 +603,124 @@ export default function CoursesMap() {
                     fontFamily: "system-ui",
                   }}
                 >
+                  {/* COURSE INFO CARD */}
                   <div
                     style={{
                       padding: 12,
                       borderRadius: 14,
                       background: "var(--card)",
                       border: "1px solid var(--border)",
+                      boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
                     }}
                   >
+                    {/* HEADER */}
                     <div
                       style={{
-                        fontSize: 16,
-                        fontWeight: 800,
-                        lineHeight: 1.2,
-                        marginBottom: 6,
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 10,
+                        marginBottom: 10,
                       }}
                     >
-                      {c.name}
+                      <div
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 999,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          background: "var(--muted)",
+                          border: "1px solid var(--border)",
+                          flexShrink: 0,
+                          fontSize: 16,
+                        }}
+                      >
+                        ⛳
+                      </div>
+
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div
+                          style={{
+                            fontSize: 15,
+                            fontWeight: 800,
+                            lineHeight: 1.25,
+                            marginBottom: 4,
+                          }}
+                        >
+                          {c.name}
+                        </div>
+
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: "var(--sub)",
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          {[c.city, c.region, c.country]
+                            .filter(Boolean)
+                            .join(", ")}
+                        </div>
+                      </div>
                     </div>
 
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: "var(--sub)",
-                        lineHeight: 1.4,
-                        marginBottom: 8,
-                      }}
-                    >
-                      {[c.city, c.region, c.country].filter(Boolean).join(", ")}
-                    </div>
+                    {/* COURSE META */}
+                    {(c.holes || c.par) && (
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 8,
+                          flexWrap: "wrap",
+                          marginBottom: 10,
+                        }}
+                      >
+                        {c.holes && (
+                          <span
+                            style={{
+                              padding: "4px 10px",
+                              borderRadius: 999,
+                              background: "var(--muted)",
+                              border: "1px solid var(--border)",
+                              fontSize: 12,
+                              fontWeight: 700,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            🏌️ {c.holes} holes
+                          </span>
+                        )}
 
+                        {c.par && (
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              padding: "4px 8px",
+                              borderRadius: 999,
+                              background: "var(--muted)",
+                              border: "1px solid var(--border)",
+                            }}
+                          >
+                            Par {c.par}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* WEBSITE */}
                     {normalizeWebsite(c.website) && (
-                      <div style={{ marginBottom: 8 }}>
+                      <div
+                        style={{
+                          marginBottom: 10,
+                          padding: "8px 10px",
+                          borderRadius: 10,
+                          background: "var(--muted)",
+                          border: "1px solid var(--border)",
+                        }}
+                      >
                         <a
                           href={normalizeWebsite(c.website)!}
                           target="_blank"
@@ -642,6 +728,9 @@ export default function CoursesMap() {
                           onMouseDown={stopBtn}
                           onClick={(e) => e.stopPropagation()}
                           style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
                             fontSize: 12,
                             fontWeight: 700,
                             color: "var(--green)",
@@ -649,45 +738,54 @@ export default function CoursesMap() {
                             wordBreak: "break-word",
                           }}
                         >
-                          Visit website ↗
+                          🌐 Visit website ↗
                         </a>
                       </div>
                     )}
 
-                    <CoursePopupActions courseId={c.id} />
+                    {/* ACTIONS */}
+                    <div
+                      style={{
+                        marginTop: 2,
+                        paddingTop: 10,
+                        borderTop: "1px solid var(--border)",
+                      }}
+                    >
+                      {/* <CoursePopupActions courseId={c.id} /> */}
+                    </div>
                   </div>
 
+                  {/* POST HERE BUTTON */}
                   {isAuthenticated && (
-                    <div>
-                      <button
-                        onMouseDown={stopBtn}
-                        onClick={(e) => {
-                          stopBtn(e);
-                          setSelectedCourse({
-                            id: c.id,
-                            name: c.name,
-                            lat,
-                            lon,
-                          });
-                          nav("/feed");
-                        }}
-                        style={{
-                          fontSize: 12,
-                          padding: "8px 12px",
-                          cursor: "pointer",
-                          borderRadius: 10,
-                          border: "1px solid var(--border)",
-                          background: "var(--muted)",
-                          color: "var(--text)",
-                          fontWeight: 700,
-                        }}
-                        title="Create a post for this course"
-                      >
-                        Post here
-                      </button>
-                    </div>
+                    <button
+                      onMouseDown={stopBtn}
+                      onClick={(e) => {
+                        stopBtn(e);
+                        setSelectedCourse({
+                          id: c.id,
+                          name: c.name,
+                          lat,
+                          lon,
+                        });
+                        nav("/feed");
+                      }}
+                      style={{
+                        fontSize: 12,
+                        padding: "8px 12px",
+                        cursor: "pointer",
+                        borderRadius: 10,
+                        border: "1px solid var(--border)",
+                        background: "var(--muted)",
+                        color: "var(--text)",
+                        fontWeight: 700,
+                      }}
+                      title="Create a post for this course"
+                    >
+                      Post here
+                    </button>
                   )}
 
+                  {/* POSTS CARD */}
                   <div
                     style={{
                       padding: 12,
@@ -708,7 +806,6 @@ export default function CoursesMap() {
                         style={{
                           fontSize: 12,
                           fontWeight: 800,
-                          color: "var(--text)",
                         }}
                       >
                         Posts
@@ -730,7 +827,6 @@ export default function CoursesMap() {
                             borderRadius: 8,
                             border: "1px solid var(--border)",
                             background: "var(--muted)",
-                            color: "var(--text)",
                             fontWeight: 700,
                           }}
                         >
@@ -780,7 +876,6 @@ export default function CoursesMap() {
                           <div
                             style={{
                               whiteSpace: "pre-wrap",
-                              color: "var(--text)",
                             }}
                           >
                             {p.content}
