@@ -485,27 +485,32 @@ export default function FeedPage() {
             </div>
           ) : null}
 
-          {posts.map((p) => (
-            <div
-              key={p.id}
-              style={{ cursor: "pointer" }}
-              onClick={() => {
-                const lat = Number(p.course.lat);
-                const lon = Number(p.course.lon);
-                if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+          {posts.map((p) => {
+            const lat = Number(p.course.lat);
+            const lon = Number(p.course.lon);
+            const canSelectCourse =
+              Number.isFinite(lat) && Number.isFinite(lon);
 
-                setSelectedCourse({
-                  id: p.course.id,
-                  name: p.course.name,
-                  lat,
-                  lon,
-                });
-              }}
-              title="Select this post's course"
-            >
-              <PostCard post={p} isMobile={isMobile} />
-            </div>
-          ))}
+            return (
+              <div key={p.id}>
+                <PostCard
+                  post={p}
+                  isMobile={isMobile}
+                  onSelectCourse={
+                    canSelectCourse
+                      ? () =>
+                          setSelectedCourse({
+                            id: p.course.id,
+                            name: p.course.name,
+                            lat,
+                            lon,
+                          })
+                      : undefined
+                  }
+                />
+              </div>
+            );
+          })}
         </div>
       </Card>
     </div>
