@@ -20,6 +20,7 @@ type Course = {
   city?: string | null;
   region?: string | null;
   country?: string | null;
+  website?: string | null;
   lat: number;
   lon: number;
 };
@@ -112,6 +113,37 @@ function FixLeafletSize() {
     setTimeout(() => {
       map.invalidateSize();
     }, 50);
+  }, [map]);
+
+  return null;
+}
+function PersistMapView() {
+  const map = useMap();
+
+  useEffect(() => {
+    const save = () => {
+      const center = map.getCenter();
+      const zoom = map.getZoom();
+
+      localStorage.setItem(
+        "fairwayd-map-view",
+        JSON.stringify({
+          lat: center.lat,
+          lon: center.lng,
+          zoom,
+        }),
+      );
+    };
+
+    map.on("moveend", save);
+    map.on("zoomend", save);
+
+    save();
+
+    return () => {
+      map.off("moveend", save);
+      map.off("zoomend", save);
+    };
   }, [map]);
 
   return null;
@@ -215,6 +247,18 @@ function formatWhen(iso: string) {
     return iso;
   }
 }
+function normalizeWebsite(url?: string | null) {
+  if (!url) return null;
+
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+
+  return `https://${trimmed}`;
+}
 
 function LoggedInBadge({ isLoggedIn }: { isLoggedIn: boolean }) {
   const handle = localStorage.getItem("fairwayd_handle") ?? "";
@@ -254,7 +298,13 @@ export default function CoursesMap() {
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [mapStyle, setMapStyle] = useState<"map" | "satellite">("map");
+  const [mapStyle, setMapStyle] = useState<"map" | "satellite">(() => {
+    const saved = localStorage.getItem("fairwayd-map-style");
+    return saved === "satellite" ? "satellite" : "map";
+  });
+  useEffect(() => {
+    localStorage.setItem("fairwayd-map-style", mapStyle);
+  }, [mapStyle]);
 
   const [postsByCourse, setPostsByCourse] = useState<Record<string, Post[]>>(
     {},
@@ -268,15 +318,19 @@ export default function CoursesMap() {
     const sp = new URLSearchParams(location.search);
     return sp.get("courseId");
   }, [location.search]);
-  const tileUrl =
-    mapStyle === "satellite"
-      ? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-      : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+  const mapTileUrl =
+    "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 
-  const tileAttribution =
-    mapStyle === "satellite"
-      ? "&copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community"
-      : "&copy; OpenStreetMap contributors &copy; CARTO";
+  const mapTileAttribution = "&copy; OpenStreetMap contributors &copy; CARTO";
+
+  const satelliteTileUrl =
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+
+  const satelliteLabelsUrl =
+    "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
+
+  const satelliteTileAttribution =
+    "&copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community";
   const markerRefs = useRef<Record<string, L.Marker | null>>({});
 
   const stopBtn = (e: any) => {
@@ -285,11 +339,31 @@ export default function CoursesMap() {
   };
 
   const center = useMemo<[number, number]>(() => {
+    // 1️⃣ zuerst letzte gespeicherte Map Position
+    try {
+      const saved = localStorage.getItem("fairwayd-map-view");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const sLat = toFiniteNumber(parsed?.lat);
+        const sLon = toFiniteNumber(parsed?.lon);
+
+        if (sLat !== null && sLon !== null) {
+          return [sLat, sLon];
+        }
+      }
+    } catch {}
+
+    // 2️⃣ sonst aktueller Standort
     const lat = toFiniteNumber(userPos?.lat);
     const lon = toFiniteNumber(userPos?.lon);
-    return lat !== null && lon !== null ? [lat, lon] : [47.5596, 7.5886];
-  }, [userPos]);
 
+    if (lat !== null && lon !== null) {
+      return [lat, lon];
+    }
+
+    // 3️⃣ neutraler Fallback
+    return [20, 0];
+  }, [userPos]);
   useEffect(() => {
     apiGet<Course[]>("/courses")
       .then((data) => {
@@ -355,38 +429,56 @@ export default function CoursesMap() {
           left: 12,
           zIndex: 1000,
           display: "flex",
-          gap: 8,
-          background: "rgba(255,255,255,0.92)",
+          gap: 6,
+          background: "rgba(255,255,255,0.94)",
           padding: 6,
           borderRadius: 999,
           boxShadow: "0 2px 12px rgba(0,0,0,.15)",
+          border: "1px solid rgba(0,0,0,0.08)",
+          backdropFilter: "blur(6px)",
         }}
       >
         <button
+          type="button"
           onClick={() => setMapStyle("map")}
+          aria-pressed={mapStyle === "map"}
+          title="Standard map"
           style={{
-            border: "none",
+            border:
+              mapStyle === "map"
+                ? "1px solid #1f8a3b"
+                : "1px solid transparent",
             borderRadius: 999,
             padding: "8px 12px",
             cursor: "pointer",
             fontWeight: 700,
             background: mapStyle === "map" ? "#1f8a3b" : "transparent",
             color: mapStyle === "map" ? "white" : "#111",
+            minWidth: 72,
+            transition: "all 0.15s ease",
           }}
         >
           Map
         </button>
 
         <button
+          type="button"
           onClick={() => setMapStyle("satellite")}
+          aria-pressed={mapStyle === "satellite"}
+          title="Satellite hybrid"
           style={{
-            border: "none",
+            border:
+              mapStyle === "satellite"
+                ? "1px solid #1f8a3b"
+                : "1px solid transparent",
             borderRadius: 999,
             padding: "8px 12px",
             cursor: "pointer",
             fontWeight: 700,
             background: mapStyle === "satellite" ? "#1f8a3b" : "transparent",
             color: mapStyle === "satellite" ? "white" : "#111",
+            minWidth: 92,
+            transition: "all 0.15s ease",
           }}
         >
           Satellite
@@ -394,14 +486,33 @@ export default function CoursesMap() {
       </div>
 
       <MapContainer
-        key={mapStyle}
         center={center}
         zoom={8}
         style={{ height: "100%", width: "100%" }}
       >
-        <TileLayer attribution={tileAttribution} url={tileUrl} />
+        {mapStyle === "map" ? (
+          <TileLayer attribution={mapTileAttribution} url={mapTileUrl} />
+        ) : (
+          <>
+            <TileLayer
+              attribution={satelliteTileAttribution}
+              url={satelliteTileUrl}
+            />
+            <TileLayer
+              attribution={satelliteTileAttribution}
+              url={satelliteLabelsUrl}
+            />
+          </>
+        )}
 
         <FixLeafletSize />
+        <PersistMapView />
+
+        <FitToData
+          userPos={userPos}
+          courses={courses}
+          locked={!!courseIdFromUrl}
+        />
 
         <FitToData
           userPos={userPos}
@@ -475,7 +586,6 @@ export default function CoursesMap() {
                     lat,
                     lon,
                   });
-                  nav("/feed");
                 },
                 popupopen: () => {
                   loadPostsForCourse(c.id, false);
@@ -483,122 +593,215 @@ export default function CoursesMap() {
               }}
             >
               <Popup>
-                <strong>{c.name}</strong>
-                <br />
-                {[c.city, c.region, c.country].filter(Boolean).join(", ")}
-                <br />
-
-                <span style={{ fontSize: 11, opacity: 0.7 }}>
-                  {[c.city, c.region, c.country].filter(Boolean).join(", ")}
-                </span>
-
-                <CoursePopupActions courseId={c.id} />
-
-                {isAuthenticated && (
-                  <div style={{ marginTop: 8 }}>
-                    <button
-                      onMouseDown={stopBtn}
-                      onClick={(e) => {
-                        stopBtn(e);
-                        setSelectedCourse({
-                          id: c.id,
-                          name: c.name,
-                          lat,
-                          lon,
-                        });
-                        nav("/feed");
-                      }}
-                      style={{
-                        fontSize: 12,
-                        padding: "4px 8px",
-                        cursor: "pointer",
-                      }}
-                      title="Create a post for this course"
-                    >
-                      Post here
-                    </button>
-                  </div>
-                )}
-
-                <div style={{ marginTop: 10, width: 260 }}>
+                <div
+                  style={{
+                    width: 280,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                    color: "var(--text)",
+                    fontFamily: "system-ui",
+                  }}
+                >
                   <div
                     style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: 6,
+                      padding: 12,
+                      borderRadius: 14,
+                      background: "var(--card)",
+                      border: "1px solid var(--border)",
                     }}
                   >
-                    <div style={{ fontSize: 12, fontWeight: 800 }}>Posts</div>
+                    <div
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 800,
+                        lineHeight: 1.2,
+                        marginBottom: 6,
+                      }}
+                    >
+                      {c.name}
+                    </div>
 
-                    {isAuthenticated && (
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "var(--sub)",
+                        lineHeight: 1.4,
+                        marginBottom: 8,
+                      }}
+                    >
+                      {[c.city, c.region, c.country].filter(Boolean).join(", ")}
+                    </div>
+
+                    {normalizeWebsite(c.website) && (
+                      <div style={{ marginBottom: 8 }}>
+                        <a
+                          href={normalizeWebsite(c.website)!}
+                          target="_blank"
+                          rel="noreferrer"
+                          onMouseDown={stopBtn}
+                          onClick={(e) => e.stopPropagation()}
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 700,
+                            color: "var(--green)",
+                            textDecoration: "none",
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          Visit website ↗
+                        </a>
+                      </div>
+                    )}
+
+                    <CoursePopupActions courseId={c.id} />
+                  </div>
+
+                  {isAuthenticated && (
+                    <div>
                       <button
                         onMouseDown={stopBtn}
                         onClick={(e) => {
                           stopBtn(e);
-                          loadPostsForCourse(c.id, true);
+                          setSelectedCourse({
+                            id: c.id,
+                            name: c.name,
+                            lat,
+                            lon,
+                          });
+                          nav("/feed");
                         }}
-                        disabled={busy}
-                        title="Reload posts for this course"
                         style={{
                           fontSize: 12,
-                          padding: "2px 6px",
-                          cursor: busy ? "default" : "pointer",
+                          padding: "8px 12px",
+                          cursor: "pointer",
+                          borderRadius: 10,
+                          border: "1px solid var(--border)",
+                          background: "var(--muted)",
+                          color: "var(--text)",
+                          fontWeight: 700,
                         }}
+                        title="Create a post for this course"
                       >
-                        {busy ? "..." : "Reload"}
+                        Post here
                       </button>
-                    )}
-                  </div>
-
-                  {!isAuthenticated && (
-                    <div style={{ fontSize: 12, opacity: 0.7 }}>
-                      Login to see posts.
                     </div>
                   )}
 
-                  {isAuthenticated && busy && (
-                    <div style={{ fontSize: 12 }}>Loading posts...</div>
-                  )}
+                  <div
+                    style={{
+                      padding: 12,
+                      borderRadius: 14,
+                      background: "var(--card)",
+                      border: "1px solid var(--border)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: 8,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 800,
+                          color: "var(--text)",
+                        }}
+                      >
+                        Posts
+                      </div>
 
-                  {isAuthenticated && err && (
-                    <div style={{ fontSize: 12, color: "crimson" }}>{err}</div>
-                  )}
+                      {isAuthenticated && (
+                        <button
+                          onMouseDown={stopBtn}
+                          onClick={(e) => {
+                            stopBtn(e);
+                            loadPostsForCourse(c.id, true);
+                          }}
+                          disabled={busy}
+                          title="Reload posts for this course"
+                          style={{
+                            fontSize: 12,
+                            padding: "4px 8px",
+                            cursor: busy ? "default" : "pointer",
+                            borderRadius: 8,
+                            border: "1px solid var(--border)",
+                            background: "var(--muted)",
+                            color: "var(--text)",
+                            fontWeight: 700,
+                          }}
+                        >
+                          {busy ? "..." : "Reload"}
+                        </button>
+                      )}
+                    </div>
 
-                  {isAuthenticated &&
-                    loaded &&
-                    list.length === 0 &&
-                    !busy &&
-                    !err && (
+                    {!isAuthenticated && (
                       <div style={{ fontSize: 12, opacity: 0.7 }}>
-                        No posts yet.
+                        Login to see posts.
                       </div>
                     )}
 
-                  {isAuthenticated &&
-                    loaded &&
-                    list.slice(0, 5).map((p) => (
-                      <div
-                        key={p.id}
-                        style={{
-                          marginTop: 8,
-                          paddingTop: 8,
-                          borderTop: "1px solid rgba(0,0,0,0.08)",
-                          fontSize: 12,
-                        }}
-                      >
-                        <div style={{ whiteSpace: "pre-wrap" }}>
-                          {p.content}
-                        </div>
-                        <div style={{ opacity: 0.65, marginTop: 4 }}>
-                          {p.user?.handle ? `@${p.user.handle} • ` : ""}
-                          {p.visibility} • {formatWhen(p.createdAt)}
-                          {p._count
-                            ? ` • ♥ ${p._count.likes} • 💬 ${p._count.comments}`
-                            : ""}
-                        </div>
+                    {isAuthenticated && busy && (
+                      <div style={{ fontSize: 12 }}>Loading posts...</div>
+                    )}
+
+                    {isAuthenticated && err && (
+                      <div style={{ fontSize: 12, color: "crimson" }}>
+                        {err}
                       </div>
-                    ))}
+                    )}
+
+                    {isAuthenticated &&
+                      loaded &&
+                      list.length === 0 &&
+                      !busy &&
+                      !err && (
+                        <div style={{ fontSize: 12, opacity: 0.7 }}>
+                          No posts yet.
+                        </div>
+                      )}
+
+                    {isAuthenticated &&
+                      loaded &&
+                      list.slice(0, 5).map((p) => (
+                        <div
+                          key={p.id}
+                          style={{
+                            marginTop: 8,
+                            paddingTop: 8,
+                            borderTop: "1px solid rgba(0,0,0,0.08)",
+                            fontSize: 12,
+                          }}
+                        >
+                          <div
+                            style={{
+                              whiteSpace: "pre-wrap",
+                              color: "var(--text)",
+                            }}
+                          >
+                            {p.content}
+                          </div>
+
+                          <div
+                            style={{
+                              opacity: 0.65,
+                              marginTop: 4,
+                              color: "var(--sub)",
+                            }}
+                          >
+                            {p.user?.handle ? `@${p.user.handle} • ` : ""}
+                            {p.visibility} • {formatWhen(p.createdAt)}
+                            {p._count
+                              ? ` • ♥ ${p._count.likes} • 💬 ${p._count.comments}`
+                              : ""}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
                 </div>
               </Popup>
             </Marker>
