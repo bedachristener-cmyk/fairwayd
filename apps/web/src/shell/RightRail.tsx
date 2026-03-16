@@ -5,6 +5,7 @@ import L from "leaflet";
 import { API_BASE } from "../api/base";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
 import { useAuth } from "../auth/AuthContext";
+import { useCourseFollow } from "../hooks/useCourseFollow";
 
 type Course = {
   id: string;
@@ -198,8 +199,9 @@ export default function RightRail() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [center, setCenter] = useState(DEFAULT_CENTER);
 
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [followBusy, setFollowBusy] = useState(false);
+  const { isFollowing, followBusy, toggleFollow } = useCourseFollow(
+    selectedCourse?.id ?? null,
+  );
 
   const [followingCount, setFollowingCount] = useState<number | null>(null);
   const [requestCount, setRequestCount] = useState<number>(0);
@@ -277,71 +279,6 @@ export default function RightRail() {
 
     run();
   }, [token]);
-
-  // Following status for selected course
-  useEffect(() => {
-    const run = async () => {
-      if (!selectedCourse?.id || !token) {
-        setIsFollowing(false);
-        return;
-      }
-      try {
-        const res = await fetch(
-          `${API_BASE}/courses/${selectedCourse.id}/following`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
-        if (!res.ok) return;
-        const data = await res.json();
-        setIsFollowing(!!data?.following);
-      } catch {
-        // ignore
-      }
-    };
-    run();
-  }, [selectedCourse?.id, token]);
-
-  const toggleFollow = async () => {
-    if (!selectedCourse?.id || !token || followBusy) return;
-
-    const prev = isFollowing;
-    const next = !prev;
-
-    // optimistic UI
-    setIsFollowing(next);
-    setFollowBusy(true);
-    setFollowingCount((n) => {
-      if (n == null) return n;
-      return next ? n + 1 : Math.max(0, n - 1);
-    });
-
-    try {
-      const res = await fetch(
-        `${API_BASE}/courses/${selectedCourse.id}/follow`,
-        {
-          method: next ? "POST" : "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-
-      if (!res.ok) {
-        // rollback
-        setIsFollowing(prev);
-        setFollowingCount((n) => {
-          if (n == null) return n;
-          return prev ? n + 1 : Math.max(0, n - 1);
-        });
-      }
-    } catch {
-      // rollback
-      setIsFollowing(prev);
-      setFollowingCount((n) => {
-        if (n == null) return n;
-        return prev ? n + 1 : Math.max(0, n - 1);
-      });
-    } finally {
-      setFollowBusy(false);
-    }
-  };
 
   const loadRequestCount = useCallback(async () => {
     if (!token) {
