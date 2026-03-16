@@ -11,6 +11,7 @@ import {
 } from "react-leaflet";
 import { useAuth } from "../auth/AuthContext";
 import { apiGet } from "../api/client";
+import { useCourseFollow } from "../hooks/useCourseFollow";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
 
 type Course = {
@@ -27,6 +28,11 @@ type Course = {
 };
 
 type Geo = { lat: number; lon: number };
+
+type PostImage = {
+  id: string;
+  url: string;
+};
 
 type Post = {
   id: string;
@@ -45,6 +51,13 @@ type Post = {
     likes: number;
     comments: number;
   };
+  images?: PostImage[];
+};
+
+type CoursePostsResponse = {
+  items?: Post[];
+  nextCursor?: string | null;
+  take?: number;
 };
 
 const golfIcon = L.divIcon({
@@ -243,7 +256,19 @@ function ZoomToCourse({
 
 function formatWhen(iso: string) {
   try {
-    return new Date(iso).toLocaleString();
+    const d = new Date(iso);
+    const diff = Date.now() - d.getTime();
+
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 60) return `${minutes}m`;
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h`;
+
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d`;
+
+    return d.toLocaleDateString();
   } catch {
     return iso;
   }
@@ -286,6 +311,41 @@ function LoggedInBadge({ isLoggedIn }: { isLoggedIn: boolean }) {
       <span style={{ fontWeight: 800 }}>Logged in</span>
       <span style={{ opacity: 0.8 }}>{handle ? `@${handle}` : ""}</span>
     </div>
+  );
+}
+
+function CourseFollowButton({ courseId }: { courseId: string }) {
+  const { token, isFollowing, followBusy, toggleFollow } =
+    useCourseFollow(courseId);
+
+  return (
+    <button
+      type="button"
+      onMouseDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleFollow();
+      }}
+      disabled={followBusy || !token}
+      title={!token ? "Please login" : "Follow course"}
+      style={{
+        fontSize: 12,
+        padding: "8px 12px",
+        borderRadius: 999,
+        border: "1px solid var(--border)",
+        background: isFollowing ? "rgba(31,138,59,0.12)" : "var(--muted)",
+        color: "var(--text)",
+        fontWeight: 800,
+        cursor: !token ? "not-allowed" : followBusy ? "default" : "pointer",
+        opacity: !token ? 0.6 : 1,
+      }}
+    >
+      {followBusy ? "..." : isFollowing ? "✓ Following" : "+ Follow"}
+    </button>
   );
 }
 
@@ -388,12 +448,18 @@ export default function CoursesMap() {
     setErrByCourse((m) => ({ ...m, [courseId]: null }));
 
     try {
-      const posts = await apiGet<Post[]>(`/posts/course/${courseId}`, {
-        token,
-      });
+      const res = await apiGet<CoursePostsResponse>(
+        `/posts/course/${courseId}`,
+        {
+          token,
+        },
+      );
+
+      const items = Array.isArray(res?.items) ? res.items : [];
+
       setPostsByCourse((m) => ({
         ...m,
-        [courseId]: Array.isArray(posts) ? posts : [],
+        [courseId]: items,
       }));
     } catch (e: any) {
       setErrByCourse((m) => ({ ...m, [courseId]: e?.message ?? String(e) }));
@@ -587,6 +653,7 @@ export default function CoursesMap() {
                     lat,
                     lon,
                   });
+                  loadPostsForCourse(c.id, false);
                 },
                 popupopen: () => {
                   loadPostsForCourse(c.id, false);
@@ -750,9 +817,14 @@ export default function CoursesMap() {
                         marginTop: 2,
                         paddingTop: 10,
                         borderTop: "1px solid var(--border)",
+                        display: "flex",
+                        gap: 8,
+                        flexWrap: "wrap",
                       }}
                     >
-                      {/* <CoursePopupActions courseId={c.id} /> */}
+                      {isAuthenticated && (
+                        <CourseFollowButton courseId={c.id} />
+                      )}
                     </div>
                   </div>
 
@@ -842,6 +914,22 @@ export default function CoursesMap() {
                       </div>
                     )}
 
+                    {isAuthenticated && (
+                      <div
+                        style={{
+                          fontSize: 11,
+                          opacity: 0.7,
+                          marginBottom: 8,
+                          padding: "6px 8px",
+                          borderRadius: 8,
+                          background: "var(--muted)",
+                          border: "1px solid var(--border)",
+                          lineHeight: 1.4,
+                          wordBreak: "break-word",
+                        }}
+                      ></div>
+                    )}
+
                     {isAuthenticated && busy && (
                       <div style={{ fontSize: 12 }}>Loading posts...</div>
                     )}
@@ -874,26 +962,67 @@ export default function CoursesMap() {
                             fontSize: 12,
                           }}
                         >
-                          <div
-                            style={{
-                              whiteSpace: "pre-wrap",
-                            }}
-                          >
-                            {p.content}
-                          </div>
+                          {p.content && (
+                            <div
+                              style={{
+                                whiteSpace: "pre-wrap",
+                              }}
+                            >
+                              {p.content}
+                            </div>
+                          )}
+
+                          {p.images && p.images.length > 0 && (
+                            <div
+                              style={{
+                                display: "flex",
+                                gap: 8,
+                                flexWrap: "wrap",
+                                marginTop: 8,
+                              }}
+                            >
+                              {p.images.slice(0, 3).map((img) => (
+                                <img
+                                  key={img.id}
+                                  src={img.url}
+                                  alt=""
+                                  style={{
+                                    width: 160,
+                                    height: 110,
+                                    objectFit: "cover",
+                                    borderRadius: 8,
+                                    border: "1px solid var(--border)",
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          )}
 
                           <div
                             style={{
-                              opacity: 0.65,
-                              marginTop: 4,
+                              opacity: 0.7,
+                              marginTop: 6,
+                              fontSize: 11,
                               color: "var(--sub)",
+                              display: "flex",
+                              gap: 8,
+                              alignItems: "center",
+                              flexWrap: "wrap",
                             }}
                           >
-                            {p.user?.handle ? `@${p.user.handle} • ` : ""}
-                            {p.visibility} • {formatWhen(p.createdAt)}
-                            {p._count
-                              ? ` • ♥ ${p._count.likes} • 💬 ${p._count.comments}`
-                              : ""}
+                            {p.user?.handle && <span>@{p.user.handle}</span>}
+
+                            <span>·</span>
+
+                            <span>{formatWhen(p.createdAt)}</span>
+
+                            {p._count && (
+                              <>
+                                <span>·</span>
+                                <span>♥ {p._count?.likes ?? 0}</span>
+                                <span>💬 {p._count?.comments ?? 0}</span>
+                              </>
+                            )}
                           </div>
                         </div>
                       ))}

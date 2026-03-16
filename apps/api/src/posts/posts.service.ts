@@ -90,6 +90,12 @@ export class PostsService {
           },
         },
         images: true,
+        _count: {
+          select: {
+            likes: true,
+            comments: true,
+          },
+        },
       },
     };
 
