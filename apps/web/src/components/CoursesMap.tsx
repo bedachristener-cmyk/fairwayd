@@ -11,7 +11,6 @@ import {
 } from "react-leaflet";
 import { useAuth } from "../auth/AuthContext";
 import { apiGet } from "../api/client";
-import CoursePopupActions from "./CoursePopupActions";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
 
 type Course = {
@@ -21,6 +20,8 @@ type Course = {
   region?: string | null;
   country?: string | null;
   website?: string | null;
+  holes?: number | null;
+  par?: number | null;
   lat: number;
   lon: number;
 };
