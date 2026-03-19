@@ -15,9 +15,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { PostsService } from './posts.service';
 import { Visibility } from '@prisma/client';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
 import { memoryStorage } from 'multer';
-import { extname } from 'path';
 import { uploadToR2 } from '../storage/r2.service';
 
 type CreatePostBody = {
@@ -26,17 +24,15 @@ type CreatePostBody = {
   visibility?: Visibility;
 };
 
-function safeFileName(original: string) {
-  const ext = extname(original || '').toLowerCase() || '.jpg';
-  const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  return `${id}${ext}`;
-}
+type CreateCommentBody = {
+  content: string;
+  parentId?: string;
+};
 
 @Controller('posts')
 export class PostsController {
   constructor(private readonly posts: PostsService) {}
 
-  // ✅ PUBLIC FEED (latest posts everywhere)
   @Get('feed')
   async feed(
     @Query('take') takeStr?: string,
@@ -46,7 +42,6 @@ export class PostsController {
     return this.posts.getPublicFeed({ take, cursor });
   }
 
-  // ✅ PUBLIC: posts for a specific course (used when clicking a golf club)
   @Get('course/:courseId')
   async byCourse(
     @Param('courseId') courseId: string,
@@ -57,7 +52,6 @@ export class PostsController {
     return this.posts.getPostsByCourse({ courseId, take, cursor });
   }
 
-  // ✅ PRIVATE: current user's posts
   @UseGuards(AuthGuard('jwt'))
   @Get('me')
   async me(@Req() req: any, @Query('take') takeStr?: string) {
@@ -80,13 +74,42 @@ export class PostsController {
     return this.posts.unlikePost(id, userId);
   }
 
-  // ✅ PRIVATE: create a post (supports optional image upload)
+  @UseGuards(AuthGuard('jwt'))
+  @Get(':id/comments')
+  async getComments(@Param('id') id: string, @Req() req: any) {
+    const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
+    return this.posts.getComments(id, userId);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post(':id/comments')
+  async createComment(
+    @Param('id') id: string,
+    @Req() req: any,
+    @Body() body: CreateCommentBody,
+  ) {
+    const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
+    return this.posts.createComment(
+      id,
+      userId,
+      body?.content ?? '',
+      body?.parentId,
+    );
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('comments/:id/like')
+  async toggleCommentLike(@Param('id') id: string, @Req() req: any) {
+    const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
+    return this.posts.toggleCommentLike(id, userId);
+  }
+
   @UseGuards(AuthGuard('jwt'))
   @Post()
   @UseInterceptors(
     FileInterceptor('image', {
       storage: memoryStorage(),
-      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+      limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
   async create(
@@ -96,7 +119,6 @@ export class PostsController {
   ) {
     const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
 
-    // for multipart/form-data, body fields are strings
     let imageUrl: string | undefined = undefined;
 
     if (image) {

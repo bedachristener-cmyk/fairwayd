@@ -485,6 +485,55 @@ export default function CoursesMap() {
     );
   }
 
+  function handleCommentClick(
+    postCourse: {
+      id: string;
+      name: string;
+      lat?: number | string;
+      lon?: number | string;
+    },
+    postId: string,
+  ) {
+    const focusCourse = {
+      id: postCourse.id,
+      name: postCourse.name,
+      lat: Number(postCourse.lat ?? 0),
+      lon: Number(postCourse.lon ?? 0),
+    };
+
+    setSelectedCourse(focusCourse);
+
+    nav("/feed", {
+      state: {
+        focusCourse,
+        focusPostId: postId,
+        openComment: true,
+      },
+    });
+  }
+
+  async function handleShareClick(postCourse: {
+    id: string;
+    name: string;
+    lat?: number | string;
+    lon?: number | string;
+  }) {
+    const shareUrl = `${window.location.origin}/feed`;
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      alert("Link copied");
+      setSelectedCourse({
+        id: postCourse.id,
+        name: postCourse.name,
+        lat: Number(postCourse.lat ?? 0),
+        lon: Number(postCourse.lon ?? 0),
+      });
+    } catch {
+      // optional fallback later
+    }
+  }
+
   return (
     <div style={{ height: "100%", position: "relative" }}>
       <LoggedInBadge isLoggedIn={isAuthenticated} />
@@ -1023,6 +1072,71 @@ export default function CoursesMap() {
                                 <span>💬 {p._count?.comments ?? 0}</span>
                               </>
                             )}
+                          </div>
+
+                          <div
+                            style={{
+                              marginTop: 8,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 12,
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <div
+                              onMouseDown={stopBtn}
+                              onClick={(e) => {
+                                stopBtn(e);
+                                handleCommentClick(
+                                  {
+                                    id: c.id,
+                                    name: c.name,
+                                    lat,
+                                    lon,
+                                  },
+                                  p.id,
+                                );
+                              }}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6,
+                                fontSize: 12,
+                                fontWeight: 700,
+                                color: "var(--green)",
+                                cursor: "pointer",
+                                userSelect: "none",
+                              }}
+                              title="Open feed and comment on this course"
+                            >
+                              Comment
+                            </div>
+
+                            <div
+                              onMouseDown={stopBtn}
+                              onClick={(e) => {
+                                stopBtn(e);
+                                void handleShareClick({
+                                  id: c.id,
+                                  name: c.name,
+                                  lat,
+                                  lon,
+                                });
+                              }}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6,
+                                fontSize: 12,
+                                fontWeight: 700,
+                                color: "var(--sub)",
+                                cursor: "pointer",
+                                userSelect: "none",
+                              }}
+                              title="Copy feed link"
+                            >
+                              Share
+                            </div>
                           </div>
                         </div>
                       ))}

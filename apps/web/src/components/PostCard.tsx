@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { fileUrl } from "../api/fileUrl";
 import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
@@ -26,19 +26,25 @@ type Post = {
   user: PostUser;
   course: PostCourse;
   images?: PostImage[];
-  likes?: { userId: string }[];
+  _count?: {
+    comments?: number;
+  };
 };
 
 type PostCardProps = {
   post: Post;
   isMobile: boolean;
+  isCommentTarget?: boolean;
   onSelectCourse?: () => void;
+  onCommentClick?: (postId: string) => void;
 };
 
 export default function PostCard({
   post,
   isMobile,
+  isCommentTarget = false,
   onSelectCourse,
+  onCommentClick,
 }: PostCardProps) {
   const { token, user } = useAuth();
 
@@ -52,6 +58,16 @@ export default function PostCard({
   const [showHeart, setShowHeart] = useState(false);
   const [lastTap, setLastTap] = useState(0);
   const [hoveredImage, setHoveredImage] = useState<string | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isCommentTarget) return;
+
+    rootRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }, [isCommentTarget]);
 
   useEffect(() => {
     if (!showHeart) return;
@@ -149,12 +165,24 @@ export default function PostCard({
 
   return (
     <div
+      ref={rootRef}
       style={{
         padding: isMobile ? "10px 0" : 12,
         borderRadius: isMobile ? 0 : 14,
-        background: isMobile ? "transparent" : "rgba(0,0,0,.10)",
-        border: isMobile ? "none" : "1px solid var(--border)",
+        background: isMobile
+          ? "transparent"
+          : isCommentTarget
+            ? "rgba(0, 200, 100, 0.08)"
+            : "rgba(0,0,0,.10)",
+        border: isMobile
+          ? "none"
+          : isCommentTarget
+            ? "1px solid var(--green)"
+            : "1px solid var(--border)",
         borderBottom: isMobile ? "1px solid var(--border)" : undefined,
+        boxShadow: isCommentTarget
+          ? "0 0 0 2px rgba(0, 200, 100, 0.25)"
+          : undefined,
         color: "var(--text)",
       }}
     >
@@ -313,9 +341,16 @@ export default function PostCard({
           {liked ? "❤️" : "♡"} {likeCount}
         </button>
 
-        <button style={actionButtonStyle}>💬 Comment</button>
+        <button
+          style={actionButtonStyle}
+          onClick={() => onCommentClick?.(post.id)}
+        >
+          💬 Comments {post._count?.comments ?? 0}
+        </button>
 
-        <button style={actionButtonStyle}>🔗 Share</button>
+        <button type="button" style={actionButtonStyle}>
+          🔗 Share
+        </button>
       </div>
     </div>
   );

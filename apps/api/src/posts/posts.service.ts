@@ -1,6 +1,10 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import {
+  BadRequestException,
+  UnauthorizedException,
+  Injectable,
+} from '@nestjs/common';
 import { Prisma, Visibility } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 
 type CreatePostBody = {
   courseId: string;
@@ -40,12 +44,17 @@ export class PostsService {
             userId: true,
           },
         },
+        _count: {
+          select: {
+            comments: true,
+          },
+        },
       },
     };
 
     if (cursor) {
       query.cursor = { id: cursor };
-      query.skip = 1; // skip the cursor item itself
+      query.skip = 1;
     }
 
     const items = await this.prisma.post.findMany(query);
@@ -189,6 +198,7 @@ export class PostsService {
       throw new BadRequestException(e?.message ?? 'Failed to create post');
     }
   }
+
   async likePost(postId: string, userId: string) {
     const pid = postId?.trim();
     const uid = userId?.trim();
@@ -237,5 +247,196 @@ export class PostsService {
     });
 
     return { ok: true };
+  }
+  async toggleCommentLike(commentId: string, userId: string) {
+    const cid = commentId?.trim();
+    const uid = userId?.trim();
+
+    if (!cid) {
+      throw new BadRequestException('Missing commentId');
+    }
+
+    if (!uid) {
+      throw new UnauthorizedException('Missing userId');
+    }
+
+    const comment = await this.prisma.comment.findUnique({
+      where: { id: cid },
+      select: { id: true },
+    });
+
+    if (!comment) {
+      throw new BadRequestException(`Unknown commentId ${cid}`);
+    }
+
+    const existing = await this.prisma.commentLike.findUnique({
+      where: {
+        commentId_userId: {
+          commentId: cid,
+          userId: uid,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (existing) {
+      await this.prisma.commentLike.delete({
+        where: {
+          commentId_userId: {
+            commentId: cid,
+            userId: uid,
+          },
+        },
+      });
+
+      return { liked: false };
+    }
+
+    await this.prisma.commentLike.create({
+      data: {
+        commentId: cid,
+        userId: uid,
+      },
+    });
+
+    return { liked: true };
+  }
+
+  async getComments(postId: string, userId?: string) {
+    const pid = postId?.trim();
+
+    if (!pid) {
+      throw new BadRequestException('Missing postId');
+    }
+
+    const post = await this.prisma.post.findUnique({
+      where: { id: pid },
+      select: { id: true },
+    });
+
+    if (!post) {
+      throw new BadRequestException(`Unknown postId ${pid}`);
+    }
+
+    const comments = await this.prisma.comment.findMany({
+      where: { postId: pid },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            handle: true,
+          },
+        },
+        likes: {
+          select: {
+            userId: true,
+          },
+        },
+        _count: {
+          select: {
+            likes: true,
+          },
+        },
+      },
+    });
+
+    const byId = new Map<
+      string,
+      (typeof comments)[number] & { replies: any[] }
+    >();
+
+    for (const comment of comments) {
+      const likedByMe =
+        !!userId && comment.likes.some((l) => l.userId === userId);
+
+      byId.set(comment.id, {
+        id: comment.id,
+        postId: comment.postId,
+        userId: comment.userId,
+        parentId: comment.parentId,
+        content: comment.content,
+        createdAt: comment.createdAt,
+        user: comment.user,
+        _count: comment._count,
+        likedByMe,
+        replies: [],
+      } as any); // 👈 DAS HINZUFÜGEN
+    }
+    const roots: Array<(typeof comments)[number] & { replies: any[] }> = [];
+
+    for (const comment of comments) {
+      const node = byId.get(comment.id)!;
+
+      if (comment.parentId) {
+        const parent = byId.get(comment.parentId);
+        if (parent) {
+          parent.replies.push(node);
+        } else {
+          roots.push(node);
+        }
+      } else {
+        roots.push(node);
+      }
+    }
+
+    return roots;
+  }
+
+  async createComment(
+    postId: string,
+    userId: string,
+    content: string,
+    parentId?: string,
+  ) {
+    const pid = postId?.trim();
+    const uid = userId?.trim();
+    const text = content?.trim();
+    const parent = parentId?.trim();
+
+    if (!pid) throw new BadRequestException('Missing postId');
+    if (!uid) throw new BadRequestException('Missing userId');
+    if (!text) throw new BadRequestException('Missing content');
+
+    const post = await this.prisma.post.findUnique({
+      where: { id: pid },
+      select: { id: true },
+    });
+
+    if (!post) {
+      throw new BadRequestException(`Unknown postId ${pid}`);
+    }
+
+    if (parent) {
+      const parentComment = await this.prisma.comment.findUnique({
+        where: { id: parent },
+        select: { id: true, postId: true },
+      });
+
+      if (!parentComment) {
+        throw new BadRequestException(`Unknown parentId ${parent}`);
+      }
+
+      if (parentComment.postId !== pid) {
+        throw new BadRequestException('Parent comment belongs to another post');
+      }
+    }
+
+    return this.prisma.comment.create({
+      data: {
+        postId: pid,
+        userId: uid,
+        content: text,
+        parentId: parent || null,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            handle: true,
+          },
+        },
+      },
+    });
   }
 }
