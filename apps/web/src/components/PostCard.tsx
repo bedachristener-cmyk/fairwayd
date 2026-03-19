@@ -26,6 +26,7 @@ type Post = {
   user: PostUser;
   course: PostCourse;
   images?: PostImage[];
+  likes?: { userId: string }[];
   _count?: {
     comments?: number;
   };
@@ -51,7 +52,8 @@ export default function PostCard({
   const currentUserId = user?.id ?? null;
 
   const [liked, setLiked] = useState(
-    post.likes?.some((l) => l.userId === currentUserId) ?? false,
+    post.likes?.some((l: { userId: string }) => l.userId === currentUserId) ??
+      false,
   );
   const [likeCount, setLikeCount] = useState(post.likes?.length ?? 0);
   const [likeBusy, setLikeBusy] = useState(false);
@@ -108,7 +110,7 @@ export default function PostCard({
       await toggleLike(nextLiked);
 
       setLiked(nextLiked);
-      setLikeCount((c) => Math.max(0, c + (nextLiked ? 1 : -1)));
+      setLikeCount((c: number) => Math.max(0, c + (nextLiked ? 1 : -1)));
     } catch (err) {
       console.error("Failed to toggle like", err);
     } finally {
@@ -132,7 +134,7 @@ export default function PostCard({
           setLikeBusy(true);
           await toggleLike(true);
           setLiked(true);
-          setLikeCount((c) => c + 1);
+          setLikeCount((c: number) => c + 1);
         } catch (err) {
           console.error("Failed to like post on double tap", err);
         } finally {
