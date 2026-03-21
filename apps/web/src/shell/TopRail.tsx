@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useMe } from "../auth/useMe";
+import logo from "../assets/logo.png";
 import {
   applyTheme,
   getInitialTheme,
@@ -97,18 +98,22 @@ export default function TopRail() {
       }}
     >
       {/* Left brand */}
-      <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-        <div
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <img
+          src={logo}
+          alt="Fairwayd"
           style={{
-            color: "var(--green)",
-            fontWeight: 900,
-            letterSpacing: 0.2,
+            height: 32,
+            width: 32,
+            borderRadius: 8,
           }}
-        >
-          Fairwayd
-        </div>
-        <div style={{ color: "var(--sub)", fontSize: 12 }}>
-          {isAuthenticated ? "Your golf social" : "Explore courses"}
+        />
+
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <span style={{ fontWeight: 800 }}>Fairwayd</span>
+          <span style={{ color: "var(--sub)", fontSize: 12 }}>
+            {isAuthenticated ? "Your golf social" : "Explore courses"}
+          </span>
         </div>
       </div>
 

@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import LoginPanel from "../components/LoginPanel";
 import DevLogin from "../components/DevLogin";
+import logo from "../assets/logo.png";
 
 export default function LandingPage() {
   const nav = useNavigate();
@@ -22,25 +23,53 @@ export default function LandingPage() {
         background: "#f5f6f8",
         display: "grid",
         placeItems: "center",
-        padding: 16,
+        padding: isAuthenticated ? 16 : 24,
       }}
     >
       <div
         style={{
-          width: "min(980px, 100%)",
+          width: "100%",
+          maxWidth: isAuthenticated ? 1200 : 760,
           display: "grid",
-          gridTemplateColumns: "1.2fr 1fr",
-          gap: 16,
+          gridTemplateColumns: isAuthenticated ? "1.2fr 1fr" : "1fr",
+          gap: isAuthenticated ? 16 : 24,
           alignItems: "start",
         }}
       >
         {/* Left: marketing / entry */}
-        <div style={card}>
-          <div style={{ fontWeight: 900, fontSize: 28 }}>Fairwayd</div>
+        <div
+          style={{
+            padding: isAuthenticated ? 22 : 8,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            minHeight: 420,
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {/* Logo */}
+            <img
+              src={logo}
+              alt="Fairwayd"
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: 16,
+              }}
+            />
 
-          <div style={subtitle}>
-            Dein Golf-Feed nach Courses: poste Momente, finde Plätze in der
-            Nähe, und bleib mit Buddies connected.
+            {/* Headline */}
+            <div style={{ fontWeight: 900, fontSize: 28, lineHeight: 1.2 }}>
+              The golf social
+              <br />
+              built around courses
+            </div>
+
+            {/* Subline */}
+            <div style={subtitle}>
+              Discover golf courses, share your rounds, and stay connected with
+              your golf buddies — all in one place.
+            </div>
           </div>
 
           <div
@@ -161,42 +190,42 @@ export default function LandingPage() {
             </div>
           )}
 
-          {/* Dev login (nur lokal/LAN sichtbar; rendert auf Vercel null) */}
-          <DevLogin />
+          {/* Dev login nur zeigen, wenn bereits eingeloggt */}
+          {isAuthenticated && <DevLogin />}
 
           {/* Optional quick links */}
-          <div style={card}>
-            <div style={{ fontWeight: 900, marginBottom: 10 }}>Quick links</div>
-            <div style={{ display: "grid", gap: 10 }}>
-              <button style={listBtn} onClick={() => nav("/map")} type="button">
-                🗺️ Map
-              </button>
+          {isAuthenticated && (
+            <div style={card}>
+              <div style={{ fontWeight: 900, marginBottom: 10 }}>
+                Quick links
+              </div>
+              <div style={{ display: "grid", gap: 10 }}>
+                <button
+                  style={listBtn}
+                  onClick={() => nav("/map")}
+                  type="button"
+                >
+                  🗺️ Map
+                </button>
 
-              <button
-                style={{
-                  ...listBtn,
-                  opacity: isAuthenticated ? 1 : 0.6,
-                }}
-                onClick={() => goProtected("/feed")}
-                type="button"
-                title={isAuthenticated ? "Open feed" : "Login needed"}
-              >
-                📰 Feed
-              </button>
+                <button
+                  style={listBtn}
+                  onClick={() => nav("/feed")}
+                  type="button"
+                >
+                  📰 Feed
+                </button>
 
-              <button
-                style={{
-                  ...listBtn,
-                  opacity: isAuthenticated ? 1 : 0.6,
-                }}
-                onClick={() => goProtected("/profile")}
-                type="button"
-                title={isAuthenticated ? "Open profile" : "Login needed"}
-              >
-                👤 Profile
-              </button>
+                <button
+                  style={listBtn}
+                  onClick={() => nav("/profile")}
+                  type="button"
+                >
+                  👤 Profile
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
