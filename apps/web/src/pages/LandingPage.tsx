@@ -8,14 +8,6 @@ export default function LandingPage() {
   const nav = useNavigate();
   const { isAuthenticated, user, logout } = useAuth();
 
-  const goProtected = (path: string) => {
-    if (!isAuthenticated) {
-      nav("/");
-      return;
-    }
-    nav(path);
-  };
-
   return (
     <div
       style={{
@@ -58,17 +50,43 @@ export default function LandingPage() {
               }}
             />
 
+            {/* Brand name */}
+            <div
+              style={{ fontWeight: 900, fontSize: 18, color: "var(--text)" }}
+            >
+              Fairwayd
+            </div>
+
+            {/* Tagline */}
+            <div
+              style={{
+                fontSize: 12,
+                color: "var(--green)",
+                fontWeight: 700,
+                letterSpacing: 0.2,
+              }}
+            >
+              Discover golf through courses, players, and stories
+            </div>
+
             {/* Headline */}
-            <div style={{ fontWeight: 900, fontSize: 28, lineHeight: 1.2 }}>
-              The golf social
+            <div
+              style={{
+                fontWeight: 900,
+                fontSize: 18,
+                lineHeight: 1.2,
+                color: "var(--text)",
+              }}
+            >
+              Everything about golf
               <br />
-              built around courses
+              in one place
             </div>
 
             {/* Subline */}
             <div style={subtitle}>
-              Discover golf courses, share your rounds, and stay connected with
-              your golf buddies — all in one place.
+              Find courses, share your rounds, rate experiences, follow other
+              golfers, and stay connected wherever you play.
             </div>
           </div>
 
@@ -85,37 +103,84 @@ export default function LandingPage() {
               onClick={() => nav("/map")}
               type="button"
             >
-              Open map
+              Explore courses
             </button>
 
-            <button
-              style={{
-                ...ghostBtn,
-                opacity: isAuthenticated ? 1 : 0.6,
-              }}
-              onClick={() => goProtected("/feed")}
-              type="button"
-              title={isAuthenticated ? "Open feed" : "Login needed"}
-            >
-              Open feed
-            </button>
+            {!isAuthenticated && (
+              <button
+                style={{
+                  border: "1px solid var(--border)",
+                  background: "var(--card)",
+                  color: "var(--text)",
+                  padding: "10px 14px",
+                  borderRadius: 999,
+                  fontWeight: 900,
+                  cursor: "pointer",
+                }}
+                onClick={() =>
+                  window.scrollTo({
+                    top: document.body.scrollHeight,
+                    behavior: "smooth",
+                  })
+                }
+                type="button"
+              >
+                Sign in
+              </button>
+            )}
 
-            <button
-              style={{
-                ...ghostBtn,
-                opacity: isAuthenticated ? 1 : 0.6,
-              }}
-              onClick={() => goProtected("/profile")}
-              type="button"
-              title={isAuthenticated ? "Open profile" : "Login needed"}
-            >
-              Profile
-            </button>
+            {isAuthenticated && (
+              <button
+                style={{
+                  border: "1px solid var(--border)",
+                  background: "var(--card)",
+                  color: "var(--text)",
+                  padding: "10px 14px",
+                  borderRadius: 999,
+                  fontWeight: 900,
+                  cursor: "pointer",
+                }}
+                onClick={() => nav("/feed")}
+                type="button"
+              >
+                Feed
+              </button>
+            )}
+
+            {isAuthenticated && (
+              <button
+                style={{
+                  border: "1px solid var(--border)",
+                  background: "var(--card)",
+                  color: "var(--text)",
+                  padding: "10px 14px",
+                  borderRadius: 999,
+                  fontWeight: 900,
+                  cursor: "pointer",
+                }}
+                onClick={() => nav("/profile")}
+                type="button"
+              >
+                Profile
+              </button>
+            )}
+          </div>
+
+          <div
+            style={{
+              marginTop: 14,
+              fontSize: 12,
+              color: "var(--sub)",
+              lineHeight: 1.5,
+            }}
+          >
+            Explore the map freely. Sign in to post, review courses, and join
+            the conversation.
           </div>
 
           <div style={hint}>
-            Map ist frei nutzbar. Zum Posten brauchst du Login. Login ist
-            rechts.
+            Explore the map freely. Sign in to post, review courses, and join
+            the conversation.
           </div>
         </div>
 
@@ -252,8 +317,8 @@ const card: React.CSSProperties = {
 const subtitle: React.CSSProperties = {
   marginTop: 8,
   fontSize: 14,
-  opacity: 0.8,
-  lineHeight: 1.4,
+  color: "var(--sub)",
+  lineHeight: 1.5,
 };
 
 const hint: React.CSSProperties = {
