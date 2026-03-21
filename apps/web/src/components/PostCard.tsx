@@ -61,6 +61,8 @@ export default function PostCard({
   const [lastTap, setLastTap] = useState(0);
   const [hoveredImage, setHoveredImage] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const [commentDraft, setCommentDraft] = useState("");
+  const [commentBusy, setCommentBusy] = useState(false);
 
   useEffect(() => {
     if (!isCommentTarget) return;
@@ -117,6 +119,13 @@ export default function PostCard({
       setLikeBusy(false);
     }
   };
+
+  function handleCommentKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      void handleCommentSubmit();
+    }
+  }
 
   const handleImageTap = async (
     e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>,
@@ -335,6 +344,7 @@ export default function PostCard({
           disabled={likeBusy}
           style={{
             ...actionButtonStyle,
+            flexShrink: 0,
             cursor: likeBusy ? "default" : "pointer",
             color: liked ? "#ff4d6d" : "var(--text)",
             opacity: likeBusy ? 0.7 : 1,

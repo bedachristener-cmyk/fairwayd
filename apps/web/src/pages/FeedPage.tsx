@@ -155,6 +155,14 @@ function CommentModal({
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [commentDraft, setCommentDraft] = useState("");
+
+  // 👇 HIER NEU
+  function handleCommentKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      void handlePostComment();
+    }
+  }
   const [sending, setSending] = useState(false);
 
   const [replyTargetId, setReplyTargetId] = useState<string | null>(null);
@@ -701,14 +709,14 @@ function CommentModal({
         onClick={(e) => e.stopPropagation()}
         style={{
           width: isMobile ? "100%" : "min(760px, 100%)",
-          height: isMobile ? "100%" : "auto",
-          maxHeight: isMobile ? "100%" : "85vh",
-          overflow: "auto",
+          height: isMobile ? "100dvh" : "min(85vh, 900px)",
+          maxHeight: isMobile ? "100dvh" : "85vh",
+          overflow: "hidden",
           background: "var(--card)",
           color: "var(--text)",
-          border: "1px solid var(--border)",
+          border: isMobile ? "none" : "1px solid var(--border)",
           borderRadius: isMobile ? 0 : 18,
-          boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
+          boxShadow: isMobile ? "none" : "0 20px 60px rgba(0,0,0,0.35)",
           display: "flex",
           flexDirection: "column",
         }}
@@ -745,68 +753,101 @@ function CommentModal({
           </button>
         </div>
 
-        <div style={{ padding: 16, display: "grid", gap: 14 }}>
+        <div
+          style={{
+            padding: 16,
+            display: "flex",
+            flexDirection: "column",
+            gap: 14,
+            flex: 1,
+            minHeight: 0,
+            overflow: "hidden",
+          }}
+        >
+          {/* ===== Scrollbarer Bereich ===== */}
           <div
             style={{
-              border: "1px solid var(--border)",
-              borderRadius: 14,
-              padding: 12,
-              background: "var(--muted)",
+              flex: 1,
+              minHeight: 0,
+              overflowY: "auto",
+              display: "grid",
+              gap: 14,
+              paddingBottom: 8,
+              WebkitOverflowScrolling: "touch",
             }}
           >
-            <div style={{ fontWeight: 800, marginBottom: 4 }}>
-              {post.course.name}
-            </div>
+            {/* ===== Post Preview ===== */}
             <div
               style={{
-                fontSize: 12,
-                color: "var(--sub)",
-                marginBottom: 8,
+                border: "1px solid var(--border)",
+                borderRadius: 14,
+                padding: 12,
+                background: "var(--muted)",
               }}
             >
-              @{post.user.handle} · {new Date(post.createdAt).toLocaleString()}
+              <div style={{ fontWeight: 800, marginBottom: 4 }}>
+                {post.course.name}
+              </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "var(--sub)",
+                  marginBottom: 8,
+                }}
+              >
+                @{post.user.handle} ·{" "}
+                {new Date(post.createdAt).toLocaleString()}
+              </div>
+              <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
+                {post.content}
+              </div>
             </div>
-            <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
-              {post.content}
+
+            {/* ===== Comments ===== */}
+            <div
+              style={{
+                border: "1px solid var(--border)",
+                borderRadius: 14,
+                padding: 14,
+                background: "rgba(255,255,255,0.02)",
+                display: "grid",
+                gap: 12,
+              }}
+            >
+              <div style={{ fontWeight: 800 }}>Comments</div>
+
+              {loading ? (
+                <div style={{ fontSize: 13, color: "var(--sub)" }}>
+                  Loading comments...
+                </div>
+              ) : comments.length === 0 ? (
+                <div style={{ fontSize: 13, color: "var(--sub)" }}>
+                  No comments yet.
+                </div>
+              ) : (
+                comments.map((comment) => renderComment(comment))
+              )}
             </div>
           </div>
 
-          <div
-            style={{
-              border: "1px solid var(--border)",
-              borderRadius: 14,
-              padding: 14,
-              background: "rgba(255,255,255,0.02)",
-              display: "grid",
-              gap: 12,
-            }}
-          >
-            <div style={{ fontWeight: 800 }}>Comments</div>
-
-            {loading ? (
-              <div style={{ fontSize: 13, color: "var(--sub)" }}>
-                Loading comments...
-              </div>
-            ) : comments.length === 0 ? (
-              <div style={{ fontSize: 13, color: "var(--sub)" }}>
-                No comments yet.
-              </div>
-            ) : (
-              comments.map((comment) => renderComment(comment))
-            )}
-          </div>
-
+          {/* ===== FIXER COMMENT COMPOSER ===== */}
           <div
             style={{
               borderTop: "1px solid var(--border)",
-              paddingTop: 12,
+              padding: "12px 16px 80px 16px",
               display: "grid",
               gap: 10,
+              background: "var(--card)",
+              position: "sticky",
+              bottom: 0,
+              zIndex: 10,
             }}
           >
             <textarea
+              autoFocus
               value={commentDraft}
               onChange={(e) => setCommentDraft(e.target.value)}
+              onKeyDown={handleCommentKeyDown}
               placeholder="Write a comment..."
               rows={3}
               style={{
