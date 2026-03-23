@@ -217,7 +217,14 @@ export default function PostCard({
         }}
       >
         @{post.user.handle} · {createdLabel}
-        {post.visibility ? ` · ${post.visibility}` : ""}
+        {post.visibility && (
+          <>
+            {" · "}
+            {post.visibility === "PUBLIC" && "🌍 Public"}
+            {post.visibility === "FOLLOWERS" && "👥 Followers"}
+            {post.visibility === "PRIVATE" && "🔒 Private"}
+          </>
+        )}
       </div>
 
       <div

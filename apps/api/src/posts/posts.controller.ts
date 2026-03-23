@@ -11,7 +11,8 @@ import {
   UseInterceptors,
   UploadedFile,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { AuthGuard } from '@nestjs/passport'; // 👈 DAS HINZUFÜGEN
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt.guard';
 import { PostsService } from './posts.service';
 import { Visibility } from '@prisma/client';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -33,23 +34,29 @@ type CreateCommentBody = {
 export class PostsController {
   constructor(private readonly posts: PostsService) {}
 
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('feed')
   async feed(
+    @Req() req: any,
     @Query('take') takeStr?: string,
     @Query('cursor') cursor?: string,
   ) {
     const take = takeStr ? Number(takeStr) : undefined;
-    return this.posts.getPublicFeed({ take, cursor });
+    const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
+    return this.posts.getPublicFeed({ take, cursor, userId });
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('course/:courseId')
   async byCourse(
+    @Req() req: any,
     @Param('courseId') courseId: string,
     @Query('take') takeStr?: string,
     @Query('cursor') cursor?: string,
   ) {
     const take = takeStr ? Number(takeStr) : undefined;
-    return this.posts.getPostsByCourse({ courseId, take, cursor });
+    const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
+    return this.posts.getPostsByCourse({ courseId, take, cursor, userId });
   }
 
   @UseGuards(AuthGuard('jwt'))

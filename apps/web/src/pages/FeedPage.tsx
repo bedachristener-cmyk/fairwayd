@@ -12,7 +12,7 @@ type Post = {
   id: string;
   content: string;
   createdAt: string;
-  visibility?: "PUBLIC" | "FOLLOWERS";
+  visibility?: "PUBLIC" | "FOLLOWERS" | "PRIVATE";
   course: {
     id: string;
     name: string;
@@ -890,9 +890,9 @@ export default function FeedPage() {
   const [draft, setDraft] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [visibility, setVisibility] = useState<"PUBLIC" | "FOLLOWERS">(
-    "PUBLIC",
-  );
+  const [visibility, setVisibility] = useState<
+    "PUBLIC" | "FOLLOWERS" | "PRIVATE"
+  >("PUBLIC");
 
   const [err, setErr] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
@@ -1182,7 +1182,9 @@ export default function FeedPage() {
                   <select
                     value={visibility}
                     onChange={(e) =>
-                      setVisibility(e.target.value as "PUBLIC" | "FOLLOWERS")
+                      setVisibility(
+                        e.target.value as "PUBLIC" | "FOLLOWERS" | "PRIVATE",
+                      )
                     }
                     style={{
                       padding: "8px 10px",
@@ -1194,8 +1196,9 @@ export default function FeedPage() {
                     }}
                     disabled={posting}
                   >
-                    <option value="PUBLIC">PUBLIC</option>
-                    <option value="FOLLOWERS">FOLLOWERS</option>
+                    <option value="PUBLIC">🌍 Public</option>
+                    <option value="FOLLOWERS">👥 Followers</option>
+                    <option value="PRIVATE">🔒 Private</option>
                   </select>
                 </div>
               </div>

@@ -15,48 +15,11 @@ type Props = {
 };
 
 async function waitForGoogle(timeoutMs = 8000) {
-  if (window.google?.accounts?.id) return true;
-
-  const src = "https://accounts.google.com/gsi/client";
-
-  let script = document.querySelector(
-    `script[src="${src}"]`,
-  ) as HTMLScriptElement | null;
-
-  if (!script) {
-    script = document.createElement("script");
-    script.src = src;
-    script.async = true;
-    script.defer = true;
-    document.head.appendChild(script);
-  }
-
-  await new Promise<void>((resolve) => {
-    if (window.google?.accounts?.id) {
-      resolve();
-      return;
-    }
-
-    let done = false;
-
-    const finish = () => {
-      if (done) return;
-      done = true;
-      resolve();
-    };
-
-    script!.addEventListener("load", finish, { once: true });
-    script!.addEventListener("error", finish, { once: true });
-
-    window.setTimeout(finish, timeoutMs);
-  });
-
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     if (window.google?.accounts?.id) return true;
-    await new Promise((r) => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 50));
   }
-
   return false;
 }
 
@@ -82,7 +45,6 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
     const init = async () => {
       setMsg(null);
       setReady(false);
-      onError?.("");
 
       if (!GOOGLE_CLIENT_ID) {
         fail(
@@ -114,7 +76,6 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
           callback: async (resp: any) => {
             try {
               setMsg(null);
-              onError?.("");
 
               const idToken = resp?.credential;
               if (!idToken) {
@@ -158,7 +119,6 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
               }
 
               onToken(token);
-              setMsg("Logged in with Google ✅");
             } catch (e: unknown) {
               fail(errMsg(e));
             }

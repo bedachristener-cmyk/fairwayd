@@ -22,12 +22,27 @@ export class PostsService {
    * - includes course + user (basic fields) + images
    * - supports cursor pagination
    */
-  async getPublicFeed(params?: { take?: number; cursor?: string }) {
+  async getPublicFeed(params?: {
+    take?: number;
+    cursor?: string;
+    userId?: string;
+  }) {
     const take = Math.max(1, Math.min(100, params?.take ?? 50));
     const cursor = params?.cursor?.trim();
+    const userId = params?.userId?.trim();
 
     const query: Prisma.PostFindManyArgs = {
-      where: { visibility: Visibility.PUBLIC },
+      where: userId
+        ? {
+            OR: [
+              { visibility: Visibility.PUBLIC },
+              {
+                userId,
+                visibility: Visibility.PRIVATE,
+              },
+            ],
+          }
+        : { visibility: Visibility.PUBLIC },
       orderBy: { createdAt: 'desc' },
       take,
       include: {
@@ -74,20 +89,33 @@ export class PostsService {
     courseId: string;
     take?: number;
     cursor?: string;
+    userId?: string;
   }) {
     const courseId = params?.courseId?.trim();
     const take = Math.max(1, Math.min(100, params?.take ?? 50));
     const cursor = params?.cursor?.trim();
+    const userId = params?.userId?.trim();
 
     if (!courseId) {
       throw new BadRequestException('Missing courseId');
     }
 
     const query: Prisma.PostFindManyArgs = {
-      where: {
-        courseId,
-        visibility: Visibility.PUBLIC,
-      },
+      where: userId
+        ? {
+            courseId,
+            OR: [
+              { visibility: Visibility.PUBLIC },
+              {
+                userId,
+                visibility: Visibility.PRIVATE,
+              },
+            ],
+          }
+        : {
+            courseId,
+            visibility: Visibility.PUBLIC,
+          },
       orderBy: { createdAt: 'desc' },
       take,
       include: {
@@ -157,9 +185,11 @@ export class PostsService {
     }
 
     const visibility =
-      body?.visibility === 'FOLLOWERS'
-        ? Visibility.FOLLOWERS
-        : Visibility.PUBLIC;
+      body?.visibility === 'PRIVATE'
+        ? Visibility.PRIVATE
+        : body?.visibility === 'FOLLOWERS'
+          ? Visibility.FOLLOWERS
+          : Visibility.PUBLIC;
 
     const course = await this.prisma.course.findUnique({
       where: { id: courseId },
