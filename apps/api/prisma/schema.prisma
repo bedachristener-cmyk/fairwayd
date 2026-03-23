@@ -13,6 +13,7 @@ enum AccountPrivacy {
 }
 
 enum Visibility {
+  PRIVATE
   FOLLOWERS
   PUBLIC
 }

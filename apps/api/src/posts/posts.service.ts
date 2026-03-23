@@ -9,7 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 type CreatePostBody = {
   courseId: string;
   content: string;
-  visibility?: 'PUBLIC' | 'FOLLOWERS';
+  visibility?: 'PUBLIC' | 'FOLLOWERS' | 'PRIVATE';
 };
 
 @Injectable()

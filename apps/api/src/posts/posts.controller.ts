@@ -21,7 +21,7 @@ import { uploadToR2 } from '../storage/r2.service';
 type CreatePostBody = {
   courseId: string;
   content: string;
-  visibility?: Visibility;
+  visibility?: 'PUBLIC' | 'FOLLOWERS' | 'PRIVATE';
 };
 
 type CreateCommentBody = {
