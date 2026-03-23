@@ -188,54 +188,56 @@ export default function PostCard({
         color: "var(--text)",
       }}
     >
-      <button
-        type="button"
-        onClick={onSelectCourse}
-        disabled={!onSelectCourse}
-        title={onSelectCourse ? "Select this post's course" : undefined}
-        style={{
-          background: "transparent",
-          border: "none",
-          padding: 0,
-          margin: 0,
-          fontWeight: 900,
-          fontSize: 16,
-          color: "var(--text)",
-          cursor: onSelectCourse ? "pointer" : "default",
-          textAlign: "left",
-        }}
-      >
-        {post.course.name}
-      </button>
+      <div style={{ padding: "0 12px" }}>
+        <button
+          type="button"
+          onClick={onSelectCourse}
+          disabled={!onSelectCourse}
+          title={onSelectCourse ? "Select this post's course" : undefined}
+          style={{
+            background: "transparent",
+            border: "none",
+            padding: 0,
+            margin: 0,
+            fontWeight: 900,
+            fontSize: 16,
+            color: "var(--text)",
+            cursor: onSelectCourse ? "pointer" : "default",
+            textAlign: "left",
+          }}
+        >
+          {post.course.name}
+        </button>
 
-      <div
-        style={{
-          fontSize: 12,
-          color: "var(--sub)",
-          marginTop: 2,
-          lineHeight: 1.4,
-        }}
-      >
-        @{post.user.handle} · {createdLabel}
-        {post.visibility && (
-          <>
-            {" · "}
-            {post.visibility === "PUBLIC" && "🌍 Public"}
-            {post.visibility === "FOLLOWERS" && "👥 Followers"}
-            {post.visibility === "PRIVATE" && "🔒 Private"}
-          </>
-        )}
-      </div>
+        <div
+          style={{
+            fontSize: 12,
+            color: "var(--sub)",
+            marginTop: 2,
+            lineHeight: 1.4,
+          }}
+        >
+          @{post.user.handle} · {createdLabel}
+          {post.visibility && (
+            <>
+              {" · "}
+              {post.visibility === "PUBLIC" && "🌍 Public"}
+              {post.visibility === "FOLLOWERS" && "👥 Followers"}
+              {post.visibility === "PRIVATE" && "🔒 Private"}
+            </>
+          )}
+        </div>
 
-      <div
-        style={{
-          marginTop: 8,
-          whiteSpace: "pre-wrap",
-          lineHeight: 1.5,
-          wordBreak: "break-word",
-        }}
-      >
-        {post.content}
+        <div
+          style={{
+            marginTop: 8,
+            whiteSpace: "pre-wrap",
+            lineHeight: 1.5,
+            wordBreak: "break-word",
+          }}
+        >
+          {post.content}
+        </div>
       </div>
 
       {validImages.length > 0 ? (
@@ -335,6 +337,7 @@ export default function PostCard({
           marginTop: 12,
           fontSize: 14,
           flexWrap: "wrap",
+          padding: "0 12px",
         }}
       >
         <button
