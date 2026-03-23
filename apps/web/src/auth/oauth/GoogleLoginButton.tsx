@@ -15,11 +15,48 @@ type Props = {
 };
 
 async function waitForGoogle(timeoutMs = 8000) {
+  if (window.google?.accounts?.id) return true;
+
+  const src = "https://accounts.google.com/gsi/client";
+
+  let script = document.querySelector(
+    `script[src="${src}"]`,
+  ) as HTMLScriptElement | null;
+
+  if (!script) {
+    script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+  }
+
+  await new Promise<void>((resolve) => {
+    if (window.google?.accounts?.id) {
+      resolve();
+      return;
+    }
+
+    let done = false;
+
+    const finish = () => {
+      if (done) return;
+      done = true;
+      resolve();
+    };
+
+    script!.addEventListener("load", finish, { once: true });
+    script!.addEventListener("error", finish, { once: true });
+
+    window.setTimeout(finish, timeoutMs);
+  });
+
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     if (window.google?.accounts?.id) return true;
-    await new Promise((r) => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 100));
   }
+
   return false;
 }
 
@@ -36,13 +73,16 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
     let cancelled = false;
 
     const fail = (m: string) => {
+      if (cancelled) return;
       setMsg(m);
+      setReady(false);
       onError?.(m);
     };
 
     const init = async () => {
       setMsg(null);
       setReady(false);
+      onError?.("");
 
       if (!GOOGLE_CLIENT_ID) {
         fail(
@@ -61,14 +101,20 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
         return;
       }
 
-      if (!btnRef.current) return;
+      if (!btnRef.current) {
+        fail("Google Button Container nicht gefunden.");
+        return;
+      }
 
       try {
+        btnRef.current.innerHTML = "";
+
         window.google.accounts.id.initialize({
           client_id: GOOGLE_CLIENT_ID,
           callback: async (resp: any) => {
             try {
               setMsg(null);
+              onError?.("");
 
               const idToken = resp?.credential;
               if (!idToken) {
@@ -76,20 +122,6 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
                   "No credential (idToken) returned from Google.",
                 );
               }
-              console.log(
-                "VITE_API_BASE_URL=",
-                import.meta.env.VITE_API_BASE_URL,
-              );
-              console.log(
-                "VITE_API_BASE_URL=",
-                import.meta.env.VITE_API_BASE_URL,
-              );
-
-              console.log(
-                "VITE_API_BASE_URL=",
-                import.meta.env.VITE_API_BASE_URL,
-              );
-              console.log("API_BASE=", API_BASE);
 
               const res = await fetch(`${API_BASE}/auth/oauth`, {
                 method: "POST",
@@ -115,7 +147,6 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
 
               const data = await res.json();
 
-              // Token robust auslesen (Backend kann verschiedene Keys liefern)
               const token =
                 data?.token ??
                 data?.accessToken ??
@@ -128,26 +159,18 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
 
               onToken(token);
               setMsg("Logged in with Google ✅");
-
-              if (!token) throw new Error("Backend returned no token.");
-
-              // Wichtig: an Parent geben (AuthContext.login soll speichern)
-              onToken(token);
-
-              setMsg("Logged in with Google ✅");
             } catch (e: unknown) {
               fail(errMsg(e));
             }
           },
         });
 
-        btnRef.current.innerHTML = "";
         window.google.accounts.id.renderButton(btnRef.current, {
           theme: "outline",
           size: "large",
           text: "continue_with",
           shape: "pill",
-          width: 320,
+          width: 280,
         });
 
         setReady(true);
@@ -157,6 +180,7 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
     };
 
     init();
+
     return () => {
       cancelled = true;
     };
@@ -167,7 +191,7 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
       <div ref={btnRef} />
       {!ready && !msg && (
         <div style={{ marginTop: 6, fontSize: 12, opacity: 0.7 }}>
-          Loading Google button…
+          Loading Google button...
         </div>
       )}
       {msg && <div style={{ marginTop: 6, fontSize: 12 }}>{msg}</div>}

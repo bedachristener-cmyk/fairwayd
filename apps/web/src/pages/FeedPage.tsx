@@ -1027,8 +1027,23 @@ export default function FeedPage() {
     typeof selectedLon === "number";
 
   const submitPost = async () => {
+    console.log("submitPost clicked", {
+      selectedCourse,
+      selectedIsComplete,
+      draft,
+      file,
+      token: Boolean(token),
+      visibility,
+      selectedName,
+      selectedLat,
+      selectedLon,
+      typeLat: typeof selectedLat,
+      typeLon: typeof selectedLon,
+    });
+
     if (!selectedCourse) {
       setErr("Choose a course first.");
+      alert("Choose a course first.");
       return;
     }
 
@@ -1036,17 +1051,20 @@ export default function FeedPage() {
       setErr(
         "Selected course is missing details (name/coordinates). Please re-select the course.",
       );
+      alert("Selected course is missing details. Please re-select the course.");
       return;
     }
 
     const text = draft.trim();
     if (!text && !file) {
       setErr("Write something or add a photo.");
+      alert("Write something or add a photo.");
       return;
     }
 
     if (!token) {
       setErr("Missing auth token. Please login again.");
+      alert("Missing auth token. Please login again.");
       return;
     }
 
@@ -1248,15 +1266,61 @@ export default function FeedPage() {
                   disabled={posting}
                 />
 
-                <div style={{ marginLeft: "auto" }}>
-                  <PillButton
+                <div
+                  style={{
+                    marginLeft: "auto",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    flexWrap: "wrap",
+                    justifyContent: "flex-end",
+                  }}
+                >
+                  {!selectedCourse && (
+                    <span
+                      style={{
+                        fontSize: 12,
+                        color: "var(--sub)",
+                      }}
+                    >
+                      Choose a course first
+                    </span>
+                  )}
+
+                  {selectedCourse && !draft.trim() && !file && (
+                    <span
+                      style={{
+                        fontSize: 12,
+                        color: "var(--sub)",
+                      }}
+                    >
+                      Write something or add an image
+                    </span>
+                  )}
+
+                  <button
                     onClick={submitPost}
-                    disabled={
-                      posting || !selectedCourse || (!draft.trim() && !file)
-                    }
+                    disabled={posting || (!draft.trim() && !file)}
+                    style={{
+                      padding: "10px 16px",
+                      borderRadius: 999,
+                      border: "1px solid var(--border)",
+                      background: "var(--text)",
+                      color: "var(--bg)",
+                      fontWeight: 800,
+                      cursor:
+                        posting || !selectedCourse || (!draft.trim() && !file)
+                          ? "default"
+                          : "pointer",
+                      opacity:
+                        posting || !selectedCourse || (!draft.trim() && !file)
+                          ? 0.5
+                          : 1,
+                    }}
+                    type="button"
                   >
                     {posting ? "Posting..." : "Post"}
-                  </PillButton>
+                  </button>
                 </div>
               </div>
 

@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import LoginPanel from "../components/LoginPanel";
@@ -7,6 +8,8 @@ import logo from "../assets/logo.png";
 export default function LandingPage() {
   const nav = useNavigate();
   const { isAuthenticated, user, logout } = useAuth();
+  const loginPanelRef = useRef<HTMLDivElement | null>(null);
+  const [highlightLogin, setHighlightLogin] = useState(false);
 
   return (
     <div
@@ -117,12 +120,14 @@ export default function LandingPage() {
                   fontWeight: 900,
                   cursor: "pointer",
                 }}
-                onClick={() =>
-                  window.scrollTo({
-                    top: document.body.scrollHeight,
+                onClick={() => {
+                  loginPanelRef.current?.scrollIntoView({
                     behavior: "smooth",
-                  })
-                }
+                    block: "center",
+                  });
+                  setHighlightLogin(true);
+                  window.setTimeout(() => setHighlightLogin(false), 1200);
+                }}
                 type="button"
               >
                 Sign in
@@ -173,10 +178,7 @@ export default function LandingPage() {
               color: "var(--sub)",
               lineHeight: 1.5,
             }}
-          >
-            Explore the map freely. Sign in to post, review courses, and join
-            the conversation.
-          </div>
+          ></div>
 
           <div style={hint}>
             Explore the map freely. Sign in to post, review courses, and join
@@ -184,10 +186,118 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Right: login center */}
+        {/* Right: login / entry panel */}
         <div style={{ display: "grid", gap: 16 }}>
           {!isAuthenticated ? (
-            <LoginPanel />
+            <div
+              style={{
+                ...card,
+                background:
+                  "linear-gradient(180deg, var(--card) 0%, rgba(255,255,255,0.96) 100%)",
+                border: "1px solid var(--border)",
+                boxShadow: "0 18px 40px rgba(0,0,0,0.08)",
+                padding: 24,
+              }}
+            >
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "6px 10px",
+                  borderRadius: 999,
+                  background: "var(--muted)",
+                  border: "1px solid var(--border)",
+                  fontSize: 12,
+                  fontWeight: 800,
+                  color: "var(--text)",
+                  marginBottom: 14,
+                }}
+              >
+                Welcome to Fairwayd
+              </div>
+
+              <div
+                style={{
+                  fontSize: 24,
+                  lineHeight: 1.15,
+                  fontWeight: 900,
+                  color: "var(--text)",
+                  marginBottom: 10,
+                }}
+              >
+                Join the golf community
+              </div>
+
+              <div
+                style={{
+                  fontSize: 14,
+                  lineHeight: 1.55,
+                  color: "var(--sub)",
+                  marginBottom: 18,
+                }}
+              >
+                Sign in to post updates, rate courses, ask questions, and follow
+                what other golfers are sharing.
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gap: 10,
+                  marginBottom: 18,
+                }}
+              >
+                <div style={featureRow}>
+                  <span>⛳</span>
+                  <span>Share rounds and golf moments</span>
+                </div>
+                <div style={featureRow}>
+                  <span>🗺️</span>
+                  <span>Discover courses on the map</span>
+                </div>
+                <div style={featureRow}>
+                  <span>💬</span>
+                  <span>Join reviews, comments, and discussion</span>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  padding: 14,
+                  borderRadius: 16,
+                  background: "rgba(0,0,0,0.02)",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                <div ref={loginPanelRef}>
+                  <div
+                    ref={loginPanelRef}
+                    style={{
+                      borderRadius: 22,
+                      transition: "box-shadow 0.25s ease, transform 0.25s ease",
+                      boxShadow: highlightLogin
+                        ? "0 0 0 4px rgba(34, 197, 94, 0.18), 0 18px 40px rgba(0,0,0,0.12)"
+                        : "none",
+                      transform: highlightLogin ? "translateY(-2px)" : "none",
+                    }}
+                  >
+                    <LoginPanel />
+                  </div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  marginTop: 14,
+                  fontSize: 12,
+                  color: "var(--sub)",
+                  lineHeight: 1.5,
+                }}
+              >
+                You can browse first and sign in when you are ready.
+              </div>
+            </div>
           ) : (
             <div style={card}>
               <div style={{ fontWeight: 900, marginBottom: 8 }}>
@@ -325,6 +435,18 @@ const hint: React.CSSProperties = {
   marginTop: 14,
   fontSize: 12,
   opacity: 0.7,
+};
+
+const featureRow: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  fontSize: 13,
+  color: "var(--text)",
+  padding: "10px 12px",
+  borderRadius: 12,
+  background: "rgba(0,0,0,0.02)",
+  border: "1px solid var(--border)",
 };
 
 const primaryBtn: React.CSSProperties = {

@@ -84,7 +84,7 @@ export default function LoginPanel() {
           <div style={{ marginBottom: 12 }}>
             <GoogleLoginButton
               onToken={(token: string) => onLoggedIn(token)}
-              onError={(m: string) => setMsg(m)}
+              onError={(m: string) => setMsg(m || null)}
             />
           </div>
 
