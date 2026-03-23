@@ -97,34 +97,6 @@ function Card({
   );
 }
 
-function PillButton({
-  children,
-  onClick,
-  disabled,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        padding: "8px 14px",
-        borderRadius: 999,
-        border: "1px solid var(--border)",
-        background: disabled ? "rgba(255,255,255,.08)" : "var(--muted)",
-        color: disabled ? "rgba(255,255,255,.45)" : "var(--text)",
-        cursor: disabled ? "default" : "pointer",
-        fontWeight: 800,
-      }}
-      type="button"
-    >
-      {children}
-    </button>
-  );
-}
 function CommentModal({
   post,
   isMobile,
