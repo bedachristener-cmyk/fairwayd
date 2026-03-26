@@ -5,6 +5,7 @@ import { useSelectedCourse } from "../state/SelectedCourseContext";
 import CourseDropdown, { type CourseLite } from "../components/CourseDropdown";
 import PostCard from "../components/PostCard";
 import { useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 type PostImage = { id: string; url: string };
 
@@ -898,6 +899,7 @@ export default function FeedPage() {
   const [posting, setPosting] = useState(false);
 
   const draftRef = useRef<HTMLTextAreaElement | null>(null);
+  const nav = useNavigate();
 
   useEffect(() => {
     const run = async () => {
