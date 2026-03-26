@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { fileUrl } from "../api/fileUrl";
 import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 type PostImage = {
   url: string | null;
@@ -61,6 +62,7 @@ export default function PostCard({
   const [lastTap, setLastTap] = useState(0);
   const [hoveredImage, setHoveredImage] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const nav = useNavigate();
 
   useEffect(() => {
     if (!isCommentTarget) return;
@@ -217,7 +219,24 @@ export default function PostCard({
             lineHeight: 1.4,
           }}
         >
-          @{post.user.handle} · {createdLabel}
+          <button
+            type="button"
+            onClick={() => nav(`/u/${post.user.handle}`)}
+            style={{
+              background: "transparent",
+              border: "none",
+              padding: 0,
+              margin: 0,
+              color: "var(--text)",
+              cursor: "pointer",
+              font: "inherit",
+            }}
+            title={`Open @${post.user.handle}`}
+          >
+            @{post.user.handle}
+          </button>
+          {" · "}
+          {createdLabel}
           {post.visibility && (
             <>
               {" · "}

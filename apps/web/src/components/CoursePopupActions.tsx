@@ -14,9 +14,30 @@ export default function CoursePopupActions({ courseId }: { courseId: string }) {
   };
 
   return (
-    <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "center" }}>
+    <div
+      style={{
+        marginTop: 8,
+        display: "flex",
+        gap: 8,
+        alignItems: "center",
+        flexWrap: "wrap", // 👉 wichtig für Mobile
+      }}
+    >
       <button onClick={goCompose} disabled={loading}>
         Post
+      </button>
+
+      {/* 👉 NEW: Follow Button */}
+      <button
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+
+          console.log("Follow course", courseId);
+        }}
+        disabled={loading}
+      >
+        Follow
       </button>
 
       {!loading && !isAuthenticated && (

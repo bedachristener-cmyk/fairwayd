@@ -190,7 +190,27 @@ export class UsersService {
       },
     });
   }
+  async listFollowingUsers(userId: string) {
+    const rows = await this.prisma.follow.findMany({
+      where: {
+        followerId: userId,
+        status: 'ACCEPTED',
+      },
+      include: {
+        following: {
+          select: {
+            id: true,
+            handle: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
 
+    return rows;
+  }
   // =========================================================
   // Follow (Instagram-style: PUBLIC => ACCEPTED, PRIVATE => PENDING)
   // =========================================================

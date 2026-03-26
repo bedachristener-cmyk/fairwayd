@@ -35,10 +35,47 @@ export class PostsService {
       where: userId
         ? {
             OR: [
-              { visibility: Visibility.PUBLIC },
+              // Eigene Posts (alle)
               {
                 userId,
-                visibility: Visibility.PRIVATE,
+              },
+
+              // Posts von Usern, denen ich folge (PUBLIC)
+              {
+                user: {
+                  followers: {
+                    some: {
+                      followerId: userId,
+                      status: 'ACCEPTED',
+                    },
+                  },
+                },
+                visibility: Visibility.PUBLIC,
+              },
+
+              // FOLLOWERS-Posts von gefolgten Usern
+              {
+                user: {
+                  followers: {
+                    some: {
+                      followerId: userId,
+                      status: 'ACCEPTED',
+                    },
+                  },
+                },
+                visibility: Visibility.FOLLOWERS,
+              },
+
+              // PUBLIC-Posts von Courses, denen ich folge
+              {
+                course: {
+                  followers: {
+                    some: {
+                      userId,
+                    },
+                  },
+                },
+                visibility: Visibility.PUBLIC,
               },
             ],
           }
@@ -73,11 +110,53 @@ export class PostsService {
     }
 
     const items = await this.prisma.post.findMany(query);
+    let followingUserIds = new Set<string>();
+    let followingCourseIds = new Set<string>();
+
+    if (userId) {
+      const follows = await this.prisma.follow.findMany({
+        where: {
+          followerId: userId,
+          status: 'ACCEPTED',
+        },
+        select: {
+          followingId: true,
+        },
+      });
+
+      followingUserIds = new Set(follows.map((f) => f.followingId));
+
+      const courseFollows = await this.prisma.courseFollow.findMany({
+        where: {
+          userId,
+        },
+        select: {
+          courseId: true,
+        },
+      });
+
+      followingCourseIds = new Set(courseFollows.map((c) => c.courseId));
+    }
 
     const nextCursor =
       items.length === take ? items[items.length - 1]?.id : null;
 
-    return { items, nextCursor, take };
+    const enrichedItems = items.map((p) => {
+      const isSelf = p.userId === userId;
+      const isFriend = followingUserIds.has(p.userId);
+      const isCourse = followingCourseIds.has(p.courseId);
+
+      return {
+        ...p,
+        feedContext: {
+          isSelf,
+          isFriend,
+          isCourse,
+        },
+      };
+    });
+
+    return { items: enrichedItems, nextCursor, take };
   }
 
   /**
@@ -109,6 +188,21 @@ export class PostsService {
               {
                 userId,
                 visibility: Visibility.PRIVATE,
+              },
+              {
+                userId,
+                visibility: Visibility.FOLLOWERS,
+              },
+              {
+                visibility: Visibility.FOLLOWERS,
+                user: {
+                  followers: {
+                    some: {
+                      followerId: userId,
+                      status: 'ACCEPTED',
+                    },
+                  },
+                },
               },
             ],
           }

@@ -1316,8 +1316,48 @@ export default function FeedPage() {
 
           <div style={{ display: "grid", gap: 10 }}>
             {posts.length === 0 ? (
-              <div style={{ color: "var(--sub)", fontSize: 13, padding: 6 }}>
-                No posts yet.
+              <div
+                style={{
+                  color: "var(--sub)",
+                  fontSize: 13,
+                  padding: 16,
+                  border: "1px solid var(--border)",
+                  borderRadius: 14,
+                  background: "var(--card)",
+                  textAlign: "center",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 18,
+                    marginBottom: 8,
+                    color: "var(--text)",
+                  }}
+                >
+                  Dein Feed ist noch leer 👀
+                </div>
+
+                <div style={{ opacity: 0.85, lineHeight: 1.5 }}>
+                  Folge anderen Golfern oder Golfplätzen, um Posts in deinem
+                  Feed zu sehen.
+                </div>
+
+                <div style={{ marginTop: 12 }}>
+                  <button
+                    type="button"
+                    onClick={() => nav("/map")}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 10,
+                      border: "1px solid var(--border)",
+                      background: "var(--bg)",
+                      color: "var(--text)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Plätze entdecken
+                  </button>
+                </div>
               </div>
             ) : null}
 

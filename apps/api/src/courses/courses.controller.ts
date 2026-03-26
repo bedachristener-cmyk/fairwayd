@@ -92,12 +92,6 @@ export class CoursesController {
     return { items };
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get a course by id' })
-  getById(@Param('id') id: string) {
-    return this.coursesService.getById(id);
-  }
-
   // ------------------------------------------------------------------
   // Course Follow (JWT)
   // ------------------------------------------------------------------
@@ -122,13 +116,8 @@ export class CoursesController {
   @UseGuards(AuthGuard('jwt'))
   @Post(':id/follow')
   @ApiOperation({ summary: 'Follow a course' })
-  async follow(@Req() req: any, @Param('id') courseId: string) {
+  async followCourse(@Param('id') courseId: string, @Req() req: any) {
     const userId = req?.user?.userId ?? req?.user?.id;
-    if (!userId) return { ok: false };
-
-    const exists = await this.coursesService.getById(courseId);
-    if (!exists) throw new NotFoundException('Course not found');
-
     await this.coursesService.followCourse(userId, courseId);
     return { ok: true };
   }
@@ -136,14 +125,15 @@ export class CoursesController {
   @UseGuards(AuthGuard('jwt'))
   @Delete(':id/follow')
   @ApiOperation({ summary: 'Unfollow a course' })
-  async unfollow(@Req() req: any, @Param('id') courseId: string) {
+  async unfollowCourse(@Param('id') courseId: string, @Req() req: any) {
     const userId = req?.user?.userId ?? req?.user?.id;
-    if (!userId) return { ok: false };
-
-    const exists = await this.coursesService.getById(courseId);
-    if (!exists) throw new NotFoundException('Course not found');
-
     await this.coursesService.unfollowCourse(userId, courseId);
     return { ok: true };
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a course by id' })
+  getById(@Param('id') id: string) {
+    return this.coursesService.getById(id);
   }
 }

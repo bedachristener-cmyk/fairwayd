@@ -244,11 +244,82 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  const [followingCourses, setFollowingCourses] = useState<any[]>([]);
+  const [followingUsers, setFollowingUsers] = useState<any[]>([]);
+  const [followRequests, setFollowRequests] = useState<any[]>([]);
+  const [followReqBusy, setFollowReqBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (mode !== "me") {
+      setFollowRequests([]);
+      return;
+    }
+
+    if (!token) {
+      setFollowRequests([]);
+      return;
+    }
+
+    const run = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/users/me/follow-requests`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!res.ok) {
+          setFollowRequests([]);
+          return;
+        }
+
+        const data = await res.json();
+        setFollowRequests(Array.isArray(data?.items) ? data.items : []);
+      } catch {
+        setFollowRequests([]);
+      }
+    };
+
+    run();
+  }, [mode, token]);
   // -------------------------
   // Follow state (only on handle profile, not self)
   // -------------------------
   const [followStatus, setFollowStatus] = useState<FollowUiStatus>("UNKNOWN");
   const [followBusy, setFollowBusy] = useState(false);
+  const handleAccept = async (userId: string) => {
+    if (!token) return;
+    setFollowReqBusy(userId);
+
+    try {
+      await fetch(`${API_BASE}/users/me/follow-requests/${userId}/accept`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setFollowRequests((prev) => prev.filter((x) => x.followerId !== userId));
+    } catch (err) {
+      console.error("Accept failed", err);
+    } finally {
+      setFollowReqBusy(null);
+    }
+  };
+
+  const handleReject = async (userId: string) => {
+    if (!token) return;
+    setFollowReqBusy(userId);
+
+    try {
+      await fetch(`${API_BASE}/users/me/follow-requests/${userId}/reject`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setFollowRequests((prev) => prev.filter((x) => x.followerId !== userId));
+    } catch (err) {
+      console.error("Reject failed", err);
+    } finally {
+      setFollowReqBusy(null);
+    }
+  };
 
   const isSelf = useMemo(() => {
     if (!me?.id || !profile?.id) return false;
@@ -312,7 +383,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
     try {
       const res = await fetch(
-        `${API_BASE}/users/id/${encodeURIComponent(profile.id)}/follow`,
+        `${API_BASE}/follows/${encodeURIComponent(profile.id)}`,
         {
           method: isActive ? "DELETE" : "POST",
           headers: { Authorization: `Bearer ${token}` },
@@ -475,6 +546,70 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
     loadFollowStatus();
   }, [mode, profile?.id, token, loadFollowStatus]);
 
+  useEffect(() => {
+    if (mode !== "me") {
+      setFollowingCourses([]);
+      return;
+    }
+
+    if (!token) {
+      setFollowingCourses([]);
+      return;
+    }
+
+    const run = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/courses/me/following`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!res.ok) {
+          setFollowingCourses([]);
+          return;
+        }
+
+        const data = await res.json();
+        setFollowingCourses(Array.isArray(data?.items) ? data.items : []);
+      } catch {
+        setFollowingCourses([]);
+      }
+    };
+
+    run();
+  }, [mode, token]);
+
+  useEffect(() => {
+    if (mode !== "me") {
+      setFollowingUsers([]);
+      return;
+    }
+
+    if (!token) {
+      setFollowingUsers([]);
+      return;
+    }
+
+    const run = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/users/me/following`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!res.ok) {
+          setFollowingUsers([]);
+          return;
+        }
+
+        const data = await res.json();
+        setFollowingUsers(Array.isArray(data?.items) ? data.items : []);
+      } catch {
+        setFollowingUsers([]);
+      }
+    };
+
+    run();
+  }, [mode, token]);
+
   const title = useMemo(() => {
     if (profile?.handle) return `@${profile.handle}`;
     return targetHandle ? `@${targetHandle}` : "Profile";
@@ -581,6 +716,160 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
       {/* ✅ Theme selection only in own profile (/profile) */}
       {mode === "me" ? <ThemePicker /> : null}
 
+      {mode === "me" && (
+        <Card title="Following Courses">
+          <div style={{ fontSize: 12, color: "var(--sub)", marginBottom: 8 }}>
+            {followingCourses.length} courses
+          </div>
+
+          {followingCourses.length === 0 ? (
+            <div style={{ padding: 12, color: "var(--sub)" }}>
+              No followed courses yet.
+            </div>
+          ) : (
+            <div style={{ display: "grid", gap: 8 }}>
+              {followingCourses.map((row: any) => {
+                const c = row.course;
+                if (!c) return null;
+
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => nav(`/courses/${c.id}`)}
+                    style={{
+                      textAlign: "left",
+                      padding: "10px",
+                      borderRadius: 10,
+                      border: "1px solid var(--border)",
+                      background: "var(--card)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    ⛳ {c.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+      )}
+      {mode === "me" && (
+        <Card
+          title="Follow Requests"
+          right={
+            <div style={{ fontSize: 12, color: "var(--sub)" }}>
+              {followRequests.length} pending
+            </div>
+          }
+        >
+          {followRequests.length === 0 ? (
+            <div style={{ padding: 12, color: "var(--sub)" }}>
+              No open requests.
+            </div>
+          ) : (
+            <div style={{ display: "grid", gap: 8 }}>
+              {followRequests.map((x: any) => {
+                const handle = x.followerHandle || x.followerId;
+                const busy = followReqBusy === x.followerId;
+
+                return (
+                  <div
+                    key={x.followerId}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: "1px solid var(--border)",
+                      background: "var(--card)",
+                    }}
+                  >
+                    <AvatarCircle
+                      handle={handle}
+                      avatarUrl={x.followerAvatarUrl}
+                    />
+
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700 }}>@{handle}</div>
+                    </div>
+
+                    <button
+                      disabled={busy}
+                      onClick={() => handleReject(x.followerId)}
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 8,
+                        border: "1px solid var(--border)",
+                        background: "transparent",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Reject
+                    </button>
+
+                    <button
+                      disabled={busy}
+                      onClick={() => handleAccept(x.followerId)}
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 8,
+                        border: "1px solid var(--border)",
+                        background: "var(--text)",
+                        color: "var(--bg)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Accept
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {mode === "me" && (
+        <Card title="Following Users">
+          <div style={{ fontSize: 12, color: "var(--sub)", marginBottom: 8 }}>
+            {followingUsers.length} users
+          </div>
+
+          {followingUsers.length === 0 ? (
+            <div style={{ padding: 12, color: "var(--sub)" }}>
+              No followed users yet.
+            </div>
+          ) : (
+            <div style={{ display: "grid", gap: 8 }}>
+              {followingUsers.map((row: any) => {
+                const u = row.following;
+                if (!u) return null;
+
+                return (
+                  <button
+                    key={u.id}
+                    onClick={() => nav(`/u/${u.handle}`)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "10px",
+                      borderRadius: 10,
+                      border: "1px solid var(--border)",
+                      background: "var(--card)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <AvatarCircle handle={u.handle} avatarUrl={u.avatarUrl} />
+                    <span>@{u.handle}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+      )}
       <Card
         title="Posts"
         right={

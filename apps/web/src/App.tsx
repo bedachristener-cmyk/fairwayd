@@ -26,6 +26,7 @@ import ProfileSetup from "./onboarding/ProfileSetup";
 // Pages
 import ProfilePage from "./pages/ProfilePage";
 import FollowingCoursesPage from "./pages/FollowingCoursesPage";
+import CoursePage from "./pages/CoursePage";
 
 /**
  * Wrap any protected page with this:
@@ -169,6 +170,18 @@ export default function App() {
                 }
               />
 
+              {/* Course detail */}
+              <Route
+                path="/courses/:courseId"
+                element={
+                  <ProtectedRoute>
+                    <OnboardingGuard>
+                      <CoursePage />
+                    </OnboardingGuard>
+                  </ProtectedRoute>
+                }
+              />
+
               {/* Follow Requests */}
               <Route
                 path="/follow-requests"
@@ -200,6 +213,18 @@ export default function App() {
                   <ProtectedRoute>
                     <OnboardingGuard>
                       <ProfilePage mode="me" />
+                    </OnboardingGuard>
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Profile (other user by handle) */}
+              <Route
+                path="/u/:handle"
+                element={
+                  <ProtectedRoute>
+                    <OnboardingGuard>
+                      <ProfilePage mode="handle" />
                     </OnboardingGuard>
                   </ProtectedRoute>
                 }

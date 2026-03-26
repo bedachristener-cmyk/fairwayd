@@ -374,6 +374,7 @@ export default function CoursesMap() {
   const [errByCourse, setErrByCourse] = useState<Record<string, string | null>>(
     {},
   );
+  const isMobile = typeof window !== "undefined" && window.innerWidth <= 980;
 
   const courseIdFromUrl = useMemo(() => {
     const sp = new URLSearchParams(location.search);
@@ -542,12 +543,12 @@ export default function CoursesMap() {
         style={{
           position: "absolute",
           top: 12,
-          left: 12,
+          left: isMobile ? 52 : 12,
           zIndex: 1000,
           display: "flex",
-          gap: 6,
+          gap: isMobile ? 3 : 6,
           background: "rgba(255,255,255,0.94)",
-          padding: 6,
+          padding: isMobile ? 3 : 6,
           borderRadius: 999,
           boxShadow: "0 2px 12px rgba(0,0,0,.15)",
           border: "1px solid rgba(0,0,0,0.08)",
@@ -565,12 +566,13 @@ export default function CoursesMap() {
                 ? "1px solid #1f8a3b"
                 : "1px solid transparent",
             borderRadius: 999,
-            padding: "8px 12px",
+            padding: isMobile ? "5px 8px" : "8px 12px",
             cursor: "pointer",
             fontWeight: 700,
+            fontSize: isMobile ? 12 : 14,
             background: mapStyle === "map" ? "#1f8a3b" : "transparent",
             color: mapStyle === "map" ? "white" : "#111",
-            minWidth: 72,
+            minWidth: isMobile ? 50 : 72,
             transition: "all 0.15s ease",
           }}
         >
@@ -588,12 +590,13 @@ export default function CoursesMap() {
                 ? "1px solid #1f8a3b"
                 : "1px solid transparent",
             borderRadius: 999,
-            padding: "8px 12px",
+            padding: isMobile ? "6px 10px" : "8px 12px",
             cursor: "pointer",
             fontWeight: 700,
+            fontSize: isMobile ? 13 : 14,
             background: mapStyle === "satellite" ? "#1f8a3b" : "transparent",
             color: mapStyle === "satellite" ? "white" : "#111",
-            minWidth: 92,
+            minWidth: isMobile ? 78 : 92,
             transition: "all 0.15s ease",
           }}
         >
@@ -702,14 +705,16 @@ export default function CoursesMap() {
                     lat,
                     lon,
                   });
-                  loadPostsForCourse(c.id, false);
-                },
-                popupopen: () => {
-                  loadPostsForCourse(c.id, false);
+                  nav(`/courses/${c.id}`);
                 },
               }}
             >
-              <Popup>
+              <Popup
+                offset={[0, 12]}
+                autoPan={true}
+                autoPanPaddingTopLeft={[20, 140]}
+                autoPanPaddingBottomRight={[20, 80]}
+              >
                 <div
                   style={{
                     width: 300,

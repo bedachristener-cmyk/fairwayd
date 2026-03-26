@@ -170,7 +170,7 @@ export class UsersController {
   }
 
   // ---------------------------------------------------------
-  // FOLLOW REQUESTS (for private accounts)
+  // FOLLOW REQUESTS / FOLLOWING
   // ---------------------------------------------------------
 
   @UseGuards(AuthGuard('jwt'))
@@ -181,6 +181,17 @@ export class UsersController {
     if (!meId) return { items: [] };
 
     const items = await this.users.listMyFollowRequests(meId);
+    return { items };
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('me/following')
+  @ApiOperation({ summary: 'List users current user follows' })
+  async myFollowing(@Req() req: any) {
+    const meId = req?.user?.userId ?? req?.user?.id;
+    if (!meId) return { items: [] };
+
+    const items = await this.users.listFollowingUsers(meId);
     return { items };
   }
 
