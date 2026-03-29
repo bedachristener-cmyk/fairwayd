@@ -136,17 +136,13 @@ export default function CourseDropdown({
           gap: 10,
           padding: "8px 14px",
           borderRadius: 999,
-          border: selected
-            ? "1px solid rgba(0,255,128,.45)"
-            : "1px solid rgba(255,255,255,.18)",
-          background: selected
-            ? "linear-gradient(180deg, rgba(0,255,128,.18), rgba(0,255,128,.10))"
-            : "rgba(255,255,255,.06)",
-          color: "white",
+          border: "1px solid var(--border)",
+          background: "var(--card)",
+          color: "var(--text)",
           cursor: "pointer",
           userSelect: "none",
           fontWeight: 900,
-          boxShadow: selected ? "0 6px 18px rgba(0,255,128,.15)" : "none",
+          boxShadow: "none",
         }}
       >
         <span style={{ display: "flex", gap: 8, alignItems: "center" }}>

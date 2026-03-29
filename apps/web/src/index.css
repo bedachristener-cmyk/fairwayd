@@ -2,67 +2,59 @@
 
 /* DARK (default) */
 html[data-theme="dark"] {
-  --bg: #052235; /* fast schwarz */
-  --card: #1f2122; /* dunkles grau */
-  --muted: #1f252b; /* etwas heller */
-  --border: #2a323a; /* klar sichtbare borders */
-  --text: #e9eef2; /* helles grau */
-  --sub: #8b98a5; /* secondary text */
+  --bg: #0f1115;
+  --card: #1a1d24;
+  --text: #f3f4f6;
+  --sub: #9ca3af;
+  --border: #2a2f3a;
   --green: #27c46b;
 }
 
 /* LIGHT */
 html[data-theme="light"] {
-  --bg: #f4f6f8; /* sehr hell */
-  --card: #ffffff; /* rein weiss */
-  --muted: #eef1f4; /* helles grau */
-  --border: rgba(0, 0, 0, 0.12);
-  --text: #111111;
-  --sub: rgba(0, 0, 0, 0.6);
-  --green: #1f8a3b;
+  --bg: #f4f6f8;
+  --card: #ffffff;
+  --text: #111827;
+  --sub: #6b7280;
+  --border: #e5e7eb;
+  --green: #16a34a;
 }
 
 /* FORREST */
 html[data-theme="forest"] {
-  --bg: #0c1511;
-  --card: #16221c;
-  --muted: #1d2d25;
-  --border: #2e4438;
-  --text: #e6f3ea;
-  --sub: #9fbaa8;
-  --green: #3ddc84;
+  --bg: #0f1a14;
+  --card: #16241c;
+  --text: #e6f4ea;
+  --sub: #9fb5a5;
+  --border: #254033;
+  --green: #34d399;
 }
 
-/* VINTAGE */
-html[data-theme="sepia"] {
-  --bg: #29251d;
-  --card: #fff8e7;
-  --muted: #efe2c6;
-  --border: #d8c7a3;
-  --text: #3b2f1e;
-  --sub: #7a6a4a;
-  --green: #7a9d54;
-}
 html[data-theme="ocean"] {
-  --bg: #061018;
-  --card: #0b1f2c;
-  --muted: #0e2736;
-  --border: rgba(255, 255, 255, 0.1);
-  --text: #e6f4ff;
-  --sub: rgba(230, 244, 255, 0.7);
-  --brand: #27c46b; /* Fairwayd green */
-  --brand2: #2ea8ff; /* ocean accent */
+  --bg: #0b1220;
+  --card: #121a2b;
+  --text: #e6f0ff;
+  --sub: #94a3b8;
+  --border: #1f2a44;
+  --green: #38bdf8;
 }
 
-html[data-theme="sunset"] {
-  --bg: #ffffff;
-  --card: #0f101c;
-  --muted: #a52f1a;
-  --border: rgba(210, 154, 154, 0.152);
-  --text: #ffecec;
-  --sub: rgba(255, 236, 236, 0.7);
-  --brand: #27c46b; /* Fairwayd green bleibt */
-  --brand2: #ff7a3d; /* warm accent */
+html[data-theme="warm"] {
+  --bg: #fdf6ec;
+  --card: #ffffff;
+  --text: #3b2f2f;
+  --sub: #8b6f6f;
+  --border: #f1e3d3;
+  --green: #d97706;
+}
+
+html[data-theme="contrast"] {
+  --bg: #000000;
+  --card: #111111;
+  --text: #ffffff;
+  --sub: #d1d5db;
+  --border: #2f2f2f;
+  --green: #00ff88;
 }
 
 /* fallback if attribute missing */

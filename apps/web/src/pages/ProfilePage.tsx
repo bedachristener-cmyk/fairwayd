@@ -833,6 +833,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                         borderRadius: 12,
                         border: "1px solid var(--border)",
                         background: "var(--card)",
+                        color: "var(--text)",
                         cursor: "pointer",
                         textAlign: "left",
                         boxSizing: "border-box",
@@ -864,7 +865,9 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                           paddingRight: isMobile ? 12 : 0,
                         }}
                       >
-                        <span style={{ fontWeight: 700 }}>{c.name}</span>
+                        <span style={{ fontWeight: 700, color: "var(--text)" }}>
+                          {c.name}
+                        </span>
                         <span style={{ fontSize: 12, color: "var(--sub)" }}>
                           golf course
                         </span>

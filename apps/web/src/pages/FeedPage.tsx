@@ -77,10 +77,10 @@ function Card({
   return (
     <div
       style={{
-        background: isMobile ? "transparent" : "var(--card)",
+        background: "var(--card)",
         borderRadius: isMobile ? 0 : 16,
-        border: isMobile ? "none" : "1px solid var(--border)",
-        padding: isMobile ? 0 : 12,
+        border: "1px solid var(--border)",
+        padding: isMobile ? "0 0 12px" : 12,
         color: "var(--text)",
       }}
     >
@@ -1152,7 +1152,7 @@ export default function FeedPage() {
           >
             <div
               style={{
-                padding: isMobile ? 0 : 12,
+                padding: isMobile ? "0 12px 12px" : 12,
                 borderRadius: isMobile ? 0 : 14,
                 background: isMobile ? "transparent" : "var(--muted)",
                 border: isMobile ? "none" : "1px solid var(--border)",
