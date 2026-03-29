@@ -1081,7 +1081,8 @@ export default function FeedPage() {
         items
           .map((course: { id?: string }) => course.id)
           .filter(
-            (id): id is string => typeof id === "string" && id.length > 0,
+            (id: string | undefined): id is string =>
+              typeof id === "string" && id.length > 0,
           ),
       );
     } catch (err) {
@@ -1155,7 +1156,7 @@ export default function FeedPage() {
 
         setFollowedCourseIds((prev) =>
           currentlyFollowed
-            ? prev.filter((id) => id !== courseId)
+            ? prev.filter((id: string) => id !== courseId)
             : prev.includes(courseId)
               ? prev
               : [...prev, courseId],
@@ -1180,7 +1181,7 @@ export default function FeedPage() {
             ? prev.includes(courseId)
               ? prev
               : [...prev, courseId]
-            : prev.filter((id) => id !== courseId),
+            : prev.filter((id: string) => id !== courseId),
         );
         console.error("Course follow toggle failed", err);
       } finally {
@@ -1189,7 +1190,6 @@ export default function FeedPage() {
     },
     [token, logout, courseFollowBusyId, followedCourseIds],
   );
-
   const submitPost = async () => {
     console.log("submitPost clicked", {
       selectedCourse,
