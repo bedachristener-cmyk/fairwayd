@@ -120,9 +120,11 @@ function PillButton({
 function AvatarCircle({
   handle,
   avatarUrl,
+  size = 56,
 }: {
   handle: string;
   avatarUrl?: string | null;
+  size?: number;
 }) {
   const letter = (handle || "?").slice(0, 1).toUpperCase();
 
@@ -132,9 +134,10 @@ function AvatarCircle({
         src={fileUrl(avatarUrl)}
         alt="avatar"
         style={{
-          width: 56,
-          height: 56,
-          borderRadius: 999,
+          display: "block",
+          width: "100%",
+          height: "100%",
+          borderRadius: "50%",
           objectFit: "cover",
           border: "1px solid var(--border)",
         }}
@@ -145,9 +148,9 @@ function AvatarCircle({
   return (
     <div
       style={{
-        width: 56,
-        height: 56,
-        borderRadius: 999,
+        width: "100%",
+        height: "100%",
+        borderRadius: "50%",
         background: "rgba(0,0,0,.18)",
         border: "1px solid var(--border)",
         display: "grid",
@@ -179,7 +182,15 @@ function ThemePicker() {
 
   return (
     <Card title="Theme">
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          flexWrap: "wrap",
+          paddingLeft: 12,
+          paddingRight: 12,
+        }}
+      >
         {THEMES.map((tName) => (
           <button
             key={tName}
@@ -203,8 +214,16 @@ function ThemePicker() {
         ))}
       </div>
 
-      <div style={{ marginTop: 8, fontSize: 12, color: "var(--sub)" }}>
-        Current: <b style={{ color: "var(--text)" }}>{theme}</b>
+      <div
+        style={{
+          fontSize: 12,
+          color: "var(--sub)",
+          marginTop: 8,
+          paddingLeft: 12,
+          paddingRight: 12,
+        }}
+      >
+        Current: {theme}
       </div>
     </Card>
   );
@@ -322,9 +341,10 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
   };
 
   const isSelf = useMemo(() => {
+    if (mode !== "handle") return true;
     if (!me?.id || !profile?.id) return false;
     return me.id === profile.id;
-  }, [me?.id, profile?.id]);
+  }, [mode, me?.id, profile?.id]);
 
   const loadFollowStatus = useCallback(async () => {
     if (!token) {
@@ -669,13 +689,71 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
           </div>
         }
       >
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <AvatarCircle
-            handle={profile?.handle ?? targetHandle ?? "?"}
-            avatarUrl={profile?.avatarUrl}
-          />
+        <div
+          style={{
+            display: "flex",
+            gap: 12,
+            alignItems: isMobile ? "stretch" : "center",
+            flexWrap: isMobile ? "wrap" : "nowrap",
+            paddingLeft: isMobile ? 12 : 0,
+            paddingRight: isMobile ? 12 : 0,
+          }}
+        >
+          {profile?.avatarUrl ? (
+            <div
+              style={{
+                width: isMobile ? 40 : 56,
+                height: isMobile ? 40 : 56,
+                minWidth: isMobile ? 40 : 56,
+                minHeight: isMobile ? 40 : 56,
+                maxWidth: isMobile ? 40 : 56,
+                maxHeight: isMobile ? 40 : 56,
+                borderRadius: "50%",
+                overflow: "hidden",
+                clipPath: "circle(50% at 50% 50%)",
+                WebkitClipPath: "circle(50% at 50% 50%)",
+                border: "1px solid var(--border)",
+                backgroundImage: `url(${fileUrl(profile.avatarUrl)})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                backgroundRepeat: "no-repeat",
+                flexShrink: 0,
+                display: "block",
+                boxSizing: "border-box",
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: isMobile ? 40 : 56,
+                height: isMobile ? 40 : 56,
+                minWidth: isMobile ? 40 : 56,
+                minHeight: isMobile ? 40 : 56,
+                maxWidth: isMobile ? 40 : 56,
+                maxHeight: isMobile ? 40 : 56,
+                borderRadius: "50%",
+                background: "rgba(39,196,107,0.18)",
+                border: "1px solid rgba(39,196,107,0.35)",
+                display: "grid",
+                placeItems: "center",
+                fontWeight: 900,
+                color: "var(--text)",
+                flexShrink: 0,
+              }}
+            >
+              {(profile?.handle ?? targetHandle ?? "?")
+                .slice(0, 1)
+                .toUpperCase()}
+            </div>
+          )}
 
-          <div style={{ minWidth: 0, flex: 1 }}>
+          <div
+            style={{
+              minWidth: 0,
+              flex: 1,
+              width: isMobile ? "calc(100% - 68px)" : "auto",
+            }}
+          >
             <div
               style={{ fontWeight: 900, fontSize: 16, color: "var(--text)" }}
             >
@@ -691,24 +769,32 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
           {/* Follow Button (only when viewing someone else) */}
           {mode === "handle" && !isSelf && followLabel ? (
-            <PillButton
-              onClick={toggleFollow}
-              disabled={followDisabled}
-              title={
-                followStatus === "PENDING"
-                  ? "Follow request sent (click to cancel)"
-                  : followStatus === "ACCEPTED"
-                    ? "Following (click to unfollow)"
-                    : "Follow"
-              }
+            <div
               style={{
-                ...followButtonStyle,
-                minWidth: 120,
-                textAlign: "center",
+                width: isMobile ? "100%" : "auto",
+                marginTop: isMobile ? 4 : 0,
               }}
             >
-              {followBusy ? "..." : followLabel}
-            </PillButton>
+              <PillButton
+                onClick={toggleFollow}
+                disabled={followDisabled}
+                title={
+                  followStatus === "PENDING"
+                    ? "Follow request sent (click to cancel)"
+                    : followStatus === "ACCEPTED"
+                      ? "Following (click to unfollow)"
+                      : "Follow"
+                }
+                style={{
+                  ...followButtonStyle,
+                  minWidth: isMobile ? undefined : 120,
+                  width: isMobile ? "100%" : undefined,
+                  textAlign: "center",
+                }}
+              >
+                {followBusy ? "..." : followLabel}
+              </PillButton>
+            </div>
           ) : null}
         </div>
       </Card>
@@ -718,39 +804,78 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
       {mode === "me" && (
         <Card title="Following Courses">
-          <div style={{ fontSize: 12, color: "var(--sub)", marginBottom: 8 }}>
-            {followingCourses.length} courses
+          <div style={{ padding: 12 }}>
+            <div
+              style={{ fontSize: 12, color: "var(--sub)", marginBottom: 10 }}
+            >
+              {followingCourses.length} courses
+            </div>
+
+            {followingCourses.length === 0 ? (
+              <div style={{ padding: 12, color: "var(--sub)" }}>
+                No followed courses yet.
+              </div>
+            ) : (
+              <div style={{ display: "grid", gap: 8 }}>
+                {followingCourses.map((row: any) => {
+                  const c = row;
+                  if (!c) return null;
+
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => nav(`/courses/${c.id}`)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        width: "100%",
+                        padding: isMobile ? "12px" : "10px 12px",
+                        borderRadius: 12,
+                        border: "1px solid var(--border)",
+                        background: "var(--card)",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        boxSizing: "border-box",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 999,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          border: "1px solid var(--border)",
+                          background: "var(--bg)",
+                          flexShrink: 0,
+                          fontSize: 16,
+                        }}
+                      >
+                        ⛳
+                      </div>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 12,
+                          paddingLeft: isMobile ? 12 : 0,
+                          paddingRight: isMobile ? 12 : 0,
+                        }}
+                      >
+                        <span style={{ fontWeight: 700 }}>{c.name}</span>
+                        <span style={{ fontSize: 12, color: "var(--sub)" }}>
+                          golf course
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
-
-          {followingCourses.length === 0 ? (
-            <div style={{ padding: 12, color: "var(--sub)" }}>
-              No followed courses yet.
-            </div>
-          ) : (
-            <div style={{ display: "grid", gap: 8 }}>
-              {followingCourses.map((row: any) => {
-                const c = row.course;
-                if (!c) return null;
-
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => nav(`/courses/${c.id}`)}
-                    style={{
-                      textAlign: "left",
-                      padding: "10px",
-                      borderRadius: 10,
-                      border: "1px solid var(--border)",
-                      background: "var(--card)",
-                      cursor: "pointer",
-                    }}
-                  >
-                    ⛳ {c.name}
-                  </button>
-                );
-              })}
-            </div>
-          )}
         </Card>
       )}
       {mode === "me" && (
@@ -777,12 +902,14 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                     key={x.followerId}
                     style={{
                       display: "flex",
-                      alignItems: "center",
+                      alignItems: isMobile ? "stretch" : "center",
+                      flexWrap: isMobile ? "wrap" : "nowrap",
                       gap: 10,
-                      padding: "10px 12px",
-                      borderRadius: 10,
+                      padding: isMobile ? "12px" : "10px 12px",
+                      borderRadius: 12,
                       border: "1px solid var(--border)",
                       background: "var(--card)",
+                      boxSizing: "border-box",
                     }}
                   >
                     <AvatarCircle
@@ -790,38 +917,55 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                       avatarUrl={x.followerAvatarUrl}
                     />
 
-                    <div style={{ flex: 1 }}>
+                    <div
+                      style={{
+                        flex: 1,
+                        minWidth: isMobile ? "calc(100% - 66px)" : 0,
+                      }}
+                    >
                       <div style={{ fontWeight: 700 }}>@{handle}</div>
                     </div>
 
-                    <button
-                      disabled={busy}
-                      onClick={() => handleReject(x.followerId)}
+                    <div
                       style={{
-                        padding: "6px 10px",
-                        borderRadius: 8,
-                        border: "1px solid var(--border)",
-                        background: "transparent",
-                        cursor: "pointer",
+                        display: "flex",
+                        gap: 8,
+                        width: isMobile ? "100%" : "auto",
+                        marginLeft: isMobile ? 0 : "auto",
+                        marginTop: isMobile ? 4 : 0,
                       }}
                     >
-                      Reject
-                    </button>
+                      <button
+                        disabled={busy}
+                        onClick={() => handleReject(x.followerId)}
+                        style={{
+                          flex: isMobile ? 1 : undefined,
+                          padding: "8px 10px",
+                          borderRadius: 8,
+                          border: "1px solid var(--border)",
+                          background: "transparent",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Reject
+                      </button>
 
-                    <button
-                      disabled={busy}
-                      onClick={() => handleAccept(x.followerId)}
-                      style={{
-                        padding: "6px 10px",
-                        borderRadius: 8,
-                        border: "1px solid var(--border)",
-                        background: "var(--text)",
-                        color: "var(--bg)",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Accept
-                    </button>
+                      <button
+                        disabled={busy}
+                        onClick={() => handleAccept(x.followerId)}
+                        style={{
+                          flex: isMobile ? 1 : undefined,
+                          padding: "8px 10px",
+                          borderRadius: 8,
+                          border: "1px solid var(--border)",
+                          background: "var(--text)",
+                          color: "var(--bg)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Accept
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -832,7 +976,14 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
       {mode === "me" && (
         <Card title="Following Users">
-          <div style={{ fontSize: 12, color: "var(--sub)", marginBottom: 8 }}>
+          <div
+            style={{
+              fontSize: 12,
+              color: "var(--sub)",
+              marginBottom: 8,
+              padding: "0 12px",
+            }}
+          >
             {followingUsers.length} users
           </div>
 
@@ -841,9 +992,11 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
               No followed users yet.
             </div>
           ) : (
-            <div style={{ display: "grid", gap: 8 }}>
+            <div
+              style={{ display: "grid", gap: 8, padding: "0 12px 12px 12px" }}
+            >
               {followingUsers.map((row: any) => {
-                const u = row.following;
+                const u = row.following ?? row;
                 if (!u) return null;
 
                 return (
@@ -854,15 +1007,60 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                       display: "flex",
                       alignItems: "center",
                       gap: 10,
-                      padding: "10px",
-                      borderRadius: 10,
+                      padding: "10px 12px",
+                      borderRadius: 12,
                       border: "1px solid var(--border)",
                       background: "var(--card)",
                       cursor: "pointer",
+                      textAlign: "left",
                     }}
                   >
-                    <AvatarCircle handle={u.handle} avatarUrl={u.avatarUrl} />
-                    <span>@{u.handle}</span>
+                    {/* Avatar */}
+                    {u.avatarUrl ? (
+                      <div
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: "50%",
+                          overflow: "hidden",
+                          clipPath: "circle(50% at 50% 50%)",
+                          WebkitClipPath: "circle(50% at 50% 50%)",
+                          border: "1px solid var(--border)",
+                          backgroundImage: `url(${fileUrl(u.avatarUrl)})`,
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
+                          flexShrink: 0,
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: "50%",
+                          background: "rgba(39,196,107,0.18)",
+                          border: "1px solid rgba(39,196,107,0.35)",
+                          display: "grid",
+                          placeItems: "center",
+                          fontWeight: 900,
+                          color: "var(--text)",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {(u.handle ?? "?").slice(0, 1).toUpperCase()}
+                      </div>
+                    )}
+
+                    {/* Text rechts */}
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                      <span style={{ fontWeight: 700, color: "var(--text)" }}>
+                        {u.name?.trim() ? u.name : `@${u.handle}`}
+                      </span>
+
+                      <span style={{ fontSize: 12, color: "var(--sub)" }}>
+                        @{u.handle}
+                      </span>
+                    </div>
                   </button>
                 );
               })}

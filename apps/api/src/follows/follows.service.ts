@@ -57,6 +57,15 @@ export class FollowsService {
     });
   }
 
+  async unfollow(followerId: string, followingId: string) {
+    return this.prisma.follow.deleteMany({
+      where: {
+        followerId,
+        followingId,
+      },
+    });
+  }
+
   async acceptRequest(myUserId: string, followId: string) {
     const row = await this.prisma.follow.findUnique({
       where: { id: followId },

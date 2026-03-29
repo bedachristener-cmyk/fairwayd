@@ -38,6 +38,12 @@ export class FollowsController {
     return this.follows.requestFollow(me, userId);
   }
 
+  @Delete(':userId')
+  async unfollow(@Req() req: any, @Param('userId') userId: string) {
+    const me = req.user.userId;
+    return this.follows.unfollow(me, userId);
+  }
+
   @Post('requests/:id/accept')
   async accept(@Req() req: any, @Param('id') id: string) {
     const me = req.user.userId;
