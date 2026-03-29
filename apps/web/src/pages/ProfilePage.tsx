@@ -116,55 +116,6 @@ function PillButton({
     </button>
   );
 }
-
-function AvatarCircle({
-  handle,
-  avatarUrl,
-  size = 56,
-}: {
-  handle: string;
-  avatarUrl?: string | null;
-  size?: number;
-}) {
-  const letter = (handle || "?").slice(0, 1).toUpperCase();
-
-  if (avatarUrl) {
-    return (
-      <img
-        src={fileUrl(avatarUrl)}
-        alt="avatar"
-        style={{
-          display: "block",
-          width: "100%",
-          height: "100%",
-          borderRadius: "50%",
-          objectFit: "cover",
-          border: "1px solid var(--border)",
-        }}
-      />
-    );
-  }
-
-  return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        borderRadius: "50%",
-        background: "rgba(0,0,0,.18)",
-        border: "1px solid var(--border)",
-        display: "grid",
-        placeItems: "center",
-        fontWeight: 900,
-        color: "var(--text)",
-      }}
-      title="Avatar placeholder"
-    >
-      {letter}
-    </div>
-  );
-}
-
 function prettyDate(d?: string) {
   if (!d) return "";
   const t = new Date(d);
