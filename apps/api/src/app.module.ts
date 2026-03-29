@@ -9,6 +9,7 @@ import { PostsModule } from './posts/posts.module';
 import { FeedModule } from './feed/feed.module';
 import { UsersModule } from './users/users.module';
 import { FollowsModule } from './follows/follows.module';
+import { FeedbackModule } from './feedback/feedback.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { FollowsModule } from './follows/follows.module';
     FeedModule,
     UsersModule, // ✅ IMPORTANT: register /users routes
     FollowsModule,
+    FeedbackModule,
   ],
   controllers: [AppController],
   providers: [AppService],

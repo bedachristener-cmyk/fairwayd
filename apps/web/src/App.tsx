@@ -27,6 +27,8 @@ import ProfileSetup from "./onboarding/ProfileSetup";
 import ProfilePage from "./pages/ProfilePage";
 import FollowingCoursesPage from "./pages/FollowingCoursesPage";
 import CoursePage from "./pages/CoursePage";
+import FeedbackAdminPage from "./pages/FeedbackAdminPage";
+import StageFeedbackWidget from "./components/StageFeedbackWidget";
 
 /**
  * Wrap any protected page with this:
@@ -194,6 +196,17 @@ export default function App() {
                 }
               />
 
+              <Route
+                path="/feedback-admin"
+                element={
+                  <ProtectedRoute>
+                    <OnboardingGuard>
+                      <FeedbackAdminPage />
+                    </OnboardingGuard>
+                  </ProtectedRoute>
+                }
+              />
+
               {/* Optional legacy compose */}
               <Route
                 path="/compose/:courseId"
@@ -246,6 +259,8 @@ export default function App() {
             <Route path="/home" element={<Navigate to="/map" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+
+          <StageFeedbackWidget />
         </SelectedCourseProvider>
       </AuthProvider>
     </BrowserRouter>

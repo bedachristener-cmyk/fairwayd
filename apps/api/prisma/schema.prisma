@@ -59,6 +59,7 @@ model User {
   comments Comment[]
   likes    Like[]
   commentLikes CommentLike[]   // 👈 NEU
+  feedbacks Feedback[]
 
   followers Follow[] @relation("followers")
   following Follow[] @relation("following")
@@ -251,4 +252,17 @@ model Review {
 
   @@unique([userId, courseId])
   @@index([courseId])
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  message   String
+  category  String   @default("other")
+  url       String?
+  device    String?
+  userAgent String?
+  userId    String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
