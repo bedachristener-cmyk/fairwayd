@@ -39,6 +39,9 @@ type PostCardProps = {
   isCommentTarget?: boolean;
   onSelectCourse?: () => void;
   onCommentClick?: (postId: string) => void;
+  courseFollowed?: boolean;
+  courseFollowBusy?: boolean;
+  onCourseFollowToggle?: (courseId: string) => void;
 };
 
 export default function PostCard({
@@ -47,6 +50,9 @@ export default function PostCard({
   isCommentTarget = false,
   onSelectCourse,
   onCommentClick,
+  courseFollowed = false,
+  courseFollowBusy = false,
+  onCourseFollowToggle,
 }: PostCardProps) {
   const { token, user } = useAuth();
 
@@ -61,6 +67,7 @@ export default function PostCard({
   const [showHeart, setShowHeart] = useState(false);
   const [lastTap, setLastTap] = useState(0);
   const [hoveredImage, setHoveredImage] = useState<string | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const nav = useNavigate();
 
@@ -82,6 +89,16 @@ export default function PostCard({
 
     return () => window.clearTimeout(timer);
   }, [showHeart]);
+
+  useEffect(() => {
+    if (!shareCopied) return;
+
+    const timer = window.setTimeout(() => {
+      setShareCopied(false);
+    }, 1600);
+
+    return () => window.clearTimeout(timer);
+  }, [shareCopied]);
 
   const toggleLike = async (nextLiked: boolean) => {
     if (!token) return false;
@@ -167,6 +184,33 @@ export default function PostCard({
     padding: isMobile ? "6px 0" : 0,
   };
 
+  const copyText = async (text: string) => {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "absolute";
+    textarea.style.left = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textarea);
+  };
+
+  const handleShareClick = async () => {
+    try {
+      const shareUrl = `${window.location.origin}/feed?postId=${encodeURIComponent(post.id)}&comment=1`;
+      await copyText(shareUrl);
+      setShareCopied(true);
+    } catch (err) {
+      console.error("Share copy failed", err);
+    }
+  };
+
   return (
     <div
       ref={rootRef}
@@ -191,25 +235,68 @@ export default function PostCard({
       }}
     >
       <div style={{ padding: "0 12px" }}>
-        <button
-          type="button"
-          onClick={onSelectCourse}
-          disabled={!onSelectCourse}
-          title={onSelectCourse ? "Select this post's course" : undefined}
+        <div
           style={{
-            background: "transparent",
-            border: "none",
-            padding: 0,
-            margin: 0,
-            fontWeight: 900,
-            fontSize: 16,
-            color: "var(--text)",
-            cursor: onSelectCourse ? "pointer" : "default",
-            textAlign: "left",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            flexWrap: "wrap",
           }}
         >
-          {post.course.name}
-        </button>
+          <button
+            type="button"
+            onClick={onSelectCourse}
+            disabled={!onSelectCourse}
+            title={onSelectCourse ? "Open this course" : undefined}
+            style={{
+              background: "transparent",
+              border: "none",
+              padding: 0,
+              margin: 0,
+              fontWeight: 900,
+              fontSize: 16,
+              color: "var(--text)",
+              cursor: onSelectCourse ? "pointer" : "default",
+              textAlign: "left",
+            }}
+          >
+            {post.course.name}
+          </button>
+
+          {onCourseFollowToggle ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onCourseFollowToggle(post.course.id);
+              }}
+              disabled={courseFollowBusy}
+              style={{
+                padding: "4px 10px",
+                borderRadius: 999,
+                border: courseFollowed
+                  ? "1px solid rgba(39,196,107,0.35)"
+                  : "1px solid var(--border)",
+                background: courseFollowed
+                  ? "rgba(39,196,107,0.16)"
+                  : "var(--bg)",
+                color: "var(--text)",
+                fontWeight: 800,
+                fontSize: 12,
+                cursor: courseFollowBusy ? "default" : "pointer",
+                opacity: courseFollowBusy ? 0.6 : 1,
+              }}
+              title={courseFollowed ? "Unfollow course" : "Follow course"}
+            >
+              {courseFollowBusy
+                ? "..."
+                : courseFollowed
+                  ? "Following"
+                  : "Follow"}
+            </button>
+          ) : null}
+        </div>
 
         <div
           style={{
@@ -380,8 +467,13 @@ export default function PostCard({
           💬 Comments {post._count?.comments ?? 0}
         </button>
 
-        <button type="button" style={actionButtonStyle}>
-          🔗 Share
+        <button
+          type="button"
+          style={actionButtonStyle}
+          onClick={handleShareClick}
+          title="Copy post link"
+        >
+          🔗 {shareCopied ? "Copied" : "Share"}
         </button>
       </div>
     </div>

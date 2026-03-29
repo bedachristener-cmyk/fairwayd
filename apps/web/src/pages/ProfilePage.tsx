@@ -4,6 +4,8 @@ import { API_BASE } from "../api/base";
 import { fileUrl } from "../api/fileUrl";
 import { useAuth } from "../auth/AuthContext";
 import { useMe } from "../auth/useMe";
+import { useSelectedCourse } from "../state/SelectedCourseContext";
+
 import {
   getInitialTheme,
   setTheme,
@@ -233,6 +235,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
   const nav = useNavigate();
   const loc = useLocation();
   const params = useParams();
+  const { setSelectedCourse } = useSelectedCourse();
 
   const auth = useAuth() as any;
   const tokenFromContext: string =
@@ -266,6 +269,9 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
   const [followingUsers, setFollowingUsers] = useState<any[]>([]);
   const [followRequests, setFollowRequests] = useState<any[]>([]);
   const [followReqBusy, setFollowReqBusy] = useState<string | null>(null);
+  const [courseFollowBusyId, setCourseFollowBusyId] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (mode !== "me") {
@@ -455,15 +461,25 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
   }, [token, followBusy, mode, profile?.id, isSelf]);
 
   const followButtonStyle: React.CSSProperties = useMemo(() => {
-    const base: React.CSSProperties = {};
     if (followStatus === "ACCEPTED") {
-      base.background = "rgba(39,196,107,0.22)";
-    } else if (followStatus === "PENDING") {
-      base.background = "rgba(255,255,255,0.08)";
-    } else {
-      base.background = "rgba(0,0,0,0.18)";
+      return {
+        background: "rgba(39,196,107,0.18)",
+        border: "1px solid rgba(39,196,107,0.35)",
+        color: "var(--text)",
+      };
     }
-    return base;
+
+    if (followStatus === "PENDING") {
+      return {
+        background: "var(--muted)",
+        color: "var(--text)",
+      };
+    }
+
+    return {
+      background: "var(--card)",
+      color: "var(--text)",
+    };
   }, [followStatus]);
 
   const loadProfile = useCallback(async () => {
@@ -566,11 +582,6 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
   }, [mode, profile?.id, token, loadFollowStatus]);
 
   useEffect(() => {
-    if (mode !== "me") {
-      setFollowingCourses([]);
-      return;
-    }
-
     if (!token) {
       setFollowingCourses([]);
       return;
@@ -595,7 +606,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
     };
 
     run();
-  }, [mode, token]);
+  }, [token]);
 
   useEffect(() => {
     if (mode !== "me") {
@@ -633,6 +644,48 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
     if (profile?.handle) return `@${profile.handle}`;
     return targetHandle ? `@${targetHandle}` : "Profile";
   }, [profile?.handle, targetHandle]);
+
+  const handleToggleCourseFollow = useCallback(
+    async (courseId: string) => {
+      if (!token) return;
+      if (courseFollowBusyId) return;
+
+      const currentlyFollowed = followingCourses.some(
+        (c: any) => c?.id === courseId,
+      );
+
+      try {
+        setCourseFollowBusyId(courseId);
+
+        const res = await fetch(`${API_BASE}/courses/${courseId}/follow`, {
+          method: currentlyFollowed ? "DELETE" : "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!res.ok) {
+          throw new Error(`Course follow request failed: ${res.status}`);
+        }
+
+        const refresh = await fetch(`${API_BASE}/courses/me/following`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!refresh.ok) {
+          throw new Error(
+            `Failed to refresh followed courses: ${refresh.status}`,
+          );
+        }
+
+        const data = await refresh.json();
+        setFollowingCourses(Array.isArray(data?.items) ? data.items : []);
+      } catch (err) {
+        console.error("Course follow toggle failed", err);
+      } finally {
+        setCourseFollowBusyId(null);
+      }
+    },
+    [token, courseFollowBusyId, followingCourses],
+  );
 
   const backTo = (loc.state as any)?.from || "/feed";
 
@@ -1083,9 +1136,55 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
         )}
 
         <div style={{ display: "grid", gap: 10 }}>
-          {posts.map((p) => (
-            <PostCard key={p.id} post={p} isMobile={isMobile} />
-          ))}
+          {posts.map((p) => {
+            const lat = Number(p.course.lat);
+            const lon = Number(p.course.lon);
+            const canSelectCourse =
+              Number.isFinite(lat) && Number.isFinite(lon);
+            const isCourseFollowed = followingCourses.some(
+              (c: any) => c?.id === p.course.id,
+            );
+            const isCourseFollowBusy = courseFollowBusyId === p.course.id;
+
+            return (
+              <PostCard
+                key={p.id}
+                post={p}
+                isMobile={isMobile}
+                onSelectCourse={
+                  canSelectCourse
+                    ? () => {
+                        setSelectedCourse({
+                          id: p.course.id,
+                          name: p.course.name,
+                          lat,
+                          lon,
+                        });
+                        nav(`/map?courseId=${p.course.id}`);
+                      }
+                    : undefined
+                }
+                onCommentClick={() =>
+                  nav("/feed", {
+                    state: {
+                      from: loc.pathname,
+                      focusPostId: p.id,
+                      openComment: true,
+                      focusCourse: {
+                        id: p.course.id,
+                        name: p.course.name,
+                        lat,
+                        lon,
+                      },
+                    },
+                  })
+                }
+                courseFollowed={isCourseFollowed}
+                courseFollowBusy={isCourseFollowBusy}
+                onCourseFollowToggle={handleToggleCourseFollow}
+              />
+            );
+          })}
         </div>
       </Card>
     </div>

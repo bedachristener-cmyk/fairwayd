@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { API_BASE } from "../api/base";
+import { fileUrl } from "../api/fileUrl";
 import { useAuth } from "../auth/AuthContext";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
 import CourseDropdown, { type CourseLite } from "../components/CourseDropdown";
@@ -108,6 +109,8 @@ function CommentModal({
   onClose: () => void;
 }) {
   const { token } = useAuth();
+  const nav = useNavigate();
+  const { setSelectedCourse } = useSelectedCourse();
 
   type CommentItem = {
     id: string;
@@ -143,6 +146,28 @@ function CommentModal({
   const [replySending, setReplySending] = useState(false);
 
   const replyInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const validImages =
+    post.images?.filter(
+      (img): img is { id: string; url: string } =>
+        typeof img?.url === "string" && img.url.length > 0,
+    ) ?? [];
+
+  const handleOpenCourse = () => {
+    const lat = Number(post.course.lat);
+    const lon = Number(post.course.lon);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+
+    setSelectedCourse({
+      id: post.course.id,
+      name: post.course.name,
+      lat,
+      lon,
+    });
+
+    onClose();
+    nav(`/map?courseId=${post.course.id}`);
+  };
 
   const loadComments = useCallback(async () => {
     if (!token) return;
@@ -670,7 +695,7 @@ function CommentModal({
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.55)",
+        background: isMobile ? "var(--bg)" : "rgba(0,0,0,0.55)",
         zIndex: 2000,
         display: "flex",
         alignItems: isMobile ? "stretch" : "center",
@@ -685,7 +710,7 @@ function CommentModal({
           height: isMobile ? "100dvh" : "min(85vh, 900px)",
           maxHeight: isMobile ? "100dvh" : "85vh",
           overflow: "hidden",
-          background: "var(--card)",
+          background: isMobile ? "var(--bg)" : "var(--card)",
           color: "var(--text)",
           border: isMobile ? "none" : "1px solid var(--border)",
           borderRadius: isMobile ? 0 : 18,
@@ -704,18 +729,18 @@ function CommentModal({
             justifyContent: "space-between",
             padding: "14px 16px",
             borderBottom: "1px solid var(--border)",
-            background: "var(--card)",
+            background: isMobile ? "var(--bg)" : "var(--card)",
           }}
         >
-          <div style={{ fontWeight: 900, fontSize: 16 }}>Comments</div>
+          <div style={{ fontWeight: 900, fontSize: 16 }}>Post & Comments</div>
 
           <button
             type="button"
             onClick={onClose}
             style={{
-              border: "1px solid var(--border)",
-              background: "var(--muted)",
-              color: "var(--text)",
+              border: "1px solid var(--text)",
+              background: "var(--text)",
+              color: "var(--bg)",
               borderRadius: 10,
               padding: "8px 12px",
               fontWeight: 800,
@@ -754,41 +779,105 @@ function CommentModal({
               style={{
                 border: "1px solid var(--border)",
                 borderRadius: 14,
-                padding: 12,
-                background: "var(--muted)",
+                overflow: "hidden",
+                background: "var(--card)",
               }}
             >
-              <div style={{ fontWeight: 800, marginBottom: 4 }}>
-                {post.course.name}
+              <div style={{ padding: "12px 12px 10px 12px" }}>
+                <button
+                  type="button"
+                  onClick={handleOpenCourse}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    padding: 0,
+                    margin: "0 0 4px 0",
+                    fontWeight: 800,
+                    fontSize: 16,
+                    color: "var(--text)",
+                    cursor: "pointer",
+                    textAlign: "left",
+                  }}
+                  title="Open course"
+                >
+                  {post.course.name}
+                </button>
+
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "var(--sub)",
+                    marginBottom: 8,
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 6,
+                    alignItems: "center",
+                  }}
+                >
+                  <span>@{post.user.handle}</span>
+                  <span>·</span>
+                  <span>{new Date(post.createdAt).toLocaleString()}</span>
+                  {post.visibility ? (
+                    <>
+                      <span>·</span>
+                      <span>
+                        {post.visibility === "PUBLIC" && "🌍 Public"}
+                        {post.visibility === "FOLLOWERS" && "👥 Followers"}
+                        {post.visibility === "PRIVATE" && "🔒 Private"}
+                      </span>
+                    </>
+                  ) : null}
+                </div>
+
+                <div
+                  style={{
+                    whiteSpace: "pre-wrap",
+                    lineHeight: 1.5,
+                    color: "var(--text)",
+                  }}
+                >
+                  {post.content}
+                </div>
               </div>
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "var(--sub)",
-                  marginBottom: 8,
-                }}
-              >
-                @{post.user.handle} ·{" "}
-                {new Date(post.createdAt).toLocaleString()}
-              </div>
-              <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
-                {post.content}
-              </div>
+
+              {validImages.length > 0 ? (
+                <div
+                  style={{
+                    display: "grid",
+                    gap: 8,
+                    padding: "0 12px 10px 12px",
+                  }}
+                >
+                  {validImages.map((img) => (
+                    <img
+                      key={img.id}
+                      src={fileUrl(img.url)}
+                      alt="Post image"
+                      loading="lazy"
+                      style={{
+                        width: "100%",
+                        display: "block",
+                        objectFit: "cover",
+                        maxHeight: isMobile ? 220 : 420,
+                        borderRadius: 10,
+                        border: "1px solid var(--border)",
+                        background: "var(--card)",
+                      }}
+                    />
+                  ))}
+                </div>
+              ) : null}
             </div>
 
             {/* ===== Comments ===== */}
             <div
               style={{
-                border: "1px solid var(--border)",
-                borderRadius: 14,
-                padding: 14,
-                background: "rgba(255,255,255,0.02)",
                 display: "grid",
                 gap: 12,
+                paddingTop: 6,
+                borderTop: "1px solid var(--border)",
               }}
             >
-              <div style={{ fontWeight: 800 }}>Comments</div>
-
               {loading ? (
                 <div style={{ fontSize: 13, color: "var(--sub)" }}>
                   Loading comments...
@@ -807,10 +896,10 @@ function CommentModal({
           <div
             style={{
               borderTop: "1px solid var(--border)",
-              padding: "12px 16px 80px 16px",
+              padding: "12px 16px 16px 16px",
               display: "grid",
               gap: 10,
-              background: "var(--card)",
+              background: isMobile ? "var(--bg)" : "var(--card)",
               position: "sticky",
               bottom: 0,
               zIndex: 10,
@@ -878,13 +967,29 @@ export default function FeedPage() {
   const handle =
     user?.handle || localStorage.getItem("fairwayd_handle") || "me";
 
+  const searchParams = useMemo(
+    () => new URLSearchParams(location.search),
+    [location.search],
+  );
+
   const focusCourse = (location.state as any)?.focusCourse ?? null;
-  const focusPostId = (location.state as any)?.focusPostId ?? null;
-  const openComment = (location.state as any)?.openComment ?? false;
+  const focusPostIdFromState = (location.state as any)?.focusPostId ?? null;
+  const openCommentFromState = (location.state as any)?.openComment ?? false;
+
+  const focusPostIdFromQuery = searchParams.get("postId");
+  const openCommentFromQuery = searchParams.get("comment") === "1";
+
+  const focusPostId = focusPostIdFromState ?? focusPostIdFromQuery;
+  const openComment = openCommentFromState || openCommentFromQuery;
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(
+    null,
+  );
+
+  const [followedCourseIds, setFollowedCourseIds] = useState<string[]>([]);
+  const [courseFollowBusyId, setCourseFollowBusyId] = useState<string | null>(
     null,
   );
 
@@ -952,11 +1057,50 @@ export default function FeedPage() {
     }
   }, [token, logout]);
 
+  const loadFollowedCourses = useCallback(async () => {
+    if (!token) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/courses/me/following`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        logout();
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(`Failed to load followed courses: ${res.status}`);
+      }
+
+      const data = await res.json();
+      const items = Array.isArray(data?.items) ? data.items : [];
+
+      setFollowedCourseIds(
+        items
+          .map((course: { id?: string }) => course.id)
+          .filter(
+            (id): id is string => typeof id === "string" && id.length > 0,
+          ),
+      );
+    } catch (err) {
+      console.error("Failed to load followed courses", err);
+      setFollowedCourseIds([]);
+    }
+  }, [token, logout]);
+
   useEffect(() => {
     if (loading) return;
     if (!token) return;
     loadFeed();
   }, [loading, token, loadFeed]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!token) return;
+    loadFollowedCourses();
+  }, [loading, token, loadFollowedCourses]);
 
   useEffect(() => {
     if (!selectedCourse) return;
@@ -999,6 +1143,52 @@ export default function FeedPage() {
     selectedName.trim().length > 0 &&
     typeof selectedLat === "number" &&
     typeof selectedLon === "number";
+  const handleToggleCourseFollow = useCallback(
+    async (courseId: string) => {
+      if (!token) return;
+      if (courseFollowBusyId) return;
+
+      const currentlyFollowed = followedCourseIds.includes(courseId);
+
+      try {
+        setCourseFollowBusyId(courseId);
+
+        setFollowedCourseIds((prev) =>
+          currentlyFollowed
+            ? prev.filter((id) => id !== courseId)
+            : prev.includes(courseId)
+              ? prev
+              : [...prev, courseId],
+        );
+
+        const res = await fetch(`${API_BASE}/courses/${courseId}/follow`, {
+          method: currentlyFollowed ? "DELETE" : "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          logout();
+          throw new Error("Unauthorized");
+        }
+
+        if (!res.ok) {
+          throw new Error(`Course follow request failed: ${res.status}`);
+        }
+      } catch (err) {
+        setFollowedCourseIds((prev) =>
+          currentlyFollowed
+            ? prev.includes(courseId)
+              ? prev
+              : [...prev, courseId]
+            : prev.filter((id) => id !== courseId),
+        );
+        console.error("Course follow toggle failed", err);
+      } finally {
+        setCourseFollowBusyId(null);
+      }
+    },
+    [token, logout, courseFollowBusyId, followedCourseIds],
+  );
 
   const submitPost = async () => {
     console.log("submitPost clicked", {
@@ -1368,6 +1558,8 @@ export default function FeedPage() {
               const lon = Number(p.course.lon);
               const canSelectCourse =
                 Number.isFinite(lat) && Number.isFinite(lon);
+              const isCourseFollowed = followedCourseIds.includes(p.course.id);
+              const isCourseFollowBusy = courseFollowBusyId === p.course.id;
 
               return (
                 <div key={p.id}>
@@ -1378,15 +1570,20 @@ export default function FeedPage() {
                     onCommentClick={(postId) => setActiveCommentPostId(postId)}
                     onSelectCourse={
                       canSelectCourse
-                        ? () =>
+                        ? () => {
                             setSelectedCourse({
                               id: p.course.id,
                               name: p.course.name,
                               lat,
                               lon,
-                            })
+                            });
+                            nav(`/map?courseId=${p.course.id}`);
+                          }
                         : undefined
                     }
+                    courseFollowed={isCourseFollowed}
+                    courseFollowBusy={isCourseFollowBusy}
+                    onCourseFollowToggle={handleToggleCourseFollow}
                   />
                 </div>
               );
