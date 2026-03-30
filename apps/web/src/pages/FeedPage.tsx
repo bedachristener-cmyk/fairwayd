@@ -2,11 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { API_BASE } from "../api/base";
 import { fileUrl } from "../api/fileUrl";
 import { useAuth } from "../auth/AuthContext";
-import { useSelectedCourse } from "../state/SelectedCourseContext";
 import CourseDropdown, { type CourseLite } from "../components/CourseDropdown";
 import PostCard from "../components/PostCard";
 import { useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
+import { useSelectedCourse } from "../state/SelectedCourseContext";
 
 type PostImage = { id: string; url: string };
 
@@ -24,6 +24,8 @@ type Post = {
   user: {
     id: string;
     handle: string;
+    name?: string | null;
+    avatarUrl?: string | null;
   };
   images?: PostImage[];
   likes?: { userId: string }[];
@@ -110,7 +112,6 @@ function CommentModal({
 }) {
   const { token } = useAuth();
   const nav = useNavigate();
-  const { setSelectedCourse } = useSelectedCourse();
 
   type CommentItem = {
     id: string;
@@ -121,9 +122,11 @@ function CommentModal({
     _count?: {
       likes?: number;
     };
-    user?: {
+    user: {
       id: string;
       handle: string;
+      name?: string | null;
+      avatarUrl?: string | null;
     };
     replies?: CommentItem[];
   };
@@ -153,20 +156,10 @@ function CommentModal({
     ) ?? [];
 
   const handleOpenCourse = () => {
-    const lat = Number(post.course.lat);
-    const lon = Number(post.course.lon);
+    if (!post.course?.id) return;
 
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
-
-    setSelectedCourse({
-      id: post.course.id,
-      name: post.course.name,
-      lat,
-      lon,
-    });
-
-    onClose();
-    nav(`/map?courseId=${post.course.id}`);
+    onClose?.(); // optional, falls vorhanden
+    nav(`/courses/${post.course.id}`);
   };
 
   const loadComments = useCallback(async () => {
@@ -1300,6 +1293,13 @@ export default function FeedPage() {
   const activeCommentPost =
     posts.find((p) => p.id === activeCommentPostId) ?? null;
 
+  const composerBoxStyle: React.CSSProperties = {
+    padding: isMobile ? "0 12px 12px" : 12,
+    borderRadius: isMobile ? 0 : 14,
+    background: "var(--card)",
+    border: isMobile ? "none" : "1px solid var(--border)",
+  };
+
   if (loading) return null;
 
   if (!isAuthenticated) {
@@ -1340,14 +1340,7 @@ export default function FeedPage() {
               paddingBottom: 12,
             }}
           >
-            <div
-              style={{
-                padding: isMobile ? "0 12px 12px" : 12,
-                borderRadius: isMobile ? 0 : 14,
-                background: isMobile ? "transparent" : "var(--muted)",
-                border: isMobile ? "none" : "1px solid var(--border)",
-              }}
-            >
+            <div style={composerBoxStyle}>
               <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                 <div
                   style={{ display: "flex", flexDirection: "column", gap: 8 }}
@@ -1370,7 +1363,14 @@ export default function FeedPage() {
                   ) : null}
                 </div>
 
-                <div style={{ marginLeft: "auto" }}>
+                <div
+                  style={{
+                    marginLeft: "auto",
+                    background: "var(--bg)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 12,
+                  }}
+                >
                   <select
                     value={visibility}
                     onChange={(e) =>
@@ -1379,12 +1379,15 @@ export default function FeedPage() {
                       )
                     }
                     style={{
-                      padding: "8px 10px",
-                      borderRadius: 12,
-                      border: "1px solid var(--border)",
-                      background: "var(--card)",
+                      padding: "10px 12px",
+                      border: "none",
+                      outline: "none",
+                      background: "transparent",
                       color: "var(--text)",
                       fontWeight: 800,
+                      appearance: "none",
+                      WebkitAppearance: "none",
+                      MozAppearance: "none",
                     }}
                     disabled={posting}
                   >
@@ -1410,8 +1413,8 @@ export default function FeedPage() {
                   marginTop: 10,
                   borderRadius: isMobile ? 0 : 12,
                   border: isMobile ? "none" : "1px solid var(--border)",
-                  padding: 10,
-                  background: isMobile ? "transparent" : "var(--card)",
+                  padding: 12,
+                  background: "var(--bg)",
                   color: "var(--text)",
                 }}
                 disabled={posting}
@@ -1571,13 +1574,7 @@ export default function FeedPage() {
                     onSelectCourse={
                       canSelectCourse
                         ? () => {
-                            setSelectedCourse({
-                              id: p.course.id,
-                              name: p.course.name,
-                              lat,
-                              lon,
-                            });
-                            nav(`/map?courseId=${p.course.id}`);
+                            nav(`/courses/${p.course.id}`);
                           }
                         : undefined
                     }

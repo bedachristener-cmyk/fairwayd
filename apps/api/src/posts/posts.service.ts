@@ -88,6 +88,8 @@ export class PostsService {
           select: {
             id: true,
             handle: true,
+            name: true,
+            avatarUrl: true,
           },
         },
         images: true,
@@ -218,6 +220,8 @@ export class PostsService {
           select: {
             id: true,
             handle: true,
+            name: true,
+            avatarUrl: true,
           },
         },
         images: true,
@@ -313,6 +317,8 @@ export class PostsService {
             select: {
               id: true,
               handle: true,
+              name: true,
+              avatarUrl: true,
             },
           },
           images: true,
@@ -450,6 +456,8 @@ export class PostsService {
           select: {
             id: true,
             handle: true,
+            name: true,
+            avatarUrl: true,
           },
         },
         likes: {
@@ -558,6 +566,8 @@ export class PostsService {
           select: {
             id: true,
             handle: true,
+            name: true,
+            avatarUrl: true,
           },
         },
       },

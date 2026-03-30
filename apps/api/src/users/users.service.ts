@@ -166,7 +166,12 @@ export class UsersService {
 
     const profileUser = await this.prisma.user.findUnique({
       where: { handle: safeHandle },
-      select: { id: true, handle: true },
+      select: {
+        id: true,
+        handle: true,
+        name: true,
+        avatarUrl: true,
+      },
     });
 
     if (!profileUser) throw new NotFoundException('User not found');

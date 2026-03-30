@@ -4,7 +4,6 @@ import { API_BASE } from "../api/base";
 import { fileUrl } from "../api/fileUrl";
 import { useAuth } from "../auth/AuthContext";
 import { useMe } from "../auth/useMe";
-import { useSelectedCourse } from "../state/SelectedCourseContext";
 
 import {
   getInitialTheme,
@@ -235,7 +234,6 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
   const nav = useNavigate();
   const loc = useLocation();
   const params = useParams();
-  const { setSelectedCourse } = useSelectedCourse();
 
   const auth = useAuth() as any;
   const tokenFromContext: string =
@@ -1154,13 +1152,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                 onSelectCourse={
                   canSelectCourse
                     ? () => {
-                        setSelectedCourse({
-                          id: p.course.id,
-                          name: p.course.name,
-                          lat,
-                          lon,
-                        });
-                        nav(`/map?courseId=${p.course.id}`);
+                        nav(`/courses/${p.course.id}`);
                       }
                     : undefined
                 }

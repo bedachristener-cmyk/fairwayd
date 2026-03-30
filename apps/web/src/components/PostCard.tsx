@@ -4,12 +4,25 @@ import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
 import { useNavigate } from "react-router-dom";
 
+function avatarSrc(url?: string | null) {
+  if (!url) return null;
+
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
+
+  return fileUrl(url);
+}
+
 type PostImage = {
   url: string | null;
 };
 
 type PostUser = {
+  id?: string;
   handle: string;
+  name?: string | null;
+  avatarUrl?: string | null;
 };
 
 type PostCourse = {
@@ -172,6 +185,8 @@ export default function PostCard({
     ) ?? [];
 
   const createdLabel = new Date(post.createdAt).toLocaleString();
+  const displayName = post.user?.name?.trim() || post.user?.handle || "User";
+  const avatarLabel = displayName.slice(0, 1).toUpperCase();
 
   const actionButtonStyle: React.CSSProperties = {
     background: "transparent",
@@ -300,38 +315,120 @@ export default function PostCard({
 
         <div
           style={{
-            fontSize: 12,
-            color: "var(--sub)",
-            marginTop: 2,
-            lineHeight: 1.4,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginTop: 8,
+            minWidth: 0,
           }}
         >
-          <button
-            type="button"
-            onClick={() => nav(`/u/${post.user.handle}`)}
-            style={{
-              background: "transparent",
-              border: "none",
-              padding: 0,
-              margin: 0,
-              color: "var(--text)",
-              cursor: "pointer",
-              font: "inherit",
-            }}
-            title={`Open @${post.user.handle}`}
-          >
-            @{post.user.handle}
-          </button>
-          {" · "}
-          {createdLabel}
-          {post.visibility && (
-            <>
-              {" · "}
-              {post.visibility === "PUBLIC" && "🌍 Public"}
-              {post.visibility === "FOLLOWERS" && "👥 Followers"}
-              {post.visibility === "PRIVATE" && "🔒 Private"}
-            </>
+          {avatarSrc(post.user?.avatarUrl) ? (
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                minWidth: 32,
+                minHeight: 32,
+                maxWidth: 32,
+                maxHeight: 32,
+                borderRadius: "50%",
+                overflow: "hidden",
+                border: "1px solid var(--border)",
+                flexShrink: 0,
+                background: "var(--muted)",
+              }}
+            >
+              <img
+                className="fw-avatar-img"
+                src={avatarSrc(post.user?.avatarUrl) ?? ""}
+                alt={displayName}
+                loading="lazy"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  minWidth: "100%",
+                  minHeight: "100%",
+                  maxWidth: "100%",
+                  maxHeight: "100%",
+                  objectFit: "cover",
+                  display: "block",
+                  borderRadius: "50%",
+                }}
+              />
+            </div>
+          ) : (
+            <div
+              className="fw-avatar-wrap"
+              style={{
+                width: 32,
+                height: 32,
+                minWidth: 32,
+                minHeight: 32,
+                maxWidth: 32,
+                maxHeight: 32,
+                borderRadius: "50%",
+                overflow: "hidden",
+                border: "1px solid var(--border)",
+                background: "var(--muted)",
+                color: "var(--text)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 12,
+                fontWeight: 800,
+                flexShrink: 0,
+              }}
+            >
+              {avatarLabel}
+            </div>
           )}
+
+          <div style={{ minWidth: 0 }}>
+            <button
+              type="button"
+              onClick={() => nav(`/u/${post.user.handle}`)}
+              style={{
+                background: "transparent",
+                border: "none",
+                padding: 0,
+                margin: 0,
+                color: "var(--text)",
+                cursor: "pointer",
+                textAlign: "left",
+                display: "block",
+                fontSize: 14,
+                fontWeight: 800,
+                lineHeight: 1.2,
+                maxWidth: "100%",
+              }}
+              title={`Open @${post.user.handle}`}
+            >
+              {displayName}
+            </button>
+
+            <div
+              style={{
+                fontSize: 12,
+                color: "var(--sub)",
+                lineHeight: 1.35,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              @{post.user.handle}
+              {" · "}
+              {createdLabel}
+              {post.visibility && (
+                <>
+                  {" · "}
+                  {post.visibility === "PUBLIC" && "🌍 Public"}
+                  {post.visibility === "FOLLOWERS" && "👥 Followers"}
+                  {post.visibility === "PRIVATE" && "🔒 Private"}
+                </>
+              )}
+            </div>
+          </div>
         </div>
 
         <div
@@ -368,12 +465,13 @@ export default function PostCard({
                 onMouseLeave={() => {
                   if (!isMobile) setHoveredImage(null);
                 }}
+                className="fw-post-image-wrap"
                 style={{
                   position: "relative",
                   overflow: "hidden",
-                  borderRadius: 14,
+                  borderRadius: isMobile ? 0 : 12,
                   background: "var(--muted)",
-                  minHeight: 120,
+                  minHeight: 60,
                   border: "1px solid var(--border)",
                   boxShadow: "0 0 0 1px rgba(255,255,255,0.08) inset",
                   cursor: "pointer",
@@ -381,6 +479,7 @@ export default function PostCard({
                 }}
               >
                 <img
+                  className="fw-post-img"
                   src={fileUrl(img.url)}
                   alt="Post image"
                   loading="lazy"

@@ -44,6 +44,8 @@ export class FeedbackService {
           select: {
             id: true,
             handle: true,
+            name: true,
+            avatarUrl: true,
           },
         },
       },

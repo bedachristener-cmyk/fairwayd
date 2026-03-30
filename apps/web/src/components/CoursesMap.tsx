@@ -699,12 +699,6 @@ export default function CoursesMap() {
               }}
               eventHandlers={{
                 click: () => {
-                  setSelectedCourse({
-                    id: c.id,
-                    name: c.name,
-                    lat,
-                    lon,
-                  });
                   nav(`/courses/${c.id}`);
                 },
               }}

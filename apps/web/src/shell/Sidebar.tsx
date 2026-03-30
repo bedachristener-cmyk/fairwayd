@@ -34,7 +34,7 @@ export default function Sidebar() {
           fontWeight: 900,
           fontSize: 20,
           marginBottom: 18,
-          color: "var(--green)",
+          color: "var(--text)",
           letterSpacing: 0.5,
         }}
       >
