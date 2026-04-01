@@ -28,6 +28,7 @@ import ProfilePage from "./pages/ProfilePage";
 import FollowingCoursesPage from "./pages/FollowingCoursesPage";
 import CoursePage from "./pages/CoursePage";
 import FeedbackAdminPage from "./pages/FeedbackAdminPage";
+import UserSearchPage from "./pages/UserSearchPage";
 import StageFeedbackWidget from "./components/StageFeedbackWidget";
 
 /**
@@ -159,6 +160,16 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/users"
+                element={
+                  <ProtectedRoute>
+                    <OnboardingGuard>
+                      <UserSearchPage />
+                    </OnboardingGuard>
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Following courses */}
               <Route
@@ -232,16 +243,6 @@ export default function App() {
               />
 
               {/* Profile (other user by handle) */}
-              <Route
-                path="/u/:handle"
-                element={
-                  <ProtectedRoute>
-                    <OnboardingGuard>
-                      <ProfilePage mode="handle" />
-                    </OnboardingGuard>
-                  </ProtectedRoute>
-                }
-              />
 
               {/* Profile by handle */}
               <Route

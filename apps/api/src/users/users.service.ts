@@ -131,6 +131,47 @@ export class UsersService {
   }
 
   // =========================================================
+  // User search
+  // =========================================================
+
+  async searchUsers(q: string) {
+    const query = q.trim();
+
+    if (!query || query.length < 2) {
+      return [];
+    }
+
+    const items = await this.prisma.user.findMany({
+      where: {
+        OR: [
+          {
+            handle: {
+              contains: query,
+              mode: 'insensitive',
+            },
+          },
+          {
+            name: {
+              contains: query,
+              mode: 'insensitive',
+            },
+          },
+        ],
+      },
+      select: {
+        id: true,
+        handle: true,
+        name: true,
+        avatarUrl: true,
+      },
+      orderBy: [{ name: 'asc' }, { handle: 'asc' }],
+      take: 20,
+    });
+
+    return items;
+  }
+
+  // =========================================================
   // Profile + posts by handle
   // =========================================================
 
@@ -195,6 +236,7 @@ export class UsersService {
       },
     });
   }
+
   async listFollowingUsers(userId: string) {
     const rows = await this.prisma.follow.findMany({
       where: {
@@ -216,6 +258,7 @@ export class UsersService {
 
     return rows;
   }
+
   // =========================================================
   // Follow (Instagram-style: PUBLIC => ACCEPTED, PRIVATE => PENDING)
   // =========================================================
@@ -248,8 +291,6 @@ export class UsersService {
         ? FollowStatus.ACCEPTED
         : FollowStatus.PENDING;
 
-    // idempotent: if already exists, update status accordingly
-    // note: if target switches from PRIVATE -> PUBLIC, a new follow will become ACCEPTED
     const row = await this.prisma.follow.upsert({
       where: {
         followerId_followingId: { followerId: meId, followingId: targetUserId },
@@ -276,7 +317,6 @@ export class UsersService {
     if (meId === targetUserId)
       throw new BadRequestException('Cannot unfollow yourself');
 
-    // deleteMany => idempotent (also cancels pending request)
     await this.prisma.follow.deleteMany({
       where: { followerId: meId, followingId: targetUserId },
     });

@@ -38,6 +38,7 @@ type Post = {
   user: {
     id: string;
     handle: string;
+    name?: string | null;
     avatarUrl?: string | null;
   };
   images?: PostImage[];
@@ -539,7 +540,18 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
         const p = (await pRes.json()) as Post[];
 
         setProfile(u);
-        setPosts(Array.isArray(p) ? p : []);
+        setPosts(
+          Array.isArray(p)
+            ? p.map((post) => ({
+                ...post,
+                user: {
+                  ...post.user,
+                  name: u.name ?? post.user.name ?? null,
+                  avatarUrl: u.avatarUrl ?? post.user.avatarUrl ?? null,
+                },
+              }))
+            : [],
+        );
       } else {
         const pRes = await fetch(
           `${API_BASE}/users/${encodeURIComponent(targetHandle)}/posts`,
@@ -639,9 +651,38 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
   }, [mode, token]);
 
   const title = useMemo(() => {
-    if (profile?.handle) return `@${profile.handle}`;
-    return targetHandle ? `@${targetHandle}` : "Profile";
-  }, [profile?.handle, targetHandle]);
+    const rawName = profile?.name?.trim() ?? "";
+    const rawHandle = profile?.handle?.trim() ?? targetHandle ?? "";
+
+    if (
+      rawName &&
+      rawName.toLowerCase() !== rawHandle.toLowerCase() &&
+      rawName.toLowerCase() !== `@${rawHandle}`.toLowerCase()
+    ) {
+      return rawName;
+    }
+
+    if (rawHandle) return `@${rawHandle}`;
+    return "Profile";
+  }, [profile?.name, profile?.handle, targetHandle]);
+
+  const profileDisplayName = useMemo(() => {
+    const rawName = profile?.name?.trim() ?? "";
+    const rawHandle = profile?.handle?.trim() ?? targetHandle ?? "";
+
+    if (!rawName) return "";
+    if (!rawHandle) return rawName;
+
+    if (rawName.toLowerCase() === rawHandle.toLowerCase()) {
+      return "";
+    }
+
+    if (rawName.toLowerCase() === `@${rawHandle}`.toLowerCase()) {
+      return "";
+    }
+
+    return rawName;
+  }, [profile?.name, profile?.handle, targetHandle]);
 
   const handleToggleCourseFollow = useCallback(
     async (courseId: string) => {
@@ -805,16 +846,48 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
             }}
           >
             <div
-              style={{ fontWeight: 900, fontSize: 16, color: "var(--text)" }}
+              style={{
+                fontWeight: 900,
+                fontSize: 16,
+                color: "var(--text)",
+                lineHeight: 1.2,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
             >
-              {profile?.name?.trim() ? profile.name : "—"}
+              {profileDisplayName ||
+                `@${profile?.handle ?? targetHandle ?? "unknown"}`}
             </div>
 
-            <div style={{ fontSize: 12, color: "var(--sub)" }}>
-              {profile?.createdAt
-                ? `Member since ${prettyDate(profile.createdAt)}`
-                : ""}
-            </div>
+            {profileDisplayName ? (
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "var(--sub)",
+                  lineHeight: 1.35,
+                  marginTop: 2,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                @{profile?.handle ?? targetHandle ?? "unknown"}
+              </div>
+            ) : null}
+
+            {profile?.createdAt ? (
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "var(--sub)",
+                  lineHeight: 1.35,
+                  marginTop: 2,
+                }}
+              >
+                Member since {prettyDate(profile.createdAt)}
+              </div>
+            ) : null}
           </div>
 
           {/* Follow Button (only when viewing someone else) */}

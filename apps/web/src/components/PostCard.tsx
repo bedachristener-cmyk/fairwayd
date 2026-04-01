@@ -253,181 +253,222 @@ export default function PostCard({
         <div
           style={{
             display: "flex",
-            alignItems: "center",
-            gap: 8,
-            flexWrap: "wrap",
-          }}
-        >
-          <button
-            type="button"
-            onClick={onSelectCourse}
-            disabled={!onSelectCourse}
-            title={onSelectCourse ? "Open this course" : undefined}
-            style={{
-              background: "transparent",
-              border: "none",
-              padding: 0,
-              margin: 0,
-              fontWeight: 900,
-              fontSize: 16,
-              color: "var(--text)",
-              cursor: onSelectCourse ? "pointer" : "default",
-              textAlign: "left",
-            }}
-          >
-            {post.course.name}
-          </button>
-
-          {onCourseFollowToggle ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onCourseFollowToggle(post.course.id);
-              }}
-              disabled={courseFollowBusy}
-              style={{
-                padding: "4px 10px",
-                borderRadius: 999,
-                border: courseFollowed
-                  ? "1px solid rgba(39,196,107,0.35)"
-                  : "1px solid var(--border)",
-                background: courseFollowed
-                  ? "rgba(39,196,107,0.16)"
-                  : "var(--bg)",
-                color: "var(--text)",
-                fontWeight: 800,
-                fontSize: 12,
-                cursor: courseFollowBusy ? "default" : "pointer",
-                opacity: courseFollowBusy ? 0.6 : 1,
-              }}
-              title={courseFollowed ? "Unfollow course" : "Follow course"}
-            >
-              {courseFollowBusy
-                ? "..."
-                : courseFollowed
-                  ? "Following"
-                  : "Follow"}
-            </button>
-          ) : null}
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            marginTop: 8,
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 12,
             minWidth: 0,
           }}
         >
-          {avatarSrc(post.user?.avatarUrl) ? (
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                minWidth: 32,
-                minHeight: 32,
-                maxWidth: 32,
-                maxHeight: 32,
-                borderRadius: "50%",
-                overflow: "hidden",
-                border: "1px solid var(--border)",
-                flexShrink: 0,
-                background: "var(--muted)",
-              }}
-            >
-              <img
-                className="fw-avatar-img"
-                src={avatarSrc(post.user?.avatarUrl) ?? ""}
-                alt={displayName}
-                loading="lazy"
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 10,
+              minWidth: 0,
+              flex: 1,
+            }}
+          >
+            {avatarSrc(post.user?.avatarUrl) ? (
+              <div
                 style={{
-                  width: "100%",
-                  height: "100%",
-                  minWidth: "100%",
-                  minHeight: "100%",
-                  maxWidth: "100%",
-                  maxHeight: "100%",
-                  objectFit: "cover",
-                  display: "block",
+                  width: 36,
+                  height: 36,
+                  minWidth: 36,
+                  minHeight: 36,
+                  maxWidth: 36,
+                  maxHeight: 36,
                   borderRadius: "50%",
+                  overflow: "hidden",
+                  border: "1px solid var(--border)",
+                  flexShrink: 0,
+                  background: "var(--muted)",
                 }}
-              />
-            </div>
-          ) : (
-            <div
-              className="fw-avatar-wrap"
-              style={{
-                width: 32,
-                height: 32,
-                minWidth: 32,
-                minHeight: 32,
-                maxWidth: 32,
-                maxHeight: 32,
-                borderRadius: "50%",
-                overflow: "hidden",
-                border: "1px solid var(--border)",
-                background: "var(--muted)",
-                color: "var(--text)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 12,
-                fontWeight: 800,
-                flexShrink: 0,
-              }}
-            >
-              {avatarLabel}
-            </div>
-          )}
+              >
+                <img
+                  className="fw-avatar-img"
+                  src={avatarSrc(post.user?.avatarUrl) ?? ""}
+                  alt={displayName}
+                  loading="lazy"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    minWidth: "100%",
+                    minHeight: "100%",
+                    maxWidth: "100%",
+                    maxHeight: "100%",
+                    objectFit: "cover",
+                    display: "block",
+                    borderRadius: "50%",
+                  }}
+                />
+              </div>
+            ) : (
+              <div
+                className="fw-avatar-wrap"
+                style={{
+                  width: 36,
+                  height: 36,
+                  minWidth: 36,
+                  minHeight: 36,
+                  maxWidth: 36,
+                  maxHeight: 36,
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                  border: "1px solid var(--border)",
+                  background: "var(--muted)",
+                  color: "var(--text)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 12,
+                  fontWeight: 800,
+                  flexShrink: 0,
+                }}
+              >
+                {avatarLabel}
+              </div>
+            )}
 
-          <div style={{ minWidth: 0 }}>
-            <button
-              type="button"
-              onClick={() => nav(`/u/${post.user.handle}`)}
-              style={{
-                background: "transparent",
-                border: "none",
-                padding: 0,
-                margin: 0,
-                color: "var(--text)",
-                cursor: "pointer",
-                textAlign: "left",
-                display: "block",
-                fontSize: 14,
-                fontWeight: 800,
-                lineHeight: 1.2,
-                maxWidth: "100%",
-              }}
-              title={`Open @${post.user.handle}`}
-            >
-              {displayName}
-            </button>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <button
+                type="button"
+                onClick={() => nav(`/u/${post.user.handle}`)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  padding: 0,
+                  margin: 0,
+                  color: "var(--text)",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  display: "block",
+                  fontSize: 14,
+                  fontWeight: 800,
+                  lineHeight: 1.2,
+                  maxWidth: "100%",
+                }}
+                title={`Open @${post.user.handle}`}
+              >
+                {displayName}
+              </button>
 
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "var(--sub)",
+                  lineHeight: 1.35,
+                  marginTop: 2,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                @{post.user.handle}
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  flexWrap: "wrap",
+                  marginTop: 6,
+                  minWidth: 0,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={onSelectCourse}
+                  disabled={!onSelectCourse}
+                  title={onSelectCourse ? "Open this course" : undefined}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    padding: 0,
+                    margin: 0,
+                    fontWeight: 700,
+                    fontSize: 13,
+                    color: "var(--text)",
+                    cursor: onSelectCourse ? "pointer" : "default",
+                    textAlign: "left",
+                    minWidth: 0,
+                  }}
+                >
+                  ⛳ {post.course.name}
+                </button>
+
+                {onCourseFollowToggle ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onCourseFollowToggle(post.course.id);
+                    }}
+                    disabled={courseFollowBusy}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: 999,
+                      border: courseFollowed
+                        ? "1px solid rgba(39,196,107,0.35)"
+                        : "1px solid var(--border)",
+                      background: courseFollowed
+                        ? "rgba(39,196,107,0.16)"
+                        : "var(--bg)",
+                      color: "var(--text)",
+                      fontWeight: 800,
+                      fontSize: 12,
+                      cursor: courseFollowBusy ? "default" : "pointer",
+                      opacity: courseFollowBusy ? 0.6 : 1,
+                    }}
+                    title={courseFollowed ? "Unfollow course" : "Follow course"}
+                  >
+                    {courseFollowBusy
+                      ? "..."
+                      : courseFollowed
+                        ? "Following"
+                        : "Follow"}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-end",
+              gap: 4,
+              flexShrink: 0,
+              textAlign: "right",
+            }}
+          >
             <div
               style={{
                 fontSize: 12,
                 color: "var(--sub)",
-                lineHeight: 1.35,
+                lineHeight: 1.2,
                 whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
               }}
             >
-              @{post.user.handle}
-              {" · "}
               {createdLabel}
-              {post.visibility && (
-                <>
-                  {" · "}
-                  {post.visibility === "PUBLIC" && "🌍 Public"}
-                  {post.visibility === "FOLLOWERS" && "👥 Followers"}
-                  {post.visibility === "PRIVATE" && "🔒 Private"}
-                </>
-              )}
             </div>
+
+            {post.visibility ? (
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "var(--sub)",
+                  lineHeight: 1.2,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {post.visibility === "PUBLIC" && "🌍 Public"}
+                {post.visibility === "FOLLOWERS" && "👥 Followers"}
+                {post.visibility === "PRIVATE" && "🔒 Private"}
+              </div>
+            ) : null}
           </div>
         </div>
 

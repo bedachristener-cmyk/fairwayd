@@ -1426,15 +1426,52 @@ export default function FeedPage() {
                   gap: 10,
                   alignItems: "center",
                   marginTop: 10,
-                  flexWrap: isMobile ? "wrap" : "nowrap",
+                  flexWrap: "wrap",
                 }}
               >
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                  disabled={posting}
-                />
+                <label
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "8px 12px",
+                    borderRadius: 999,
+                    border: "1px solid var(--border)",
+                    background: "var(--bg)",
+                    color: posting ? "var(--sub)" : "var(--text)",
+                    fontWeight: 700,
+                    fontSize: 12,
+                    cursor: posting ? "default" : "pointer",
+                    opacity: posting ? 0.6 : 1,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  📷 Add image
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                    disabled={posting}
+                    style={{ display: "none" }}
+                  />
+                </label>
+
+                {file ? (
+                  <span
+                    style={{
+                      fontSize: 12,
+                      color: "var(--sub)",
+                      minWidth: 0,
+                      maxWidth: isMobile ? "100%" : 220,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                    title={file.name}
+                  >
+                    {file.name}
+                  </span>
+                ) : null}
 
                 <div
                   style={{
@@ -1470,7 +1507,9 @@ export default function FeedPage() {
 
                   <button
                     onClick={submitPost}
-                    disabled={posting || (!draft.trim() && !file)}
+                    disabled={
+                      posting || !selectedCourse || (!draft.trim() && !file)
+                    }
                     style={{
                       padding: "10px 16px",
                       borderRadius: 999,

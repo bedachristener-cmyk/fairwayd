@@ -7,6 +7,7 @@ import {
   Delete,
   Req,
   UploadedFile,
+  Query,
   UseGuards,
   UseInterceptors,
   Param,
@@ -219,6 +220,19 @@ export class UsersController {
     if (!ok) throw new NotFoundException('Request not found');
 
     return { ok: true };
+  }
+
+  // ---------------------------------------------------------
+  // Search
+  // Wichtig:
+  // - search BEFORE :handle/posts and :handle
+  // - keep after "me" routes, otherwise "me" could match :handle
+  // ---------------------------------------------------------
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('search')
+  searchUsers(@Query('q') q?: string) {
+    return this.users.searchUsers(q ?? '');
   }
 
   // ---------------------------------------------------------
