@@ -197,6 +197,17 @@ export class UsersController {
   }
 
   @UseGuards(AuthGuard('jwt'))
+  @Get('me/followers')
+  @ApiOperation({ summary: 'List users following the current user' })
+  async myFollowers(@Req() req: any) {
+    const meId = req?.user?.userId ?? req?.user?.id;
+    if (!meId) return { items: [] };
+
+    const items = await this.users.listFollowerUsers(meId);
+    return { items };
+  }
+
+  @UseGuards(AuthGuard('jwt'))
   @Post('me/follow-requests/:followerId/accept')
   @ApiOperation({ summary: 'Accept a follow request' })
   async acceptFollow(@Req() req: any, @Param('followerId') followerId: string) {
