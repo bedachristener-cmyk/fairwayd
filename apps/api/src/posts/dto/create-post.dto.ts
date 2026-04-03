@@ -9,6 +9,7 @@ import {
 export enum VisibilityDto {
   FOLLOWERS = 'FOLLOWERS',
   PUBLIC = 'PUBLIC',
+  PRIVATE = 'PRIVATE',
 }
 
 export class CreatePostDto {

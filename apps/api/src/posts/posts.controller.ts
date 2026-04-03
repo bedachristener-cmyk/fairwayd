@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -28,6 +29,11 @@ type CreatePostBody = {
 type CreateCommentBody = {
   content: string;
   parentId?: string;
+};
+
+type UpdatePostBody = {
+  content?: string;
+  visibility?: 'PUBLIC' | 'FOLLOWERS' | 'PRIVATE';
 };
 
 @Controller('posts')
@@ -109,6 +115,24 @@ export class PostsController {
   async toggleCommentLike(@Param('id') id: string, @Req() req: any) {
     const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
     return this.posts.toggleCommentLike(id, userId);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Patch(':id')
+  async updatePost(
+    @Param('id') id: string,
+    @Req() req: any,
+    @Body() body: UpdatePostBody,
+  ) {
+    const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
+    return this.posts.updatePost(id, userId, body);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Delete(':id')
+  async deletePost(@Param('id') id: string, @Req() req: any) {
+    const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
+    return this.posts.deletePost(id, userId);
   }
 
   @UseGuards(AuthGuard('jwt'))

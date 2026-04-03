@@ -12,6 +12,11 @@ type CreatePostBody = {
   visibility?: 'PUBLIC' | 'FOLLOWERS' | 'PRIVATE';
 };
 
+type UpdatePostBody = {
+  content?: string;
+  visibility?: 'PUBLIC' | 'FOLLOWERS' | 'PRIVATE';
+};
+
 @Injectable()
 export class PostsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -327,6 +332,109 @@ export class PostsService {
     } catch (e: any) {
       throw new BadRequestException(e?.message ?? 'Failed to create post');
     }
+  }
+
+  async updatePost(postId: string, userId: string, body: UpdatePostBody) {
+    const pid = postId?.trim();
+    const uid = userId?.trim();
+
+    if (!pid) throw new BadRequestException('Missing postId');
+    if (!uid) throw new BadRequestException('Missing userId');
+
+    const post = await this.prisma.post.findUnique({
+      where: { id: pid },
+      select: { id: true, userId: true },
+    });
+
+    if (!post) {
+      throw new BadRequestException(`Unknown postId ${pid}`);
+    }
+
+    if (post.userId !== uid) {
+      throw new UnauthorizedException('You can only edit your own posts');
+    }
+
+    const data: Prisma.PostUpdateInput = {};
+
+    if (typeof body?.content === 'string') {
+      const trimmedContent = body.content.trim();
+      data.content = trimmedContent;
+    }
+
+    if (typeof body?.visibility === 'string') {
+      data.visibility =
+        body.visibility === 'PRIVATE'
+          ? Visibility.PRIVATE
+          : body.visibility === 'FOLLOWERS'
+            ? Visibility.FOLLOWERS
+            : Visibility.PUBLIC;
+    }
+
+    if (Object.keys(data).length === 0) {
+      throw new BadRequestException('Nothing to update');
+    }
+
+    if (
+      Object.prototype.hasOwnProperty.call(data, 'content') &&
+      !data.content &&
+      body?.visibility === undefined
+    ) {
+      throw new BadRequestException('Content cannot be empty');
+    }
+
+    return this.prisma.post.update({
+      where: { id: pid },
+      data,
+      include: {
+        course: true,
+        user: {
+          select: {
+            id: true,
+            handle: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+        images: true,
+        likes: {
+          select: {
+            userId: true,
+          },
+        },
+        _count: {
+          select: {
+            comments: true,
+          },
+        },
+      },
+    });
+  }
+
+  async deletePost(postId: string, userId: string) {
+    const pid = postId?.trim();
+    const uid = userId?.trim();
+
+    if (!pid) throw new BadRequestException('Missing postId');
+    if (!uid) throw new BadRequestException('Missing userId');
+
+    const post = await this.prisma.post.findUnique({
+      where: { id: pid },
+      select: { id: true, userId: true },
+    });
+
+    if (!post) {
+      throw new BadRequestException(`Unknown postId ${pid}`);
+    }
+
+    if (post.userId !== uid) {
+      throw new UnauthorizedException('You can only delete your own posts');
+    }
+
+    await this.prisma.post.delete({
+      where: { id: pid },
+    });
+
+    return { ok: true, id: pid };
   }
 
   async likePost(postId: string, userId: string) {

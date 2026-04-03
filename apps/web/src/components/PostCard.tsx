@@ -55,17 +55,22 @@ type PostCardProps = {
   courseFollowed?: boolean;
   courseFollowBusy?: boolean;
   onCourseFollowToggle?: (courseId: string) => void;
+
+  onPostUpdated?: (updatedPost: any) => void;
+  onPostDeleted?: (postId: string) => void;
 };
 
 export default function PostCard({
   post,
   isMobile,
-  isCommentTarget = false,
+  isCommentTarget,
   onSelectCourse,
   onCommentClick,
-  courseFollowed = false,
-  courseFollowBusy = false,
+  courseFollowed,
+  courseFollowBusy,
   onCourseFollowToggle,
+  onPostUpdated,
+  onPostDeleted,
 }: PostCardProps) {
   const { token, user } = useAuth();
 
@@ -187,6 +192,141 @@ export default function PostCard({
   const createdLabel = new Date(post.createdAt).toLocaleString();
   const displayName = post.user?.name?.trim() || post.user?.handle || "User";
   const avatarLabel = displayName.slice(0, 1).toUpperCase();
+
+  const auth = useAuth() as any;
+
+  const viewerId =
+    auth?.user?.id || auth?.me?.id || auth?.user?.sub || auth?.me?.sub || null;
+
+  const isOwnPost =
+    !!viewerId &&
+    (post.user?.id === viewerId ||
+      (post as any).userId === viewerId ||
+      (post as any).feedContext?.isSelf === true);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [saveBusy, setSaveBusy] = useState(false);
+  const [editError, setEditError] = useState("");
+
+  const [localContent, setLocalContent] = useState(post.content ?? "");
+  const [localVisibility, setLocalVisibility] = useState<
+    "PUBLIC" | "FOLLOWERS" | "PRIVATE"
+  >((post.visibility as "PUBLIC" | "FOLLOWERS" | "PRIVATE") ?? "PUBLIC");
+
+  const [editContent, setEditContent] = useState(post.content ?? "");
+  const [editVisibility, setEditVisibility] = useState<
+    "PUBLIC" | "FOLLOWERS" | "PRIVATE"
+  >((post.visibility as "PUBLIC" | "FOLLOWERS" | "PRIVATE") ?? "PUBLIC");
+
+  useEffect(() => {
+    setLocalContent(post.content ?? "");
+    setLocalVisibility(
+      (post.visibility as "PUBLIC" | "FOLLOWERS" | "PRIVATE") ?? "PUBLIC",
+    );
+    setEditContent(post.content ?? "");
+    setEditVisibility(
+      (post.visibility as "PUBLIC" | "FOLLOWERS" | "PRIVATE") ?? "PUBLIC",
+    );
+    setIsEditing(false);
+    setEditError("");
+  }, [post.id, post.content, post.visibility]);
+
+  async function handleSaveEdit() {
+    if (!auth?.token) return;
+
+    const trimmed = editContent.trim();
+    const currentTrimmed = (localContent ?? "").trim();
+
+    if (!trimmed && currentTrimmed) {
+      setEditError("Post content cannot be empty.");
+      return;
+    }
+
+    try {
+      setSaveBusy(true);
+      setEditError("");
+
+      const payload: {
+        content?: string;
+        visibility: "PUBLIC" | "FOLLOWERS" | "PRIVATE";
+      } = {
+        visibility: editVisibility,
+      };
+
+      if (trimmed) {
+        payload.content = trimmed;
+      }
+
+      const res = await fetch(`${API_BASE}/posts/${post.id}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${auth.token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to update post: ${res.status}`);
+      }
+
+      const updated = await res.json();
+
+      setLocalContent(updated?.content ?? localContent);
+      setLocalVisibility(
+        (updated?.visibility as "PUBLIC" | "FOLLOWERS" | "PRIVATE") ??
+          editVisibility,
+      );
+
+      setEditContent(updated?.content ?? editContent);
+      setEditVisibility(
+        (updated?.visibility as "PUBLIC" | "FOLLOWERS" | "PRIVATE") ??
+          editVisibility,
+      );
+
+      onPostUpdated?.(updated);
+
+      setIsEditing(false);
+    } catch (err) {
+      console.error("Post update failed", err);
+      setEditError("Could not save changes.");
+    } finally {
+      setSaveBusy(false);
+    }
+  }
+
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
+  async function handleDeletePost() {
+    if (!auth?.token) return;
+    if (deleteBusy) return;
+
+    const confirmed = window.confirm("Do you really want to delete this post?");
+
+    if (!confirmed) return;
+
+    try {
+      setDeleteBusy(true);
+
+      const res = await fetch(`${API_BASE}/posts/${post.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${auth.token}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to delete post: ${res.status}`);
+      }
+
+      onPostDeleted?.(post.id);
+    } catch (err) {
+      console.error("Post delete failed", err);
+      window.alert("Could not delete post.");
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
 
   const actionButtonStyle: React.CSSProperties = {
     background: "transparent",
@@ -455,7 +595,7 @@ export default function PostCard({
               {createdLabel}
             </div>
 
-            {post.visibility ? (
+            {localVisibility ? (
               <div
                 style={{
                   fontSize: 11,
@@ -464,24 +604,201 @@ export default function PostCard({
                   whiteSpace: "nowrap",
                 }}
               >
-                {post.visibility === "PUBLIC" && "🌍 Public"}
-                {post.visibility === "FOLLOWERS" && "👥 Followers"}
-                {post.visibility === "PRIVATE" && "🔒 Private"}
+                {localVisibility === "PUBLIC" && "🌍 Public"}
+                {localVisibility === "FOLLOWERS" && "👥 Followers"}
+                {localVisibility === "PRIVATE" && "🔒 Private"}
+              </div>
+            ) : null}
+            {isOwnPost ? (
+              <div
+                style={{
+                  marginTop: 4,
+                  display: "flex",
+                  gap: 10,
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditContent(localContent);
+                    setEditVisibility(localVisibility);
+                    setEditError("");
+                    setIsEditing((v) => !v);
+                  }}
+                  title={isEditing ? "Close edit" : "Edit post"}
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    padding: 0,
+                    margin: 0,
+                    color: "var(--sub)",
+                    fontSize: isMobile ? 18 : 16,
+                    lineHeight: 1,
+                    cursor: "pointer",
+                    borderRadius: 999,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: isMobile ? 24 : 22,
+                    height: isMobile ? 24 : 22,
+                  }}
+                >
+                  {isEditing ? "✖️" : "✏️"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDeletePost}
+                  disabled={deleteBusy}
+                  title="Delete post"
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    padding: 0,
+                    margin: 0,
+                    color: deleteBusy ? "var(--sub)" : "rgb(255,170,170)",
+                    fontSize: isMobile ? 18 : 16,
+                    lineHeight: 1,
+                    cursor: deleteBusy ? "default" : "pointer",
+                    borderRadius: 999,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: isMobile ? 24 : 22,
+                    height: isMobile ? 24 : 22,
+                    opacity: deleteBusy ? 0.6 : 1,
+                  }}
+                >
+                  🗑️
+                </button>
               </div>
             ) : null}
           </div>
         </div>
 
-        <div
-          style={{
-            marginTop: 8,
-            whiteSpace: "pre-wrap",
-            lineHeight: 1.5,
-            wordBreak: "break-word",
-          }}
-        >
-          {post.content}
-        </div>
+        {isEditing ? (
+          <div
+            style={{
+              marginTop: 10,
+              display: "grid",
+              gap: 10,
+            }}
+          >
+            <textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              rows={4}
+              style={{
+                width: "100%",
+                resize: "vertical",
+                padding: "10px 12px",
+                borderRadius: 12,
+                border: "1px solid var(--border)",
+                background: "var(--bg)",
+                color: "var(--text)",
+                boxSizing: "border-box",
+                font: "inherit",
+                lineHeight: 1.5,
+              }}
+            />
+
+            <select
+              value={editVisibility}
+              onChange={(e) =>
+                setEditVisibility(
+                  e.target.value as "PUBLIC" | "FOLLOWERS" | "PRIVATE",
+                )
+              }
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 12,
+                border: "1px solid var(--border)",
+                background: "var(--bg)",
+                color: "var(--text)",
+                boxSizing: "border-box",
+                font: "inherit",
+              }}
+            >
+              <option value="PUBLIC">🌍 Public</option>
+              <option value="FOLLOWERS">👥 Followers</option>
+              <option value="PRIVATE">🔒 Private</option>
+            </select>
+
+            {editError ? (
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "#ff9a9a",
+                }}
+              >
+                {editError}
+              </div>
+            ) : null}
+
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                type="button"
+                onClick={handleSaveEdit}
+                disabled={saveBusy}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: 999,
+                  border: "1px solid rgba(39,196,107,0.35)",
+                  background: "rgba(39,196,107,0.16)",
+                  color: "var(--text)",
+                  fontWeight: 800,
+                  cursor: saveBusy ? "default" : "pointer",
+                  opacity: saveBusy ? 0.7 : 1,
+                }}
+              >
+                {saveBusy ? "Saving..." : "Save"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setEditContent(localContent);
+                  setEditVisibility(localVisibility);
+                  setEditError("");
+                  setIsEditing(false);
+                }}
+                disabled={saveBusy}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: 999,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg)",
+                  color: "var(--text)",
+                  fontWeight: 800,
+                  cursor: saveBusy ? "default" : "pointer",
+                  opacity: saveBusy ? 0.7 : 1,
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div
+            style={{
+              marginTop: 8,
+              whiteSpace: "pre-wrap",
+              lineHeight: 1.5,
+              wordBreak: "break-word",
+            }}
+          >
+            {localContent}
+          </div>
+        )}
       </div>
 
       {validImages.length > 0 ? (

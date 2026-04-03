@@ -1619,7 +1619,24 @@ export default function FeedPage() {
                     }
                     courseFollowed={isCourseFollowed}
                     courseFollowBusy={isCourseFollowBusy}
+                    onPostDeleted={(postId) => {
+                      setPosts((prev) =>
+                        prev.filter((item) => item.id !== postId),
+                      );
+                    }}
                     onCourseFollowToggle={handleToggleCourseFollow}
+                    onPostUpdated={(updatedPost) => {
+                      setPosts((prev) =>
+                        prev.map((item) =>
+                          item.id === updatedPost.id
+                            ? {
+                                ...item,
+                                ...updatedPost,
+                              }
+                            : item,
+                        ),
+                      );
+                    }}
                   />
                 </div>
               );
