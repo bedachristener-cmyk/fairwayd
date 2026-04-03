@@ -1366,9 +1366,12 @@ export default function FeedPage() {
                 <div
                   style={{
                     marginLeft: "auto",
-                    background: "var(--bg)",
-                    border: "1px solid var(--border)",
+                    background: "var(--card)",
+                    border: "1px solid var(--line, var(--border))",
                     borderRadius: 12,
+                    paddingRight: 10,
+                    display: "flex",
+                    alignItems: "center",
                   }}
                 >
                   <select
@@ -1382,18 +1385,44 @@ export default function FeedPage() {
                       padding: "10px 12px",
                       border: "none",
                       outline: "none",
-                      background: "transparent",
+                      background: "var(--card)",
                       color: "var(--text)",
                       fontWeight: 800,
                       appearance: "none",
                       WebkitAppearance: "none",
                       MozAppearance: "none",
+                      borderRadius: 12,
+                      cursor: posting ? "default" : "pointer",
                     }}
                     disabled={posting}
                   >
-                    <option value="PUBLIC">🌍 Public</option>
-                    <option value="FOLLOWERS">👥 Followers</option>
-                    <option value="PRIVATE">🔒 Private</option>
+                    <option
+                      value="PUBLIC"
+                      style={{
+                        background: "var(--card)",
+                        color: "var(--text)",
+                      }}
+                    >
+                      🌍 Public
+                    </option>
+                    <option
+                      value="FOLLOWERS"
+                      style={{
+                        background: "var(--card)",
+                        color: "var(--text)",
+                      }}
+                    >
+                      👥 Followers
+                    </option>
+                    <option
+                      value="PRIVATE"
+                      style={{
+                        background: "var(--card)",
+                        color: "var(--text)",
+                      }}
+                    >
+                      🔒 Private
+                    </option>
                   </select>
                 </div>
               </div>

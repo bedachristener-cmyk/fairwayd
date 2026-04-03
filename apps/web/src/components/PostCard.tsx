@@ -205,6 +205,26 @@ export default function PostCard({
       (post as any).feedContext?.isSelf === true);
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!isMenuOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!menuRef.current) return;
+
+      const target = event.target;
+      if (target instanceof Node && !menuRef.current.contains(target)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+    };
+  }, [isMenuOpen]);
   const [saveBusy, setSaveBusy] = useState(false);
   const [editError, setEditError] = useState("");
 
@@ -611,68 +631,117 @@ export default function PostCard({
             ) : null}
             {isOwnPost ? (
               <div
+                ref={menuRef}
                 style={{
                   marginTop: 4,
                   display: "flex",
-                  gap: 10,
                   alignItems: "center",
                   justifyContent: "flex-end",
+                  position: "relative",
                 }}
               >
                 <button
                   type="button"
                   onClick={() => {
-                    setEditContent(localContent);
-                    setEditVisibility(localVisibility);
-                    setEditError("");
-                    setIsEditing((v) => !v);
+                    setIsMenuOpen((v) => !v);
                   }}
-                  title={isEditing ? "Close edit" : "Edit post"}
+                  title="Post actions"
+                  aria-label="Post actions"
                   style={{
                     border: "none",
-                    background: "transparent",
+                    background: isMenuOpen
+                      ? "rgba(255,255,255,0.08)"
+                      : "transparent",
                     padding: 0,
                     margin: 0,
                     color: "var(--sub)",
-                    fontSize: isMobile ? 18 : 16,
+                    fontSize: isMobile ? 20 : 18,
                     lineHeight: 1,
                     cursor: "pointer",
                     borderRadius: 999,
                     display: "inline-flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    width: isMobile ? 24 : 22,
-                    height: isMobile ? 24 : 22,
+                    width: isMobile ? 32 : 30,
+                    height: isMobile ? 32 : 30,
+                    transition: "background 0.15s ease, transform 0.15s ease",
                   }}
                 >
-                  {isEditing ? "✖️" : "✏️"}
+                  ⋮
                 </button>
 
-                <button
-                  type="button"
-                  onClick={handleDeletePost}
-                  disabled={deleteBusy}
-                  title="Delete post"
-                  style={{
-                    border: "none",
-                    background: "transparent",
-                    padding: 0,
-                    margin: 0,
-                    color: deleteBusy ? "var(--sub)" : "rgb(255,170,170)",
-                    fontSize: isMobile ? 18 : 16,
-                    lineHeight: 1,
-                    cursor: deleteBusy ? "default" : "pointer",
-                    borderRadius: 999,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: isMobile ? 24 : 22,
-                    height: isMobile ? 24 : 22,
-                    opacity: deleteBusy ? 0.6 : 1,
-                  }}
-                >
-                  🗑️
-                </button>
+                {isMenuOpen ? (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: isMobile ? 34 : 30,
+                      right: 0,
+                      minWidth: isMobile ? 170 : 156,
+                      background: "var(--card)",
+                      border: "1px solid var(--line, rgba(255,255,255,0.08))",
+                      borderRadius: 18,
+                      boxShadow: "0 18px 40px rgba(0,0,0,0.24)",
+                      padding: 8,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 6,
+                      zIndex: 30,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditContent(localContent);
+                        setEditVisibility(localVisibility);
+                        setEditError("");
+                        setIsEditing(true);
+                        setIsMenuOpen(false);
+                      }}
+                      style={{
+                        border: "none",
+                        background: "rgba(255,255,255,0.03)",
+                        color: "var(--text)",
+                        textAlign: "left",
+                        padding: isMobile ? "11px 12px" : "10px 12px",
+                        borderRadius: 14,
+                        cursor: "pointer",
+                        fontSize: 14,
+                        display: "flex",
+                        alignItems: "center",
+                        width: "100%",
+                        minHeight: isMobile ? 40 : 36,
+                      }}
+                    >
+                      Edit post
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        handleDeletePost();
+                      }}
+                      disabled={deleteBusy}
+                      style={{
+                        border: "none",
+                        background: "var(--danger-soft)",
+                        color: deleteBusy ? "var(--sub)" : "var(--danger)",
+                        textAlign: "left",
+                        padding: isMobile ? "11px 12px" : "10px 12px",
+                        borderRadius: 14,
+                        cursor: deleteBusy ? "default" : "pointer",
+                        fontSize: 14,
+                        opacity: deleteBusy ? 0.6 : 1,
+                        display: "flex",
+                        alignItems: "center",
+                        width: "100%",
+                        minHeight: isMobile ? 40 : 36,
+                      }}
+                    >
+                      Delete post
+                    </button>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>
