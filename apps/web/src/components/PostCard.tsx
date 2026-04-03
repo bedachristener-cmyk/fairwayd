@@ -41,7 +41,9 @@ type Post = {
   course: PostCourse;
   images?: PostImage[];
   likes?: { userId: string }[];
+  comments?: unknown[];
   _count?: {
+    likes?: number;
     comments?: number;
   };
 };
@@ -76,11 +78,23 @@ export default function PostCard({
 
   const currentUserId = user?.id ?? null;
 
-  const [liked, setLiked] = useState(
+  const initialLiked =
     post.likes?.some((l: { userId: string }) => l.userId === currentUserId) ??
-      false,
-  );
-  const [likeCount, setLikeCount] = useState(post.likes?.length ?? 0);
+    false;
+
+  const initialLikeCount =
+    typeof post._count?.likes === "number"
+      ? post._count.likes
+      : (post.likes?.length ?? 0);
+
+  const initialCommentCount =
+    typeof post._count?.comments === "number"
+      ? post._count.comments
+      : (post.comments?.length ?? 0);
+
+  const [liked, setLiked] = useState(initialLiked);
+  const [likeCount, setLikeCount] = useState(initialLikeCount);
+  const [commentCount, setCommentCount] = useState(initialCommentCount);
   const [likeBusy, setLikeBusy] = useState(false);
   const [showHeart, setShowHeart] = useState(false);
   const [lastTap, setLastTap] = useState(0);
@@ -247,9 +261,36 @@ export default function PostCard({
     setEditVisibility(
       (post.visibility as "PUBLIC" | "FOLLOWERS" | "PRIVATE") ?? "PUBLIC",
     );
+
+    const nextLiked =
+      post.likes?.some((l: { userId: string }) => l.userId === currentUserId) ??
+      false;
+
+    const nextLikeCount =
+      typeof post._count?.likes === "number"
+        ? post._count.likes
+        : (post.likes?.length ?? 0);
+
+    const nextCommentCount =
+      typeof post._count?.comments === "number"
+        ? post._count.comments
+        : (post.comments?.length ?? 0);
+
+    setLiked(nextLiked);
+    setLikeCount(nextLikeCount);
+    setCommentCount(nextCommentCount);
+
     setIsEditing(false);
     setEditError("");
-  }, [post.id, post.content, post.visibility]);
+  }, [
+    post.id,
+    post.content,
+    post.visibility,
+    post.likes,
+    post.comments,
+    post._count,
+    currentUserId,
+  ]);
 
   async function handleSaveEdit() {
     if (!auth?.token) return;
@@ -987,10 +1028,11 @@ export default function PostCard({
         </button>
 
         <button
+          type="button"
           style={actionButtonStyle}
           onClick={() => onCommentClick?.(post.id)}
         >
-          💬 Comments {post._count?.comments ?? 0}
+          💬 Comments {commentCount}
         </button>
 
         <button

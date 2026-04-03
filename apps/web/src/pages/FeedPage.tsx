@@ -360,9 +360,32 @@ function CommentModal({
                   background: "var(--card)",
                 }}
               >
-                <div style={{ fontWeight: 700 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const handle = reply.user?.handle?.trim();
+                    if (!handle) return;
+                    nav(`/u/${handle}`);
+                  }}
+                  disabled={!reply.user?.handle}
+                  title={
+                    reply.user?.handle
+                      ? `Open @${reply.user.handle}`
+                      : undefined
+                  }
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    padding: 0,
+                    margin: 0,
+                    fontWeight: 700,
+                    color: "var(--text)",
+                    cursor: reply.user?.handle ? "pointer" : "default",
+                    textAlign: "left",
+                  }}
+                >
                   @{reply.user?.handle ?? "user"}
-                </div>
+                </button>
 
                 <div
                   style={{
@@ -523,9 +546,30 @@ function CommentModal({
             background: "var(--card)",
           }}
         >
-          <div style={{ fontWeight: 700 }}>
+          <button
+            type="button"
+            onClick={() => {
+              const handle = comment.user?.handle?.trim();
+              if (!handle) return;
+              nav(`/u/${handle}`);
+            }}
+            disabled={!comment.user?.handle}
+            title={
+              comment.user?.handle ? `Open @${comment.user.handle}` : undefined
+            }
+            style={{
+              border: "none",
+              background: "transparent",
+              padding: 0,
+              margin: 0,
+              fontWeight: 700,
+              color: "var(--text)",
+              cursor: comment.user?.handle ? "pointer" : "default",
+              textAlign: "left",
+            }}
+          >
             @{comment.user?.handle ?? "user"}
-          </div>
+          </button>
 
           <div
             style={{

@@ -230,9 +230,38 @@ export class UsersService {
         content: true,
         createdAt: true,
         visibility: true,
-        course: { select: { id: true, name: true, lat: true, lon: true } },
-        user: { select: { id: true, handle: true, avatarUrl: true } },
-        images: { select: { id: true, url: true } },
+        course: {
+          select: {
+            id: true,
+            name: true,
+            lat: true,
+            lon: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            handle: true,
+            avatarUrl: true,
+          },
+        },
+        images: {
+          select: {
+            id: true,
+            url: true,
+          },
+        },
+        likes: {
+          select: {
+            userId: true,
+          },
+        },
+        _count: {
+          select: {
+            likes: true,
+            comments: true,
+          },
+        },
       },
     });
   }

@@ -4,6 +4,7 @@ import { API_BASE } from "../api/base";
 import { fileUrl } from "../api/fileUrl";
 import { useAuth } from "../auth/AuthContext";
 import { useMe } from "../auth/useMe";
+import UserListCard from "../components/UserListCard";
 
 import {
   getInitialTheme,
@@ -28,7 +29,7 @@ type Post = {
   id: string;
   content: string;
   createdAt: string;
-  visibility?: "PUBLIC" | "FOLLOWERS";
+  visibility?: "PUBLIC" | "FOLLOWERS" | "PRIVATE";
   course: {
     id: string;
     name: string;
@@ -42,10 +43,29 @@ type Post = {
     avatarUrl?: string | null;
   };
   images?: PostImage[];
+  likes?: { userId: string }[];
+  comments?: unknown[];
+  _count?: {
+    likes?: number;
+    comments?: number;
+  };
 };
 
 type FollowUiStatus = "NONE" | "PENDING" | "ACCEPTED" | "SELF" | "UNKNOWN";
 
+type ListUser = {
+  id: string;
+  handle: string;
+  name?: string | null;
+  avatarUrl?: string | null;
+};
+
+type FollowRelation = {
+  followerId?: string;
+  followingId?: string;
+  follower?: ListUser;
+  following?: ListUser;
+};
 function Card({
   title,
   children,
@@ -265,9 +285,9 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
   const [err, setErr] = useState<string | null>(null);
 
   const [followingCourses, setFollowingCourses] = useState<any[]>([]);
-  const [followingUsers, setFollowingUsers] = useState<any[]>([]);
-  const [followers, setFollowers] = useState<any[]>([]);
-  const [followRequests, setFollowRequests] = useState<any[]>([]);
+  const [followingUsers, setFollowingUsers] = useState<FollowRelation[]>([]);
+  const [followers, setFollowers] = useState<FollowRelation[]>([]);
+  const [followRequests, setFollowRequests] = useState<FollowRelation[]>([]);
   const followingUsersRef = useRef<HTMLDivElement | null>(null);
   const followersRef = useRef<HTMLDivElement | null>(null);
   const postsRef = useRef<HTMLDivElement | null>(null);
@@ -1226,192 +1246,46 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
       {mode === "me" && (
         <div ref={followingUsersRef}>
-          <Card title="Following Users">
-            <div
-              style={{
-                fontSize: 12,
-                color: "var(--sub)",
-                marginBottom: 8,
-                padding: "0 12px",
-              }}
-            >
-              {followingUsers.length} users
-            </div>
-
-            {followingUsers.length === 0 ? (
-              <div style={{ padding: 12, color: "var(--sub)" }}>
-                No followed users yet.
-              </div>
-            ) : (
-              <div
-                style={{ display: "grid", gap: 8, padding: "0 12px 12px 12px" }}
-              >
-                {followingUsers.map((row: any) => {
-                  const u = row.following ?? row;
-                  if (!u) return null;
-
-                  return (
-                    <button
-                      key={u.id}
-                      onClick={() => nav(`/u/${u.handle}`)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        padding: "10px 12px",
-                        borderRadius: 12,
-                        border: "1px solid var(--border)",
-                        background: "var(--card)",
-                        cursor: "pointer",
-                        textAlign: "left",
-                      }}
-                    >
-                      {/* Avatar */}
-                      {u.avatarUrl ? (
-                        <div
-                          style={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: "50%",
-                            overflow: "hidden",
-                            clipPath: "circle(50% at 50% 50%)",
-                            WebkitClipPath: "circle(50% at 50% 50%)",
-                            border: "1px solid var(--border)",
-                            backgroundImage: `url(${fileUrl(u.avatarUrl)})`,
-                            backgroundSize: "cover",
-                            backgroundPosition: "center",
-                            flexShrink: 0,
-                          }}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: "50%",
-                            background: "rgba(39,196,107,0.18)",
-                            border: "1px solid rgba(39,196,107,0.35)",
-                            display: "grid",
-                            placeItems: "center",
-                            fontWeight: 900,
-                            color: "var(--text)",
-                            flexShrink: 0,
-                          }}
-                        >
-                          {(u.handle ?? "?").slice(0, 1).toUpperCase()}
-                        </div>
-                      )}
-
-                      {/* Text rechts */}
-                      <div style={{ display: "flex", flexDirection: "column" }}>
-                        <span style={{ fontWeight: 700, color: "var(--text)" }}>
-                          {u.name?.trim() ? u.name : `@${u.handle}`}
-                        </span>
-
-                        <span style={{ fontSize: 12, color: "var(--sub)" }}>
-                          @{u.handle}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </Card>
+          <UserListCard
+            title="Following Users"
+            count={followingUsers.length}
+            users={followingUsers
+              .map((row) => row.following)
+              .filter((u): u is ListUser => Boolean(u))
+              .map((u) => ({
+                id: u.id,
+                name: u.name,
+                handle: u.handle,
+                avatarUrl: u.avatarUrl ? fileUrl(u.avatarUrl) : null,
+              }))}
+            emptyText="No followed users yet."
+            onUserClick={(user) => {
+              if (!user.handle) return;
+              nav(`/u/${user.handle}`);
+            }}
+          />
         </div>
       )}
       {mode === "me" && (
         <div ref={followersRef}>
-          <Card title="Followers">
-            <div
-              style={{
-                fontSize: 12,
-                color: "var(--sub)",
-                marginBottom: 8,
-                padding: "0 12px",
-              }}
-            >
-              {followers.length} users
-            </div>
-
-            {followers.length === 0 ? (
-              <div style={{ padding: 12, color: "var(--sub)" }}>
-                No followers yet.
-              </div>
-            ) : (
-              <div
-                style={{ display: "grid", gap: 8, padding: "0 12px 12px 12px" }}
-              >
-                {followers.map((row: any) => {
-                  const u = row.follower ?? row;
-                  if (!u) return null;
-
-                  return (
-                    <button
-                      key={u.id}
-                      onClick={() => nav(`/u/${u.handle}`)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        padding: "10px 12px",
-                        borderRadius: 12,
-                        border: "1px solid var(--border)",
-                        background: "var(--card)",
-                        cursor: "pointer",
-                        textAlign: "left",
-                      }}
-                    >
-                      {u.avatarUrl ? (
-                        <div
-                          style={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: "50%",
-                            overflow: "hidden",
-                            clipPath: "circle(50% at 50% 50%)",
-                            WebkitClipPath: "circle(50% at 50% 50%)",
-                            border: "1px solid var(--border)",
-                            backgroundImage: `url(${fileUrl(u.avatarUrl)})`,
-                            backgroundSize: "cover",
-                            backgroundPosition: "center",
-                            flexShrink: 0,
-                          }}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: "50%",
-                            background: "var(--muted)",
-                            border: "1px solid var(--border)",
-                            display: "grid",
-                            placeItems: "center",
-                            fontWeight: 900,
-                            color: "var(--text)",
-                            flexShrink: 0,
-                          }}
-                        >
-                          {(u.handle ?? "?").slice(0, 1).toUpperCase()}
-                        </div>
-                      )}
-
-                      <div style={{ display: "flex", flexDirection: "column" }}>
-                        <span style={{ fontWeight: 700, color: "var(--text)" }}>
-                          {u.name?.trim() ? u.name : `@${u.handle}`}
-                        </span>
-
-                        <span style={{ fontSize: 12, color: "var(--sub)" }}>
-                          @{u.handle}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </Card>
+          <UserListCard
+            title="Followers"
+            count={followers.length}
+            users={followers
+              .map((row) => row.follower)
+              .filter((u): u is ListUser => Boolean(u))
+              .map((u) => ({
+                id: u.id,
+                name: u.name,
+                handle: u.handle,
+                avatarUrl: u.avatarUrl ? fileUrl(u.avatarUrl) : null,
+              }))}
+            emptyText="No followers yet."
+            onUserClick={(user) => {
+              if (!user.handle) return;
+              nav(`/u/${user.handle}`);
+            }}
+          />
         </div>
       )}
       <div ref={postsRef}>
