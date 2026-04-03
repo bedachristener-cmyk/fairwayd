@@ -22,6 +22,14 @@ function initialsFromHandle(handle: string) {
   return h.slice(0, 2).toUpperCase();
 }
 
+type UserSearchItem = {
+  id: string;
+  handle: string;
+  name?: string | null;
+  avatarUrl?: string | null;
+  followStatus?: "NONE" | "PENDING" | "ACCEPTED" | "SELF" | "UNKNOWN";
+};
+
 export default function TopRail() {
   const nav = useNavigate();
   const auth = useAuth() as any;
@@ -30,7 +38,9 @@ export default function TopRail() {
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<UserSearchItem[]>([]);
+  const [suggestions, setSuggestions] = useState<UserSearchItem[]>([]);
+  const [followBusyId, setFollowBusyId] = useState<string | null>(null);
   const [theme, setTheme] = useState<ThemeName>(() => getInitialTheme());
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 980);
 
@@ -63,6 +73,7 @@ export default function TopRail() {
 
   useEffect(() => {
     if (!searchOpen) return;
+
     if (!query.trim()) {
       setResults([]);
       return;
@@ -83,7 +94,51 @@ export default function TopRail() {
         }
 
         const data = await res.json();
-        setResults(Array.isArray(data) ? data : []);
+        const baseItems = Array.isArray(data) ? data : [];
+
+        const itemsWithStatus: UserSearchItem[] = await Promise.all(
+          baseItems.map(async (item): Promise<UserSearchItem> => {
+            try {
+              const statusRes = await fetch(
+                `${API_BASE}/users/id/${item.id}/following-status`,
+                {
+                  headers: { Authorization: `Bearer ${auth?.token}` },
+                },
+              );
+
+              if (!statusRes.ok) {
+                return {
+                  ...item,
+                  followStatus: "UNKNOWN",
+                };
+              }
+
+              const statusData = await statusRes.json();
+              const rawStatus = String(
+                statusData?.status ?? "UNKNOWN",
+              ).toUpperCase();
+
+              let followStatus: UserSearchItem["followStatus"] = "UNKNOWN";
+
+              if (rawStatus === "ACCEPTED") followStatus = "ACCEPTED";
+              else if (rawStatus === "PENDING") followStatus = "PENDING";
+              else if (rawStatus === "SELF") followStatus = "SELF";
+              else if (rawStatus === "NONE") followStatus = "NONE";
+
+              return {
+                ...item,
+                followStatus,
+              };
+            } catch {
+              return {
+                ...item,
+                followStatus: "UNKNOWN",
+              };
+            }
+          }),
+        );
+
+        setResults(itemsWithStatus);
       } catch (err) {
         console.error("Search failed", err);
         setResults([]);
@@ -92,7 +147,54 @@ export default function TopRail() {
 
     return () => clearTimeout(t);
   }, [query, searchOpen, auth?.token]);
+  useEffect(() => {
+    if (!searchOpen) return;
+    if (query.trim()) return;
 
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const fallbackQueries = ["an", "ma", "ch", "be"];
+        let foundItems: UserSearchItem[] = [];
+
+        for (const q of fallbackQueries) {
+          const res = await fetch(
+            `${API_BASE}/users/search?q=${encodeURIComponent(q)}`,
+            {
+              headers: { Authorization: `Bearer ${auth?.token}` },
+            },
+          );
+
+          if (!res.ok) continue;
+
+          const data = await res.json();
+          const baseItems = Array.isArray(data) ? data : [];
+
+          // 👉 eigenen User rausfiltern
+          const filtered = baseItems.filter((u: any) => u.id !== me?.id);
+
+          if (filtered.length > 0) {
+            foundItems = filtered.slice(0, 6);
+            break;
+          }
+        }
+
+        if (!cancelled) {
+          setSuggestions(foundItems);
+        }
+      } catch (err) {
+        console.error("Suggestions failed", err);
+        if (!cancelled) {
+          setSuggestions([]);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchOpen, query, auth?.token]);
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node;
@@ -136,6 +238,98 @@ export default function TopRail() {
       nav("/", { replace: true });
     }
   };
+
+  function getFollowLabel(status?: UserSearchItem["followStatus"]) {
+    if (status === "ACCEPTED") return "Following";
+    if (status === "PENDING") return "Requested";
+    if (status === "SELF") return "You";
+    return "Follow";
+  }
+
+  async function handleToggleFollow(
+    e: React.MouseEvent<HTMLButtonElement>,
+    user: UserSearchItem,
+  ) {
+    e.stopPropagation();
+
+    if (!auth?.token) return;
+    if (user.followStatus === "SELF") return;
+    if (followBusyId) return;
+
+    const current = user.followStatus ?? "NONE";
+    const isActive = current === "ACCEPTED" || current === "PENDING";
+
+    setFollowBusyId(user.id);
+
+    setResults((prev) =>
+      prev.map((item) =>
+        item.id === user.id
+          ? {
+              ...item,
+              followStatus: isActive ? "NONE" : "PENDING",
+            }
+          : item,
+      ),
+    );
+
+    try {
+      const res = await fetch(`${API_BASE}/users/id/${user.id}/follow`, {
+        method: isActive ? "DELETE" : "POST",
+        headers: { Authorization: `Bearer ${auth?.token}` },
+      });
+
+      if (!res.ok) {
+        throw new Error(`Follow request failed: ${res.status}`);
+      }
+
+      if (!isActive) {
+        const data = await res.json().catch(() => null);
+        const status = String(data?.status ?? "PENDING").toUpperCase();
+
+        setResults((prev) =>
+          prev.map((item) =>
+            item.id === user.id
+              ? {
+                  ...item,
+                  followStatus:
+                    status === "ACCEPTED"
+                      ? "ACCEPTED"
+                      : status === "PENDING"
+                        ? "PENDING"
+                        : "NONE",
+                }
+              : item,
+          ),
+        );
+      } else {
+        setResults((prev) =>
+          prev.map((item) =>
+            item.id === user.id
+              ? {
+                  ...item,
+                  followStatus: "NONE",
+                }
+              : item,
+          ),
+        );
+      }
+    } catch (err) {
+      console.error("Follow toggle failed", err);
+
+      setResults((prev) =>
+        prev.map((item) =>
+          item.id === user.id
+            ? {
+                ...item,
+                followStatus: current,
+              }
+            : item,
+        ),
+      );
+    } finally {
+      setFollowBusyId(null);
+    }
+  }
 
   return (
     <>
@@ -415,7 +609,82 @@ export default function TopRail() {
             }}
           />
 
-          <div style={{ display: "grid", gap: 8 }}>
+          {!query.trim() && suggestions.length > 0 ? (
+            <div
+              style={{
+                display: "grid",
+                gap: 6,
+                paddingBottom: 6,
+                borderBottom: "1px solid rgba(255,255,255,0.06)",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  color: "var(--sub)",
+                  padding: "0 2px",
+                }}
+              >
+                Suggested golfers
+              </div>
+
+              {suggestions.map((u) => (
+                <div
+                  key={u.id}
+                  onClick={() => {
+                    setSearchOpen(false);
+                    setQuery("");
+                    setResults([]);
+                    nav(`/u/${u.handle}`);
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "8px 10px",
+                    borderRadius: 10,
+                    cursor: "pointer",
+                  }}
+                >
+                  {u.avatarUrl ? (
+                    <img
+                      src={fileUrl(u.avatarUrl)}
+                      alt={u.handle}
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: "50%",
+                        objectFit: "cover",
+                        border: "1px solid var(--border)",
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: "50%",
+                        background: "rgba(39,196,107,0.18)",
+                        display: "grid",
+                        placeItems: "center",
+                        fontWeight: 900,
+                        color: "var(--text)",
+                      }}
+                    >
+                      {(u.name || u.handle).slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+
+                  <div style={{ fontSize: 13, color: "var(--text)" }}>
+                    {u.name || u.handle}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          <div style={{ display: "grid", gap: 10 }}>
             {results.map((u) => (
               <div
                 key={u.id}
@@ -429,9 +698,11 @@ export default function TopRail() {
                   display: "flex",
                   alignItems: "center",
                   gap: 10,
-                  padding: "8px 10px",
+                  padding: "10px 10px",
                   cursor: "pointer",
-                  borderRadius: 10,
+                  borderRadius: 12,
+                  border: "1px solid rgba(255,255,255,0.04)",
+                  background: "rgba(255,255,255,0.02)",
                 }}
               >
                 {u.avatarUrl ? (
@@ -454,6 +725,7 @@ export default function TopRail() {
                       height: 32,
                       borderRadius: "50%",
                       background: "rgba(39,196,107,0.18)",
+                      border: "1px solid rgba(39,196,107,0.35)",
                       display: "grid",
                       placeItems: "center",
                       fontWeight: 900,
@@ -465,7 +737,7 @@ export default function TopRail() {
                   </div>
                 )}
 
-                <div style={{ minWidth: 0 }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
                   <div
                     style={{
                       fontWeight: 700,
@@ -489,6 +761,59 @@ export default function TopRail() {
                     @{u.handle}
                   </div>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={(e) => handleToggleFollow(e, u)}
+                  disabled={u.followStatus === "SELF" || followBusyId === u.id}
+                  style={{
+                    minWidth: 86,
+                    height: 32,
+                    padding: "0 12px",
+                    borderRadius: 999,
+                    border:
+                      u.followStatus === "ACCEPTED"
+                        ? "1px solid rgba(39,196,107,0.38)"
+                        : u.followStatus === "PENDING"
+                          ? "1px solid rgba(255,255,255,0.14)"
+                          : u.followStatus === "SELF"
+                            ? "1px solid rgba(120,160,255,0.28)"
+                            : "1px solid var(--border)",
+                    background:
+                      u.followStatus === "ACCEPTED"
+                        ? "rgba(39,196,107,0.16)"
+                        : u.followStatus === "PENDING"
+                          ? "rgba(255,255,255,0.05)"
+                          : u.followStatus === "SELF"
+                            ? "rgba(120,160,255,0.12)"
+                            : "var(--bg)",
+                    color:
+                      u.followStatus === "ACCEPTED"
+                        ? "rgb(120,235,165)"
+                        : u.followStatus === "PENDING"
+                          ? "var(--sub)"
+                          : u.followStatus === "SELF"
+                            ? "rgb(170,195,255)"
+                            : "var(--text)",
+                    fontWeight: 900,
+                    fontSize: 11,
+                    letterSpacing: 0.2,
+                    cursor:
+                      u.followStatus === "SELF" || followBusyId === u.id
+                        ? "default"
+                        : "pointer",
+                    opacity: followBusyId === u.id ? 0.6 : 1,
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {followBusyId === u.id
+                    ? "..."
+                    : getFollowLabel(u.followStatus)}
+                </button>
               </div>
             ))}
 

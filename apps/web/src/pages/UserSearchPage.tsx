@@ -88,8 +88,6 @@ export default function UserSearchPage() {
         );
 
         setResults(itemsWithStatus);
-
-        setResults(itemsWithStatus);
       } catch (err) {
         console.error("User search failed", err);
         setResults([]);
