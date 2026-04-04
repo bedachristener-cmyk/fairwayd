@@ -1125,7 +1125,7 @@ export default function FeedPage() {
                   style={{
                     position: "fixed",
                     inset: 0,
-                    zIndex: 1000,
+                    zIndex: 99999,
                     background: "rgba(0,0,0,0.7)",
                     display: "flex",
                     alignItems: isMobile ? "stretch" : "center",
@@ -1236,13 +1236,16 @@ export default function FeedPage() {
 
                     <div
                       style={{
-                        padding: 16,
+                        padding: isMobile
+                          ? "16px 16px calc(16px + env(safe-area-inset-bottom, 0px))"
+                          : 16,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
                         gap: 12,
                         flexWrap: "wrap",
                         borderTop: "1px solid var(--border)",
+                        background: "var(--card)",
                       }}
                     >
                       <div
