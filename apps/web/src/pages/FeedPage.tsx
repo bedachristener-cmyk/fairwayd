@@ -306,11 +306,23 @@ export default function FeedPage() {
 
   const openGalleryPicker = () => {
     if (posting) return;
+
+    if (!selectedCourse) {
+      alert("Please choose a course first ⛳");
+      return;
+    }
+
     galleryInputRef.current?.click();
   };
 
   const openCameraPicker = () => {
     if (posting) return;
+
+    if (!selectedCourse) {
+      alert("Please choose a course first ⛳");
+      return;
+    }
+
     cameraInputRef.current?.click();
   };
 
@@ -625,7 +637,6 @@ export default function FeedPage() {
                 }}
                 disabled={posting}
               />
-
               <div
                 style={{
                   display: "flex",
@@ -633,6 +644,7 @@ export default function FeedPage() {
                   alignItems: "center",
                   marginTop: 10,
                   flexWrap: "wrap",
+                  rowGap: 10,
                 }}
               >
                 <>
@@ -730,20 +742,54 @@ export default function FeedPage() {
                 </>
 
                 {file ? (
-                  <span
+                  <div
                     style={{
-                      fontSize: 12,
-                      color: "var(--sub)",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8,
                       minWidth: 0,
-                      maxWidth: isMobile ? "100%" : 220,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
+                      maxWidth: isMobile ? "100%" : 320,
+                      padding: "8px 10px",
+                      borderRadius: 999,
+                      background: "var(--card)",
+                      border: "1px solid var(--border)",
                     }}
-                    title={file.name}
                   >
-                    {file.name}
-                  </span>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        color: "var(--sub)",
+                        minWidth: 0,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                      title={file.name}
+                    >
+                      {file.name}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFile(null);
+                        setPreview(null);
+                      }}
+                      disabled={posting}
+                      style={{
+                        border: "none",
+                        background: "transparent",
+                        color: posting ? "var(--sub)" : "var(--text)",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        cursor: posting ? "default" : "pointer",
+                        padding: 0,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
                 ) : null}
 
                 <div
@@ -761,9 +807,33 @@ export default function FeedPage() {
                       style={{
                         fontSize: 12,
                         color: "var(--sub)",
+                        fontWeight: 700,
                       }}
                     >
-                      Choose a course first
+                      Choose a course first to enable posting
+                    </span>
+                  )}
+
+                  {selectedCourse && !draft.trim() && !file && (
+                    <span
+                      style={{
+                        fontSize: 12,
+                        color: "var(--sub)",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Write something or add an image
+                    </span>
+                  )}
+
+                  {selectedCourse && file && !draft.trim() && (
+                    <span
+                      style={{
+                        fontSize: 12,
+                        color: "var(--sub)",
+                      }}
+                    >
+                      Image ready to post
                     </span>
                   )}
 
@@ -801,22 +871,49 @@ export default function FeedPage() {
                     }}
                     type="button"
                   >
-                    {posting ? "Posting..." : "Post"}
+                    {posting
+                      ? "Posting..."
+                      : file && !draft.trim()
+                        ? "Post image"
+                        : "Post"}
                   </button>
                 </div>
               </div>
 
               {preview && (
-                <img
-                  src={preview}
-                  alt="preview"
+                <div
                   style={{
-                    marginTop: 10,
-                    borderRadius: 12,
-                    maxWidth: "100%",
-                    border: "1px solid var(--border)",
+                    marginTop: 12,
+                    display: "inline-flex",
+                    flexDirection: "column",
+                    gap: 8,
+                    width: isMobile ? "100%" : "auto",
                   }}
-                />
+                >
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 800,
+                      color: "var(--sub)",
+                    }}
+                  >
+                    Image preview
+                  </div>
+
+                  <img
+                    src={preview}
+                    alt="preview"
+                    style={{
+                      borderRadius: 12,
+                      maxWidth: "100%",
+                      width: isMobile ? "100%" : "auto",
+                      maxHeight: isMobile ? 320 : 360,
+                      objectFit: "cover",
+                      border: "1px solid var(--border)",
+                      background: "var(--card)",
+                    }}
+                  />
+                </div>
               )}
             </div>
           </div>
