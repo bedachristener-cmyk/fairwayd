@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import ReactCrop, { type Crop, type PixelCrop } from "react-image-crop";
+import "react-image-crop/dist/ReactCrop.css";
 import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
 import CourseDropdown, { type CourseLite } from "../components/CourseDropdown";
@@ -7,6 +9,7 @@ import CommentModal from "../components/CommentModal";
 import { useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
+import { getCroppedImageFile } from "../utils/cropImage";
 
 type PostImage = { id: string; url: string };
 
@@ -145,6 +148,20 @@ export default function FeedPage() {
     "PUBLIC" | "FOLLOWERS" | "PRIVATE"
   >("PUBLIC");
 
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorImageSrc, setEditorImageSrc] = useState<string | null>(null);
+  const [editorFileName, setEditorFileName] = useState("image.jpg");
+  const [crop, setCrop] = useState<Crop>({
+    unit: "%",
+    x: 10,
+    y: 10,
+    width: 80,
+    height: 80,
+  });
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop | null>(null);
+  const [rotation, setRotation] = useState(0);
+  const [applyingEdit, setApplyingEdit] = useState(false);
+
   const [err, setErr] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
   const [composerHint, setComposerHint] = useState<string | null>(null);
@@ -152,7 +169,48 @@ export default function FeedPage() {
   const draftRef = useRef<HTMLTextAreaElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const editorImageRef = useRef<HTMLImageElement | null>(null);
   const nav = useNavigate();
+
+  const resetEditorState = useCallback(() => {
+    setEditorOpen(false);
+    setEditorImageSrc(null);
+    setEditorFileName("image.jpg");
+    setCrop({
+      unit: "%",
+      x: 10,
+      y: 10,
+      width: 80,
+      height: 80,
+    });
+    setCompletedCrop(null);
+    setRotation(0);
+    setApplyingEdit(false);
+  }, []);
+
+  const openEditorForFile = useCallback(async (picked: File) => {
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error("Failed to read image file"));
+
+      reader.readAsDataURL(picked);
+    });
+
+    setEditorFileName(picked.name || "image.jpg");
+    setEditorImageSrc(dataUrl);
+    setCrop({
+      unit: "%",
+      x: 10,
+      y: 10,
+      width: 80,
+      height: 80,
+    });
+    setCompletedCrop(null);
+    setRotation(0);
+    setEditorOpen(true);
+  }, []);
 
   useEffect(() => {
     const run = async () => {
@@ -297,13 +355,67 @@ export default function FeedPage() {
     typeof selectedLat === "number" &&
     typeof selectedLon === "number";
 
-  const handleComposerImageChange = (
+  const handleComposerImageChange = async (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const picked = e.target.files?.[0] ?? null;
-    setFile(picked);
     e.target.value = "";
+
+    if (!picked) return;
+
+    try {
+      await openEditorForFile(picked);
+      setErr(null);
+    } catch (err: any) {
+      console.error("Image picker failed", err);
+      setErr(err?.message ?? "Failed to open selected image");
+    }
   };
+
+  const applyImageEdits = useCallback(async () => {
+    if (!editorImageSrc || !completedCrop || !editorImageRef.current) return;
+
+    try {
+      setApplyingEdit(true);
+
+      const img = editorImageRef.current;
+      const rect = img.getBoundingClientRect();
+
+      if (!rect.width || !rect.height) {
+        throw new Error("Image size could not be determined");
+      }
+
+      const scaleX = img.naturalWidth / rect.width;
+      const scaleY = img.naturalHeight / rect.height;
+
+      const editedFile = await getCroppedImageFile(
+        editorImageSrc,
+        {
+          x: Math.round(completedCrop.x * scaleX),
+          y: Math.round(completedCrop.y * scaleY),
+          width: Math.round(completedCrop.width * scaleX),
+          height: Math.round(completedCrop.height * scaleY),
+        },
+        rotation,
+        editorFileName || "image.jpg",
+      );
+
+      setFile(editedFile);
+      setErr(null);
+      resetEditorState();
+    } catch (e: any) {
+      console.error("Apply image edits failed", e);
+      setErr(e?.message ?? "Failed to edit image");
+    } finally {
+      setApplyingEdit(false);
+    }
+  }, [
+    editorImageSrc,
+    completedCrop,
+    rotation,
+    editorFileName,
+    resetEditorState,
+  ]);
 
   const openGalleryPicker = () => {
     if (posting) return;
@@ -471,6 +583,7 @@ export default function FeedPage() {
       setDraft("");
       setFile(null);
       setPreview(null);
+      resetEditorState();
 
       setPosts((prev) => {
         const rest = prev.filter((p) => p.id !== optimisticId);
@@ -660,12 +773,22 @@ export default function FeedPage() {
                   display: "flex",
                   gap: 10,
                   alignItems: "center",
-                  marginTop: 10,
+                  marginTop: 12,
+                  padding: isMobile ? "12px 0 0" : "12px",
                   flexWrap: "wrap",
                   rowGap: 10,
+                  justifyContent: "space-between",
+                  borderTop: "1px solid var(--border)",
                 }}
               >
-                <>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    flexWrap: "wrap",
+                  }}
+                >
                   <input
                     ref={galleryInputRef}
                     type="file"
@@ -757,52 +880,107 @@ export default function FeedPage() {
                       📷 Add image
                     </button>
                   )}
-                </>
+                </div>
 
                 {file ? (
                   <div
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
-                      gap: 8,
+                      gap: 10,
                       minWidth: 0,
-                      maxWidth: isMobile ? "100%" : 320,
-                      padding: "8px 10px",
-                      borderRadius: 999,
-                      background: "var(--card)",
+                      maxWidth: isMobile ? "100%" : 360,
+                      padding: "10px 12px",
+                      borderRadius: 14,
+                      background: "var(--bg)",
                       border: "1px solid var(--border)",
                     }}
                   >
-                    <span
+                    <div
                       style={{
-                        fontSize: 12,
-                        color: "var(--sub)",
+                        display: "flex",
+                        flexDirection: "column",
                         minWidth: 0,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
+                        gap: 2,
+                        flex: 1,
                       }}
-                      title={file.name}
                     >
-                      {file.name}
-                    </span>
+                      <span
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 800,
+                          color: "var(--text)",
+                        }}
+                      >
+                        1 image ready
+                      </span>
+
+                      <span
+                        style={{
+                          fontSize: 12,
+                          color: "var(--sub)",
+                          minWidth: 0,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                        title={file.name}
+                      >
+                        {file.name}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!file) return;
+
+                        try {
+                          await openEditorForFile(file);
+                          setErr(null);
+                        } catch (err: any) {
+                          console.error("Re-open editor failed", err);
+                          setErr(
+                            err?.message ?? "Failed to reopen image editor",
+                          );
+                        }
+                      }}
+                      disabled={posting}
+                      style={{
+                        border: "1px solid var(--border)",
+                        background: "var(--card)",
+                        color: posting ? "var(--sub)" : "var(--text)",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        cursor: posting ? "default" : "pointer",
+                        padding: "8px 10px",
+                        borderRadius: 999,
+                        whiteSpace: "nowrap",
+                        opacity: posting ? 0.6 : 1,
+                      }}
+                    >
+                      Edit
+                    </button>
 
                     <button
                       type="button"
                       onClick={() => {
                         setFile(null);
                         setPreview(null);
+                        resetEditorState();
                       }}
                       disabled={posting}
                       style={{
-                        border: "none",
-                        background: "transparent",
+                        border: "1px solid var(--border)",
+                        background: "var(--card)",
                         color: posting ? "var(--sub)" : "var(--text)",
                         fontSize: 12,
                         fontWeight: 800,
                         cursor: posting ? "default" : "pointer",
-                        padding: 0,
+                        padding: "8px 10px",
+                        borderRadius: 999,
                         whiteSpace: "nowrap",
+                        opacity: posting ? 0.6 : 1,
                       }}
                     >
                       Remove
@@ -902,10 +1080,10 @@ export default function FeedPage() {
                 <div
                   style={{
                     marginTop: 12,
-                    display: "inline-flex",
+                    display: "flex",
                     flexDirection: "column",
-                    gap: 8,
-                    width: isMobile ? "100%" : "auto",
+                    gap: 10,
+                    width: isMobile ? "100%" : "min(420px, 100%)",
                   }}
                 >
                   <div
@@ -918,19 +1096,251 @@ export default function FeedPage() {
                     Image preview
                   </div>
 
-                  <img
-                    src={preview}
-                    alt="preview"
+                  <div
                     style={{
-                      borderRadius: 12,
-                      maxWidth: "100%",
-                      width: isMobile ? "100%" : "auto",
-                      maxHeight: isMobile ? 320 : 360,
-                      objectFit: "cover",
+                      borderRadius: 16,
+                      overflow: "hidden",
                       border: "1px solid var(--border)",
-                      background: "var(--card)",
+                      background: "var(--bg)",
+                      boxShadow: "0 4px 18px rgba(0,0,0,0.08)",
                     }}
-                  />
+                  >
+                    <img
+                      src={preview}
+                      alt="preview"
+                      style={{
+                        display: "block",
+                        width: "100%",
+                        maxHeight: isMobile ? 320 : 360,
+                        objectFit: "cover",
+                        background: "var(--card)",
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {editorOpen && editorImageSrc && (
+                <div
+                  style={{
+                    position: "fixed",
+                    inset: 0,
+                    zIndex: 1000,
+                    background: "rgba(0,0,0,0.7)",
+                    display: "flex",
+                    alignItems: isMobile ? "stretch" : "center",
+                    justifyContent: "center",
+                    padding: isMobile ? 0 : 20,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: isMobile ? "100%" : "min(720px, 100%)",
+                      height: isMobile ? "100%" : "min(760px, 90vh)",
+                      background: "var(--card)",
+                      color: "var(--text)",
+                      border: isMobile ? "none" : "1px solid var(--border)",
+                      borderRadius: isMobile ? 0 : 20,
+                      display: "flex",
+                      flexDirection: "column",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: "14px 16px 10px",
+                        borderBottom: "1px solid var(--border)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 12,
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 900, fontSize: 16 }}>
+                          Edit image
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: "var(--sub)",
+                            marginTop: 4,
+                          }}
+                        >
+                          Crop freely and rotate before posting
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (applyingEdit) return;
+                          resetEditorState();
+                        }}
+                        disabled={applyingEdit}
+                        style={{
+                          border: "1px solid var(--border)",
+                          background: "var(--bg)",
+                          color: "var(--text)",
+                          borderRadius: 999,
+                          padding: "8px 12px",
+                          fontWeight: 700,
+                          cursor: applyingEdit ? "default" : "pointer",
+                          opacity: applyingEdit ? 0.6 : 1,
+                        }}
+                      >
+                        Close
+                      </button>
+                    </div>
+
+                    <div
+                      style={{
+                        flex: 1,
+                        overflow: "auto",
+                        background: "#111",
+                        padding: isMobile ? 12 : 20,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <div
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "100%",
+                        }}
+                      >
+                        <ReactCrop
+                          crop={crop}
+                          onChange={(nextCrop) => setCrop(nextCrop)}
+                          onComplete={(pixelCrop) =>
+                            setCompletedCrop(pixelCrop)
+                          }
+                        >
+                          <img
+                            ref={editorImageRef}
+                            src={editorImageSrc}
+                            alt="Edit preview"
+                            style={{
+                              display: "block",
+                              maxWidth: "100%",
+                              maxHeight: isMobile ? "70vh" : "60vh",
+                              objectFit: "contain",
+                              transform: `rotate(${rotation}deg)`,
+                              transformOrigin: "center center",
+                            }}
+                          />
+                        </ReactCrop>
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        padding: 16,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 12,
+                        flexWrap: "wrap",
+                        borderTop: "1px solid var(--border)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 10,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setRotation((prev) => prev - 90)}
+                          disabled={applyingEdit}
+                          style={{
+                            padding: "10px 14px",
+                            borderRadius: 999,
+                            border: "1px solid var(--border)",
+                            background: "var(--bg)",
+                            color: "var(--text)",
+                            fontWeight: 700,
+                            cursor: applyingEdit ? "default" : "pointer",
+                            opacity: applyingEdit ? 0.6 : 1,
+                          }}
+                        >
+                          ↺ Rotate -90°
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setRotation((prev) => prev + 90)}
+                          disabled={applyingEdit}
+                          style={{
+                            padding: "10px 14px",
+                            borderRadius: 999,
+                            border: "1px solid var(--border)",
+                            background: "var(--bg)",
+                            color: "var(--text)",
+                            fontWeight: 700,
+                            cursor: applyingEdit ? "default" : "pointer",
+                            opacity: applyingEdit ? 0.6 : 1,
+                          }}
+                        >
+                          ↻ Rotate +90°
+                        </button>
+                      </div>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 10,
+                          flexWrap: "wrap",
+                          justifyContent: "flex-end",
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (applyingEdit) return;
+                            resetEditorState();
+                          }}
+                          disabled={applyingEdit}
+                          style={{
+                            padding: "10px 14px",
+                            borderRadius: 999,
+                            border: "1px solid var(--border)",
+                            background: "var(--bg)",
+                            color: "var(--text)",
+                            fontWeight: 700,
+                            cursor: applyingEdit ? "default" : "pointer",
+                            opacity: applyingEdit ? 0.6 : 1,
+                          }}
+                        >
+                          Cancel
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={applyImageEdits}
+                          disabled={applyingEdit || !completedCrop}
+                          style={{
+                            padding: "10px 16px",
+                            borderRadius: 999,
+                            border: "1px solid var(--border)",
+                            background: "var(--text)",
+                            color: "var(--bg)",
+                            fontWeight: 800,
+                            cursor:
+                              applyingEdit || !completedCrop
+                                ? "default"
+                                : "pointer",
+                            opacity: applyingEdit || !completedCrop ? 0.5 : 1,
+                          }}
+                        >
+                          {applyingEdit ? "Applying..." : "Apply"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
