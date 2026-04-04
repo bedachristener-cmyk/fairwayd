@@ -1125,7 +1125,7 @@ export default function FeedPage() {
                   style={{
                     position: "fixed",
                     inset: 0,
-                    zIndex: 99999,
+                    zIndex: 2147483647,
                     background: "rgba(0,0,0,0.7)",
                     display: "flex",
                     alignItems: isMobile ? "stretch" : "center",
@@ -1135,6 +1135,8 @@ export default function FeedPage() {
                 >
                   <div
                     style={{
+                      position: "relative",
+                      zIndex: 2147483647,
                       width: isMobile ? "100%" : "min(720px, 100%)",
                       height: isMobile ? "100%" : "min(760px, 90vh)",
                       background: "var(--card)",
@@ -1236,6 +1238,8 @@ export default function FeedPage() {
 
                     <div
                       style={{
+                        position: "relative",
+                        zIndex: 2147483647,
                         padding: isMobile
                           ? "16px 16px calc(16px + env(safe-area-inset-bottom, 0px))"
                           : 16,
