@@ -13,6 +13,7 @@ import {
   type ThemeName,
 } from "../theme/theme";
 import PostCard from "../components/PostCard";
+import CommentModal from "../components/CommentModal";
 
 type PostImage = { id: string; url: string };
 
@@ -281,12 +282,19 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
   const [profile, setProfile] = useState<ProfileUser | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   const [followingCourses, setFollowingCourses] = useState<any[]>([]);
   const [followingUsers, setFollowingUsers] = useState<FollowRelation[]>([]);
   const [followers, setFollowers] = useState<FollowRelation[]>([]);
+  const activeCommentPost = useMemo(() => {
+    if (!activeCommentPostId) return null;
+    return posts.find((p) => p.id === activeCommentPostId) ?? null;
+  }, [activeCommentPostId, posts]);
   const [followRequests, setFollowRequests] = useState<FollowRelation[]>([]);
   const followingUsersRef = useRef<HTMLDivElement | null>(null);
   const followersRef = useRef<HTMLDivElement | null>(null);
@@ -1326,21 +1334,8 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                         }
                       : undefined
                   }
-                  onCommentClick={() =>
-                    nav("/feed", {
-                      state: {
-                        from: loc.pathname,
-                        focusPostId: p.id,
-                        openComment: true,
-                        focusCourse: {
-                          id: p.course.id,
-                          name: p.course.name,
-                          lat,
-                          lon,
-                        },
-                      },
-                    })
-                  }
+                  onCommentClick={() => setActiveCommentPostId(p.id)}
+                  onOpenPost={() => setActiveCommentPostId(p.id)}
                   courseFollowed={isCourseFollowed}
                   courseFollowBusy={isCourseFollowBusy}
                   onCourseFollowToggle={handleToggleCourseFollow}
@@ -1350,6 +1345,13 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
           </div>
         </Card>
       </div>
+      {activeCommentPost ? (
+        <CommentModal
+          post={activeCommentPost}
+          isMobile={isMobile}
+          onClose={() => setActiveCommentPostId(null)}
+        />
+      ) : null}
     </div>
   );
 }

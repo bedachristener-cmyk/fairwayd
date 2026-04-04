@@ -54,6 +54,7 @@ type PostCardProps = {
   isCommentTarget?: boolean;
   onSelectCourse?: () => void;
   onCommentClick?: (postId: string) => void;
+  onOpenPost?: (postId: string) => void;
   courseFollowed?: boolean;
   courseFollowBusy?: boolean;
   onCourseFollowToggle?: (courseId: string) => void;
@@ -68,6 +69,7 @@ export default function PostCard({
   isCommentTarget,
   onSelectCourse,
   onCommentClick,
+  onOpenPost,
   courseFollowed,
   courseFollowBusy,
   onCourseFollowToggle,
@@ -417,6 +419,12 @@ export default function PostCard({
     document.body.removeChild(textarea);
   };
 
+  const handleOpenPost = () => {
+    if (isEditing) return;
+    if (isMenuOpen) return;
+    onOpenPost?.(post.id);
+  };
+
   const handleShareClick = async () => {
     try {
       const shareUrl = `${window.location.origin}/feed?postId=${encodeURIComponent(post.id)}&comment=1`;
@@ -430,6 +438,7 @@ export default function PostCard({
   return (
     <div
       ref={rootRef}
+      onClick={handleOpenPost}
       style={{
         padding: isMobile ? "10px 0" : 12,
         borderRadius: isMobile ? 0 : 14,
@@ -448,6 +457,7 @@ export default function PostCard({
           ? "0 0 0 2px rgba(0, 200, 100, 0.25)"
           : undefined,
         color: "var(--text)",
+        cursor: onOpenPost && !isEditing && !isMenuOpen ? "pointer" : "default",
       }}
     >
       <div style={{ padding: "0 12px" }}>
@@ -533,7 +543,10 @@ export default function PostCard({
             <div style={{ minWidth: 0, flex: 1 }}>
               <button
                 type="button"
-                onClick={() => nav(`/u/${post.user.handle}`)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  nav(`/u/${post.user.handle}`);
+                }}
                 style={{
                   background: "transparent",
                   border: "none",
@@ -579,7 +592,10 @@ export default function PostCard({
               >
                 <button
                   type="button"
-                  onClick={onSelectCourse}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectCourse?.();
+                  }}
                   disabled={!onSelectCourse}
                   title={onSelectCourse ? "Open this course" : undefined}
                   style={{
@@ -683,7 +699,8 @@ export default function PostCard({
               >
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setIsMenuOpen((v) => !v);
                   }}
                   title="Post actions"
@@ -731,7 +748,8 @@ export default function PostCard({
                   >
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setEditContent(localContent);
                         setEditVisibility(localVisibility);
                         setEditError("");
@@ -758,7 +776,8 @@ export default function PostCard({
 
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setIsMenuOpen(false);
                         handleDeletePost();
                       }}
@@ -857,7 +876,11 @@ export default function PostCard({
             >
               <button
                 type="button"
-                onClick={handleSaveEdit}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditContent(localContent);
+                  handleSaveEdit();
+                }}
                 disabled={saveBusy}
                 style={{
                   padding: "8px 12px",
@@ -1014,7 +1037,10 @@ export default function PostCard({
         }}
       >
         <button
-          onClick={handleLikeClick}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleLikeClick();
+          }}
           disabled={likeBusy}
           style={{
             ...actionButtonStyle,
@@ -1030,7 +1056,10 @@ export default function PostCard({
         <button
           type="button"
           style={actionButtonStyle}
-          onClick={() => onCommentClick?.(post.id)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onCommentClick?.(post.id);
+          }}
         >
           💬 Comments {commentCount}
         </button>
@@ -1038,7 +1067,10 @@ export default function PostCard({
         <button
           type="button"
           style={actionButtonStyle}
-          onClick={handleShareClick}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleShareClick();
+          }}
           title="Copy post link"
         >
           🔗 {shareCopied ? "Copied" : "Share"}
