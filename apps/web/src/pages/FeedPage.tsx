@@ -147,6 +147,7 @@ export default function FeedPage() {
 
   const [err, setErr] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
+  const [composerHint, setComposerHint] = useState<string | null>(null);
 
   const draftRef = useRef<HTMLTextAreaElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
@@ -308,10 +309,12 @@ export default function FeedPage() {
     if (posting) return;
 
     if (!selectedCourse) {
-      alert("Please choose a course first ⛳");
+      setComposerHint("Please choose a course first ⛳");
+      draftRef.current?.focus();
       return;
     }
 
+    setComposerHint(null);
     galleryInputRef.current?.click();
   };
 
@@ -319,10 +322,12 @@ export default function FeedPage() {
     if (posting) return;
 
     if (!selectedCourse) {
-      alert("Please choose a course first ⛳");
+      setComposerHint("Please choose a course first ⛳");
+      draftRef.current?.focus();
       return;
     }
 
+    setComposerHint(null);
     cameraInputRef.current?.click();
   };
 
@@ -539,15 +544,27 @@ export default function FeedPage() {
                     selectedCourseId={selectedCourse?.id ?? null}
                     onSelect={(id) => {
                       const c = courses.find((x) => x.id === id);
-                      if (c) setSelectedCourse(c);
+                      if (c) {
+                        setSelectedCourse(c);
+                        setComposerHint(null);
+                      }
                     }}
-                    onClear={() => clearSelectedCourse()}
+                    onClear={() => {
+                      clearSelectedCourse();
+                      setComposerHint(null);
+                    }}
                     placeholder="Choose course"
                   />
 
                   {!selectedCourse ? (
-                    <div style={{ fontSize: 12, color: "var(--sub)" }}>
-                      Pick a course before posting.
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: composerHint ? "var(--text)" : "var(--sub)",
+                        fontWeight: composerHint ? 800 : 400,
+                      }}
+                    >
+                      {composerHint ?? "Pick a course before posting."}
                     </div>
                   ) : null}
                 </div>
@@ -622,6 +639,7 @@ export default function FeedPage() {
                 onChange={(e) => {
                   setDraft(e.target.value);
                   if (err) setErr(null);
+                  if (composerHint) setComposerHint(null);
                 }}
                 placeholder="What’s your golf moment?"
                 rows={3}
