@@ -355,7 +355,7 @@ export default function FeedPage() {
     typeof selectedLat === "number" &&
     typeof selectedLon === "number";
 
-  const handleComposerImageChange = async (
+  const handleComposerImageChange = (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const picked = e.target.files?.[0] ?? null;
@@ -363,13 +363,8 @@ export default function FeedPage() {
 
     if (!picked) return;
 
-    try {
-      await openEditorForFile(picked);
-      setErr(null);
-    } catch (err: any) {
-      console.error("Image picker failed", err);
-      setErr(err?.message ?? "Failed to open selected image");
-    }
+    setFile(picked);
+    setErr(null);
   };
 
   const applyImageEdits = useCallback(async () => {
