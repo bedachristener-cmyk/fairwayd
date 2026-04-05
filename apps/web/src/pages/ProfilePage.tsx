@@ -203,7 +203,10 @@ function ThemePicker() {
   }, [theme]);
 
   return (
-    <Card title="Theme">
+    <Card
+      title="Theme"
+      right={<span style={{ fontSize: 11, color: "var(--sub)" }}>{theme}</span>}
+    >
       <div
         style={{
           display: "flex",
@@ -221,31 +224,19 @@ function ThemePicker() {
             style={{
               border: "1px solid var(--border)",
               background:
-                theme === tName ? "rgba(39,196,107,0.22)" : "rgba(0,0,0,0.18)",
+                theme === tName ? "rgba(39,196,107,0.18)" : "rgba(0,0,0,0.14)",
               color: "var(--text)",
-              borderRadius: 10,
-              padding: "6px 10px",
+              borderRadius: 8,
+              padding: "5px 8px",
               cursor: "pointer",
-              fontWeight: 900,
-              fontSize: 12,
-              minWidth: 86,
+              fontWeight: 800,
+              fontSize: 11,
+              minWidth: 72,
             }}
           >
             {tName.toUpperCase()}
           </button>
         ))}
-      </div>
-
-      <div
-        style={{
-          fontSize: 12,
-          color: "var(--sub)",
-          marginTop: 8,
-          paddingLeft: 12,
-          paddingRight: 12,
-        }}
-      >
-        Current: {theme}
       </div>
     </Card>
   );
@@ -809,10 +800,13 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
     borderRadius: 16,
     border:
       activeSection === section
-        ? "1px solid rgba(39,196,107,0.40)"
+        ? "1px solid rgba(39,196,107,0.6)"
         : "1px solid var(--border)",
     background:
-      activeSection === section ? "rgba(39,196,107,0.14)" : "var(--card)",
+      activeSection === section ? "rgba(39,196,107,0.22)" : "var(--card)",
+    boxShadow:
+      activeSection === section ? "0 0 0 1px rgba(39,196,107,0.25)" : "none",
+    transition: "all 0.15s ease",
     color: "var(--text)",
     cursor: "pointer",
     textAlign: "left",
@@ -980,16 +974,19 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                 onClick={() => setActiveSection("posts")}
                 style={summaryButtonStyle("posts")}
               >
-                <span
-                  style={{
-                    fontSize: isMobile ? 20 : 22,
-                    fontWeight: 900,
-                    color: "var(--text)",
-                    lineHeight: 1,
-                  }}
-                >
-                  {posts.length}
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 16 }}>📝</span>
+                  <span
+                    style={{
+                      fontSize: isMobile ? 20 : 22,
+                      fontWeight: 900,
+                      color: "var(--text)",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {posts.length}
+                  </span>
+                </div>
                 <span
                   style={{
                     fontSize: 12,
@@ -1007,16 +1004,19 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                 onClick={() => setActiveSection("following")}
                 style={summaryButtonStyle("following")}
               >
-                <span
-                  style={{
-                    fontSize: isMobile ? 20 : 22,
-                    fontWeight: 900,
-                    color: "var(--text)",
-                    lineHeight: 1,
-                  }}
-                >
-                  {followingUsers.length}
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 16 }}>🧑‍🤝‍🧑</span>
+                  <span
+                    style={{
+                      fontSize: isMobile ? 20 : 22,
+                      fontWeight: 900,
+                      color: "var(--text)",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {followers.length}
+                  </span>
+                </div>
                 <span
                   style={{
                     fontSize: 12,
@@ -1061,16 +1061,19 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                 onClick={() => setActiveSection("courses")}
                 style={summaryButtonStyle("courses")}
               >
-                <span
-                  style={{
-                    fontSize: isMobile ? 20 : 22,
-                    fontWeight: 900,
-                    color: "var(--text)",
-                    lineHeight: 1,
-                  }}
-                >
-                  {followingCourses.length}
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 16 }}>⛳</span>
+                  <span
+                    style={{
+                      fontSize: isMobile ? 20 : 22,
+                      fontWeight: 900,
+                      color: "var(--text)",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {followingCourses.length}
+                  </span>
+                </div>
                 <span
                   style={{
                     fontSize: 12,
@@ -1224,19 +1227,20 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
         <Card
           title="Follow Requests"
           right={
-            <div style={{ fontSize: 12, color: "var(--sub)" }}>
-              {followRequests.length} pending
-            </div>
+            <span style={{ fontSize: 11, color: "var(--sub)" }}>
+              {followRequests.length}
+            </span>
           }
         >
           {followRequests.length === 0 ? (
-            <div style={{ padding: 12, color: "var(--sub)" }}>
-              No open requests.
+            <div style={{ padding: 10, color: "var(--sub)", fontSize: 13 }}>
+              No open requests
             </div>
           ) : (
             <div style={{ display: "grid", gap: 8 }}>
               {followRequests.map((x: any) => {
                 const handle = x.followerHandle || x.followerId;
+                const name = x.followerName || x.follower?.name || null;
                 const busy = followReqBusy === x.followerId;
 
                 return (
@@ -1246,26 +1250,65 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                       display: "flex",
                       alignItems: isMobile ? "stretch" : "center",
                       flexWrap: isMobile ? "wrap" : "nowrap",
-                      gap: 10,
-                      padding: isMobile ? "12px" : "10px 12px",
+                      gap: 8,
+                      padding: isMobile ? "10px" : "8px 10px",
                       borderRadius: 12,
                       border: "1px solid var(--border)",
                       background: "var(--card)",
                       boxSizing: "border-box",
                     }}
                   >
-                    <AvatarCircle
-                      handle={handle}
-                      avatarUrl={x.followerAvatarUrl}
-                    />
+                    <div
+                      style={{
+                        width: 32,
+                        height: 32,
+                        minWidth: 32,
+                        minHeight: 32,
+                        maxWidth: 32,
+                        maxHeight: 32,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <AvatarCircle
+                        handle={handle}
+                        avatarUrl={x.followerAvatarUrl}
+                      />
+                    </div>
 
                     <div
                       style={{
                         flex: 1,
                         minWidth: isMobile ? "calc(100% - 66px)" : 0,
+                        display: "grid",
+                        gap: 2,
                       }}
                     >
-                      <div style={{ fontWeight: 700 }}>@{handle}</div>
+                      {name ? (
+                        <div
+                          style={{
+                            fontWeight: 800,
+                            fontSize: 13,
+                            color: "var(--text)",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {name}
+                        </div>
+                      ) : null}
+
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: "var(--sub)",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        @{handle}
+                      </div>
                     </div>
 
                     <div
@@ -1282,7 +1325,8 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                         onClick={() => handleReject(x.followerId)}
                         style={{
                           flex: isMobile ? 1 : undefined,
-                          padding: "8px 10px",
+                          padding: "6px 8px",
+                          fontSize: 12,
                           borderRadius: 8,
                           border: "1px solid var(--border)",
                           background: "transparent",
@@ -1297,7 +1341,8 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                         onClick={() => handleAccept(x.followerId)}
                         style={{
                           flex: isMobile ? 1 : undefined,
-                          padding: "8px 10px",
+                          padding: "6px 8px",
+                          fontSize: 12,
                           borderRadius: 8,
                           border: "1px solid var(--border)",
                           background: "var(--text)",
