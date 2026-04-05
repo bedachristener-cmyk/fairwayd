@@ -1014,7 +1014,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                       lineHeight: 1,
                     }}
                   >
-                    {followers.length}
+                    {followingUsers.length}
                   </span>
                 </div>
                 <span
