@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import ReactCrop, { type Crop, type PixelCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { API_BASE } from "../api/base";
@@ -235,6 +236,17 @@ export default function FeedPage() {
     setPreview(url);
     return () => URL.revokeObjectURL(url);
   }, [file]);
+
+  useEffect(() => {
+    if (!editorOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [editorOpen]);
 
   const loadFeed = useCallback(async () => {
     if (!token) return;
@@ -1115,190 +1127,55 @@ export default function FeedPage() {
                 </div>
               )}
 
-              {editorOpen && editorImageSrc && (
-                <div
-                  style={{
-                    position: "fixed",
-                    inset: 0,
-                    zIndex: 2147483647,
-                    background: "rgba(0,0,0,0.7)",
-                    display: "flex",
-                    alignItems: isMobile ? "stretch" : "center",
-                    justifyContent: "center",
-                    padding: isMobile ? 0 : 20,
-                  }}
-                >
+              {editorOpen &&
+                editorImageSrc &&
+                createPortal(
                   <div
                     style={{
-                      position: "relative",
+                      position: "fixed",
+                      inset: 0,
                       zIndex: 2147483647,
-                      width: isMobile ? "100%" : "min(720px, 100%)",
-                      height: isMobile ? "100%" : "min(760px, 90vh)",
-                      background: "var(--card)",
-                      color: "var(--text)",
-                      border: isMobile ? "none" : "1px solid var(--border)",
-                      borderRadius: isMobile ? 0 : 20,
-                      display: "flex",
-                      flexDirection: "column",
-                      overflow: "hidden",
+                      background: "rgba(0,0,0,0.82)",
                     }}
                   >
                     <div
                       style={{
-                        padding: "14px 16px 10px",
-                        borderBottom: "1px solid var(--border)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: 12,
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 900, fontSize: 16 }}>
-                          Edit image
-                        </div>
-                        <div
-                          style={{
-                            fontSize: 12,
-                            color: "var(--sub)",
-                            marginTop: 4,
-                          }}
-                        >
-                          Crop freely and rotate before posting
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (applyingEdit) return;
-                          resetEditorState();
-                        }}
-                        disabled={applyingEdit}
-                        style={{
-                          border: "1px solid var(--border)",
-                          background: "var(--bg)",
-                          color: "var(--text)",
-                          borderRadius: 999,
-                          padding: "8px 12px",
-                          fontWeight: 700,
-                          cursor: applyingEdit ? "default" : "pointer",
-                          opacity: applyingEdit ? 0.6 : 1,
-                        }}
-                      >
-                        Close
-                      </button>
-                    </div>
-
-                    <div
-                      style={{
-                        flex: 1,
-                        overflow: "auto",
-                        background: "#111",
-                        padding: isMobile ? 12 : 20,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <div
-                        style={{
-                          maxWidth: "100%",
-                          maxHeight: "100%",
-                        }}
-                      >
-                        <ReactCrop
-                          crop={crop}
-                          onChange={(nextCrop) => setCrop(nextCrop)}
-                          onComplete={(pixelCrop) =>
-                            setCompletedCrop(pixelCrop)
-                          }
-                        >
-                          <img
-                            ref={editorImageRef}
-                            src={editorImageSrc}
-                            alt="Edit preview"
-                            style={{
-                              display: "block",
-                              maxWidth: "100%",
-                              maxHeight: isMobile ? "70vh" : "60vh",
-                              objectFit: "contain",
-                              transform: `rotate(${rotation}deg)`,
-                              transformOrigin: "center center",
-                            }}
-                          />
-                        </ReactCrop>
-                      </div>
-                    </div>
-
-                    <div
-                      style={{
-                        position: "relative",
-                        zIndex: 2147483647,
-                        padding: isMobile
-                          ? "16px 16px calc(16px + env(safe-area-inset-bottom, 0px))"
-                          : 16,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: 12,
-                        flexWrap: "wrap",
-                        borderTop: "1px solid var(--border)",
+                        position: "absolute",
+                        inset: 0,
                         background: "var(--card)",
+                        color: "var(--text)",
+                        display: "grid",
+                        gridTemplateRows: "auto minmax(0, 1fr) auto",
                       }}
                     >
                       <div
                         style={{
+                          padding: isMobile
+                            ? "12px 14px 10px"
+                            : "14px 16px 10px",
+                          borderBottom: "1px solid var(--border)",
                           display: "flex",
-                          gap: 10,
-                          flexWrap: "wrap",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 12,
+                          background: "var(--card)",
                         }}
                       >
-                        <button
-                          type="button"
-                          onClick={() => setRotation((prev) => prev - 90)}
-                          disabled={applyingEdit}
-                          style={{
-                            padding: "10px 14px",
-                            borderRadius: 999,
-                            border: "1px solid var(--border)",
-                            background: "var(--bg)",
-                            color: "var(--text)",
-                            fontWeight: 700,
-                            cursor: applyingEdit ? "default" : "pointer",
-                            opacity: applyingEdit ? 0.6 : 1,
-                          }}
-                        >
-                          ↺ Rotate -90°
-                        </button>
+                        <div>
+                          <div style={{ fontWeight: 900, fontSize: 16 }}>
+                            Edit image
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 12,
+                              color: "var(--sub)",
+                              marginTop: 4,
+                            }}
+                          >
+                            Crop freely and rotate before posting
+                          </div>
+                        </div>
 
-                        <button
-                          type="button"
-                          onClick={() => setRotation((prev) => prev + 90)}
-                          disabled={applyingEdit}
-                          style={{
-                            padding: "10px 14px",
-                            borderRadius: 999,
-                            border: "1px solid var(--border)",
-                            background: "var(--bg)",
-                            color: "var(--text)",
-                            fontWeight: 700,
-                            cursor: applyingEdit ? "default" : "pointer",
-                            opacity: applyingEdit ? 0.6 : 1,
-                          }}
-                        >
-                          ↻ Rotate +90°
-                        </button>
-                      </div>
-
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: 10,
-                          flexWrap: "wrap",
-                          justifyContent: "flex-end",
-                        }}
-                      >
                         <button
                           type="button"
                           onClick={() => {
@@ -1307,44 +1184,178 @@ export default function FeedPage() {
                           }}
                           disabled={applyingEdit}
                           style={{
-                            padding: "10px 14px",
-                            borderRadius: 999,
                             border: "1px solid var(--border)",
                             background: "var(--bg)",
                             color: "var(--text)",
+                            borderRadius: 999,
+                            padding: "8px 12px",
                             fontWeight: 700,
                             cursor: applyingEdit ? "default" : "pointer",
                             opacity: applyingEdit ? 0.6 : 1,
                           }}
                         >
-                          Cancel
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={applyImageEdits}
-                          disabled={applyingEdit || !completedCrop}
-                          style={{
-                            padding: "10px 16px",
-                            borderRadius: 999,
-                            border: "1px solid var(--border)",
-                            background: "var(--text)",
-                            color: "var(--bg)",
-                            fontWeight: 800,
-                            cursor:
-                              applyingEdit || !completedCrop
-                                ? "default"
-                                : "pointer",
-                            opacity: applyingEdit || !completedCrop ? 0.5 : 1,
-                          }}
-                        >
-                          {applyingEdit ? "Applying..." : "Apply"}
+                          Close
                         </button>
                       </div>
+
+                      <div
+                        style={{
+                          minHeight: 0,
+                          overflow: "auto",
+                          background: "#111",
+                          padding: isMobile ? 10 : 20,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <div
+                          style={{
+                            maxWidth: "100%",
+                            width: "100%",
+                            display: "flex",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <ReactCrop
+                            crop={crop}
+                            onChange={(nextCrop) => setCrop(nextCrop)}
+                            onComplete={(pixelCrop) =>
+                              setCompletedCrop(pixelCrop)
+                            }
+                          >
+                            <img
+                              ref={editorImageRef}
+                              src={editorImageSrc}
+                              alt="Edit preview"
+                              style={{
+                                display: "block",
+                                maxWidth: "100%",
+                                maxHeight: isMobile ? "44dvh" : "60vh",
+                                objectFit: "contain",
+                                transform: `rotate(${rotation}deg)`,
+                                transformOrigin: "center center",
+                              }}
+                            />
+                          </ReactCrop>
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          padding: isMobile
+                            ? "10px 12px calc(10px + env(safe-area-inset-bottom, 0px))"
+                            : 16,
+                          borderTop: "1px solid var(--border)",
+                          background: "var(--card)",
+                          display: "grid",
+                          gap: 10,
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: isMobile
+                              ? "1fr 1fr"
+                              : "auto auto",
+                            gap: 10,
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => setRotation((prev) => prev - 90)}
+                            disabled={applyingEdit}
+                            style={{
+                              padding: "11px 12px",
+                              borderRadius: 999,
+                              border: "1px solid var(--border)",
+                              background: "var(--bg)",
+                              color: "var(--text)",
+                              fontWeight: 700,
+                              cursor: applyingEdit ? "default" : "pointer",
+                              opacity: applyingEdit ? 0.6 : 1,
+                              width: "100%",
+                            }}
+                          >
+                            ↺ Rotate -90°
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setRotation((prev) => prev + 90)}
+                            disabled={applyingEdit}
+                            style={{
+                              padding: "11px 12px",
+                              borderRadius: 999,
+                              border: "1px solid var(--border)",
+                              background: "var(--bg)",
+                              color: "var(--text)",
+                              fontWeight: 700,
+                              cursor: applyingEdit ? "default" : "pointer",
+                              opacity: applyingEdit ? 0.6 : 1,
+                              width: "100%",
+                            }}
+                          >
+                            ↻ Rotate +90°
+                          </button>
+                        </div>
+
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr",
+                            gap: 10,
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (applyingEdit) return;
+                              resetEditorState();
+                            }}
+                            disabled={applyingEdit}
+                            style={{
+                              padding: "12px 14px",
+                              borderRadius: 999,
+                              border: "1px solid var(--border)",
+                              background: "var(--bg)",
+                              color: "var(--text)",
+                              fontWeight: 700,
+                              cursor: applyingEdit ? "default" : "pointer",
+                              opacity: applyingEdit ? 0.6 : 1,
+                              width: "100%",
+                            }}
+                          >
+                            Cancel
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={applyImageEdits}
+                            disabled={applyingEdit || !completedCrop}
+                            style={{
+                              padding: "12px 14px",
+                              borderRadius: 999,
+                              border: "1px solid var(--border)",
+                              background: "var(--text)",
+                              color: "var(--bg)",
+                              fontWeight: 800,
+                              cursor:
+                                applyingEdit || !completedCrop
+                                  ? "default"
+                                  : "pointer",
+                              opacity: applyingEdit || !completedCrop ? 0.5 : 1,
+                              width: "100%",
+                            }}
+                          >
+                            {applyingEdit ? "Applying..." : "Apply"}
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              )}
+                  </div>,
+                  document.body,
+                )}
             </div>
           </div>
 
