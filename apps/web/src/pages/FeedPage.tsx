@@ -355,6 +355,11 @@ export default function FeedPage() {
   const selectedName = selectedCourse?.name;
   const selectedLat = selectedCourse?.lat;
   const selectedLon = selectedCourse?.lon;
+  const selectedCourseId = selectedCourse?.id ?? null;
+  const isSelectedCourseFollowed = selectedCourseId
+    ? followedCourseIds.includes(selectedCourseId)
+    : false;
+  const isSelectedCourseFollowBusy = courseFollowBusyId === selectedCourseId;
 
   const supportsDirectCamera =
     typeof navigator !== "undefined" &&
@@ -686,7 +691,107 @@ export default function FeedPage() {
                     >
                       {composerHint ?? "Pick a course before posting."}
                     </div>
-                  ) : null}
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: isMobile ? "stretch" : "center",
+                        justifyContent: "space-between",
+                        gap: 10,
+                        flexWrap: isMobile ? "wrap" : "nowrap",
+                        padding: isMobile ? "10px 12px" : "10px 12px",
+                        borderRadius: 14,
+                        border: "1px solid var(--border)",
+                        background: "var(--bg)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          minWidth: 0,
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 2,
+                          flex: 1,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: "var(--sub)",
+                            textTransform: "uppercase",
+                            letterSpacing: 0.4,
+                          }}
+                        >
+                          Selected course
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!selectedCourseId) return;
+                            nav(`/courses/${selectedCourseId}`);
+                          }}
+                          style={{
+                            padding: 0,
+                            margin: 0,
+                            border: "none",
+                            background: "transparent",
+                            color: "var(--text)",
+                            fontSize: 15,
+                            fontWeight: 800,
+                            textAlign: "left",
+                            cursor: selectedCourseId ? "pointer" : "default",
+                          }}
+                        >
+                          {selectedCourse.name}
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!selectedCourseId || isSelectedCourseFollowBusy) {
+                            return;
+                          }
+                          handleToggleCourseFollow(selectedCourseId);
+                        }}
+                        disabled={
+                          !selectedCourseId || isSelectedCourseFollowBusy
+                        }
+                        style={{
+                          alignSelf: isMobile ? "stretch" : "center",
+                          minWidth: isMobile ? "100%" : 120,
+                          padding: "10px 14px",
+                          borderRadius: 999,
+                          border: "1px solid var(--border)",
+                          background: isSelectedCourseFollowed
+                            ? "var(--text)"
+                            : "var(--card)",
+                          color: isSelectedCourseFollowed
+                            ? "var(--bg)"
+                            : "var(--text)",
+                          fontWeight: 800,
+                          fontSize: 13,
+                          cursor:
+                            !selectedCourseId || isSelectedCourseFollowBusy
+                              ? "default"
+                              : "pointer",
+                          opacity:
+                            !selectedCourseId || isSelectedCourseFollowBusy
+                              ? 0.6
+                              : 1,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {isSelectedCourseFollowBusy
+                          ? "Updating..."
+                          : isSelectedCourseFollowed
+                            ? "Following"
+                            : "Follow"}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div
