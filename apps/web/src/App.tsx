@@ -117,6 +117,16 @@ function ProfileSetupPage() {
   return <ProfileSetup me={me} onDone={afterDone} />;
 }
 
+function StageFeedbackWidgetGuard() {
+  const location = useLocation();
+
+  if (location.pathname === "/feed") {
+    return null;
+  }
+
+  return <StageFeedbackWidget />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -261,7 +271,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
 
-          <StageFeedbackWidget />
+          <StageFeedbackWidgetGuard />
         </SelectedCourseProvider>
       </AuthProvider>
     </BrowserRouter>
