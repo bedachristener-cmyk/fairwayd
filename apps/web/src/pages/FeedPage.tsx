@@ -40,6 +40,15 @@ type Course = {
   name: string;
   lat: number;
   lon: number;
+  holes?: number | null;
+  website?: string | null;
+  isPrivate?: boolean | null;
+  private?: boolean | null;
+  visibility?: string | null;
+  access?: string | null;
+  city?: string | null;
+  region?: string | null;
+  country?: string | null;
 };
 
 async function resizeImage(file: File): Promise<File> {
@@ -352,10 +361,40 @@ export default function FeedPage() {
     [courses],
   );
 
-  const selectedName = selectedCourse?.name;
-  const selectedLat = selectedCourse?.lat;
-  const selectedLon = selectedCourse?.lon;
   const selectedCourseId = selectedCourse?.id ?? null;
+  const selectedCourseFull =
+    courses.find((course) => course.id === selectedCourseId) ?? null;
+
+  const selectedName = selectedCourseFull?.name ?? selectedCourse?.name;
+  const selectedLat = selectedCourseFull?.lat ?? selectedCourse?.lat;
+  const selectedLon = selectedCourseFull?.lon ?? selectedCourse?.lon;
+
+  const selectedHoles = selectedCourseFull?.holes ?? null;
+  const selectedWebsite = selectedCourseFull?.website ?? null;
+
+  const selectedVisibilityRaw =
+    selectedCourseFull?.visibility ?? selectedCourseFull?.access ?? null;
+
+  const selectedIsPrivate =
+    typeof selectedCourseFull?.isPrivate === "boolean"
+      ? selectedCourseFull.isPrivate
+      : typeof selectedCourseFull?.private === "boolean"
+        ? selectedCourseFull.private
+        : typeof selectedVisibilityRaw === "string"
+          ? selectedVisibilityRaw.toLowerCase() === "private"
+          : null;
+
+  const selectedCity = selectedCourseFull?.city ?? null;
+  const selectedRegion = selectedCourseFull?.region ?? null;
+  const selectedCountry = selectedCourseFull?.country ?? null;
+
+  const selectedLocationLabel = [selectedCity, selectedRegion, selectedCountry]
+    .filter(
+      (value): value is string =>
+        typeof value === "string" && value.trim().length > 0,
+    )
+    .join(", ");
+
   const isSelectedCourseFollowed = selectedCourseId
     ? followedCourseIds.includes(selectedCourseId)
     : false;
@@ -364,6 +403,13 @@ export default function FeedPage() {
   const supportsDirectCamera =
     typeof navigator !== "undefined" &&
     /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  const normalizedSelectedWebsite =
+    selectedWebsite && selectedWebsite.trim().length > 0
+      ? /^https?:\/\//i.test(selectedWebsite)
+        ? selectedWebsite
+        : `https://${selectedWebsite}`
+      : null;
 
   const selectedIsComplete =
     Boolean(selectedCourse?.id) &&
@@ -660,9 +706,22 @@ export default function FeedPage() {
             }}
           >
             <div style={composerBoxStyle}>
-              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  alignItems: isMobile ? "stretch" : "flex-start",
+                  flexWrap: "wrap",
+                }}
+              >
                 <div
-                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                    flex: 1,
+                    minWidth: isMobile ? "100%" : 260,
+                  }}
                 >
                   <CourseDropdown
                     courses={coursesLite}
@@ -697,12 +756,15 @@ export default function FeedPage() {
                         display: "flex",
                         alignItems: isMobile ? "stretch" : "center",
                         justifyContent: "space-between",
-                        gap: 10,
+                        gap: 12,
                         flexWrap: isMobile ? "wrap" : "nowrap",
-                        padding: isMobile ? "10px 12px" : "10px 12px",
-                        borderRadius: 14,
+                        padding: isMobile ? "12px" : "12px 14px",
+                        borderRadius: 16,
                         border: "1px solid var(--border)",
-                        background: "var(--bg)",
+                        background: "var(--card)",
+                        boxShadow: isMobile
+                          ? "none"
+                          : "0 4px 14px rgba(0,0,0,0.04)",
                       }}
                     >
                       <div
@@ -710,17 +772,17 @@ export default function FeedPage() {
                           minWidth: 0,
                           display: "flex",
                           flexDirection: "column",
-                          gap: 2,
+                          gap: 4,
                           flex: 1,
                         }}
                       >
                         <div
                           style={{
                             fontSize: 11,
-                            fontWeight: 700,
+                            fontWeight: 800,
                             color: "var(--sub)",
                             textTransform: "uppercase",
-                            letterSpacing: 0.4,
+                            letterSpacing: 0.5,
                           }}
                         >
                           Selected course
@@ -738,14 +800,104 @@ export default function FeedPage() {
                             border: "none",
                             background: "transparent",
                             color: "var(--text)",
-                            fontSize: 15,
-                            fontWeight: 800,
+                            fontSize: isMobile ? 15 : 16,
+                            fontWeight: 900,
                             textAlign: "left",
                             cursor: selectedCourseId ? "pointer" : "default",
+                            lineHeight: 1.25,
+                            wordBreak: "break-word",
                           }}
                         >
                           {selectedCourse.name}
                         </button>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: "var(--sub)",
+                            lineHeight: 1.35,
+                          }}
+                        >
+                          Posts and images will be linked to this course
+                        </div>
+
+                        {(selectedLocationLabel ||
+                          selectedHoles !== null ||
+                          selectedIsPrivate !== null ||
+                          normalizedSelectedWebsite) && (
+                          <div
+                            style={{
+                              display: "flex",
+                              flexWrap: "wrap",
+                              gap: 8,
+                              marginTop: 4,
+                            }}
+                          >
+                            {selectedLocationLabel ? (
+                              <span
+                                style={{
+                                  fontSize: 12,
+                                  color: "var(--sub)",
+                                  padding: "6px 10px",
+                                  borderRadius: 999,
+                                  border: "1px solid var(--border)",
+                                  background: "var(--bg)",
+                                }}
+                              >
+                                📍 {selectedLocationLabel}
+                              </span>
+                            ) : null}
+
+                            {selectedHoles !== null ? (
+                              <span
+                                style={{
+                                  fontSize: 12,
+                                  color: "var(--sub)",
+                                  padding: "6px 10px",
+                                  borderRadius: 999,
+                                  border: "1px solid var(--border)",
+                                  background: "var(--bg)",
+                                }}
+                              >
+                                ⛳ {selectedHoles} holes
+                              </span>
+                            ) : null}
+
+                            {selectedIsPrivate !== null ? (
+                              <span
+                                style={{
+                                  fontSize: 12,
+                                  color: "var(--sub)",
+                                  padding: "6px 10px",
+                                  borderRadius: 999,
+                                  border: "1px solid var(--border)",
+                                  background: "var(--bg)",
+                                }}
+                              >
+                                {selectedIsPrivate ? "🔒 Private" : "🌍 Public"}
+                              </span>
+                            ) : null}
+
+                            {normalizedSelectedWebsite ? (
+                              <a
+                                href={normalizedSelectedWebsite}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  fontSize: 12,
+                                  color: "var(--text)",
+                                  padding: "6px 10px",
+                                  borderRadius: 999,
+                                  border: "1px solid var(--border)",
+                                  background: "var(--bg)",
+                                  textDecoration: "none",
+                                  fontWeight: 700,
+                                }}
+                              >
+                                Website
+                              </a>
+                            ) : null}
+                          </div>
+                        )}
                       </div>
 
                       <button
@@ -761,13 +913,13 @@ export default function FeedPage() {
                         }
                         style={{
                           alignSelf: isMobile ? "stretch" : "center",
-                          minWidth: isMobile ? "100%" : 120,
+                          minWidth: isMobile ? "100%" : 132,
                           padding: "10px 14px",
                           borderRadius: 999,
                           border: "1px solid var(--border)",
                           background: isSelectedCourseFollowed
                             ? "var(--text)"
-                            : "var(--card)",
+                            : "var(--bg)",
                           color: isSelectedCourseFollowed
                             ? "var(--bg)"
                             : "var(--text)",
@@ -782,6 +934,9 @@ export default function FeedPage() {
                               ? 0.6
                               : 1,
                           whiteSpace: "nowrap",
+                          boxShadow: isSelectedCourseFollowed
+                            ? "0 2px 10px rgba(0,0,0,0.08)"
+                            : "none",
                         }}
                       >
                         {isSelectedCourseFollowBusy
@@ -796,13 +951,17 @@ export default function FeedPage() {
 
                 <div
                   style={{
-                    marginLeft: "auto",
+                    marginLeft: isMobile ? 0 : "auto",
+                    minWidth: isMobile ? "100%" : "auto",
                     background: "var(--card)",
-                    border: "1px solid var(--line, var(--border))",
-                    borderRadius: 12,
+                    border: "1px solid var(--border)",
+                    borderRadius: 14,
                     paddingRight: 10,
                     display: "flex",
                     alignItems: "center",
+                    boxShadow: isMobile
+                      ? "none"
+                      : "0 2px 10px rgba(0,0,0,0.03)",
                   }}
                 >
                   <select
@@ -819,11 +978,13 @@ export default function FeedPage() {
                       background: "var(--card)",
                       color: "var(--text)",
                       fontWeight: 800,
+                      fontSize: 13,
                       appearance: "none",
                       WebkitAppearance: "none",
                       MozAppearance: "none",
-                      borderRadius: 12,
+                      borderRadius: 14,
                       cursor: posting ? "default" : "pointer",
+                      width: isMobile ? "100%" : "auto",
                     }}
                     disabled={posting}
                   >

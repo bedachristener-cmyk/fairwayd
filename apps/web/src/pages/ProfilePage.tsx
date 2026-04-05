@@ -291,6 +291,9 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
   const [followingCourses, setFollowingCourses] = useState<any[]>([]);
   const [followingUsers, setFollowingUsers] = useState<FollowRelation[]>([]);
   const [followers, setFollowers] = useState<FollowRelation[]>([]);
+  const [activeSection, setActiveSection] = useState<
+    "posts" | "following" | "followers" | "courses"
+  >("posts");
   const activeCommentPost = useMemo(() => {
     if (!activeCommentPostId) return null;
     return posts.find((p) => p.id === activeCommentPostId) ?? null;
@@ -792,6 +795,30 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
   const backTo = (loc.state as any)?.from || "/feed";
 
+  const summaryButtonStyle = (
+    section: "posts" | "following" | "followers" | "courses",
+  ): React.CSSProperties => ({
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    justifyContent: "center",
+    gap: 4,
+    width: "100%",
+    minHeight: isMobile ? 72 : 78,
+    padding: isMobile ? "12px 14px" : "14px 16px",
+    borderRadius: 16,
+    border:
+      activeSection === section
+        ? "1px solid rgba(39,196,107,0.40)"
+        : "1px solid var(--border)",
+    background:
+      activeSection === section ? "rgba(39,196,107,0.14)" : "var(--card)",
+    color: "var(--text)",
+    cursor: "pointer",
+    textAlign: "left",
+    boxSizing: "border-box",
+  });
+
   return (
     <div style={{ display: "grid", gap: 12, minWidth: 0 }}>
       {err && (
@@ -942,90 +969,119 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
             <div
               style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: isMobile ? 10 : 14,
-                marginTop: 8,
-                fontSize: 12,
-                lineHeight: 1.35,
+                display: "grid",
+                gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)",
+                gap: 10,
+                marginTop: 12,
               }}
             >
               <button
                 type="button"
-                onClick={() => {
-                  postsRef.current?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "start",
-                  });
-                }}
-                style={{
-                  border: "none",
-                  background: "transparent",
-                  padding: 0,
-                  margin: 0,
-                  color: "var(--sub)",
-                  cursor: "pointer",
-                  fontSize: 12,
-                  lineHeight: 1.35,
-                }}
+                onClick={() => setActiveSection("posts")}
+                style={summaryButtonStyle("posts")}
               >
-                <strong style={{ color: "var(--text)" }}>{posts.length}</strong>{" "}
-                posts
+                <span
+                  style={{
+                    fontSize: isMobile ? 20 : 22,
+                    fontWeight: 900,
+                    color: "var(--text)",
+                    lineHeight: 1,
+                  }}
+                >
+                  {posts.length}
+                </span>
+                <span
+                  style={{
+                    fontSize: 12,
+                    color: "var(--sub)",
+                    fontWeight: 700,
+                    lineHeight: 1.3,
+                  }}
+                >
+                  My Posts
+                </span>
               </button>
 
-              {mode === "me" ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      followingUsersRef.current?.scrollIntoView({
-                        behavior: "smooth",
-                        block: "start",
-                      });
-                    }}
-                    style={{
-                      border: "none",
-                      background: "transparent",
-                      padding: 0,
-                      margin: 0,
-                      color: "var(--sub)",
-                      cursor: "pointer",
-                      fontSize: 12,
-                      lineHeight: 1.35,
-                    }}
-                  >
-                    <strong style={{ color: "var(--text)" }}>
-                      {followingUsers.length}
-                    </strong>{" "}
-                    following
-                  </button>
+              <button
+                type="button"
+                onClick={() => setActiveSection("following")}
+                style={summaryButtonStyle("following")}
+              >
+                <span
+                  style={{
+                    fontSize: isMobile ? 20 : 22,
+                    fontWeight: 900,
+                    color: "var(--text)",
+                    lineHeight: 1,
+                  }}
+                >
+                  {followingUsers.length}
+                </span>
+                <span
+                  style={{
+                    fontSize: 12,
+                    color: "var(--sub)",
+                    fontWeight: 700,
+                    lineHeight: 1.3,
+                  }}
+                >
+                  Users I Follow
+                </span>
+              </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      followersRef.current?.scrollIntoView({
-                        behavior: "smooth",
-                        block: "start",
-                      });
-                    }}
-                    style={{
-                      border: "none",
-                      background: "transparent",
-                      padding: 0,
-                      margin: 0,
-                      color: "var(--sub)",
-                      cursor: "pointer",
-                      fontSize: 12,
-                      lineHeight: 1.35,
-                    }}
-                  >
-                    <strong style={{ color: "var(--text)" }}>
-                      {followers.length}
-                    </strong>{" "}
-                    followers
-                  </button>
-                </>
-              ) : null}
+              <button
+                type="button"
+                onClick={() => setActiveSection("followers")}
+                style={summaryButtonStyle("followers")}
+              >
+                <span
+                  style={{
+                    fontSize: isMobile ? 20 : 22,
+                    fontWeight: 900,
+                    color: "var(--text)",
+                    lineHeight: 1,
+                  }}
+                >
+                  {followers.length}
+                </span>
+                <span
+                  style={{
+                    fontSize: 12,
+                    color: "var(--sub)",
+                    fontWeight: 700,
+                    lineHeight: 1.3,
+                  }}
+                >
+                  My Followers
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveSection("courses")}
+                style={summaryButtonStyle("courses")}
+              >
+                <span
+                  style={{
+                    fontSize: isMobile ? 20 : 22,
+                    fontWeight: 900,
+                    color: "var(--text)",
+                    lineHeight: 1,
+                  }}
+                >
+                  {followingCourses.length}
+                </span>
+                <span
+                  style={{
+                    fontSize: 12,
+                    color: "var(--sub)",
+                    fontWeight: 700,
+                    lineHeight: 1.3,
+                  }}
+                >
+                  Courses I Follow
+                </span>
+              </button>
             </div>
 
             {profile?.createdAt ? (
@@ -1077,7 +1133,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
       {/* ✅ Theme selection only in own profile (/profile) */}
       {mode === "me" ? <ThemePicker /> : null}
 
-      {mode === "me" && (
+      {mode === "me" && activeSection === "courses" && (
         <Card title="Following Courses">
           <div style={{ padding: 12 }}>
             <div
@@ -1105,8 +1161,8 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                         alignItems: "center",
                         gap: 12,
                         width: "100%",
-                        padding: isMobile ? "12px" : "10px 12px",
-                        borderRadius: 12,
+                        padding: isMobile ? "10px 12px" : "10px 12px",
+                        borderRadius: 14,
                         border: "1px solid var(--border)",
                         background: "var(--card)",
                         color: "var(--text)",
@@ -1117,8 +1173,8 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                     >
                       <div
                         style={{
-                          width: 36,
-                          height: 36,
+                          width: 34,
+                          height: 34,
                           borderRadius: 999,
                           display: "flex",
                           alignItems: "center",
@@ -1134,18 +1190,26 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
                       <div
                         style={{
+                          minWidth: 0,
                           display: "flex",
                           flexDirection: "column",
-                          gap: 12,
-                          paddingLeft: isMobile ? 12 : 0,
-                          paddingRight: isMobile ? 12 : 0,
+                          gap: 2,
+                          flex: 1,
                         }}
                       >
-                        <span style={{ fontWeight: 700, color: "var(--text)" }}>
+                        <span
+                          style={{
+                            fontWeight: 800,
+                            color: "var(--text)",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
                           {c.name}
                         </span>
                         <span style={{ fontSize: 12, color: "var(--sub)" }}>
-                          golf course
+                          Golf course
                         </span>
                       </div>
                     </button>
@@ -1252,7 +1316,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
         </Card>
       )}
 
-      {mode === "me" && (
+      {mode === "me" && activeSection === "following" && (
         <div ref={followingUsersRef}>
           <UserListCard
             title="Following Users"
@@ -1274,7 +1338,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
           />
         </div>
       )}
-      {mode === "me" && (
+      {mode === "me" && activeSection === "followers" && (
         <div ref={followersRef}>
           <UserListCard
             title="Followers"
@@ -1296,55 +1360,57 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
           />
         </div>
       )}
-      <div ref={postsRef}>
-        <Card
-          title="Posts"
-          right={
-            <div style={{ fontSize: 12, color: "var(--sub)" }}>
-              {loading ? "Loading..." : `${posts.length} posts`}
-            </div>
-          }
-        >
-          {!loading && posts.length === 0 && (
-            <div style={{ padding: 12, color: "var(--sub)" }}>
-              No posts yet.
-            </div>
-          )}
+      {activeSection === "posts" && (
+        <div ref={postsRef}>
+          <Card
+            title="Posts"
+            right={
+              <div style={{ fontSize: 12, color: "var(--sub)" }}>
+                {loading ? "Loading..." : `${posts.length} posts`}
+              </div>
+            }
+          >
+            {!loading && posts.length === 0 && (
+              <div style={{ padding: 12, color: "var(--sub)" }}>
+                No posts yet.
+              </div>
+            )}
 
-          <div style={{ display: "grid", gap: 10 }}>
-            {posts.map((p) => {
-              const lat = Number(p.course.lat);
-              const lon = Number(p.course.lon);
-              const canSelectCourse =
-                Number.isFinite(lat) && Number.isFinite(lon);
-              const isCourseFollowed = followingCourses.some(
-                (c: any) => c?.id === p.course.id,
-              );
-              const isCourseFollowBusy = courseFollowBusyId === p.course.id;
+            <div style={{ display: "grid", gap: 10 }}>
+              {posts.map((p) => {
+                const lat = Number(p.course.lat);
+                const lon = Number(p.course.lon);
+                const canSelectCourse =
+                  Number.isFinite(lat) && Number.isFinite(lon);
+                const isCourseFollowed = followingCourses.some(
+                  (c: any) => c?.id === p.course.id,
+                );
+                const isCourseFollowBusy = courseFollowBusyId === p.course.id;
 
-              return (
-                <PostCard
-                  key={p.id}
-                  post={p}
-                  isMobile={isMobile}
-                  onSelectCourse={
-                    canSelectCourse
-                      ? () => {
-                          nav(`/courses/${p.course.id}`);
-                        }
-                      : undefined
-                  }
-                  onCommentClick={() => setActiveCommentPostId(p.id)}
-                  onOpenPost={() => setActiveCommentPostId(p.id)}
-                  courseFollowed={isCourseFollowed}
-                  courseFollowBusy={isCourseFollowBusy}
-                  onCourseFollowToggle={handleToggleCourseFollow}
-                />
-              );
-            })}
-          </div>
-        </Card>
-      </div>
+                return (
+                  <PostCard
+                    key={p.id}
+                    post={p}
+                    isMobile={isMobile}
+                    onSelectCourse={
+                      canSelectCourse
+                        ? () => {
+                            nav(`/courses/${p.course.id}`);
+                          }
+                        : undefined
+                    }
+                    onCommentClick={() => setActiveCommentPostId(p.id)}
+                    onOpenPost={() => setActiveCommentPostId(p.id)}
+                    courseFollowed={isCourseFollowed}
+                    courseFollowBusy={isCourseFollowBusy}
+                    onCourseFollowToggle={handleToggleCourseFollow}
+                  />
+                );
+              })}
+            </div>
+          </Card>
+        </div>
+      )}
       {activeCommentPost ? (
         <CommentModal
           post={activeCommentPost}

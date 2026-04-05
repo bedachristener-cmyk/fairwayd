@@ -30,7 +30,7 @@ function getInitials(user: UserListItem) {
 
 function AvatarCircle({
   user,
-  size = 44,
+  size = 42,
 }: {
   user: UserListItem;
   size?: number;
@@ -43,7 +43,11 @@ function AvatarCircle({
         style={{
           width: size,
           height: size,
-          borderRadius: "999px",
+          minWidth: size,
+          minHeight: size,
+          maxWidth: size,
+          maxHeight: size,
+          borderRadius: "50%",
           objectFit: "cover",
           display: "block",
           flexShrink: 0,
@@ -64,8 +68,8 @@ function AvatarCircle({
         flexShrink: 0,
         background: "var(--border)",
         color: "var(--text)",
-        fontSize: 13,
-        fontWeight: 700,
+        fontSize: 11,
+        fontWeight: 800,
       }}
     >
       {getInitials(user)}
@@ -134,7 +138,7 @@ export default function UserListCard({
         <div
           style={{
             display: "grid",
-            gap: 10,
+            gap: 8,
           }}
         >
           {users.map((user) => (
@@ -144,8 +148,8 @@ export default function UserListCard({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                gap: 12,
-                padding: 10,
+                gap: 10,
+                padding: "8px 10px",
                 borderRadius: 14,
                 background: "var(--bg)",
                 border: "1px solid var(--border)",
@@ -161,7 +165,7 @@ export default function UserListCard({
                   margin: 0,
                   display: "flex",
                   alignItems: "center",
-                  gap: 12,
+                  gap: 10,
                   minWidth: 0,
                   flex: 1,
                   cursor: onUserClick ? "pointer" : "default",
@@ -174,14 +178,14 @@ export default function UserListCard({
                   style={{
                     minWidth: 0,
                     display: "grid",
-                    gap: 2,
+                    gap: 1,
                   }}
                 >
                   <div
                     style={{
                       color: "var(--text)",
-                      fontSize: 14,
-                      fontWeight: 700,
+                      fontSize: 13,
+                      fontWeight: 800,
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -193,7 +197,7 @@ export default function UserListCard({
                   <div
                     style={{
                       color: "var(--sub)",
-                      fontSize: 13,
+                      fontSize: 12,
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
