@@ -290,6 +290,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
     return posts.find((p) => p.id === activeCommentPostId) ?? null;
   }, [activeCommentPostId, posts]);
   const [followRequests, setFollowRequests] = useState<FollowRelation[]>([]);
+  const [sentFollowRequests, setSentFollowRequests] = useState<any[]>([]);
   const followingUsersRef = useRef<HTMLDivElement | null>(null);
   const followersRef = useRef<HTMLDivElement | null>(null);
   const postsRef = useRef<HTMLDivElement | null>(null);
@@ -301,29 +302,47 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
   useEffect(() => {
     if (mode !== "me") {
       setFollowRequests([]);
+      setSentFollowRequests([]);
       return;
     }
 
     if (!token) {
       setFollowRequests([]);
+      setSentFollowRequests([]);
       return;
     }
 
     const run = async () => {
       try {
-        const res = await fetch(`${API_BASE}/users/me/follow-requests`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const [incomingRes, sentRes] = await Promise.all([
+          fetch(`${API_BASE}/users/me/follow-requests`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${API_BASE}/users/me/follow-requests/sent`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
 
-        if (!res.ok) {
+        if (incomingRes.ok) {
+          const incomingData = await incomingRes.json();
+          setFollowRequests(
+            Array.isArray(incomingData?.items) ? incomingData.items : [],
+          );
+        } else {
           setFollowRequests([]);
-          return;
         }
 
-        const data = await res.json();
-        setFollowRequests(Array.isArray(data?.items) ? data.items : []);
+        if (sentRes.ok) {
+          const sentData = await sentRes.json();
+          setSentFollowRequests(
+            Array.isArray(sentData?.items) ? sentData.items : [],
+          );
+        } else {
+          setSentFollowRequests([]);
+        }
       } catch {
         setFollowRequests([]);
+        setSentFollowRequests([]);
       }
     };
 
@@ -1352,6 +1371,110 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                       >
                         Accept
                       </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {mode === "me" && (
+        <Card
+          title="Sent Requests"
+          right={
+            <span style={{ fontSize: 11, color: "var(--sub)" }}>
+              {sentFollowRequests.length}
+            </span>
+          }
+        >
+          {sentFollowRequests.length === 0 ? (
+            <div style={{ padding: 10, color: "var(--sub)", fontSize: 13 }}>
+              No open sent requests
+            </div>
+          ) : (
+            <div style={{ display: "grid", gap: 8 }}>
+              {sentFollowRequests.map((x: any) => {
+                const handle = x.followingHandle || x.followingId;
+                const name = x.followingName || null;
+
+                return (
+                  <div
+                    key={x.followingId}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: isMobile ? "10px" : "8px 10px",
+                      borderRadius: 12,
+                      border: "1px solid var(--border)",
+                      background: "var(--card)",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 32,
+                        height: 32,
+                        minWidth: 32,
+                        minHeight: 32,
+                        maxWidth: 32,
+                        maxHeight: 32,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <AvatarCircle
+                        handle={handle}
+                        avatarUrl={x.followingAvatarUrl}
+                      />
+                    </div>
+
+                    <div
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        display: "grid",
+                        gap: 2,
+                      }}
+                    >
+                      {name ? (
+                        <div
+                          style={{
+                            fontWeight: 800,
+                            fontSize: 13,
+                            color: "var(--text)",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {name}
+                        </div>
+                      ) : null}
+
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: "var(--sub)",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        @{handle}
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "var(--sub)",
+                        fontWeight: 700,
+                        flexShrink: 0,
+                      }}
+                    >
+                      Requested
                     </div>
                   </div>
                 );

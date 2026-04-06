@@ -417,6 +417,34 @@ export class UsersService {
     }));
   }
 
+  async listMySentFollowRequests(meId: string) {
+    const rows = await this.prisma.follow.findMany({
+      where: { followerId: meId, status: FollowStatus.PENDING },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        following: {
+          select: {
+            id: true,
+            handle: true,
+            name: true,
+            avatarUrl: true,
+            privacy: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    return rows.map((r) => ({
+      followingId: r.followingId,
+      createdAt: r.createdAt,
+
+      followingHandle: r.following?.handle ?? null,
+      followingName: r.following?.name ?? null,
+      followingAvatarUrl: r.following?.avatarUrl ?? null,
+    }));
+  }
+
   async acceptFollowRequest(meId: string, followerId: string) {
     const res = await this.prisma.follow.updateMany({
       where: {

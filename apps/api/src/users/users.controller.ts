@@ -186,6 +186,19 @@ export class UsersController {
   }
 
   @UseGuards(AuthGuard('jwt'))
+  @Get('me/follow-requests/sent')
+  @ApiOperation({
+    summary: 'List pending follow requests sent by current user',
+  })
+  async mySentFollowRequests(@Req() req: any) {
+    const meId = req?.user?.userId ?? req?.user?.id;
+    if (!meId) return { items: [] };
+
+    const items = await this.users.listMySentFollowRequests(meId);
+    return { items };
+  }
+
+  @UseGuards(AuthGuard('jwt'))
   @Get('me/following')
   @ApiOperation({ summary: 'List users current user follows' })
   async myFollowing(@Req() req: any) {

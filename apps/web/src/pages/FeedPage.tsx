@@ -33,6 +33,11 @@ type Post = {
   };
   images?: PostImage[];
   likes?: { userId: string }[];
+  comments?: unknown[];
+  _count?: {
+    likes?: number;
+    comments?: number;
+  };
 };
 
 type Course = {
@@ -278,7 +283,29 @@ export default function FeedPage() {
       }
 
       const data = await res.json();
-      setPosts(Array.isArray(data?.items) ? data.items : []);
+      const items = Array.isArray(data?.items) ? data.items : [];
+
+      setPosts(
+        items.map((post: any) => ({
+          ...post,
+          likes: Array.isArray(post?.likes) ? post.likes : [],
+          comments: Array.isArray(post?.comments) ? post.comments : [],
+          _count: {
+            likes:
+              typeof post?._count?.likes === "number"
+                ? post._count.likes
+                : Array.isArray(post?.likes)
+                  ? post.likes.length
+                  : 0,
+            comments:
+              typeof post?._count?.comments === "number"
+                ? post._count.comments
+                : Array.isArray(post?.comments)
+                  ? post.comments.length
+                  : 0,
+          },
+        })),
+      );
     } catch (e: any) {
       setErr(e?.message ?? "Failed to load feed");
     }
@@ -669,7 +696,15 @@ export default function FeedPage() {
 
   if (!isAuthenticated) {
     return (
-      <div style={{ display: "grid", gap: 12 }}>
+      <div
+        style={{
+          display: "grid",
+          gap: 12,
+          paddingBottom: isMobile
+            ? "calc(64px + env(safe-area-inset-bottom, 0px))"
+            : 0,
+        }}
+      >
         <Card title="Feed">
           <div style={{ color: "var(--sub)", fontSize: 13 }}>
             Bitte neu einloggen (DB Reset hat den alten Token ungültig gemacht).
@@ -1625,7 +1660,15 @@ export default function FeedPage() {
             </div>
           </div>
 
-          <div style={{ display: "grid", gap: 10 }}>
+          <div
+            style={{
+              display: "grid",
+              gap: 10,
+              paddingBottom: isMobile
+                ? "calc(96px + env(safe-area-inset-bottom, 0px))"
+                : 0,
+            }}
+          >
             {posts.length === 0 ? (
               <div
                 style={{
