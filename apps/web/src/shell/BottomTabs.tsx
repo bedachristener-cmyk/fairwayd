@@ -59,6 +59,7 @@ export default function BottomTabs() {
     >
       <Tab to="/feed" label="Feed" icon="📰" />
       <Tab to="/map" label="Map" icon="🗺️" />
+      <Tab to="/destinations" label="Explore" icon="🌍" />
       <Tab to="/profile" label="Me" icon="👤" />
     </div>
   );

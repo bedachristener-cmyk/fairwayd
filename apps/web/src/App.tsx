@@ -29,7 +29,9 @@ import FollowingCoursesPage from "./pages/FollowingCoursesPage";
 import CoursePage from "./pages/CoursePage";
 import FeedbackAdminPage from "./pages/FeedbackAdminPage";
 import UserSearchPage from "./pages/UserSearchPage";
+import DestinationsPage from "./pages/DestinationsPage";
 import StageFeedbackWidget from "./components/StageFeedbackWidget";
+import DestinationPage from "./pages/DestinationPage";
 
 /**
  * Wrap any protected page with this:
@@ -180,6 +182,19 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+
+              <Route
+                path="/destinations"
+                element={
+                  <ProtectedRoute>
+                    <OnboardingGuard>
+                      <DestinationsPage />
+                    </OnboardingGuard>
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route path="/destinations/:slug" element={<DestinationPage />} />
 
               {/* Following courses */}
               <Route

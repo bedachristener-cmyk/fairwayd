@@ -949,15 +949,16 @@ export default function FeedPage() {
                         style={{
                           alignSelf: isMobile ? "stretch" : "center",
                           minWidth: isMobile ? "100%" : 132,
+                          minHeight: 42,
                           padding: "10px 14px",
                           borderRadius: 999,
-                          border: "1px solid var(--border)",
+                          border: isSelectedCourseFollowed
+                            ? "1px solid rgba(39,196,107,0.45)"
+                            : "1px solid var(--border)",
                           background: isSelectedCourseFollowed
-                            ? "var(--text)"
+                            ? "rgba(39,196,107,0.18)"
                             : "var(--bg)",
-                          color: isSelectedCourseFollowed
-                            ? "var(--bg)"
-                            : "var(--text)",
+                          color: "var(--text)",
                           fontWeight: 800,
                           fontSize: 13,
                           cursor:
@@ -966,12 +967,14 @@ export default function FeedPage() {
                               : "pointer",
                           opacity:
                             !selectedCourseId || isSelectedCourseFollowBusy
-                              ? 0.6
+                              ? 0.7
                               : 1,
                           whiteSpace: "nowrap",
                           boxShadow: isSelectedCourseFollowed
-                            ? "0 2px 10px rgba(0,0,0,0.08)"
+                            ? "0 0 0 1px rgba(39,196,107,0.12)"
                             : "none",
+                          transition:
+                            "background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease",
                         }}
                       >
                         {isSelectedCourseFollowBusy
@@ -1338,17 +1341,6 @@ export default function FeedPage() {
                       }}
                     >
                       Image ready to post
-                    </span>
-                  )}
-
-                  {selectedCourse && !draft.trim() && !file && (
-                    <span
-                      style={{
-                        fontSize: 12,
-                        color: "var(--sub)",
-                      }}
-                    >
-                      Write something or add an image
                     </span>
                   )}
 

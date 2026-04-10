@@ -233,4 +233,65 @@ export class CoursesService {
 
     return rows.map((r) => r.course);
   }
+
+  async listCountries() {
+    const rows = await this.prisma.course.groupBy({
+      by: ['country'],
+      where: {
+        active: true,
+        country: {
+          not: '',
+        },
+      },
+      _count: {
+        country: true,
+      },
+      orderBy: {
+        country: 'asc',
+      },
+    });
+
+    return {
+      items: rows.map((row) => ({
+        country: row.country,
+        courseCount: row._count.country,
+      })),
+    };
+  }
+
+  async getByCountry(country: string) {
+    const normalizedCountry = (country || '').trim().toUpperCase();
+
+    if (!normalizedCountry) {
+      throw new BadRequestException('Country is required');
+    }
+
+    const items = await this.prisma.course.findMany({
+      where: {
+        active: true,
+        country: normalizedCountry,
+      },
+      orderBy: {
+        name: 'asc',
+      },
+      select: {
+        id: true,
+        name: true,
+        city: true,
+        region: true,
+        country: true,
+        lat: true,
+        lon: true,
+        holes: true,
+        access: true,
+        website: true,
+      },
+    });
+
+    return {
+      country: normalizedCountry,
+      courseCount: items.length,
+      items,
+    };
+  }
 }

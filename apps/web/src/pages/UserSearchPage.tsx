@@ -99,7 +99,12 @@ export default function UserSearchPage() {
     return () => clearTimeout(t);
   }, [query, token]);
 
-  function getFollowLabel(status?: UserItem["followStatus"]) {
+  function getFollowLabel(status?: UserItem["followStatus"], isBusy?: boolean) {
+    if (isBusy) {
+      if (status === "ACCEPTED" || status === "PENDING") return "Updating...";
+      return "Requesting...";
+    }
+
     if (status === "ACCEPTED") return "Following";
     if (status === "PENDING") return "Requested";
     if (status === "SELF") return "You";
@@ -328,29 +333,59 @@ export default function UserSearchPage() {
               onClick={(e) => handleToggleFollow(e, u)}
               disabled={u.followStatus === "SELF" || followBusyId === u.id}
               style={{
-                padding: "7px 10px",
+                minWidth: 96,
+                minHeight: 32,
+                padding: "7px 12px",
                 borderRadius: 999,
                 border:
                   u.followStatus === "ACCEPTED"
-                    ? "1px solid rgba(39,196,107,0.35)"
-                    : "1px solid var(--border)",
+                    ? "1px solid rgba(39,196,107,0.42)"
+                    : u.followStatus === "PENDING"
+                      ? "1px solid rgba(255,255,255,0.12)"
+                      : u.followStatus === "SELF"
+                        ? "1px solid var(--border)"
+                        : "1px solid var(--border)",
                 background:
                   u.followStatus === "ACCEPTED"
-                    ? "rgba(39,196,107,0.16)"
-                    : "var(--bg)",
-                color: "var(--text)",
+                    ? "rgba(39,196,107,0.18)"
+                    : u.followStatus === "PENDING"
+                      ? "var(--card)"
+                      : u.followStatus === "SELF"
+                        ? "rgba(255,255,255,0.04)"
+                        : "var(--bg)",
+                color:
+                  u.followStatus === "PENDING" ? "var(--sub)" : "var(--text)",
                 fontWeight: 800,
                 fontSize: 11,
+                lineHeight: 1,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
                 cursor:
                   u.followStatus === "SELF" || followBusyId === u.id
                     ? "default"
                     : "pointer",
-                opacity: followBusyId === u.id ? 0.6 : 1,
+                opacity: followBusyId === u.id ? 0.72 : 1,
                 whiteSpace: "nowrap",
                 flexShrink: 0,
+                boxShadow:
+                  u.followStatus === "ACCEPTED"
+                    ? "0 0 0 1px rgba(39,196,107,0.10)"
+                    : "none",
+                transition:
+                  "background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease",
               }}
+              title={
+                u.followStatus === "SELF"
+                  ? "This is you"
+                  : u.followStatus === "PENDING"
+                    ? "Follow request sent"
+                    : u.followStatus === "ACCEPTED"
+                      ? "Following"
+                      : "Follow this user"
+              }
             >
-              {followBusyId === u.id ? "..." : getFollowLabel(u.followStatus)}
+              {getFollowLabel(u.followStatus, followBusyId === u.id)}
             </button>
           </button>
         ))}

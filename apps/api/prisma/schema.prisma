@@ -98,6 +98,21 @@ model Follow {
   @@index([followingId, status])
 }
 
+model Destination {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  slug        String   @unique
+  description String?
+  coverImage  String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([code])
+  @@index([slug])
+  @@index([isActive])
+}
 
 model Course {
   id         String  @id @default(cuid())

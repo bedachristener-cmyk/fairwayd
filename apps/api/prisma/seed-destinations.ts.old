@@ -1,0 +1,46 @@
+import 'dotenv/config';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient({
+  datasourceUrl: process.env.DATABASE_URL,
+});
+
+async function main() {
+  const items = [
+    { code: 'TH', name: 'Thailand', slug: 'thailand' },
+    { code: 'VN', name: 'Vietnam', slug: 'vietnam' },
+    { code: 'PT', name: 'Portugal', slug: 'portugal' },
+    { code: 'ES', name: 'Spain', slug: 'spain' },
+    { code: 'TR', name: 'Turkey', slug: 'turkey' },
+    { code: 'AE', name: 'United Arab Emirates', slug: 'united-arab-emirates' },
+    { code: 'CH', name: 'Switzerland', slug: 'switzerland' },
+    { code: 'DE', name: 'Germany', slug: 'germany' },
+    { code: 'AT', name: 'Austria', slug: 'austria' },
+    { code: 'FR', name: 'France', slug: 'france' },
+    { code: 'IT', name: 'Italy', slug: 'italy' },
+    { code: 'US', name: 'United States', slug: 'united-states' },
+  ];
+
+  for (const item of items) {
+    await prisma.destination.upsert({
+      where: { code: item.code },
+      update: {
+        name: item.name,
+        slug: item.slug,
+        isActive: true,
+      },
+      create: item,
+    });
+  }
+
+  console.log(`Seeded ${items.length} destinations`);
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

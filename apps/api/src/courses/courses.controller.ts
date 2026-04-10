@@ -76,6 +76,18 @@ export class CoursesController {
     return this.coursesService.findNearby({ lat, lon, radiusM });
   }
 
+  @Get('countries')
+  @ApiOperation({ summary: 'List countries with active course counts' })
+  async listCountries() {
+    return this.coursesService.listCountries();
+  }
+
+  @Get('by-country/:country')
+  @ApiOperation({ summary: 'List active courses by country' })
+  async getByCountry(@Param('country') country: string) {
+    return this.coursesService.getByCountry(country);
+  }
+
   // ------------------------------------------------------------------
   // Current user's followed courses (JWT)
   // IMPORTANT: must be BEFORE @Get(':id')

@@ -295,6 +295,9 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
   const followersRef = useRef<HTMLDivElement | null>(null);
   const postsRef = useRef<HTMLDivElement | null>(null);
   const [followReqBusy, setFollowReqBusy] = useState<string | null>(null);
+  const [sentFollowReqBusy, setSentFollowReqBusy] = useState<string | null>(
+    null,
+  );
   const [courseFollowBusyId, setCourseFollowBusyId] = useState<string | null>(
     null,
   );
@@ -386,6 +389,36 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
       console.error("Reject failed", err);
     } finally {
       setFollowReqBusy(null);
+    }
+  };
+
+  const handleCancelSentRequest = async (userId: string) => {
+    if (!token) return;
+    setSentFollowReqBusy(userId);
+
+    try {
+      const res = await fetch(
+        `${API_BASE}/follows/${encodeURIComponent(userId)}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        throw new Error(
+          `Cancel sent request failed. HTTP ${res.status} ${res.statusText} ${t}`.trim(),
+        );
+      }
+
+      setSentFollowRequests((prev) =>
+        prev.filter((x: any) => x.followingId !== userId),
+      );
+    } catch (err) {
+      console.error("Cancel sent request failed", err);
+    } finally {
+      setSentFollowReqBusy(null);
     }
   };
 
@@ -1398,13 +1431,15 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
               {sentFollowRequests.map((x: any) => {
                 const handle = x.followingHandle || x.followingId;
                 const name = x.followingName || null;
+                const busy = sentFollowReqBusy === x.followingId;
 
                 return (
                   <div
                     key={x.followingId}
                     style={{
                       display: "flex",
-                      alignItems: "center",
+                      alignItems: isMobile ? "stretch" : "center",
+                      flexWrap: isMobile ? "wrap" : "nowrap",
                       gap: 8,
                       padding: isMobile ? "10px" : "8px 10px",
                       borderRadius: 12,
@@ -1433,7 +1468,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                     <div
                       style={{
                         flex: 1,
-                        minWidth: 0,
+                        minWidth: isMobile ? "calc(100% - 66px)" : 0,
                         display: "grid",
                         gap: 2,
                       }}
@@ -1468,13 +1503,41 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
                     <div
                       style={{
-                        fontSize: 12,
-                        color: "var(--sub)",
-                        fontWeight: 700,
-                        flexShrink: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        width: isMobile ? "100%" : "auto",
+                        marginLeft: isMobile ? 0 : "auto",
+                        marginTop: isMobile ? 4 : 0,
                       }}
                     >
-                      Requested
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: "var(--sub)",
+                          fontWeight: 700,
+                          flexShrink: 0,
+                        }}
+                      >
+                        Requested
+                      </div>
+
+                      <button
+                        disabled={busy}
+                        onClick={() => handleCancelSentRequest(x.followingId)}
+                        style={{
+                          flex: isMobile ? 1 : undefined,
+                          padding: "6px 10px",
+                          fontSize: 12,
+                          borderRadius: 8,
+                          border: "1px solid var(--border)",
+                          background: "transparent",
+                          color: "var(--text)",
+                          cursor: busy ? "default" : "pointer",
+                        }}
+                      >
+                        {busy ? "..." : "Cancel"}
+                      </button>
                     </div>
                   </div>
                 );
@@ -1544,7 +1607,15 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
               </div>
             )}
 
-            <div style={{ display: "grid", gap: 10 }}>
+            <div
+              style={{
+                display: "grid",
+                gap: 10,
+                paddingBottom: isMobile
+                  ? "calc(72px + env(safe-area-inset-bottom, 0px))"
+                  : 0,
+              }}
+            >
               {posts.map((p) => {
                 const lat = Number(p.course.lat);
                 const lon = Number(p.course.lon);

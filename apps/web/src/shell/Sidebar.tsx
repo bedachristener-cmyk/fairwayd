@@ -47,6 +47,14 @@ export default function Sidebar() {
         </button>
 
         <button
+          onClick={() => go("/destinations")}
+          style={btnStyle}
+          type="button"
+        >
+          🌍 Explore
+        </button>
+
+        <button
           onClick={() => goProtected("/feed")}
           style={{
             ...btnStyle,

@@ -624,27 +624,33 @@ export default function PostCard({
                     }}
                     disabled={courseFollowBusy}
                     style={{
-                      padding: "4px 10px",
-                      borderRadius: 999,
-                      border: courseFollowed
-                        ? "1px solid rgba(39,196,107,0.35)"
-                        : "1px solid var(--border)",
+                      border: "none",
                       background: courseFollowed
-                        ? "rgba(39,196,107,0.16)"
-                        : "var(--bg)",
-                      color: "var(--text)",
-                      fontWeight: 800,
+                        ? "var(--text)"
+                        : "rgba(255,255,255,0.08)",
+                      color: courseFollowed ? "var(--bg)" : "var(--text)",
+                      padding: "6px 14px",
+                      borderRadius: 999,
+                      fontWeight: 700,
                       fontSize: 12,
+                      lineHeight: 1,
+                      minHeight: 30,
+                      minWidth: 90,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                       cursor: courseFollowBusy ? "default" : "pointer",
                       opacity: courseFollowBusy ? 0.6 : 1,
+                      transition: "all 0.15s ease",
+                      whiteSpace: "nowrap",
                     }}
                     title={courseFollowed ? "Unfollow course" : "Follow course"}
                   >
                     {courseFollowBusy
                       ? "..."
                       : courseFollowed
-                        ? "Following"
-                        : "Follow"}
+                        ? "✓ Following"
+                        : "+ Follow"}
                   </button>
                 ) : null}
               </div>

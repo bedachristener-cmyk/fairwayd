@@ -10,6 +10,7 @@ import { FeedModule } from './feed/feed.module';
 import { UsersModule } from './users/users.module';
 import { FollowsModule } from './follows/follows.module';
 import { FeedbackModule } from './feedback/feedback.module';
+import { DestinationsModule } from './destinations/destinations.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { FeedbackModule } from './feedback/feedback.module';
     UsersModule, // ✅ IMPORTANT: register /users routes
     FollowsModule,
     FeedbackModule,
+    DestinationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
