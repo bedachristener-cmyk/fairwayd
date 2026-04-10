@@ -695,48 +695,85 @@ export default function DestinationPage() {
                     key={c.id}
                     onClick={() => navigate(`/courses/${c.id}`)}
                     style={{
-                      padding: 16,
-                      borderRadius: 18,
+                      minWidth: isMobile ? 260 : "auto",
+                      flex: isMobile ? "0 0 auto" : "1 1 0",
+                      borderRadius: 20,
                       border: "1px solid var(--border)",
-                      background: "var(--bg)",
+                      background: "var(--card)",
                       cursor: "pointer",
-                      transition: "all 0.15s ease",
-                      minWidth: 0,
-                      boxSizing: "border-box",
+                      overflow: "hidden",
+                      transition: "all 0.18s ease",
+                      boxShadow: "0 6px 20px rgba(0,0,0,0.12)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = "translateY(-4px)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = "translateY(0)";
                     }}
                   >
+                    {/* IMAGE PLACEHOLDER */}
                     <div
                       style={{
-                        fontWeight: 800,
-                        fontSize: 16,
-                        color: "var(--text)",
-                        marginBottom: 6,
-                      }}
-                    >
-                      {c.name}
-                    </div>
-
-                    <div
-                      style={{
-                        fontSize: 13,
-                        color: "var(--sub)",
-                        marginBottom: 10,
-                      }}
-                    >
-                      {c.city} {c.region ? `• ${c.region}` : ""}
-                    </div>
-
-                    <div
-                      style={{
+                        height: 150,
+                        background:
+                          "linear-gradient(135deg, rgba(79,140,255,0.55) 0%, rgba(32,48,88,0.55) 55%, rgba(255,255,255,0.06) 100%)",
                         display: "flex",
-                        gap: 10,
-                        flexWrap: "wrap",
-                        fontSize: 12,
-                        color: "var(--sub)",
+                        alignItems: "flex-end",
+                        padding: 12,
                       }}
                     >
-                      {c.holes && <div>⛳ {c.holes}</div>}
-                      {c.access && <div>🌍 {c.access}</div>}
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 800,
+                          color: "white",
+                          background: "rgba(0,0,0,0.45)",
+                          padding: "6px 10px",
+                          borderRadius: 999,
+                          letterSpacing: 0.2,
+                        }}
+                      >
+                        {c.access || "Course"}
+                      </div>
+                    </div>
+
+                    {/* CONTENT */}
+                    <div style={{ padding: 14 }}>
+                      <div
+                        style={{
+                          fontWeight: 800,
+                          fontSize: 17,
+                          letterSpacing: -0.2,
+                          color: "var(--text)",
+                          marginBottom: 6,
+                        }}
+                      >
+                        {c.name}
+                      </div>
+
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "var(--sub)",
+                          marginBottom: 10,
+                        }}
+                      >
+                        {[c.city, c.region].filter(Boolean).join(" • ")}
+                      </div>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 10,
+                          flexWrap: "wrap",
+                          fontSize: 12,
+                          color: "var(--sub)",
+                        }}
+                      >
+                        {c.holes && <div>⛳ {c.holes}</div>}
+                        {c.access && <div>🌍 {c.access}</div>}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -908,47 +945,82 @@ export default function DestinationPage() {
                 key={c.id}
                 onClick={() => navigate(`/courses/${c.id}`)}
                 style={{
-                  padding: 14,
-                  marginBottom: 12,
-                  borderRadius: 16,
+                  borderRadius: 20,
                   border: "1px solid var(--border)",
                   background: "var(--card)",
                   cursor: "pointer",
-                  transition: "all 0.15s ease",
+                  overflow: "hidden",
+                  transition: "all 0.18s ease",
+                  boxShadow: "0 6px 20px rgba(0,0,0,0.12)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-4px)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
                 }}
               >
+                {/* HEADER / IMAGE */}
                 <div
                   style={{
-                    fontWeight: 800,
-                    fontSize: 15,
-                    color: "var(--text)",
-                    marginBottom: 4,
-                  }}
-                >
-                  {c.name}
-                </div>
-
-                <div
-                  style={{
-                    fontSize: 13,
-                    color: "var(--sub)",
-                    marginBottom: 8,
-                  }}
-                >
-                  {c.city} {c.region ? `• ${c.region}` : ""}
-                </div>
-
-                <div
-                  style={{
+                    height: 120,
+                    background:
+                      "linear-gradient(135deg, rgba(79,140,255,0.35), rgba(255,255,255,0.05))",
                     display: "flex",
-                    gap: 12,
-                    flexWrap: "wrap",
-                    fontSize: 12,
-                    color: "var(--sub)",
+                    alignItems: "flex-end",
+                    padding: 10,
                   }}
                 >
-                  {c.holes && <div>⛳ {c.holes} holes</div>}
-                  {c.access && <div>🌍 {c.access}</div>}
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "white",
+                      background: "rgba(0,0,0,0.35)",
+                      padding: "4px 8px",
+                      borderRadius: 999,
+                    }}
+                  >
+                    {c.access || "Course"}
+                  </div>
+                </div>
+
+                {/* CONTENT */}
+                <div style={{ padding: 14 }}>
+                  <div
+                    style={{
+                      fontWeight: 800,
+                      fontSize: 17,
+                      letterSpacing: -0.2,
+                      color: "var(--text)",
+                      marginBottom: 6,
+                    }}
+                  >
+                    {c.name}
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: "var(--sub)",
+                      marginBottom: 10,
+                    }}
+                  >
+                    {[c.city, c.region].filter(Boolean).join(" • ")}
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 10,
+                      flexWrap: "wrap",
+                      fontSize: 12,
+                      color: "var(--sub)",
+                    }}
+                  >
+                    {c.holes && <div>⛳ {c.holes}</div>}
+                    {c.access && <div>🌍 {c.access}</div>}
+                  </div>
                 </div>
               </div>
             ))
