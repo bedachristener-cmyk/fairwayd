@@ -48,6 +48,7 @@ type DestinationDetail = {
   name: string;
   slug: string;
   courseCount: number;
+  followerCount?: number;
 };
 
 type PostImage = { id: string; url: string };
@@ -104,12 +105,54 @@ export default function DestinationPage() {
   const [activeTab, setActiveTab] = useState<"overview" | "courses" | "posts">(
     "overview",
   );
+  const [destinationFollowing, setDestinationFollowing] = useState(false);
+  const [destinationFollowerCount, setDestinationFollowerCount] = useState(0);
+  const [destinationFollowBusy, setDestinationFollowBusy] = useState(false);
 
   const featuredCourses = (data?.items ?? []).slice(0, 3);
   const featuredPosts = (posts ?? []).slice(0, 2);
 
   const openCoursesTab = () => setActiveTab("courses");
   const openPostsTab = () => setActiveTab("posts");
+
+  const loadDestinationFollowStatus = useCallback(async () => {
+    if (!slug) return;
+
+    if (!token) {
+      setDestinationFollowing(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `${API_BASE}/destinations/${slug}/follow-status`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      if (res.status === 401 || res.status === 403) {
+        logout();
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(
+          `Failed to load destination follow status: ${res.status}`,
+        );
+      }
+
+      const json = await res.json();
+
+      setDestinationFollowing(!!json?.following);
+
+      if (typeof json?.followerCount === "number") {
+        setDestinationFollowerCount(json.followerCount);
+      }
+    } catch (err) {
+      console.error("Failed to load destination follow status", err);
+    }
+  }, [slug, token, logout]);
   const [followedCourseIds, setFollowedCourseIds] = useState<string[]>([]);
   const [courseFollowBusyId, setCourseFollowBusyId] = useState<string | null>(
     null,
@@ -194,6 +237,65 @@ export default function DestinationPage() {
     },
     [token, logout, courseFollowBusyId, followedCourseIds],
   );
+  const handleToggleDestinationFollow = useCallback(async () => {
+    if (!slug) return;
+    if (destinationFollowBusy) return;
+
+    if (!token) {
+      navigate("/");
+      return;
+    }
+
+    const currentlyFollowing = destinationFollowing;
+
+    try {
+      setDestinationFollowBusy(true);
+
+      setDestinationFollowing(!currentlyFollowing);
+      setDestinationFollowerCount((prev) =>
+        currentlyFollowing ? Math.max(0, prev - 1) : prev + 1,
+      );
+
+      const res = await fetch(`${API_BASE}/destinations/${slug}/follow`, {
+        method: currentlyFollowing ? "DELETE" : "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        logout();
+        throw new Error("Unauthorized");
+      }
+
+      if (!res.ok) {
+        throw new Error(`Destination follow request failed: ${res.status}`);
+      }
+
+      const json = await res.json();
+
+      if (typeof json?.following === "boolean") {
+        setDestinationFollowing(json.following);
+      }
+
+      if (typeof json?.followerCount === "number") {
+        setDestinationFollowerCount(json.followerCount);
+      }
+    } catch (err) {
+      setDestinationFollowing(currentlyFollowing);
+      setDestinationFollowerCount((prev) =>
+        currentlyFollowing ? prev + 1 : Math.max(0, prev - 1),
+      );
+      console.error("Destination follow toggle failed", err);
+    } finally {
+      setDestinationFollowBusy(false);
+    }
+  }, [
+    slug,
+    token,
+    logout,
+    navigate,
+    destinationFollowBusy,
+    destinationFollowing,
+  ]);
 
   useEffect(() => {
     if (!slug) return;
@@ -224,6 +326,12 @@ export default function DestinationPage() {
           items: Array.isArray(coursesJson?.items) ? coursesJson.items : [],
           destination,
         });
+
+        setDestinationFollowerCount(
+          typeof destination.followerCount === "number"
+            ? destination.followerCount
+            : 0,
+        );
 
         setPostsLoading(true);
         try {
@@ -280,6 +388,10 @@ export default function DestinationPage() {
   useEffect(() => {
     loadFollowedCourses();
   }, [loadFollowedCourses]);
+
+  useEffect(() => {
+    loadDestinationFollowStatus();
+  }, [loadDestinationFollowStatus]);
   const activeCommentPost =
     posts.find((p) => p.id === activeCommentPostId) ?? null;
 
@@ -544,6 +656,20 @@ export default function DestinationPage() {
                     fontWeight: 700,
                   }}
                 >
+                  👥 {destinationFollowerCount} followers
+                </div>
+
+                <div
+                  style={{
+                    padding: "9px 13px",
+                    borderRadius: 999,
+                    border: "1px solid var(--border)",
+                    background: "rgba(255,255,255,0.05)",
+                    color: "var(--text)",
+                    fontSize: 13,
+                    fontWeight: 700,
+                  }}
+                >
                   🌍 {data.destination?.code || data.country}
                 </div>
 
@@ -570,6 +696,35 @@ export default function DestinationPage() {
                   alignItems: isMobile ? "stretch" : "center",
                 }}
               >
+                <button
+                  type="button"
+                  onClick={handleToggleDestinationFollow}
+                  disabled={destinationFollowBusy}
+                  style={{
+                    border: destinationFollowing
+                      ? "1px solid var(--border)"
+                      : "none",
+                    background: destinationFollowing
+                      ? "rgba(255,255,255,0.05)"
+                      : "var(--text)",
+                    color: destinationFollowing ? "var(--text)" : "var(--bg)",
+                    height: 44,
+                    padding: "0 18px",
+                    borderRadius: 999,
+                    fontWeight: 800,
+                    fontSize: 14,
+                    cursor: destinationFollowBusy ? "default" : "pointer",
+                    width: isMobile ? "100%" : "auto",
+                    opacity: destinationFollowBusy ? 0.7 : 1,
+                  }}
+                >
+                  {destinationFollowBusy
+                    ? "Please wait..."
+                    : destinationFollowing
+                      ? "Following destination"
+                      : "Follow destination"}
+                </button>
+
                 <button
                   type="button"
                   onClick={openCoursesTab}

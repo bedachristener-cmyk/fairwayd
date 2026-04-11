@@ -2,7 +2,6 @@ datasource db {
   provider = "postgresql"
 }
 
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -37,7 +36,6 @@ enum FollowStatus {
   ACCEPTED
 }
 
-
 model User {
   id        String         @id @default(cuid())
   email     String?        @unique
@@ -53,18 +51,19 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  accounts AuthAccount[]
-  posts    Post[]
-  reviews  Review[]
-  comments Comment[]
-  likes    Like[]
-  commentLikes CommentLike[]   // 👈 NEU
-  feedbacks Feedback[]
+  accounts     AuthAccount[]
+  posts        Post[]
+  reviews      Review[]
+  comments     Comment[]
+  likes        Like[]
+  commentLikes CommentLike[] // 👈 NEU
+  feedbacks    Feedback[]
 
   followers Follow[] @relation("followers")
   following Follow[] @relation("following")
 
-  courseFollows CourseFollow[]
+  courseFollows      CourseFollow[]
+  destinationFollows DestinationFollow[]
 }
 
 model AuthAccount {
@@ -108,6 +107,8 @@ model Destination {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  followers DestinationFollow[]
 
   @@index([code])
   @@index([slug])
@@ -191,12 +192,12 @@ model PostImage {
 }
 
 model Comment {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   postId    String
   userId    String
   parentId  String?
   content   String
-  createdAt DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   post    Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
   user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -207,6 +208,7 @@ model Comment {
   @@index([postId, createdAt])
   @@index([parentId])
 }
+
 model CommentLike {
   id        String   @id @default(cuid())
   commentId String
@@ -244,6 +246,19 @@ model CourseFollow {
 
   @@unique([userId, courseId])
   @@index([courseId])
+}
+
+model DestinationFollow {
+  id            String   @id @default(cuid())
+  userId        String
+  destinationId String
+  createdAt     DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  destination Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, destinationId])
+  @@index([destinationId])
 }
 
 model Review {
