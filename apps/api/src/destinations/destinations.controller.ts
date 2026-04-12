@@ -9,6 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt.guard';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { DestinationsService } from './destinations.service';
 
@@ -27,9 +28,11 @@ export class DestinationsController {
     return this.destinationsService.findBySlug(slug);
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
   @Get(':slug/posts')
-  getPosts(@Param('slug') slug: string) {
-    return this.destinationsService.getPostsBySlug(slug);
+  getPosts(@Param('slug') slug: string, @Req() req: any) {
+    const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
+    return this.destinationsService.getPostsBySlug(slug, userId);
   }
 
   @UseGuards(AuthGuard('jwt'))

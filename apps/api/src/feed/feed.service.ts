@@ -15,16 +15,51 @@ export class FeedService {
 
     const followingIds = following.map((f) => f.followingId);
 
+    const followedDestinations = await this.prisma.destinationFollow.findMany({
+      where: { userId },
+      select: {
+        destination: {
+          select: {
+            code: true,
+          },
+        },
+      },
+    });
+
+    const followedDestinationCodes = followedDestinations
+      .map((d) => d.destination?.code)
+      .filter((code): code is string => !!code);
+
     // 2) get recent posts:
     // - my posts: all visibilities (incl PRIVATE)
     // - following posts: only PUBLIC/FOLLOWERS
+    // - followed destinations: PUBLIC only
     const posts = await this.prisma.post.findMany({
       where: {
         OR: [
-          { userId }, // my posts (incl PRIVATE)
+          // my own posts -> all visibilities
+          {
+            userId,
+          },
+
+          // followed users -> PUBLIC
           {
             userId: { in: followingIds },
-            visibility: { in: [Visibility.PUBLIC, Visibility.FOLLOWERS] },
+            visibility: Visibility.PUBLIC,
+          },
+
+          // followed users -> FOLLOWERS
+          {
+            userId: { in: followingIds },
+            visibility: Visibility.FOLLOWERS,
+          },
+
+          // followed destinations -> PUBLIC only
+          {
+            visibility: Visibility.PUBLIC,
+            course: {
+              country: { in: followedDestinationCodes },
+            },
           },
         ],
       },

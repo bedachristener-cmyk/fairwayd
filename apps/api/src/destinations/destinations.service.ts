@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Visibility } from '@prisma/client';
 
 @Injectable()
 export class DestinationsService {
@@ -76,7 +77,7 @@ export class DestinationsService {
     };
   }
 
-  async getPostsBySlug(slug: string) {
+  async getPostsBySlug(slug: string, userId?: string) {
     const destination = await this.prisma.destination.findUnique({
       where: { slug },
     });
@@ -85,12 +86,49 @@ export class DestinationsService {
       throw new NotFoundException('Destination not found');
     }
 
-    const items = await this.prisma.post.findMany({
-      where: {
-        course: {
-          country: destination.code,
+    let followingUserIds: string[] = [];
+
+    if (userId) {
+      const follows = await this.prisma.follow.findMany({
+        where: {
+          followerId: userId,
+          status: 'ACCEPTED',
         },
-      },
+        select: {
+          followingId: true,
+        },
+      });
+
+      followingUserIds = follows.map((f) => f.followingId);
+    }
+
+    const items = await this.prisma.post.findMany({
+      where: userId
+        ? {
+            course: {
+              country: destination.code,
+            },
+            OR: [
+              {
+                visibility: Visibility.PUBLIC,
+              },
+              {
+                userId,
+              },
+              {
+                visibility: Visibility.FOLLOWERS,
+                userId: {
+                  in: followingUserIds,
+                },
+              },
+            ],
+          }
+        : {
+            course: {
+              country: destination.code,
+            },
+            visibility: Visibility.PUBLIC,
+          },
       include: {
         user: {
           select: {

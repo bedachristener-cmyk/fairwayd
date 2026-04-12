@@ -102,6 +102,7 @@ export default function PostCard({
   const [lastTap, setLastTap] = useState(0);
   const [hoveredImage, setHoveredImage] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const nav = useNavigate();
 
@@ -613,46 +614,6 @@ export default function PostCard({
                 >
                   ⛳ {post.course.name}
                 </button>
-
-                {onCourseFollowToggle ? (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onCourseFollowToggle(post.course.id);
-                    }}
-                    disabled={courseFollowBusy}
-                    style={{
-                      border: "none",
-                      background: courseFollowed
-                        ? "var(--text)"
-                        : "rgba(255,255,255,0.08)",
-                      color: courseFollowed ? "var(--bg)" : "var(--text)",
-                      padding: "6px 14px",
-                      borderRadius: 999,
-                      fontWeight: 700,
-                      fontSize: 12,
-                      lineHeight: 1,
-                      minHeight: 30,
-                      minWidth: 90,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: courseFollowBusy ? "default" : "pointer",
-                      opacity: courseFollowBusy ? 0.6 : 1,
-                      transition: "all 0.15s ease",
-                      whiteSpace: "nowrap",
-                    }}
-                    title={courseFollowed ? "Unfollow course" : "Follow course"}
-                  >
-                    {courseFollowBusy
-                      ? "..."
-                      : courseFollowed
-                        ? "✓ Following"
-                        : "+ Follow"}
-                  </button>
-                ) : null}
               </div>
             </div>
           </div>
@@ -691,6 +652,42 @@ export default function PostCard({
                 {localVisibility === "FOLLOWERS" && "👥 Followers"}
                 {localVisibility === "PRIVATE" && "🔒 Private"}
               </div>
+            ) : null}
+            {onCourseFollowToggle ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onCourseFollowToggle(post.course.id);
+                }}
+                disabled={courseFollowBusy}
+                style={{
+                  marginTop: 6,
+                  border: courseFollowed
+                    ? "1px solid rgba(80,140,255,0.4)"
+                    : "1px solid var(--border)",
+                  background: courseFollowed
+                    ? "rgba(80,140,255,0.10)"
+                    : "transparent",
+                  color: courseFollowed ? "var(--text)" : "var(--sub)",
+                  padding: "3px 10px",
+                  borderRadius: 999,
+                  fontWeight: 700,
+                  fontSize: 11,
+                  lineHeight: 1,
+                  cursor: courseFollowBusy ? "default" : "pointer",
+                  opacity: courseFollowBusy ? 0.5 : 0.9,
+                  transition: "all 0.15s ease",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {courseFollowBusy
+                  ? "..."
+                  : courseFollowed
+                    ? "✓ Following"
+                    : "+ Follow"}
+              </button>
             ) : null}
             {isOwnPost ? (
               <div
@@ -935,7 +932,40 @@ export default function PostCard({
               wordBreak: "break-word",
             }}
           >
-            {localContent}
+            <div
+              style={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: expanded ? "unset" : 4,
+                overflow: "hidden",
+              }}
+            >
+              {localContent}
+            </div>
+
+            {localContent && localContent.length > 140 ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setExpanded((v) => !v);
+                }}
+                style={{
+                  marginTop: 6,
+                  padding: 0,
+                  border: "none",
+                  background: "transparent",
+                  color: "var(--text)",
+                  fontWeight: 500,
+                  opacity: 0.6,
+
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                {expanded ? "Show less" : "More"}
+              </button>
+            ) : null}
           </div>
         )}
       </div>

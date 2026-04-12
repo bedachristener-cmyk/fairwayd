@@ -91,7 +91,7 @@ type CountryPageData = {
 export default function DestinationPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const { token, logout } = useAuth();
+  const { token, logout, user } = useAuth();
   const isMobile = window.innerWidth <= 980;
 
   const [loading, setLoading] = useState(true);
@@ -99,6 +99,13 @@ export default function DestinationPage() {
   const [search, setSearch] = useState("");
   const [posts, setPosts] = useState<DestinationPost[]>([]);
   const [postsLoading, setPostsLoading] = useState(false);
+  const isOwnPost = (p: DestinationPost) => {
+    return user?.id && p.user?.id === user.id;
+  };
+
+  const isFromFollowedUser = (p: DestinationPost) => {
+    return !isOwnPost(p) && p.visibility === "FOLLOWERS";
+  };
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(
     null,
   );
@@ -337,6 +344,13 @@ export default function DestinationPage() {
         try {
           const postsRes = await fetch(
             `${API_BASE}/destinations/${slug}/posts`,
+            token
+              ? {
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                  },
+                }
+              : undefined,
           );
           const postsJson = await postsRes.json();
           const items = Array.isArray(postsJson?.items) ? postsJson.items : [];
@@ -1232,7 +1246,22 @@ export default function DestinationPage() {
           ) : (
             <div style={{ display: "grid", gap: 12 }}>
               {posts.map((p) => (
-                <div key={p.id} style={{ display: "grid", gap: 8 }}>
+                <div key={p.id} style={{ display: "grid", gap: 6 }}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: "var(--sub)",
+                      marginLeft: 6,
+                    }}
+                  >
+                    {isOwnPost(p)
+                      ? "Your post"
+                      : isFromFollowedUser(p)
+                        ? "From someone you follow"
+                        : "Public post"}
+                  </div>
+
                   <PostCard
                     post={p}
                     isMobile={isMobile}

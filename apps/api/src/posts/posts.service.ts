@@ -36,16 +36,67 @@ export class PostsService {
     const cursor = params?.cursor?.trim();
     const userId = params?.userId?.trim();
 
+    let followedDestinationCodes: string[] = [];
+
+    if (userId) {
+      const followedDestinations = await this.prisma.destinationFollow.findMany(
+        {
+          where: { userId },
+          select: {
+            destination: {
+              select: {
+                code: true,
+              },
+            },
+          },
+        },
+      );
+
+      followedDestinationCodes = followedDestinations
+        .map((d) => d.destination?.code)
+        .filter((code): code is string => !!code);
+    }
+
+    let followingUserIds = new Set<string>();
+    let followingCourseIds = new Set<string>();
+    let followingDestinationCodesSet = new Set<string>();
+
+    if (userId) {
+      const follows = await this.prisma.follow.findMany({
+        where: {
+          followerId: userId,
+          status: 'ACCEPTED',
+        },
+        select: {
+          followingId: true,
+        },
+      });
+
+      followingUserIds = new Set(follows.map((f) => f.followingId));
+
+      const courseFollows = await this.prisma.courseFollow.findMany({
+        where: {
+          userId,
+        },
+        select: {
+          courseId: true,
+        },
+      });
+
+      followingCourseIds = new Set(courseFollows.map((c) => c.courseId));
+      followingDestinationCodesSet = new Set(followedDestinationCodes);
+    }
+
     const query: Prisma.PostFindManyArgs = {
       where: userId
         ? {
             OR: [
-              // Eigene Posts (alle)
+              // Eigene Posts -> alle Sichtbarkeiten
               {
                 userId,
               },
 
-              // Posts von Usern, denen ich folge (PUBLIC)
+              // Gefolgte User -> nur PUBLIC
               {
                 user: {
                   followers: {
@@ -58,7 +109,7 @@ export class PostsService {
                 visibility: Visibility.PUBLIC,
               },
 
-              // FOLLOWERS-Posts von gefolgten Usern
+              // Gefolgte User -> nur FOLLOWERS
               {
                 user: {
                   followers: {
@@ -71,7 +122,7 @@ export class PostsService {
                 visibility: Visibility.FOLLOWERS,
               },
 
-              // PUBLIC-Posts von Courses, denen ich folge
+              // Gefolgte Courses -> nur PUBLIC
               {
                 course: {
                   followers: {
@@ -81,6 +132,16 @@ export class PostsService {
                   },
                 },
                 visibility: Visibility.PUBLIC,
+              },
+
+              // Gefolgte Destinations -> nur PUBLIC
+              {
+                visibility: Visibility.PUBLIC,
+                course: {
+                  country: {
+                    in: followedDestinationCodes,
+                  },
+                },
               },
             ],
           }
@@ -116,42 +177,53 @@ export class PostsService {
       query.skip = 1;
     }
 
-    const items = await this.prisma.post.findMany(query);
-    let followingUserIds = new Set<string>();
-    let followingCourseIds = new Set<string>();
+    const rawItems = await this.prisma.post.findMany(query);
 
-    if (userId) {
-      const follows = await this.prisma.follow.findMany({
-        where: {
-          followerId: userId,
-          status: 'ACCEPTED',
-        },
-        select: {
-          followingId: true,
-        },
-      });
+    const items = rawItems.filter((p: any) => {
+      // eigene Posts -> immer erlaubt
+      if (p.userId === userId) {
+        return true;
+      }
 
-      followingUserIds = new Set(follows.map((f) => f.followingId));
+      // ohne Login -> nur PUBLIC
+      if (!userId) {
+        return p.visibility === Visibility.PUBLIC;
+      }
 
-      const courseFollows = await this.prisma.courseFollow.findMany({
-        where: {
-          userId,
-        },
-        select: {
-          courseId: true,
-        },
-      });
+      const followsAuthor = followingUserIds.has(p.userId);
+      const followsCourse = followingCourseIds.has(p.courseId);
+      const followsDestination =
+        !!p.course?.country &&
+        followingDestinationCodesSet.has(p.course.country);
 
-      followingCourseIds = new Set(courseFollows.map((c) => c.courseId));
-    }
+      // fremde PRIVATE Posts -> NIE erlaubt
+      if (p.visibility === Visibility.PRIVATE) {
+        return false;
+      }
+
+      // fremde FOLLOWERS Posts -> nur wenn Autor gefolgt
+      if (p.visibility === Visibility.FOLLOWERS) {
+        return followsAuthor;
+      }
+
+      // PUBLIC Posts
+      if (p.visibility === Visibility.PUBLIC) {
+        return followsAuthor || followsCourse || followsDestination;
+      }
+
+      return false;
+    });
 
     const nextCursor =
       items.length === take ? items[items.length - 1]?.id : null;
 
-    const enrichedItems = items.map((p) => {
+    const enrichedItems = items.map((p: any) => {
       const isSelf = p.userId === userId;
       const isFriend = followingUserIds.has(p.userId);
       const isCourse = followingCourseIds.has(p.courseId);
+      const isDestination =
+        !!p.course?.country &&
+        followingDestinationCodesSet.has(p.course.country);
 
       return {
         ...p,
@@ -159,6 +231,7 @@ export class PostsService {
           isSelf,
           isFriend,
           isCourse,
+          isDestination,
         },
       };
     });
