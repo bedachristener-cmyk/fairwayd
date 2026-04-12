@@ -209,16 +209,7 @@ export default function App() {
               />
 
               {/* Course detail */}
-              <Route
-                path="/courses/:courseId"
-                element={
-                  <ProtectedRoute>
-                    <OnboardingGuard>
-                      <CoursePage />
-                    </OnboardingGuard>
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/courses/:courseId" element={<CoursePage />} />
 
               {/* Follow Requests */}
               <Route
@@ -282,7 +273,7 @@ export default function App() {
               />
             </Route>
 
-            <Route path="/home" element={<Navigate to="/map" replace />} />
+            <Route path="/home" element={<Navigate to="/feed" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
 

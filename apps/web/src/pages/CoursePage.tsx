@@ -55,15 +55,6 @@ export default function CoursePage() {
   const { token } = useAuth();
 
   const isMobile = window.innerWidth <= 980;
-  const primaryBtnStyle = {
-    padding: "10px 14px",
-    borderRadius: 999,
-    border: "1px solid var(--border)",
-    background: "var(--card)",
-    color: "var(--text)",
-    fontWeight: 800,
-    cursor: "pointer",
-  } as const;
 
   const secondaryBtnStyle = {
     padding: "10px 14px",
@@ -82,32 +73,38 @@ export default function CoursePage() {
 
   // Load course + posts
   useEffect(() => {
-    if (!courseId || !token) return;
+    if (!courseId) return;
 
     const run = async () => {
       try {
         setLoading(true);
 
-        // Course laden
+        // ✅ Course IMMER laden (ohne Token)
         const cRes = await fetch(`${API_BASE}/courses/${courseId}`);
         if (cRes.ok) {
           const c = await cRes.json();
           setCourse(c);
         }
 
-        // Follow-Status laden
-        const fRes = await fetch(`${API_BASE}/courses/${courseId}/following`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        // ✅ Follow nur wenn eingeloggt
+        if (token) {
+          const fRes = await fetch(
+            `${API_BASE}/courses/${courseId}/following`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            },
+          );
 
-        if (fRes.ok) {
-          const f = await fRes.json();
-          setFollowing(!!f?.following);
+          if (fRes.ok) {
+            const f = await fRes.json();
+            setFollowing(!!f?.following);
+          }
         }
 
-        // Posts laden
+        // ✅ Posts (optional public später)
+
         const pRes = await fetch(`${API_BASE}/posts/course/${courseId}`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
 
         if (pRes.ok) {
@@ -122,9 +119,6 @@ export default function CoursePage() {
                 : [];
 
           setPosts(nextPosts);
-          console.log("CoursePage posts response", data);
-        } else {
-          console.error("CoursePage posts load failed", pRes.status);
         }
       } catch (err) {
         console.error("Course page load failed", err);
@@ -168,9 +162,9 @@ export default function CoursePage() {
       <div
         style={{
           padding: isMobile ? 12 : 18,
-          borderRadius: isMobile ? 0 : 16,
+          borderRadius: 16,
+          background: isMobile ? "rgba(0,0,0,0.03)" : "var(--card)",
           border: isMobile ? "none" : "1px solid var(--border)",
-          background: isMobile ? "transparent" : "var(--card)",
         }}
       >
         <div
@@ -266,8 +260,63 @@ export default function CoursePage() {
           </div>
         )}
 
+        {/* Guest sign-in banner */}
+        {!token && (
+          <div
+            style={{
+              marginTop: 12,
+              padding: "12px 14px",
+              borderRadius: 14,
+              border: "1px solid rgba(0,0,0,0.10)",
+              background: "rgba(0,0,0,0.4)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              width: "100%",
+              boxSizing: "border-box",
+            }}
+          >
+            <div style={{ fontSize: 14, fontWeight: 800 }}>
+              🔒 Sign in to unlock full experience
+            </div>
+
+            <div
+              style={{
+                fontSize: 13,
+                color: "var(--sub)",
+                lineHeight: 1.5,
+              }}
+            >
+              Follow this course, post updates and join the conversation.
+            </div>
+
+            <button
+              onClick={() => nav("/")}
+              style={{
+                padding: "8px 14px",
+                borderRadius: 999,
+                border: "1px solid var(--border)",
+                background: "var(--card)",
+                color: "var(--text)",
+                fontWeight: 800,
+                cursor: "pointer",
+                width: "fit-content",
+              }}
+            >
+              Sign in
+            </button>
+          </div>
+        )}
+
         {/* Actions */}
-        <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 10,
+            marginTop: 12,
+            flexWrap: "wrap",
+          }}
+        >
           <button
             type="button"
             onClick={async () => {
@@ -297,14 +346,18 @@ export default function CoursePage() {
             }}
             disabled={followBusy}
             style={{
-              ...primaryBtnStyle,
-              background: following ? "var(--muted)" : "var(--card)",
+              padding: "10px 14px",
+              borderRadius: 999,
+              border: "1px solid var(--border)",
+              background: following ? "rgba(0,0,0,0.06)" : "var(--card)",
               color: "var(--text)",
+              fontWeight: 800,
               cursor: followBusy ? "default" : "pointer",
               opacity: followBusy ? 0.7 : 1,
+              boxShadow: "none",
             }}
           >
-            {followBusy ? "Saving..." : following ? "Following" : "Follow"}
+            {followBusy ? "Saving..." : following ? "✓ Following" : "+ Follow"}
           </button>
 
           <button
@@ -347,7 +400,9 @@ export default function CoursePage() {
             <div
               style={{ fontSize: 18, marginBottom: 8, color: "var(--text)" }}
             >
-              Noch keine Posts zu diesem Platz
+              {!token
+                ? "Noch keine öffentlichen Posts verfügbar"
+                : "Noch keine Posts zu diesem Platz"}
             </div>
 
             <div style={{ opacity: 0.85, lineHeight: 1.5 }}>

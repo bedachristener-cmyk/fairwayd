@@ -562,16 +562,16 @@ export default function TopRail() {
               type="button"
               onClick={() => nav("/")}
               style={{
-                border: "1px solid rgba(39,196,107,0.35)",
-                background: "rgba(39,196,107,0.18)",
+                border: "1px solid var(--border)",
+                background: "var(--card)",
                 color: "var(--text)",
                 padding: "8px 12px",
                 borderRadius: 12,
                 cursor: "pointer",
-                fontWeight: 900,
+                fontWeight: 800,
               }}
             >
-              Login
+              Sign in
             </button>
           )}
         </div>
