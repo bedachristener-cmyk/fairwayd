@@ -1,5 +1,26 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
+import {
+  ChevronRight,
+  Globe,
+  HelpCircle,
+  Home,
+  LogOut,
+  Map,
+  Menu,
+  Shield,
+  Bell,
+  Settings,
+  User,
+  Users,
+  X,
+} from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useMe } from "../auth/useMe";
 import logo from "../assets/logo.png";
@@ -30,28 +51,50 @@ type UserSearchItem = {
   followStatus?: "NONE" | "PENDING" | "ACCEPTED" | "SELF" | "UNKNOWN";
 };
 
+type MainMenuItem = {
+  key: string;
+  label: string;
+  subtitle?: string;
+  icon: React.ReactNode;
+  action: () => void;
+  danger?: boolean;
+  disabled?: boolean;
+  isActive?: boolean;
+};
+
 export default function TopRail() {
   const nav = useNavigate();
+  const location = useLocation();
   const auth = useAuth() as any;
   const { me } = useMe(true);
 
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [mainMenuOpen, setMainMenuOpen] = useState(false);
+
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<UserSearchItem[]>([]);
   const [suggestions, setSuggestions] = useState<UserSearchItem[]>([]);
   const [followBusyId, setFollowBusyId] = useState<string | null>(null);
   const [theme, setTheme] = useState<ThemeName>(() => getInitialTheme());
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 980);
+  const [notificationBadgeCount, setNotificationBadgeCount] = useState(0);
 
   const btnRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+
+  const hamburgerBtnRef = useRef<HTMLButtonElement | null>(null);
+  const mainMenuRef = useRef<HTMLDivElement | null>(null);
 
   const isAuthenticated = !!auth?.isAuthenticated;
 
   const handle = useMemo(() => {
     return me?.handle || auth?.user?.handle || auth?.me?.handle || "me";
   }, [me?.handle, auth?.user?.handle, auth?.me?.handle]);
+
+  const displayName = useMemo(() => {
+    return me?.name || auth?.user?.name || auth?.me?.name || handle;
+  }, [me?.name, auth?.user?.name, auth?.me?.name, handle]);
 
   const rawAvatarUrl = useMemo(() => {
     return me?.avatarUrl || auth?.user?.avatarUrl || auth?.me?.avatarUrl || "";
@@ -70,6 +113,50 @@ export default function TopRail() {
 
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadNotificationBadgeCount() {
+      if (!auth?.token || !isAuthenticated) {
+        setNotificationBadgeCount(0);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/users/me/follow-requests`, {
+          headers: { Authorization: `Bearer ${auth?.token}` },
+        });
+
+        if (!res.ok) {
+          if (!cancelled) setNotificationBadgeCount(0);
+          return;
+        }
+
+        const data = await res.json();
+        const items = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.items)
+            ? data.items
+            : [];
+
+        if (!cancelled) {
+          setNotificationBadgeCount(items.length);
+        }
+      } catch (err) {
+        console.error("Notification badge load failed", err);
+        if (!cancelled) {
+          setNotificationBadgeCount(0);
+        }
+      }
+    }
+
+    loadNotificationBadgeCount();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [auth?.token, isAuthenticated, location.pathname]);
 
   useEffect(() => {
     if (!searchOpen) return;
@@ -147,6 +234,7 @@ export default function TopRail() {
 
     return () => clearTimeout(t);
   }, [query, searchOpen, auth?.token]);
+
   useEffect(() => {
     if (!searchOpen) return;
     if (query.trim()) return;
@@ -171,7 +259,6 @@ export default function TopRail() {
           const data = await res.json();
           const baseItems = Array.isArray(data) ? data : [];
 
-          // 👉 eigenen User rausfiltern
           const filtered = baseItems.filter((u: any) => u.id !== me?.id);
 
           if (filtered.length > 0) {
@@ -194,25 +281,37 @@ export default function TopRail() {
     return () => {
       cancelled = true;
     };
-  }, [searchOpen, query, auth?.token]);
+  }, [searchOpen, query, auth?.token, me?.id]);
+
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node;
 
-      if (menuRef.current?.contains(t)) return;
-      if (btnRef.current?.contains(t)) return;
+      const clickedAccountMenu =
+        menuRef.current?.contains(t) || btnRef.current?.contains(t);
 
-      setOpen(false);
+      const clickedMainMenu =
+        mainMenuRef.current?.contains(t) ||
+        hamburgerBtnRef.current?.contains(t);
+
+      if (!clickedAccountMenu) {
+        setOpen(false);
+      }
+
+      if (!clickedMainMenu) {
+        setMainMenuOpen(false);
+      }
     };
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setOpen(false);
         setSearchOpen(false);
+        setMainMenuOpen(false);
       }
     };
 
-    if (open || searchOpen) {
+    if (open || searchOpen || mainMenuOpen) {
       window.addEventListener("mousedown", onDown);
       window.addEventListener("keydown", onKey);
     }
@@ -221,7 +320,7 @@ export default function TopRail() {
       window.removeEventListener("mousedown", onDown);
       window.removeEventListener("keydown", onKey);
     };
-  }, [open, searchOpen]);
+  }, [open, searchOpen, mainMenuOpen]);
 
   const doToggleTheme = () => {
     const next = toggleTheme(theme);
@@ -235,9 +334,26 @@ export default function TopRail() {
     } finally {
       setOpen(false);
       setSearchOpen(false);
+      setMainMenuOpen(false);
       nav("/", { replace: true });
     }
   };
+
+  function closeAllMenus() {
+    setOpen(false);
+    setSearchOpen(false);
+    setMainMenuOpen(false);
+  }
+
+  function navigateFromMenu(path: string) {
+    closeAllMenus();
+    nav(path);
+  }
+
+  function showSoon(label: string) {
+    closeAllMenus();
+    window.alert(`${label} is not wired yet.`);
+  }
 
   function getFollowLabel(status?: UserSearchItem["followStatus"]) {
     if (status === "ACCEPTED") return "Following";
@@ -331,6 +447,94 @@ export default function TopRail() {
     }
   }
 
+  const mainMenuItems: MainMenuItem[] = [
+    {
+      key: "profile",
+      label: "Profile",
+      subtitle: "Your profile and posts",
+      icon: <User size={18} strokeWidth={2.2} />,
+      action: () => navigateFromMenu("/profile"),
+      isActive:
+        location.pathname === "/profile" || location.pathname.startsWith("/u/"),
+    },
+    {
+      key: "feed",
+      label: "Feed",
+      subtitle: "Latest activity",
+      icon: <Home size={18} strokeWidth={2.2} />,
+      action: () => navigateFromMenu("/feed"),
+      isActive: location.pathname === "/feed",
+    },
+    {
+      key: "map",
+      label: "Map / Explore",
+      subtitle: "Discover courses",
+      icon: <Map size={18} strokeWidth={2.2} />,
+      action: () => navigateFromMenu("/map"),
+      isActive: location.pathname === "/map",
+    },
+    {
+      key: "friends",
+      label: "Friends / Following",
+      subtitle: "Your network",
+      icon: <Users size={18} strokeWidth={2.2} />,
+      action: () => navigateFromMenu("/friends"),
+      isActive: location.pathname === "/friends",
+    },
+    {
+      key: "destinations",
+      label: "Destinations",
+      subtitle: "Golf by country",
+      icon: <Globe size={18} strokeWidth={2.2} />,
+      action: () => navigateFromMenu("/destinations"),
+      isActive: location.pathname.startsWith("/destinations"),
+    },
+    {
+      key: "notifications",
+      label: "Notifications",
+      subtitle: "Follow requests and activity",
+      icon: <Bell size={18} strokeWidth={2.2} />,
+      action: () => navigateFromMenu("/notifications"),
+      isActive: location.pathname === "/notifications",
+    },
+    {
+      key: "settings",
+      label: "Settings",
+      subtitle: "Theme and app preferences",
+      icon: <Settings size={18} strokeWidth={2.2} />,
+      action: () => {
+        closeAllMenus();
+        doToggleTheme();
+      },
+      isActive: false,
+    },
+    {
+      key: "privacy",
+      label: "Privacy / Security",
+      subtitle: "Planned next step",
+      icon: <Shield size={18} strokeWidth={2.2} />,
+      action: () => showSoon("Privacy / Security"),
+      disabled: true,
+      isActive: false,
+    },
+    {
+      key: "help",
+      label: "Help / FAQ",
+      subtitle: "Quick help and guidance",
+      icon: <HelpCircle size={18} strokeWidth={2.2} />,
+      action: () => navigateFromMenu("/help"),
+      isActive: location.pathname === "/help",
+    },
+    {
+      key: "logout",
+      label: "Logout",
+      subtitle: "Sign out of Fairwayd",
+      icon: <LogOut size={18} strokeWidth={2.2} />,
+      action: doLogout,
+      danger: true,
+      isActive: false,
+    },
+  ];
   return (
     <>
       <div
@@ -348,6 +552,21 @@ export default function TopRail() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button
+            ref={hamburgerBtnRef}
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              setSearchOpen(false);
+              setMainMenuOpen((v) => !v);
+            }}
+            aria-label="Open main menu"
+            title="Open main menu"
+            style={hamburgerButtonStyle}
+          >
+            <Menu size={18} strokeWidth={2.4} />
+          </button>
+
           <img
             src={logo}
             alt="Fairwayd"
@@ -375,51 +594,119 @@ export default function TopRail() {
           }}
         >
           {isAuthenticated ? (
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
+            <>
+              {/* SEARCH */}
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  setMainMenuOpen(false);
 
-                if (isMobile) {
-                  setSearchOpen((v) => !v);
-                } else {
-                  nav("/users");
+                  if (isMobile) {
+                    setSearchOpen((v) => !v);
+                  } else {
+                    nav("/users");
+                  }
+                }}
+                style={
+                  isMobile
+                    ? {
+                        border: "none",
+                        background: "transparent",
+                        color: "var(--text)",
+                        padding: 0,
+                        cursor: "pointer",
+                        fontSize: 18,
+                        lineHeight: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: 28,
+                        height: 28,
+                        flexShrink: 0,
+                      }
+                    : {
+                        border: "1px solid var(--border)",
+                        background: "var(--bg)",
+                        color: "var(--text)",
+                        padding: "8px 12px",
+                        borderRadius: 999,
+                        cursor: "pointer",
+                        fontWeight: 800,
+                        fontSize: 12,
+                        whiteSpace: "nowrap",
+                        flexShrink: 0,
+                      }
                 }
-              }}
-              style={
-                isMobile
-                  ? {
-                      border: "none",
-                      background: "transparent",
-                      color: "var(--text)",
-                      padding: 0,
-                      cursor: "pointer",
-                      fontSize: 18,
+                title="Find golfers"
+              >
+                {isMobile ? (
+                  <span style={{ fontSize: 18, lineHeight: 1 }}>🔍</span>
+                ) : (
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
                       lineHeight: 1,
+                    }}
+                  >
+                    <span style={{ fontSize: 15, lineHeight: 1 }}>🔍</span>
+                    <span>Find golfers</span>
+                  </span>
+                )}
+              </button>
+
+              {/* 🔔 NOTIFICATIONS */}
+              <button
+                type="button"
+                onClick={() => {
+                  closeAllMenus();
+                  nav("/notifications");
+                }}
+                title="Notifications"
+                style={{
+                  position: "relative",
+                  border: "none",
+                  background: "transparent",
+                  color: "var(--text)",
+                  padding: 0,
+                  cursor: "pointer",
+                  width: 28,
+                  height: 28,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <span style={{ fontSize: 18, lineHeight: 1 }}>🔔</span>
+
+                {notificationBadgeCount > 0 ? (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: -4,
+                      right: -6,
+                      minWidth: 16,
+                      height: 16,
+                      padding: "0 4px",
+                      borderRadius: 999,
+                      background: "var(--text)",
+                      color: "var(--bg)",
+                      fontSize: 10,
+                      fontWeight: 900,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      width: 28,
-                      height: 28,
-                      flexShrink: 0,
-                    }
-                  : {
-                      border: "1px solid var(--border)",
-                      background: "var(--bg)",
-                      color: "var(--text)",
-                      padding: "8px 12px",
-                      borderRadius: 999,
-                      cursor: "pointer",
-                      fontWeight: 800,
-                      fontSize: 12,
-                      whiteSpace: "nowrap",
-                      flexShrink: 0,
-                    }
-              }
-              title="Find golfers"
-            >
-              {isMobile ? "🔍" : "🔍 Find golfers"}
-            </button>
+                      lineHeight: 1,
+                    }}
+                  >
+                    {notificationBadgeCount}
+                  </div>
+                ) : null}
+              </button>
+            </>
           ) : null}
 
           {isAuthenticated ? (
@@ -429,6 +716,7 @@ export default function TopRail() {
                 type="button"
                 onClick={() => {
                   setSearchOpen(false);
+                  setMainMenuOpen(false);
                   setOpen((v) => !v);
                 }}
                 style={{
@@ -462,34 +750,37 @@ export default function TopRail() {
                       width: 34,
                       height: 34,
                       borderRadius: 999,
-                      background: "rgba(39,196,107,0.18)",
-                      border: "1px solid rgba(39,196,107,0.35)",
+                      background: "var(--bg)",
+                      border: "1px solid var(--border)",
                       display: "grid",
                       placeItems: "center",
-                      fontWeight: 900,
-                      color: "var(--text)",
                       boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
-                      letterSpacing: 0.5,
+                      fontSize: 16,
+                      lineHeight: 1,
                     }}
                   >
-                    {initials}
+                    👤
                   </div>
                 )}
 
-                <div
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 900,
-                    color: "var(--text)",
-                    opacity: 0.9,
-                  }}
-                >
-                  @{handle}
-                </div>
+                {!isMobile ? (
+                  <>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 900,
+                        color: "var(--text)",
+                        opacity: 0.9,
+                      }}
+                    >
+                      @{handle}
+                    </div>
 
-                <div style={{ fontSize: 12, opacity: 0.65, marginTop: -1 }}>
-                  ▾
-                </div>
+                    <div style={{ fontSize: 12, opacity: 0.65, marginTop: -1 }}>
+                      ▾
+                    </div>
+                  </>
+                ) : null}
               </button>
 
               {open ? (
@@ -576,6 +867,379 @@ export default function TopRail() {
           )}
         </div>
       </div>
+
+      {mainMenuOpen ? (
+        <>
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.45)",
+              zIndex: 3498,
+            }}
+          />
+
+          <div
+            ref={mainMenuRef}
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              bottom: 0,
+              width: isMobile ? "86vw" : 360,
+              maxWidth: "100%",
+              background: "var(--card)",
+              borderRight: "1px solid var(--border)",
+              boxShadow: "16px 0 40px rgba(0,0,0,0.45)",
+              zIndex: 3499,
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <div
+              style={{
+                padding: "14px 14px 12px 14px",
+                borderBottom: "1px solid var(--border)",
+                display: "grid",
+                gap: 12,
+                background: "var(--card)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                  gap: 12,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    minWidth: 0,
+                    flex: 1,
+                  }}
+                >
+                  {isAuthenticated ? (
+                    avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt={displayName}
+                        style={{
+                          width: 52,
+                          height: 52,
+                          borderRadius: 999,
+                          objectFit: "cover",
+                          border: "1px solid var(--border)",
+                          flexShrink: 0,
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 52,
+                          height: 52,
+                          borderRadius: 999,
+                          border: "1px solid var(--border)",
+                          background: "var(--bg)",
+                          color: "var(--text)",
+                          display: "grid",
+                          placeItems: "center",
+                          fontWeight: 900,
+                          fontSize: 16,
+                          letterSpacing: 0.4,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {initials}
+                      </div>
+                    )
+                  ) : (
+                    <img
+                      src={logo}
+                      alt="Fairwayd"
+                      style={{
+                        width: 52,
+                        height: 52,
+                        borderRadius: 16,
+                        border: "1px solid var(--border)",
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
+
+                  <div
+                    style={{
+                      minWidth: 0,
+                      flex: 1,
+                      display: "grid",
+                      gap: 3,
+                      paddingTop: 2,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 800,
+                        color: "var(--sub)",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {isAuthenticated ? "Your account" : "Fairwayd"}
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: 17,
+                        lineHeight: 1.15,
+                        fontWeight: 900,
+                        color: "var(--text)",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {isAuthenticated ? displayName : "Welcome"}
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: 13,
+                        color: "var(--sub)",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {isAuthenticated
+                        ? `@${handle}`
+                        : "Explore courses and golfers"}
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setMainMenuOpen(false)}
+                  style={drawerCloseButton}
+                  aria-label="Close main menu"
+                  title="Close main menu"
+                >
+                  <X size={18} strokeWidth={2.4} />
+                </button>
+              </div>
+
+              {isAuthenticated ? (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
+                    padding: "10px 12px",
+                    borderRadius: 14,
+                    border: "1px solid var(--border)",
+                    background: "var(--bg)",
+                  }}
+                >
+                  <div
+                    style={{
+                      minWidth: 0,
+                      display: "grid",
+                      gap: 2,
+                      flex: 1,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 800,
+                        color: "var(--sub)",
+                      }}
+                    >
+                      Jump back into your profile
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: 13,
+                        color: "var(--text)",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      Posts, followers and account details
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => navigateFromMenu("/profile")}
+                    style={{
+                      border: "1px solid var(--border)",
+                      background: "var(--card)",
+                      color: "var(--text)",
+                      height: 34,
+                      padding: "0 12px",
+                      borderRadius: 999,
+                      cursor: "pointer",
+                      fontWeight: 800,
+                      fontSize: 12,
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                    }}
+                  >
+                    View profile
+                  </button>
+                </div>
+              ) : null}
+            </div>
+
+            <div
+              style={{
+                flex: 1,
+                overflowY: "auto",
+                padding: "10px 10px 18px 10px",
+                display: "grid",
+                gap: 6,
+              }}
+            >
+              {mainMenuItems.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={item.action}
+                  style={{
+                    ...drawerListItem,
+                    color: item.danger
+                      ? "rgba(255,140,140,1)"
+                      : item.isActive
+                        ? "var(--text)"
+                        : "var(--text)",
+                    opacity: item.disabled ? 0.72 : 1,
+                    background: item.isActive
+                      ? "rgba(255,255,255,0.06)"
+                      : "transparent",
+                    borderLeft: item.isActive
+                      ? "3px solid var(--text)"
+                      : "3px solid transparent",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 28,
+                      height: 28,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: item.danger
+                        ? "rgba(255,140,140,1)"
+                        : item.isActive
+                          ? "var(--text)"
+                          : "var(--sub)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {item.icon}
+                  </div>
+
+                  <div
+                    style={{
+                      minWidth: 0,
+                      flex: 1,
+                      textAlign: "left",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontWeight: item.isActive ? 900 : 800,
+                        fontSize: 14,
+                        lineHeight: 1.2,
+                        color: item.danger
+                          ? "rgba(255,140,140,1)"
+                          : item.isActive
+                            ? "var(--text)"
+                            : "var(--text)",
+                      }}
+                    >
+                      {item.label}
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: item.danger
+                          ? "rgba(255,180,180,0.9)"
+                          : item.isActive
+                            ? "rgba(39,196,107,0.95)"
+                            : "var(--sub)",
+                        marginTop: 2,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {item.subtitle}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      flexShrink: 0,
+                      paddingLeft: 8,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    {item.key === "notifications" &&
+                    notificationBadgeCount > 0 ? (
+                      <div
+                        style={{
+                          minWidth: 20,
+                          height: 20,
+                          padding: "0 6px",
+                          borderRadius: 999,
+                          border: "1px solid var(--border)",
+                          background: "var(--bg)",
+                          color: "var(--text)",
+                          fontSize: 11,
+                          fontWeight: 900,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        {notificationBadgeCount}
+                      </div>
+                    ) : null}
+
+                    <div
+                      style={{
+                        color: item.danger
+                          ? "rgba(255,180,180,0.9)"
+                          : item.isActive
+                            ? "var(--text)"
+                            : "var(--sub)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <ChevronRight size={18} strokeWidth={2.2} />
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      ) : null}
 
       {searchOpen ? (
         <div
@@ -835,7 +1499,54 @@ export default function TopRail() {
   );
 }
 
-const menuItem: React.CSSProperties = {
+const hamburgerButtonStyle: CSSProperties = {
+  width: 38,
+  height: 38,
+  borderRadius: 12,
+  border: "1px solid var(--border)",
+  background: "var(--bg)",
+  color: "var(--text)",
+  cursor: "pointer",
+  display: "inline-flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 4,
+  flexShrink: 0,
+};
+
+const drawerCloseButton: CSSProperties = {
+  width: 34,
+  height: 34,
+  borderRadius: 10,
+  border: "1px solid var(--border)",
+  background: "var(--bg)",
+  color: "var(--text)",
+  cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
+};
+
+const drawerListItem: CSSProperties = {
+  width: "100%",
+  display: "flex",
+  alignItems: "center",
+  gap: 12,
+  textAlign: "left",
+  padding: "13px 12px",
+  borderTop: 0,
+  borderRight: 0,
+  borderBottom: "1px solid var(--border)",
+  borderLeft: "3px solid transparent",
+  background: "transparent",
+  cursor: "pointer",
+  transition:
+    "background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease",
+};
+
+const menuItem: CSSProperties = {
   width: "100%",
   textAlign: "left",
   padding: "10px 12px",
@@ -846,7 +1557,7 @@ const menuItem: React.CSSProperties = {
   fontWeight: 800,
 };
 
-const menuItemDanger: React.CSSProperties = {
+const menuItemDanger: CSSProperties = {
   ...menuItem,
   color: "rgba(255,140,140,1)",
 };

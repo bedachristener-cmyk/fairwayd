@@ -17,6 +17,9 @@ import AppShell from "./shell/AppShell";
 import { SelectedCourseProvider } from "./state/SelectedCourseContext";
 import LandingPage from "./pages/LandingPage";
 import FollowRequestsPage from "./pages/FollowRequestsPage";
+import FriendsPage from "./pages/FriendsPage";
+import NotificationsPage from "./pages/NotificationsPage";
+import HelpPage from "./pages/HelpPage";
 
 // Onboarding (frontend)
 import { useMe } from "./auth/useMe";
@@ -210,6 +213,9 @@ export default function App() {
 
               {/* Course detail */}
               <Route path="/courses/:courseId" element={<CoursePage />} />
+              <Route path="/friends" element={<FriendsPage />} />
+              <Route path="/notifications" element={<NotificationsPage />} />
+              <Route path="/help" element={<HelpPage />} />
 
               {/* Follow Requests */}
               <Route
