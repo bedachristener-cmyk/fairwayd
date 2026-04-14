@@ -17,6 +17,7 @@ import AppShell from "./shell/AppShell";
 import { SelectedCourseProvider } from "./state/SelectedCourseContext";
 import LandingPage from "./pages/LandingPage";
 import FollowRequestsPage from "./pages/FollowRequestsPage";
+import PrivacySecurityPage from "./pages/PrivacySecurityPage";
 import FriendsPage from "./pages/FriendsPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import HelpPage from "./pages/HelpPage";
@@ -31,9 +32,9 @@ import ProfilePage from "./pages/ProfilePage";
 import FollowingCoursesPage from "./pages/FollowingCoursesPage";
 import CoursePage from "./pages/CoursePage";
 import FeedbackAdminPage from "./pages/FeedbackAdminPage";
+import FeedbackPage from "./pages/FeedbackPage";
 import UserSearchPage from "./pages/UserSearchPage";
 import DestinationsPage from "./pages/DestinationsPage";
-import StageFeedbackWidget from "./components/StageFeedbackWidget";
 import DestinationPage from "./pages/DestinationPage";
 
 /**
@@ -122,16 +123,6 @@ function ProfileSetupPage() {
   return <ProfileSetup me={me} onDone={afterDone} />;
 }
 
-function StageFeedbackWidgetGuard() {
-  const location = useLocation();
-
-  if (location.pathname === "/feed") {
-    return null;
-  }
-
-  return <StageFeedbackWidget />;
-}
-
 export default function App() {
   return (
     <BrowserRouter>
@@ -216,6 +207,14 @@ export default function App() {
               <Route path="/friends" element={<FriendsPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/help" element={<HelpPage />} />
+              <Route
+                path="/privacy-security"
+                element={
+                  <ProtectedRoute>
+                    <PrivacySecurityPage />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Follow Requests */}
               <Route
@@ -224,6 +223,16 @@ export default function App() {
                   <ProtectedRoute>
                     <OnboardingGuard>
                       <FollowRequestsPage />
+                    </OnboardingGuard>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/feedback"
+                element={
+                  <ProtectedRoute>
+                    <OnboardingGuard>
+                      <FeedbackPage />
                     </OnboardingGuard>
                   </ProtectedRoute>
                 }
@@ -282,8 +291,6 @@ export default function App() {
             <Route path="/home" element={<Navigate to="/feed" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-
-          <StageFeedbackWidgetGuard />
         </SelectedCourseProvider>
       </AuthProvider>
     </BrowserRouter>

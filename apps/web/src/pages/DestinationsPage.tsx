@@ -278,6 +278,7 @@ export default function DestinationsPage() {
         display: "grid",
         gap: 12,
         padding: 12,
+        paddingBottom: 80,
         width: "100%",
         minWidth: 0,
         boxSizing: "border-box",

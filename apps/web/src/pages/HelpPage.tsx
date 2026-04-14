@@ -30,7 +30,8 @@ export default function HelpPage() {
     {
       id: "privacy",
       title: "Privacy / Security",
-      subtitle: "Privacy options will live here",
+      subtitle: "Privacy and account safety settings",
+      path: "/privacy-security",
       icon: <Shield size={18} strokeWidth={2.2} />,
     },
     {

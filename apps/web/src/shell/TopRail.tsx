@@ -13,6 +13,7 @@ import {
   LogOut,
   Map,
   Menu,
+  MessageSquare,
   Shield,
   Bell,
   Settings,
@@ -101,7 +102,7 @@ export default function TopRail() {
   }, [me?.avatarUrl, auth?.user?.avatarUrl, auth?.me?.avatarUrl]);
 
   const avatarUrl = fileUrl(rawAvatarUrl);
-  const initials = initialsFromHandle(handle);
+  const isAdmin = ["beda"].includes((handle || "").toLowerCase());
 
   useEffect(() => {
     function handleResize() {
@@ -350,11 +351,6 @@ export default function TopRail() {
     nav(path);
   }
 
-  function showSoon(label: string) {
-    closeAllMenus();
-    window.alert(`${label} is not wired yet.`);
-  }
-
   function getFollowLabel(status?: UserSearchItem["followStatus"]) {
     if (status === "ACCEPTED") return "Following";
     if (status === "PENDING") return "Requested";
@@ -498,6 +494,26 @@ export default function TopRail() {
       isActive: location.pathname === "/notifications",
     },
     {
+      key: "feedback",
+      label: "Feedback",
+      subtitle: "Send feedback about Fairwayd",
+      icon: <MessageSquare size={18} strokeWidth={2.2} />,
+      action: () => navigateFromMenu("/feedback"),
+      isActive: location.pathname === "/feedback",
+    },
+    ...(isAdmin
+      ? [
+          {
+            key: "feedback-admin",
+            label: "Feedback Admin",
+            subtitle: "Review tester feedback",
+            icon: <MessageSquare size={18} strokeWidth={2.2} />,
+            action: () => navigateFromMenu("/feedback-admin"),
+            isActive: location.pathname === "/feedback-admin",
+          },
+        ]
+      : []),
+    {
       key: "settings",
       label: "Settings",
       subtitle: "Theme and app preferences",
@@ -511,11 +527,10 @@ export default function TopRail() {
     {
       key: "privacy",
       label: "Privacy / Security",
-      subtitle: "Planned next step",
+      subtitle: "Account privacy and safety",
       icon: <Shield size={18} strokeWidth={2.2} />,
-      action: () => showSoon("Privacy / Security"),
-      disabled: true,
-      isActive: false,
+      action: () => navigateFromMenu("/privacy-security"),
+      isActive: location.pathname === "/privacy-security",
     },
     {
       key: "help",
@@ -953,7 +968,7 @@ export default function TopRail() {
                           flexShrink: 0,
                         }}
                       >
-                        {initials}
+                        {initialsFromHandle(handle)}
                       </div>
                     )
                   ) : (
@@ -1104,7 +1119,9 @@ export default function TopRail() {
               style={{
                 flex: 1,
                 overflowY: "auto",
-                padding: "10px 10px 18px 10px",
+                padding: isMobile
+                  ? "10px 10px 110px 10px"
+                  : "10px 10px 18px 10px",
                 display: "grid",
                 gap: 6,
               }}

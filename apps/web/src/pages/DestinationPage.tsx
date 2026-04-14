@@ -5,6 +5,7 @@ import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
 import PostCard from "../components/PostCard";
 import CommentModal from "../components/CommentModal";
+import { DESTINATION_INFO } from "../data/destinationInfo";
 
 const COUNTRY_NAMES: Record<string, string> = {
   TH: "Thailand",
@@ -99,13 +100,6 @@ export default function DestinationPage() {
   const [search, setSearch] = useState("");
   const [posts, setPosts] = useState<DestinationPost[]>([]);
   const [postsLoading, setPostsLoading] = useState(false);
-  const isOwnPost = (p: DestinationPost) => {
-    return user?.id && p.user?.id === user.id;
-  };
-
-  const isFromFollowedUser = (p: DestinationPost) => {
-    return !isOwnPost(p) && p.visibility === "FOLLOWERS";
-  };
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(
     null,
   );
@@ -115,9 +109,22 @@ export default function DestinationPage() {
   const [destinationFollowing, setDestinationFollowing] = useState(false);
   const [destinationFollowerCount, setDestinationFollowerCount] = useState(0);
   const [destinationFollowBusy, setDestinationFollowBusy] = useState(false);
+  const [followedCourseIds, setFollowedCourseIds] = useState<string[]>([]);
+  const [courseFollowBusyId, setCourseFollowBusyId] = useState<string | null>(
+    null,
+  );
 
   const featuredCourses = (data?.items ?? []).slice(0, 3);
   const featuredPosts = (posts ?? []).slice(0, 2);
+  const info = slug ? DESTINATION_INFO[slug] : undefined;
+
+  const isOwnPost = (p: DestinationPost) => {
+    return user?.id && p.user?.id === user.id;
+  };
+
+  const isFromFollowedUser = (p: DestinationPost) => {
+    return !isOwnPost(p) && p.visibility === "FOLLOWERS";
+  };
 
   const openCoursesTab = () => setActiveTab("courses");
   const openPostsTab = () => setActiveTab("posts");
@@ -160,10 +167,7 @@ export default function DestinationPage() {
       console.error("Failed to load destination follow status", err);
     }
   }, [slug, token, logout]);
-  const [followedCourseIds, setFollowedCourseIds] = useState<string[]>([]);
-  const [courseFollowBusyId, setCourseFollowBusyId] = useState<string | null>(
-    null,
-  );
+
   const loadFollowedCourses = useCallback(async () => {
     if (!token) return;
 
@@ -244,6 +248,7 @@ export default function DestinationPage() {
     },
     [token, logout, courseFollowBusyId, followedCourseIds],
   );
+
   const handleToggleDestinationFollow = useCallback(async () => {
     if (!slug) return;
     if (destinationFollowBusy) return;
@@ -397,7 +402,7 @@ export default function DestinationPage() {
     };
 
     load();
-  }, [slug]);
+  }, [slug, token]);
 
   useEffect(() => {
     loadFollowedCourses();
@@ -406,11 +411,11 @@ export default function DestinationPage() {
   useEffect(() => {
     loadDestinationFollowStatus();
   }, [loadDestinationFollowStatus]);
+
   const activeCommentPost =
     posts.find((p) => p.id === activeCommentPostId) ?? null;
 
   if (loading) return <div style={{ padding: 20 }}>Loading...</div>;
-
   if (!data) return <div style={{ padding: 20 }}>No data</div>;
 
   const filteredItems = (data.items || []).filter((c: Course) => {
@@ -421,6 +426,7 @@ export default function DestinationPage() {
       (c.region || "").toLowerCase().includes(q)
     );
   });
+
   return (
     <div
       style={{
@@ -779,6 +785,144 @@ export default function DestinationPage() {
               </div>
             </div>
           </div>
+
+          {info?.bestTime ? (
+            <div
+              style={{
+                padding: isMobile ? 16 : 20,
+                borderRadius: 18,
+                border: "1px solid var(--border)",
+                background: "var(--card)",
+                display: "grid",
+                gap: 10,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: isMobile ? 20 : 22,
+                  fontWeight: 800,
+                  color: "var(--text)",
+                }}
+              >
+                ⛳ Best time to play
+              </div>
+
+              <div
+                style={{
+                  fontSize: 14,
+                  color: "var(--sub)",
+                  lineHeight: 1.45,
+                }}
+              >
+                Seasonal golf overview for{" "}
+                {data.destination?.name || getCountryName(data.country)}.
+              </div>
+
+              {info.bestTime.map((item: any, i: number) => (
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    fontSize: 13,
+                    borderTop: i === 0 ? "none" : "1px solid var(--border)",
+                    paddingTop: i === 0 ? 0 : 10,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div style={{ fontWeight: 700, color: "var(--text)" }}>
+                    {item.label}
+                  </div>
+
+                  <div
+                    style={{
+                      color: "var(--sub)",
+                      textAlign: isMobile ? "left" : "right",
+                      maxWidth: isMobile ? "100%" : "60%",
+                    }}
+                  >
+                    {item.text}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          {info?.highlights?.length ? (
+            <div
+              style={{
+                padding: isMobile ? 16 : 20,
+                borderRadius: 18,
+                border: "1px solid var(--border)",
+                background: "var(--card)",
+                display: "grid",
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: isMobile ? 20 : 22,
+                  fontWeight: 800,
+                  color: "var(--text)",
+                }}
+              >
+                📍 Highlights
+              </div>
+
+              <div
+                style={{
+                  fontSize: 14,
+                  color: "var(--sub)",
+                  lineHeight: 1.45,
+                }}
+              >
+                Tap a highlight to jump into matching courses for{" "}
+                {data.destination?.name || getCountryName(data.country)}.
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: 10,
+                }}
+              >
+                {info.highlights.map(
+                  (
+                    item: {
+                      label: string;
+                      query: string;
+                    },
+                    i: number,
+                  ) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => {
+                        setSearch(item.query);
+                        setActiveTab("courses");
+                      }}
+                      style={{
+                        border: "1px solid var(--border)",
+                        borderRadius: 14,
+                        background: "var(--bg)",
+                        padding: "12px 12px",
+                        fontSize: 13,
+                        color: "var(--text)",
+                        lineHeight: 1.45,
+                        textAlign: "left",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {item.label}
+                    </button>
+                  ),
+                )}
+              </div>
+            </div>
+          ) : null}
+
           <div
             style={{
               padding: isMobile ? 16 : 20,
@@ -881,15 +1025,14 @@ export default function DestinationPage() {
                       e.currentTarget.style.transform = "translateY(0)";
                     }}
                   >
-                    {/* IMAGE PLACEHOLDER */}
                     <div
                       style={{
-                        height: 150,
+                        height: 48,
                         background:
-                          "linear-gradient(135deg, rgba(79,140,255,0.55) 0%, rgba(32,48,88,0.55) 55%, rgba(255,255,255,0.06) 100%)",
+                          "linear-gradient(90deg, rgba(79,140,255,0.28) 0%, rgba(32,48,88,0.22) 55%, rgba(255,255,255,0.04) 100%)",
                         display: "flex",
-                        alignItems: "flex-end",
-                        padding: 12,
+                        alignItems: "center",
+                        padding: "0 12px",
                       }}
                     >
                       <div
@@ -907,7 +1050,6 @@ export default function DestinationPage() {
                       </div>
                     </div>
 
-                    {/* CONTENT */}
                     <div style={{ padding: 14 }}>
                       <div
                         style={{
@@ -1121,6 +1263,7 @@ export default function DestinationPage() {
                   overflow: "hidden",
                   transition: "all 0.18s ease",
                   boxShadow: "0 6px 20px rgba(0,0,0,0.12)",
+                  marginBottom: 12,
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = "translateY(-4px)";
@@ -1129,33 +1272,30 @@ export default function DestinationPage() {
                   e.currentTarget.style.transform = "translateY(0)";
                 }}
               >
-                {/* HEADER / IMAGE */}
-                <div
-                  style={{
-                    height: 120,
-                    background:
-                      "linear-gradient(135deg, rgba(79,140,255,0.35), rgba(255,255,255,0.05))",
-                    display: "flex",
-                    alignItems: "flex-end",
-                    padding: 10,
-                  }}
-                >
+                <div style={{ padding: 14, display: "grid", gap: 8 }}>
                   <div
                     style={{
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: 700,
-                      color: "white",
-                      background: "rgba(0,0,0,0.35)",
                       padding: "4px 8px",
                       borderRadius: 999,
+                      width: "fit-content",
+                      background:
+                        c.access === "PRIVATE"
+                          ? "rgba(255,255,255,0.08)"
+                          : "rgba(39,196,107,0.18)",
+                      color:
+                        c.access === "PRIVATE"
+                          ? "var(--text)"
+                          : "rgb(39,196,107)",
+                      border:
+                        c.access === "PRIVATE"
+                          ? "1px solid var(--border)"
+                          : "1px solid rgba(39,196,107,0.35)",
                     }}
                   >
                     {c.access || "Course"}
                   </div>
-                </div>
-
-                {/* CONTENT */}
-                <div style={{ padding: 14 }}>
                   <div
                     style={{
                       fontWeight: 800,
@@ -1308,6 +1448,7 @@ export default function DestinationPage() {
           )}
         </div>
       )}
+
       {activeCommentPost ? (
         <CommentModal
           post={activeCommentPost}
