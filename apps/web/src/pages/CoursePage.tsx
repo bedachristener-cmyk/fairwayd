@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
+import CourseRatingSummary from "../components/CourseRatingSummary";
 import PostCard from "../components/PostCard";
+import { getCourseRatingSummary } from "../data/courseRatings";
 
 type Post = {
   id: string;
@@ -70,6 +72,7 @@ export default function CoursePage() {
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
+  const ratingSummary = getCourseRatingSummary(course?.id);
 
   // Load course + posts
   useEffect(() => {
@@ -382,6 +385,8 @@ export default function CoursePage() {
           </button>
         </div>
       </div>
+
+      <CourseRatingSummary rating={ratingSummary} />
 
       {/* ===== POSTS ===== */}
       <div style={{ display: "grid", gap: 10 }}>
