@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
@@ -38,6 +38,245 @@ type Course = {
   access?: string | null;
 };
 
+type DraftRating = {
+  overall: number;
+  condition: number;
+  layout: number;
+  scenery: number;
+  value: number;
+};
+
+function clampRating(value: number) {
+  return Math.min(5, Math.max(1, value));
+}
+
+function roundToStep(value: number, step = 0.2) {
+  return Math.round(value / step) * step;
+}
+
+function formatRatingValue(value: number) {
+  return value.toFixed(1);
+}
+
+function getStarFillPercent(starIndex: number, value: number) {
+  const fill = Math.max(0, Math.min(1, value - starIndex));
+  return fill * 100;
+}
+
+function StarRatingPreview({ value }: { value: number }) {
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 2,
+        lineHeight: 1,
+      }}
+    >
+      {Array.from({ length: 5 }).map((_, index) => {
+        const fillPercent = getStarFillPercent(index, value);
+
+        return (
+          <span
+            key={index}
+            style={{
+              position: "relative",
+              display: "inline-block",
+              width: 18,
+              height: 18,
+              fontSize: 18,
+              lineHeight: "18px",
+            }}
+          >
+            <span
+              style={{
+                color: "var(--muted)",
+              }}
+            >
+              ★
+            </span>
+
+            <span
+              style={{
+                position: "absolute",
+                left: 0,
+                top: 0,
+                width: `${fillPercent}%`,
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                color: "var(--green)",
+              }}
+            >
+              ★
+            </span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function RatingSliderRow({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (next: number) => void;
+}) {
+  const fillPercent = ((value - 1) / 4) * 100;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        padding: "12px 0",
+        borderTop: "1px solid var(--border)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <div
+          style={{
+            fontSize: 14,
+            fontWeight: 800,
+            color: "var(--text)",
+          }}
+        >
+          {label}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            flexWrap: "wrap",
+          }}
+        >
+          <StarRatingPreview value={value} />
+          <div
+            style={{
+              minWidth: 34,
+              textAlign: "right",
+              fontSize: 14,
+              fontWeight: 800,
+              color: "var(--text)",
+            }}
+          >
+            {formatRatingValue(value)}
+          </div>
+        </div>
+      </div>
+
+      <div
+        style={{
+          position: "relative",
+          height: 28,
+          display: "flex",
+          alignItems: "center",
+        }}
+      >
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            height: 8,
+            borderRadius: 999,
+            background: "var(--muted)",
+            border: "1px solid var(--border)",
+            overflow: "hidden",
+            pointerEvents: "none",
+          }}
+        >
+          <div
+            style={{
+              width: `${fillPercent}%`,
+              height: "100%",
+              background: "var(--text)",
+              opacity: 0.18,
+            }}
+          />
+        </div>
+
+        <input
+          type="range"
+          min={1}
+          max={5}
+          step={0.2}
+          value={value}
+          onChange={(e) =>
+            onChange(clampRating(roundToStep(Number(e.target.value), 0.2)))
+          }
+          style={{
+            width: "100%",
+            margin: 0,
+            position: "relative",
+            zIndex: 1,
+            appearance: "none",
+            WebkitAppearance: "none",
+            background: "transparent",
+            cursor: "pointer",
+            height: 28,
+          }}
+        />
+
+        <style>
+          {`
+            input[type="range"]::-webkit-slider-runnable-track {
+              height: 8px;
+              background: transparent;
+              border: none;
+              border-radius: 999px;
+            }
+
+            input[type="range"]::-webkit-slider-thumb {
+              -webkit-appearance: none;
+              appearance: none;
+              width: 18px;
+              height: 18px;
+              margin-top: -5px;
+              border-radius: 999px;
+              background: var(--card);
+              border: 2px solid var(--text);
+              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+            }
+
+            input[type="range"]::-moz-range-track {
+              height: 8px;
+              background: transparent;
+              border: none;
+              border-radius: 999px;
+            }
+
+            input[type="range"]::-moz-range-thumb {
+              width: 18px;
+              height: 18px;
+              border-radius: 999px;
+              background: var(--card);
+              border: 2px solid var(--text);
+              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+            }
+          `}
+        </style>
+      </div>
+    </div>
+  );
+}
+
 function normalizeWebsite(url?: string | null) {
   if (!url) return null;
 
@@ -72,6 +311,15 @@ export default function CoursePage() {
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
+  const [showRatingPanel, setShowRatingPanel] = useState(false);
+  const [draftRating, setDraftRating] = useState<DraftRating>({
+    overall: 4.0,
+    condition: 4.0,
+    layout: 4.0,
+    scenery: 4.0,
+    value: 4.0,
+  });
+
   const ratingSummary = getCourseRatingSummary(course?.id);
 
   // Load course + posts
@@ -132,6 +380,30 @@ export default function CoursePage() {
 
     run();
   }, [courseId, token]);
+
+  useEffect(() => {
+    if (!ratingSummary) return;
+
+    setDraftRating({
+      overall: ratingSummary.overall,
+      condition: ratingSummary.breakdown.condition,
+      layout: ratingSummary.breakdown.layout,
+      scenery: ratingSummary.breakdown.scenery,
+      value: ratingSummary.breakdown.value,
+    });
+  }, [ratingSummary]);
+
+  const draftAverage = useMemo(() => {
+    const average =
+      (draftRating.overall +
+        draftRating.condition +
+        draftRating.layout +
+        draftRating.scenery +
+        draftRating.value) /
+      5;
+
+    return roundToStep(average, 0.2);
+  }, [draftRating]);
 
   if (loading) return null;
 
@@ -386,7 +658,195 @@ export default function CoursePage() {
         </div>
       </div>
 
-      <CourseRatingSummary rating={ratingSummary} />
+      <CourseRatingSummary
+        rating={ratingSummary}
+        canRate={!!token}
+        ctaLabel={showRatingPanel ? "Hide rating form" : undefined}
+        onRateClick={() => {
+          if (!token) {
+            nav("/");
+            return;
+          }
+
+          setShowRatingPanel((prev) => !prev);
+        }}
+      />
+
+      {showRatingPanel && !!token && (
+        <section
+          style={{
+            padding: 16,
+            borderRadius: 16,
+            background: "var(--card)",
+            border: "1px solid var(--border)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: 16,
+                  fontWeight: 800,
+                  color: "var(--text)",
+                }}
+              >
+                Rate this course
+              </div>
+
+              <div
+                style={{
+                  marginTop: 6,
+                  fontSize: 14,
+                  color: "var(--sub)",
+                  lineHeight: 1.5,
+                }}
+              >
+                Prototype only for now. Move the sliders and see how the stars
+                react live.
+              </div>
+            </div>
+
+            <div
+              style={{
+                minWidth: 76,
+                textAlign: "right",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 26,
+                  fontWeight: 900,
+                  lineHeight: 1,
+                  color: "var(--text)",
+                }}
+              >
+                {formatRatingValue(draftAverage)}
+              </div>
+
+              <div
+                style={{
+                  marginTop: 6,
+                }}
+              >
+                <StarRatingPreview value={draftAverage} />
+              </div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              marginTop: 8,
+              borderTop: "1px solid var(--border)",
+            }}
+          >
+            <RatingSliderRow
+              label="Overall"
+              value={draftRating.overall}
+              onChange={(next) =>
+                setDraftRating((prev) => ({ ...prev, overall: next }))
+              }
+            />
+
+            <RatingSliderRow
+              label="Condition"
+              value={draftRating.condition}
+              onChange={(next) =>
+                setDraftRating((prev) => ({ ...prev, condition: next }))
+              }
+            />
+
+            <RatingSliderRow
+              label="Layout"
+              value={draftRating.layout}
+              onChange={(next) =>
+                setDraftRating((prev) => ({ ...prev, layout: next }))
+              }
+            />
+
+            <RatingSliderRow
+              label="Scenery"
+              value={draftRating.scenery}
+              onChange={(next) =>
+                setDraftRating((prev) => ({ ...prev, scenery: next }))
+              }
+            />
+
+            <RatingSliderRow
+              label="Value"
+              value={draftRating.value}
+              onChange={(next) =>
+                setDraftRating((prev) => ({ ...prev, value: next }))
+              }
+            />
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              gap: 10,
+              flexWrap: "wrap",
+              marginTop: 14,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                alert("Save comes in the backend step.");
+              }}
+              style={{
+                padding: "10px 14px",
+                borderRadius: 999,
+                border: "1px solid var(--border)",
+                background: "var(--card)",
+                color: "var(--text)",
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              Save rating
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (ratingSummary) {
+                  setDraftRating({
+                    overall: ratingSummary.overall,
+                    condition: ratingSummary.breakdown.condition,
+                    layout: ratingSummary.breakdown.layout,
+                    scenery: ratingSummary.breakdown.scenery,
+                    value: ratingSummary.breakdown.value,
+                  });
+                } else {
+                  setDraftRating({
+                    overall: 4.0,
+                    condition: 4.0,
+                    layout: 4.0,
+                    scenery: 4.0,
+                    value: 4.0,
+                  });
+                }
+
+                setShowRatingPanel(false);
+              }}
+              style={secondaryBtnStyle}
+            >
+              Cancel
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* ===== POSTS ===== */}
       <div style={{ display: "grid", gap: 10 }}>

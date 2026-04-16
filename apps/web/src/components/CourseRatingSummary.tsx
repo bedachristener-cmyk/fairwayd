@@ -2,6 +2,9 @@ import type { CourseRatingSummaryData } from "../data/courseRatings";
 
 type Props = {
   rating: CourseRatingSummaryData | null;
+  canRate?: boolean;
+  onRateClick?: () => void;
+  ctaLabel?: string;
 };
 
 function formatRating(value: number) {
@@ -61,16 +64,23 @@ function RatingRow({ label, value }: { label: string; value: number }) {
   );
 }
 
-export default function CourseRatingSummary({ rating }: Props) {
+export default function CourseRatingSummary({
+  rating,
+  canRate = false,
+  onRateClick,
+  ctaLabel,
+}: Props) {
+  const resolvedCtaLabel =
+    ctaLabel ?? (canRate ? "Rate this course" : "Sign in to rate");
+
   if (!rating) {
     return (
       <section
         style={{
-          marginTop: 18,
           padding: 16,
-          borderRadius: 18,
-          border: "1px solid var(--border)",
+          borderRadius: 16,
           background: "var(--card)",
+          border: "1px solid var(--border)",
         }}
       >
         <div
@@ -93,6 +103,23 @@ export default function CourseRatingSummary({ rating }: Props) {
         >
           No ratings yet. Be the first golfer to rate this course.
         </div>
+
+        <button
+          type="button"
+          onClick={onRateClick}
+          style={{
+            marginTop: 14,
+            padding: "10px 14px",
+            borderRadius: 999,
+            border: "1px solid var(--border)",
+            background: "var(--card)",
+            color: "var(--text)",
+            fontWeight: 800,
+            cursor: "pointer",
+          }}
+        >
+          {resolvedCtaLabel}
+        </button>
       </section>
     );
   }
@@ -100,11 +127,10 @@ export default function CourseRatingSummary({ rating }: Props) {
   return (
     <section
       style={{
-        marginTop: 18,
         padding: 16,
-        borderRadius: 18,
-        border: "1px solid var(--border)",
+        borderRadius: 16,
         background: "var(--card)",
+        border: "1px solid var(--border)",
         display: "flex",
         flexDirection: "column",
         gap: 14,
@@ -199,6 +225,24 @@ export default function CourseRatingSummary({ rating }: Props) {
         <RatingRow label="Scenery" value={rating.breakdown.scenery} />
         <RatingRow label="Value" value={rating.breakdown.value} />
       </div>
+
+      <button
+        type="button"
+        onClick={onRateClick}
+        style={{
+          marginTop: 2,
+          padding: "10px 14px",
+          borderRadius: 999,
+          border: "1px solid var(--border)",
+          background: "var(--card)",
+          color: "var(--text)",
+          fontWeight: 800,
+          cursor: "pointer",
+          width: "fit-content",
+        }}
+      >
+        {ctaLabel}
+      </button>
     </section>
   );
 }
