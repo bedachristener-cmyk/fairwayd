@@ -241,7 +241,7 @@ export default function CourseRatingSummary({
           width: "fit-content",
         }}
       >
-        {ctaLabel}
+        {resolvedCtaLabel}
       </button>
     </section>
   );

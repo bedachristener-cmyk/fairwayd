@@ -5,6 +5,7 @@ import { useAuth } from "../auth/AuthContext";
 import CourseRatingSummary from "../components/CourseRatingSummary";
 import PostCard from "../components/PostCard";
 import { getCourseRatingSummary } from "../data/courseRatings";
+import { getMonetizationLinksForCourse } from "../data/monetization";
 
 type Post = {
   id: string;
@@ -312,6 +313,7 @@ export default function CoursePage() {
   const [following, setFollowing] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
   const [showRatingPanel, setShowRatingPanel] = useState(false);
+  const [showDetailedRatings, setShowDetailedRatings] = useState(false);
   const [draftRating, setDraftRating] = useState<DraftRating>({
     overall: 4.0,
     condition: 4.0,
@@ -321,6 +323,11 @@ export default function CoursePage() {
   });
 
   const ratingSummary = getCourseRatingSummary(course?.id);
+
+  const monetizationLinks = getMonetizationLinksForCourse(course?.id);
+
+  // temporary usage to avoid TS unused error (monetization prepared for later)
+  void monetizationLinks;
 
   // Load course + posts
   useEffect(() => {
@@ -668,7 +675,15 @@ export default function CoursePage() {
             return;
           }
 
-          setShowRatingPanel((prev) => !prev);
+          setShowRatingPanel((prev) => {
+            const next = !prev;
+
+            if (next) {
+              setShowDetailedRatings(false);
+            }
+
+            return next;
+          });
         }}
       />
 
@@ -712,8 +727,8 @@ export default function CoursePage() {
                   lineHeight: 1.5,
                 }}
               >
-                Prototype only for now. Move the sliders and see how the stars
-                react live.
+                Start with a quick overall rating. Detailed ratings are
+                optional.
               </div>
             </div>
 
@@ -758,37 +773,74 @@ export default function CoursePage() {
               }
             />
 
-            <RatingSliderRow
-              label="Condition"
-              value={draftRating.condition}
-              onChange={(next) =>
-                setDraftRating((prev) => ({ ...prev, condition: next }))
-              }
-            />
+            <div
+              style={{
+                paddingTop: 12,
+                display: "flex",
+                justifyContent: "flex-start",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setShowDetailedRatings((prev) => !prev)}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: 999,
+                  border: "1px solid var(--border)",
+                  background: "transparent",
+                  color: "var(--text)",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontSize: 13,
+                }}
+              >
+                {showDetailedRatings
+                  ? "Hide detailed ratings"
+                  : "Add detailed ratings"}
+              </button>
+            </div>
 
-            <RatingSliderRow
-              label="Layout"
-              value={draftRating.layout}
-              onChange={(next) =>
-                setDraftRating((prev) => ({ ...prev, layout: next }))
-              }
-            />
+            {showDetailedRatings && (
+              <div
+                style={{
+                  marginTop: 6,
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <RatingSliderRow
+                  label="Condition"
+                  value={draftRating.condition}
+                  onChange={(next) =>
+                    setDraftRating((prev) => ({ ...prev, condition: next }))
+                  }
+                />
 
-            <RatingSliderRow
-              label="Scenery"
-              value={draftRating.scenery}
-              onChange={(next) =>
-                setDraftRating((prev) => ({ ...prev, scenery: next }))
-              }
-            />
+                <RatingSliderRow
+                  label="Layout"
+                  value={draftRating.layout}
+                  onChange={(next) =>
+                    setDraftRating((prev) => ({ ...prev, layout: next }))
+                  }
+                />
 
-            <RatingSliderRow
-              label="Value"
-              value={draftRating.value}
-              onChange={(next) =>
-                setDraftRating((prev) => ({ ...prev, value: next }))
-              }
-            />
+                <RatingSliderRow
+                  label="Scenery"
+                  value={draftRating.scenery}
+                  onChange={(next) =>
+                    setDraftRating((prev) => ({ ...prev, scenery: next }))
+                  }
+                />
+
+                <RatingSliderRow
+                  label="Value"
+                  value={draftRating.value}
+                  onChange={(next) =>
+                    setDraftRating((prev) => ({ ...prev, value: next }))
+                  }
+                />
+              </div>
+            )}
           </div>
 
           <div
@@ -838,6 +890,7 @@ export default function CoursePage() {
                   });
                 }
 
+                setShowDetailedRatings(false);
                 setShowRatingPanel(false);
               }}
               style={secondaryBtnStyle}
