@@ -1,4 +1,4 @@
-import type { CourseRatingSummaryData } from "../data/courseRatings";
+import type { RatingSummary as CourseRatingSummaryData } from "../api/ratings";
 
 type Props = {
   rating: CourseRatingSummaryData | null;
@@ -9,6 +9,52 @@ type Props = {
 
 function formatRating(value: number) {
   return value.toFixed(1);
+}
+
+function StarPreview({ value }: { value: number }) {
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 2,
+        lineHeight: 1,
+      }}
+    >
+      {Array.from({ length: 5 }).map((_, index) => {
+        const fill = Math.max(0, Math.min(1, value - index));
+
+        return (
+          <span
+            key={index}
+            style={{
+              position: "relative",
+              width: 14,
+              height: 14,
+              fontSize: 14,
+              lineHeight: "14px",
+            }}
+          >
+            <span style={{ color: "var(--muted)" }}>★</span>
+
+            <span
+              style={{
+                position: "absolute",
+                left: 0,
+                top: 0,
+                width: `${fill * 100}%`,
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                color: "var(--text)",
+              }}
+            >
+              ★
+            </span>
+          </span>
+        );
+      })}
+    </div>
+  );
 }
 
 function RatingRow({ label, value }: { label: string; value: number }) {
@@ -35,7 +81,7 @@ function RatingRow({ label, value }: { label: string; value: number }) {
         style={{
           height: 8,
           borderRadius: 999,
-          background: "var(--bg)",
+          background: "var(--muted)",
           border: "1px solid var(--border)",
           overflow: "hidden",
         }}
@@ -44,8 +90,9 @@ function RatingRow({ label, value }: { label: string; value: number }) {
           style={{
             width: `${(value / 5) * 100}%`,
             height: "100%",
-            background: "var(--text)",
-            opacity: 0.18,
+            background:
+              "linear-gradient(90deg, var(--text), rgba(255,255,255,0.6))",
+            opacity: 0.35,
           }}
         />
       </div>
@@ -185,17 +232,6 @@ export default function CourseRatingSummary({
           >
             {formatRating(rating.overall)}
           </div>
-
-          <div
-            style={{
-              marginTop: 6,
-              fontSize: 13,
-              color: "var(--sub)",
-              fontWeight: 600,
-            }}
-          >
-            {rating.count} reviews
-          </div>
         </div>
       </div>
 
@@ -210,7 +246,13 @@ export default function CourseRatingSummary({
         }}
       >
         <span aria-hidden="true">⭐</span>
-        <span>{formatRating(rating.overall)} overall</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {formatRating(rating.overall)}
+          <StarPreview value={rating.overall} />
+          <span style={{ color: "var(--sub)", fontWeight: 600 }}>
+            • {rating.count} reviews
+          </span>
+        </span>
       </div>
 
       <div

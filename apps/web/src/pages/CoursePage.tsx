@@ -1,11 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
 import CourseRatingSummary from "../components/CourseRatingSummary";
 import PostCard from "../components/PostCard";
-import { getCourseRatingSummary } from "../data/courseRatings";
 import { getMonetizationLinksForCourse } from "../data/monetization";
+import {
+  saveRating,
+  getMyRating,
+  getRatingSummary,
+  type RatingSummary,
+  type MyRating,
+} from "../api/ratings";
 
 type Post = {
   id: string;
@@ -291,12 +297,35 @@ function normalizeWebsite(url?: string | null) {
   return `https://${trimmed}`;
 }
 
+function createDefaultDraftRating(): DraftRating {
+  return {
+    overall: 4.0,
+    condition: 4.0,
+    layout: 4.0,
+    scenery: 4.0,
+    value: 4.0,
+  };
+}
+
+function mapMyRatingToDraft(data: MyRating): DraftRating {
+  return {
+    overall: data.overall,
+    condition: data.condition ?? data.overall,
+    layout: data.layout ?? data.overall,
+    scenery: data.scenery ?? data.overall,
+    value: data.value ?? data.overall,
+  };
+}
+
 export default function CoursePage() {
   const { courseId } = useParams<{ courseId: string }>();
   const nav = useNavigate();
+  const location = useLocation();
   const { token } = useAuth();
 
   const isMobile = window.innerWidth <= 980;
+  const ratingSectionRef = useRef<HTMLElement | null>(null);
+  const ratingPanelRef = useRef<HTMLElement | null>(null);
 
   const secondaryBtnStyle = {
     padding: "10px 14px",
@@ -314,15 +343,14 @@ export default function CoursePage() {
   const [followBusy, setFollowBusy] = useState(false);
   const [showRatingPanel, setShowRatingPanel] = useState(false);
   const [showDetailedRatings, setShowDetailedRatings] = useState(false);
-  const [draftRating, setDraftRating] = useState<DraftRating>({
-    overall: 4.0,
-    condition: 4.0,
-    layout: 4.0,
-    scenery: 4.0,
-    value: 4.0,
-  });
-
-  const ratingSummary = getCourseRatingSummary(course?.id);
+  const [ratingSaved, setRatingSaved] = useState(false);
+  const [ratingSummary, setRatingSummary] = useState<RatingSummary | null>(
+    null,
+  );
+  const [myRating, setMyRating] = useState<MyRating | null>(null);
+  const [draftRating, setDraftRating] = useState<DraftRating>(
+    createDefaultDraftRating(),
+  );
 
   const monetizationLinks = getMonetizationLinksForCourse(course?.id);
 
@@ -389,28 +417,133 @@ export default function CoursePage() {
   }, [courseId, token]);
 
   useEffect(() => {
-    if (!ratingSummary) return;
+    if (!course?.id) return;
 
-    setDraftRating({
-      overall: ratingSummary.overall,
-      condition: ratingSummary.breakdown.condition,
-      layout: ratingSummary.breakdown.layout,
-      scenery: ratingSummary.breakdown.scenery,
-      value: ratingSummary.breakdown.value,
-    });
-  }, [ratingSummary]);
+    getRatingSummary(course.id)
+      .then((data) => {
+        setRatingSummary(data);
+      })
+      .catch(() => {
+        setRatingSummary(null);
+      });
+  }, [course?.id]);
+
+  useEffect(() => {
+    if (!course?.id || !token) {
+      setMyRating(null);
+      setDraftRating(createDefaultDraftRating());
+      setShowDetailedRatings(false);
+      return;
+    }
+
+    getMyRating(course.id, token)
+      .then((data) => {
+        if (!data) {
+          setMyRating(null);
+          setDraftRating(createDefaultDraftRating());
+          setShowDetailedRatings(false);
+          return;
+        }
+
+        setMyRating(data);
+
+        const nextDraft = mapMyRatingToDraft(data);
+        setDraftRating(nextDraft);
+
+        const hasDetailedRatings =
+          data.condition != null ||
+          data.layout != null ||
+          data.scenery != null ||
+          data.value != null;
+
+        setShowDetailedRatings(hasDetailedRatings);
+      })
+      .catch(() => {
+        setMyRating(null);
+        setDraftRating(createDefaultDraftRating());
+        setShowDetailedRatings(false);
+      });
+  }, [course?.id, token]);
+
+  useEffect(() => {
+    if (!ratingSaved) return;
+
+    const timer = window.setTimeout(() => {
+      setRatingSaved(false);
+    }, 1800);
+
+    return () => window.clearTimeout(timer);
+  }, [ratingSaved]);
 
   const draftAverage = useMemo(() => {
-    const average =
-      (draftRating.overall +
-        draftRating.condition +
-        draftRating.layout +
-        draftRating.scenery +
-        draftRating.value) /
-      5;
+    if (showDetailedRatings) {
+      const average =
+        (draftRating.condition +
+          draftRating.layout +
+          draftRating.scenery +
+          draftRating.value) /
+        4;
 
-    return roundToStep(average, 0.2);
-  }, [draftRating]);
+      return roundToStep(average, 0.2);
+    }
+
+    return roundToStep(draftRating.overall, 0.2);
+  }, [draftRating, showDetailedRatings]);
+
+  useEffect(() => {
+    const state = location.state as
+      | { openRating?: boolean; scrollToRating?: boolean }
+      | undefined;
+
+    const params = new URLSearchParams(location.search);
+
+    const shouldOpen =
+      state?.openRating === true ||
+      params.get("openRating") === "1" ||
+      params.get("openRating") === "true";
+
+    const shouldScroll =
+      state?.scrollToRating === true ||
+      params.get("scrollToRating") === "1" ||
+      params.get("scrollToRating") === "true";
+
+    if (!course || !token || !shouldOpen) return;
+
+    if (myRating) {
+      const nextDraft = mapMyRatingToDraft(myRating);
+      setDraftRating(nextDraft);
+
+      const hasDetailedRatings =
+        myRating.condition != null ||
+        myRating.layout != null ||
+        myRating.scenery != null ||
+        myRating.value != null;
+
+      setShowDetailedRatings(hasDetailedRatings);
+    } else {
+      setDraftRating(createDefaultDraftRating());
+      setShowDetailedRatings(false);
+    }
+
+    setShowRatingPanel(true);
+
+    if (shouldScroll) {
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    }
+
+    nav(location.pathname, { replace: true });
+  }, [
+    course,
+    token,
+    myRating,
+    location.pathname,
+    location.search,
+    location.state,
+    nav,
+  ]);
 
   if (loading) return null;
 
@@ -665,30 +798,70 @@ export default function CoursePage() {
         </div>
       </div>
 
-      <CourseRatingSummary
-        rating={ratingSummary}
-        canRate={!!token}
-        ctaLabel={showRatingPanel ? "Hide rating form" : undefined}
-        onRateClick={() => {
-          if (!token) {
-            nav("/");
-            return;
+      <section ref={ratingSectionRef}>
+        <CourseRatingSummary
+          rating={ratingSummary}
+          canRate={!!token}
+          ctaLabel={
+            showRatingPanel
+              ? "Hide rating form"
+              : myRating
+                ? "Edit your rating"
+                : "Rate this course"
           }
-
-          setShowRatingPanel((prev) => {
-            const next = !prev;
-
-            if (next) {
-              setShowDetailedRatings(false);
+          onRateClick={() => {
+            if (!token) {
+              nav("/");
+              return;
             }
 
-            return next;
-          });
-        }}
-      />
+            setShowRatingPanel((prev) => {
+              const next = !prev;
+
+              if (next) {
+                if (myRating) {
+                  const nextDraft = mapMyRatingToDraft(myRating);
+                  setDraftRating(nextDraft);
+
+                  const hasDetailedRatings =
+                    myRating.condition != null ||
+                    myRating.layout != null ||
+                    myRating.scenery != null ||
+                    myRating.value != null;
+
+                  setShowDetailedRatings(hasDetailedRatings);
+                } else {
+                  setDraftRating(createDefaultDraftRating());
+                  setShowDetailedRatings(false);
+                }
+              }
+
+              return next;
+            });
+          }}
+        />
+      </section>
+
+      {ratingSaved && (
+        <div
+          style={{
+            marginTop: -2,
+            padding: "10px 12px",
+            borderRadius: 12,
+            border: "1px solid var(--border)",
+            background: "var(--card)",
+            color: "var(--text)",
+            fontSize: 13,
+            fontWeight: 700,
+          }}
+        >
+          ✅ Rating saved
+        </div>
+      )}
 
       {showRatingPanel && !!token && (
         <section
+          ref={ratingPanelRef}
           style={{
             padding: 16,
             borderRadius: 16,
@@ -716,7 +889,7 @@ export default function CoursePage() {
                   color: "var(--text)",
                 }}
               >
-                Rate this course
+                {myRating ? "Edit your rating" : "Rate this course"}
               </div>
 
               <div
@@ -727,8 +900,13 @@ export default function CoursePage() {
                   lineHeight: 1.5,
                 }}
               >
-                Start with a quick overall rating. Detailed ratings are
-                optional.
+                {showDetailedRatings
+                  ? myRating
+                    ? "Update your detailed rating. Overall is calculated automatically."
+                    : "Add detailed ratings. Overall is calculated automatically."
+                  : myRating
+                    ? "You already rated this course. Adjust your overall rating or add detailed ratings."
+                    : "Start with a quick overall rating. Detailed ratings are optional."}
               </div>
             </div>
 
@@ -765,13 +943,15 @@ export default function CoursePage() {
               borderTop: "1px solid var(--border)",
             }}
           >
-            <RatingSliderRow
-              label="Overall"
-              value={draftRating.overall}
-              onChange={(next) =>
-                setDraftRating((prev) => ({ ...prev, overall: next }))
-              }
-            />
+            {!showDetailedRatings && (
+              <RatingSliderRow
+                label="Overall"
+                value={draftRating.overall}
+                onChange={(next) =>
+                  setDraftRating((prev) => ({ ...prev, overall: next }))
+                }
+              />
+            )}
 
             <div
               style={{
@@ -782,7 +962,23 @@ export default function CoursePage() {
             >
               <button
                 type="button"
-                onClick={() => setShowDetailedRatings((prev) => !prev)}
+                onClick={() => {
+                  setShowDetailedRatings((prev) => {
+                    const next = !prev;
+
+                    if (next) {
+                      setDraftRating((current) => ({
+                        ...current,
+                        condition: current.overall,
+                        layout: current.overall,
+                        scenery: current.overall,
+                        value: current.overall,
+                      }));
+                    }
+
+                    return next;
+                  });
+                }}
                 style={{
                   padding: "8px 12px",
                   borderRadius: 999,
@@ -853,8 +1049,52 @@ export default function CoursePage() {
           >
             <button
               type="button"
-              onClick={() => {
-                alert("Save comes in the backend step.");
+              onClick={async () => {
+                if (!course?.id || !token) return;
+
+                try {
+                  await saveRating(course.id, token, {
+                    overall: showDetailedRatings
+                      ? draftAverage
+                      : draftRating.overall,
+                    condition: showDetailedRatings
+                      ? draftRating.condition
+                      : null,
+                    layout: showDetailedRatings ? draftRating.layout : null,
+                    scenery: showDetailedRatings ? draftRating.scenery : null,
+                    value: showDetailedRatings ? draftRating.value : null,
+                  });
+
+                  const updatedSummary = await getRatingSummary(course.id);
+                  setRatingSummary(updatedSummary);
+
+                  const savedMyRating: MyRating = {
+                    overall: showDetailedRatings
+                      ? draftAverage
+                      : draftRating.overall,
+                    condition: showDetailedRatings
+                      ? draftRating.condition
+                      : null,
+                    layout: showDetailedRatings ? draftRating.layout : null,
+                    scenery: showDetailedRatings ? draftRating.scenery : null,
+                    value: showDetailedRatings ? draftRating.value : null,
+                  };
+
+                  setMyRating(savedMyRating);
+                  setDraftRating(mapMyRatingToDraft(savedMyRating));
+
+                  setShowDetailedRatings(
+                    savedMyRating.condition != null ||
+                      savedMyRating.layout != null ||
+                      savedMyRating.scenery != null ||
+                      savedMyRating.value != null,
+                  );
+                  setShowRatingPanel(false);
+                  setRatingSaved(true);
+                } catch (err) {
+                  console.error("Save rating failed", err);
+                  alert("Failed to save rating");
+                }
               }}
               style={{
                 padding: "10px 14px",
@@ -866,36 +1106,32 @@ export default function CoursePage() {
                 cursor: "pointer",
               }}
             >
-              Save rating
+              {myRating ? "Update rating" : "Save rating"}
             </button>
 
             <button
               type="button"
               onClick={() => {
-                if (ratingSummary) {
-                  setDraftRating({
-                    overall: ratingSummary.overall,
-                    condition: ratingSummary.breakdown.condition,
-                    layout: ratingSummary.breakdown.layout,
-                    scenery: ratingSummary.breakdown.scenery,
-                    value: ratingSummary.breakdown.value,
-                  });
+                if (myRating) {
+                  setDraftRating(mapMyRatingToDraft(myRating));
+
+                  const hasDetailedRatings =
+                    myRating.condition != null ||
+                    myRating.layout != null ||
+                    myRating.scenery != null ||
+                    myRating.value != null;
+
+                  setShowDetailedRatings(hasDetailedRatings);
                 } else {
-                  setDraftRating({
-                    overall: 4.0,
-                    condition: 4.0,
-                    layout: 4.0,
-                    scenery: 4.0,
-                    value: 4.0,
-                  });
+                  setDraftRating(createDefaultDraftRating());
+                  setShowDetailedRatings(false);
                 }
 
-                setShowDetailedRatings(false);
                 setShowRatingPanel(false);
               }}
               style={secondaryBtnStyle}
             >
-              Cancel
+              Close
             </button>
           </div>
         </section>

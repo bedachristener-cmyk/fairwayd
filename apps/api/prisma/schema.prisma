@@ -64,6 +64,8 @@ model User {
 
   courseFollows      CourseFollow[]
   destinationFollows DestinationFollow[]
+
+  courseRatings CourseRating[]
 }
 
 model AuthAccount {
@@ -145,6 +147,8 @@ model Course {
   // Users following this course
   followers CourseFollow[]
 
+  ratings CourseRating[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -155,6 +159,28 @@ model Course {
   @@index([access])
   @@index([holes])
   @@index([location], type: Gist)
+}
+
+model CourseRating {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId   String
+  courseId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  // Ratings
+  overall   Float
+  condition Float?
+  layout    Float?
+  scenery   Float?
+  value     Float?
+
+  @@unique([userId, courseId]) // 1 rating per user per course
 }
 
 model Post {

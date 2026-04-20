@@ -48,6 +48,11 @@ type Post = {
   };
 };
 
+type PostCourseRating = {
+  overall: number;
+  count: number;
+};
+
 type PostCardProps = {
   post: Post;
   isMobile: boolean;
@@ -58,6 +63,8 @@ type PostCardProps = {
   courseFollowed?: boolean;
   courseFollowBusy?: boolean;
   onCourseFollowToggle?: (courseId: string) => void;
+  courseRating?: PostCourseRating | null;
+  myRating?: { overall: number } | null;
 
   onPostUpdated?: (updatedPost: any) => void;
   onPostDeleted?: (postId: string) => void;
@@ -73,6 +80,8 @@ export default function PostCard({
   courseFollowed,
   courseFollowBusy,
   onCourseFollowToggle,
+  courseRating,
+  myRating,
   onPostUpdated,
   onPostDeleted,
 }: PostCardProps) {
@@ -614,6 +623,104 @@ export default function PostCard({
                 >
                   ⛳ {post.course.name}
                 </button>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    gap: 4,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    {courseRating && courseRating.count > 0 ? (
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 8,
+                          padding: "3px 8px",
+                          borderRadius: 999,
+                          border: "1px solid var(--border)",
+                          background: "var(--card)",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: "var(--text)",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        <span aria-hidden="true">⭐</span>
+                        <span>
+                          {courseRating.overall.toFixed(1)} •{" "}
+                          {courseRating.count}
+                        </span>
+
+                        {myRating ? (
+                          <span
+                            style={{
+                              marginLeft: 6,
+                              padding: "2px 6px",
+                              borderRadius: 999,
+                              background: "rgba(0,0,0,0.06)",
+                              fontSize: 11,
+                              fontWeight: 800,
+                            }}
+                          >
+                            You: {myRating.overall.toFixed(1)}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      nav(`/courses/${post.course.id}`, {
+                        state: {
+                          openRating: true,
+                          scrollToRating: true,
+                        },
+                      });
+                    }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    title={myRating ? "Edit your rating" : "Rate this course"}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      padding: 0,
+                      margin: 0,
+                      border: "none",
+                      background: "transparent",
+                      color: "var(--sub)",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      textAlign: "left",
+                      cursor: "pointer",
+                      width: "fit-content",
+                      textDecoration: "underline",
+                      textUnderlineOffset: 2,
+                      whiteSpace: "nowrap",
+                      position: "relative",
+                      zIndex: 2,
+                      pointerEvents: "auto",
+                    }}
+                  >
+                    {myRating ? "Edit your rating" : "Rate this course"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

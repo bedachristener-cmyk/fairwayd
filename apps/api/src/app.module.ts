@@ -11,6 +11,7 @@ import { UsersModule } from './users/users.module';
 import { FollowsModule } from './follows/follows.module';
 import { FeedbackModule } from './feedback/feedback.module';
 import { DestinationsModule } from './destinations/destinations.module';
+import { RatingsModule } from './ratings/ratings.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { DestinationsModule } from './destinations/destinations.module';
     FollowsModule,
     FeedbackModule,
     DestinationsModule,
+    RatingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

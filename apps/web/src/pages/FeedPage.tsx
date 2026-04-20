@@ -11,6 +11,12 @@ import { useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
 import { getCroppedImageFile } from "../utils/cropImage";
+import {
+  getRatingSummary,
+  getMyRating,
+  type RatingSummary,
+  type MyRating,
+} from "../api/ratings";
 
 type PostImage = { id: string; url: string };
 
@@ -55,6 +61,8 @@ type Course = {
   region?: string | null;
   country?: string | null;
 };
+
+type CourseRatingMap = Record<string, RatingSummary | null>;
 
 async function resizeImage(file: File): Promise<File> {
   const img = document.createElement("img");
@@ -147,6 +155,14 @@ export default function FeedPage() {
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [courseRatings, setCourseRatings] = useState<CourseRatingMap>({});
+  const [myRatings, setMyRatings] = useState<Record<string, MyRating | null>>(
+    {},
+  );
+  const [activeRatingCourseId, setActiveRatingCourseId] = useState<
+    string | null
+  >(null);
+  const [ratingDraft, setRatingDraft] = useState(4);
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(
     null,
   );
@@ -382,6 +398,77 @@ export default function FeedPage() {
 
     setActiveCommentPostId(focusPostId);
   }, [openComment, focusPostId]);
+
+  useEffect(() => {
+    const uniqueCourseIds = Array.from(
+      new Set(
+        posts
+          .map((post) => post.course?.id)
+          .filter(
+            (courseId): courseId is string =>
+              typeof courseId === "string" && courseId.length > 0,
+          ),
+      ),
+    );
+
+    if (uniqueCourseIds.length === 0) {
+      setCourseRatings({});
+      setMyRatings({});
+      return;
+    }
+
+    let cancelled = false;
+
+    const emptySummary: RatingSummary = {
+      overall: 0,
+      count: 0,
+      breakdown: {
+        condition: 0,
+        layout: 0,
+        scenery: 0,
+        value: 0,
+      },
+    };
+
+    const run = async () => {
+      try {
+        const nextCourseRatings: Record<string, RatingSummary | null> = {};
+        const nextMyRatings: Record<string, MyRating | null> = {};
+
+        for (const courseId of uniqueCourseIds) {
+          try {
+            const summary = await getRatingSummary(courseId);
+            nextCourseRatings[courseId] = summary ?? emptySummary;
+          } catch (err) {
+            console.error("Rating summary failed for course", courseId, err);
+            nextCourseRatings[courseId] = emptySummary;
+          }
+
+          try {
+            nextMyRatings[courseId] = token
+              ? await getMyRating(courseId, token)
+              : null;
+          } catch (err) {
+            console.error("My rating failed for course", courseId, err);
+            nextMyRatings[courseId] = null;
+          }
+        }
+
+        if (cancelled) return;
+
+        setCourseRatings(nextCourseRatings);
+        setMyRatings(nextMyRatings);
+      } catch (err) {
+        console.error("Failed to load feed ratings", err);
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [posts, token]);
 
   const coursesLite: CourseLite[] = useMemo(
     () => courses.map((c) => ({ id: c.id, name: c.name })),
@@ -1732,6 +1819,15 @@ export default function FeedPage() {
                     }
                     courseFollowed={isCourseFollowed}
                     courseFollowBusy={isCourseFollowBusy}
+                    courseRating={
+                      courseRatings[p.course.id]
+                        ? {
+                            overall: courseRatings[p.course.id]!.overall,
+                            count: courseRatings[p.course.id]!.count,
+                          }
+                        : null
+                    }
+                    myRating={myRatings[p.course.id] ?? null}
                     onPostDeleted={(postId) => {
                       setPosts((prev) =>
                         prev.filter((item) => item.id !== postId),
@@ -1764,6 +1860,140 @@ export default function FeedPage() {
           isMobile={isMobile}
           onClose={() => setActiveCommentPostId(null)}
         />
+      ) : null}
+
+      {activeRatingCourseId ? (
+        <div
+          onClick={() => setActiveRatingCourseId(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 200,
+            background: "rgba(0,0,0,0.35)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "min(520px, 100%)",
+              padding: 18,
+              borderRadius: 18,
+              border: "1px solid var(--border)",
+              background: "var(--card)",
+              color: "var(--text)",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.28)",
+              display: "grid",
+              gap: 14,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 900 }}>
+                  Rate this course
+                </div>
+                <div
+                  style={{
+                    marginTop: 4,
+                    fontSize: 13,
+                    color: "var(--sub)",
+                  }}
+                >
+                  Selected course id: {activeRatingCourseId}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setActiveRatingCourseId(null)}
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: 999,
+                    border: "1px solid var(--border)",
+                    background: "var(--bg)",
+                    color: "var(--text)",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gap: 14,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  flexWrap: "wrap",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 14,
+                    color: "var(--sub)",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Set your overall rating for this course.
+                </div>
+
+                <div
+                  style={{
+                    fontSize: 28,
+                    fontWeight: 900,
+                    color: "var(--text)",
+                    lineHeight: 1,
+                    minWidth: 52,
+                    textAlign: "right",
+                  }}
+                >
+                  {ratingDraft.toFixed(1)}
+                </div>
+              </div>
+
+              <input
+                type="range"
+                min={1}
+                max={5}
+                step={0.2}
+                value={ratingDraft}
+                onChange={(e) => setRatingDraft(Number(e.target.value))}
+                style={{
+                  width: "100%",
+                  margin: 0,
+                  cursor: "pointer",
+                }}
+              />
+            </div>
+          </div>
+        </div>
       ) : null}
     </>
   );
