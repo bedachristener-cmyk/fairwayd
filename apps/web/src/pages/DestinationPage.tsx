@@ -27,11 +27,10 @@ function getCountryName(code?: string) {
   return COUNTRY_NAMES[code] || code;
 }
 
-function getFlagEmoji(countryCode?: string) {
+function getFlagUrl(countryCode?: string) {
   if (!countryCode) return "";
-  return countryCode
-    .toUpperCase()
-    .replace(/./g, (char) => String.fromCodePoint(127397 + char.charCodeAt(0)));
+
+  return `https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`;
 }
 
 type Course = {
@@ -605,7 +604,16 @@ export default function DestinationPage() {
                   textTransform: "uppercase",
                 }}
               >
-                <span>{getFlagEmoji(data.destination?.code)}</span>
+                <img
+                  src={getFlagUrl(data.destination?.code)}
+                  alt={data.destination?.code || data.country}
+                  style={{
+                    width: 20,
+                    height: 14,
+                    objectFit: "cover",
+                    borderRadius: 3,
+                  }}
+                />
                 <span>Golf destination</span>
               </div>
 
@@ -681,6 +689,9 @@ export default function DestinationPage() {
 
                 <div
                   style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
                     padding: "9px 13px",
                     borderRadius: 999,
                     border: "1px solid var(--border)",
@@ -690,7 +701,9 @@ export default function DestinationPage() {
                     fontWeight: 700,
                   }}
                 >
-                  🌍 {data.destination?.code || data.country}
+                  <span>
+                    {data.destination?.name || getCountryName(data.country)}
+                  </span>
                 </div>
 
                 <div
@@ -1010,26 +1023,36 @@ export default function DestinationPage() {
                     style={{
                       minWidth: isMobile ? 260 : "auto",
                       flex: isMobile ? "0 0 auto" : "1 1 0",
-                      borderRadius: 20,
+                      borderRadius: 18,
                       border: "1px solid var(--border)",
                       background: "var(--card)",
                       cursor: "pointer",
                       overflow: "hidden",
-                      transition: "all 0.18s ease",
-                      boxShadow: "0 6px 20px rgba(0,0,0,0.12)",
+                      transition: "transform 0.18s ease, box-shadow 0.18s ease",
+                      boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = "translateY(-4px)";
+                      e.currentTarget.style.transform = "translateY(-2px)";
+                      e.currentTarget.style.boxShadow =
+                        "0 8px 18px rgba(0,0,0,0.10)";
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow =
+                        "0 4px 14px rgba(0,0,0,0.08)";
+                    }}
+                    onMouseDown={(e) => {
+                      e.currentTarget.style.transform = "scale(0.98)";
+                    }}
+                    onMouseUp={(e) => {
+                      e.currentTarget.style.transform = "translateY(-2px)";
                     }}
                   >
                     <div
                       style={{
-                        height: 48,
+                        height: 46,
                         background:
-                          "linear-gradient(90deg, rgba(79,140,255,0.28) 0%, rgba(32,48,88,0.22) 55%, rgba(255,255,255,0.04) 100%)",
+                          "linear-gradient(90deg, rgba(255,255,255,0.03) 0%, rgba(79,140,255,0.10) 45%, rgba(255,255,255,0.02) 100%)",
                         display: "flex",
                         alignItems: "center",
                         padding: "0 12px",
@@ -1037,10 +1060,11 @@ export default function DestinationPage() {
                     >
                       <div
                         style={{
-                          fontSize: 12,
+                          fontSize: 11,
                           fontWeight: 800,
-                          color: "white",
-                          background: "rgba(0,0,0,0.45)",
+                          color: "var(--text)",
+                          background: "rgba(255,255,255,0.08)",
+                          border: "1px solid rgba(255,255,255,0.08)",
                           padding: "6px 10px",
                           borderRadius: 999,
                           letterSpacing: 0.2,

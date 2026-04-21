@@ -401,11 +401,22 @@ export default function DestinationsPage() {
                     display: "grid",
                     placeItems: "center",
                     background: "var(--bg)",
-                    fontWeight: 900,
-                    fontSize: 13,
                   }}
                 >
-                  {item.code || item.country}
+                  <img
+                    src={`https://flagcdn.com/w40/${(
+                      item.code ||
+                      item.country ||
+                      ""
+                    ).toLowerCase()}.png`}
+                    alt={item.code}
+                    style={{
+                      width: 26,
+                      height: 18,
+                      objectFit: "cover",
+                      borderRadius: 4,
+                    }}
+                  />
                 </div>
 
                 <div
