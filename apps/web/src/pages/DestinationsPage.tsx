@@ -377,13 +377,14 @@ export default function DestinationsPage() {
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 12,
+                  gap: 14,
                   width: "100%",
                   minWidth: 0,
-                  padding: "14px 16px",
-                  borderRadius: 16,
+                  padding: "16px 16px",
+                  borderRadius: 18,
                   border: "1px solid var(--border)",
-                  background: "var(--card)",
+                  background:
+                    "color-mix(in srgb, var(--card) 88%, var(--bg) 12%)",
                   color: "var(--text)",
                   textAlign: "left",
                   cursor: "pointer",
@@ -391,33 +392,28 @@ export default function DestinationsPage() {
                   overflow: "hidden",
                 }}
               >
-                <div
+                <img
+                  src={`https://flagcdn.com/w40/${(
+                    item.code ||
+                    item.country ||
+                    ""
+                  ).toLowerCase()}.png`}
+                  alt={item.code}
                   style={{
-                    width: 44,
-                    height: 44,
-                    minWidth: 44,
-                    borderRadius: 999,
-                    border: "1px solid var(--border)",
-                    display: "grid",
-                    placeItems: "center",
-                    background: "var(--bg)",
+                    display: "block",
+                    width: "36px",
+                    minWidth: "36px",
+                    maxWidth: "36px",
+                    height: "24px",
+                    minHeight: "24px",
+                    maxHeight: "24px",
+                    objectFit: "cover",
+                    borderRadius: 8,
+                    flexShrink: 0,
+                    alignSelf: "center",
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
                   }}
-                >
-                  <img
-                    src={`https://flagcdn.com/w40/${(
-                      item.code ||
-                      item.country ||
-                      ""
-                    ).toLowerCase()}.png`}
-                    alt={item.code}
-                    style={{
-                      width: 26,
-                      height: 18,
-                      objectFit: "cover",
-                      borderRadius: 4,
-                    }}
-                  />
-                </div>
+                />
 
                 <div
                   style={{
@@ -431,8 +427,12 @@ export default function DestinationsPage() {
                   <div
                     style={{
                       fontWeight: 800,
-                      fontSize: 15,
+                      fontSize: 16,
+                      lineHeight: 1.2,
                       color: "var(--text)",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
                     }}
                   >
                     {label}
@@ -440,18 +440,32 @@ export default function DestinationsPage() {
 
                   <div
                     style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 8,
                       fontSize: 12,
                       color: "var(--sub)",
+                      lineHeight: 1.35,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    Explore courses, local posts and golf activity
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 10,
+                      fontSize: 12,
+                      color: "var(--sub)",
+                      lineHeight: 1.4,
                     }}
                   >
                     {item.courseCount > 0 ? (
-                      <div>{item.courseCount} courses</div>
+                      <span>{item.courseCount} courses</span>
                     ) : null}
 
-                    <div>{item.followerCount || 0} followers</div>
+                    <span>{item.followerCount || 0} followers</span>
                   </div>
                 </div>
 
@@ -477,7 +491,8 @@ export default function DestinationsPage() {
                         ? "rgba(255,255,255,0.05)"
                         : "var(--text)",
                       color: isFollowing ? "var(--text)" : "var(--bg)",
-                      height: 38,
+                      minWidth: 96,
+                      height: 36,
                       padding: "0 14px",
                       borderRadius: 999,
                       cursor: isBusy ? "default" : "pointer",
@@ -493,9 +508,10 @@ export default function DestinationsPage() {
 
                   <div
                     style={{
-                      fontSize: 18,
+                      fontSize: 15,
                       color: "var(--sub)",
                       flexShrink: 0,
+                      opacity: 0.55,
                     }}
                   >
                     ›
