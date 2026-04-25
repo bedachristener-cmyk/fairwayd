@@ -94,6 +94,10 @@ export default function DestinationPage() {
   const { token, logout, user } = useAuth();
   const isMobile = window.innerWidth <= 980;
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [slug]);
+
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<CountryPageData | null>(null);
   const [search, setSearch] = useState("");
@@ -455,7 +459,7 @@ export default function DestinationPage() {
         style={{
           display: "flex",
           justifyContent: "center",
-          marginBottom: 20,
+          marginBottom: 18,
           position: "sticky",
           top: 10,
           zIndex: 5,
@@ -464,12 +468,12 @@ export default function DestinationPage() {
         <div
           style={{
             display: "flex",
-            gap: 6,
-            padding: 6,
+            gap: 8,
+            padding: 4,
             borderRadius: 999,
-            background: "rgba(255,255,255,0.05)",
+            background: "var(--card)",
             border: "1px solid var(--border)",
-            backdropFilter: "blur(6px)",
+            boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
             maxWidth: "100%",
             overflowX: "auto",
           }}
@@ -489,19 +493,17 @@ export default function DestinationPage() {
                   setActiveTab(tab.key as "overview" | "courses" | "posts")
                 }
                 style={{
-                  border: "none",
-                  background: isActive
-                    ? "var(--text)"
-                    : "rgba(255,255,255,0.06)",
-                  color: isActive ? "var(--bg)" : "var(--text)",
-                  fontWeight: 700,
+                  border: isActive ? "none" : "1px solid transparent",
+                  background: isActive ? "var(--text)" : "transparent",
+                  color: isActive ? "var(--bg)" : "var(--sub)",
+                  fontWeight: isActive ? 800 : 700,
                   fontSize: 13,
-                  padding: "8px 14px",
+                  padding: "9px 16px",
                   borderRadius: 999,
                   cursor: "pointer",
                   whiteSpace: "nowrap",
                   transition: "all 0.15s ease",
-                  opacity: isActive ? 1 : 0.75,
+                  opacity: isActive ? 1 : 0.95,
                 }}
               >
                 {tab.label}
@@ -554,20 +556,6 @@ export default function DestinationPage() {
             <div
               style={{
                 position: "absolute",
-                right: isMobile ? -30 : -10,
-                top: isMobile ? -30 : -20,
-                width: isMobile ? 140 : 220,
-                height: isMobile ? 140 : 220,
-                borderRadius: "50%",
-                background: "rgba(39,196,107,0.12)",
-                filter: "blur(6px)",
-                pointerEvents: "none",
-              }}
-            />
-
-            <div
-              style={{
-                position: "absolute",
                 left: isMobile ? -40 : -20,
                 bottom: isMobile ? -50 : -30,
                 width: isMobile ? 120 : 180,
@@ -589,32 +577,52 @@ export default function DestinationPage() {
             >
               <div
                 style={{
-                  display: "inline-flex",
+                  display: "flex",
                   alignItems: "center",
-                  gap: 8,
-                  width: "fit-content",
-                  padding: "8px 12px",
-                  borderRadius: 999,
-                  border: "1px solid rgba(255,255,255,0.10)",
-                  background: "rgba(255,255,255,0.05)",
-                  color: "var(--text)",
-                  fontSize: 12,
-                  fontWeight: 800,
-                  letterSpacing: 0.4,
-                  textTransform: "uppercase",
+                  gap: 12,
                 }}
               >
                 <img
                   src={getFlagUrl(data.destination?.code)}
                   alt={data.destination?.code || data.country}
                   style={{
-                    width: 20,
-                    height: 14,
+                    width: 22,
+                    height: 16,
                     objectFit: "cover",
-                    borderRadius: 3,
+                    borderRadius: 4,
                   }}
                 />
-                <span>Golf destination</span>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gap: 2,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      letterSpacing: 0.6,
+                      color: "var(--sub)",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Golf destination
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: isMobile ? 36 : 52,
+                      fontWeight: 900,
+                      lineHeight: 1.05,
+                      color: "var(--text)",
+                      letterSpacing: -0.6,
+                    }}
+                  >
+                    {data.destination?.name || getCountryName(data.country)}
+                  </div>
+                </div>
               </div>
 
               <div
@@ -624,19 +632,6 @@ export default function DestinationPage() {
                   maxWidth: 820,
                 }}
               >
-                <div
-                  style={{
-                    fontSize: isMobile ? 32 : 46,
-                    fontWeight: 900,
-                    lineHeight: 1.02,
-                    color: "var(--text)",
-                    letterSpacing: -0.8,
-                  }}
-                >
-                  Golf in{" "}
-                  {data.destination?.name || getCountryName(data.country)}
-                </div>
-
                 <div
                   style={{
                     fontSize: isMobile ? 15 : 17,

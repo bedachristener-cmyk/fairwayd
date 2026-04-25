@@ -473,7 +473,7 @@ export default function DestinationsPage() {
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: 10,
+                    gap: 0,
                     flexShrink: 0,
                     marginLeft: "auto",
                   }}
@@ -486,17 +486,17 @@ export default function DestinationsPage() {
                     }}
                     disabled={isBusy}
                     style={{
-                      border: isFollowing ? "1px solid var(--border)" : "none",
+                      border: "1px solid var(--border)",
                       background: isFollowing
-                        ? "rgba(255,255,255,0.05)"
-                        : "var(--text)",
-                      color: isFollowing ? "var(--text)" : "var(--bg)",
-                      minWidth: 96,
-                      height: 36,
+                        ? "rgba(255,255,255,0.06)"
+                        : "transparent",
+                      color: "var(--text)",
+                      minWidth: 90,
+                      height: 34,
                       padding: "0 14px",
                       borderRadius: 999,
                       cursor: isBusy ? "default" : "pointer",
-                      fontWeight: 800,
+                      fontWeight: 700,
                       fontSize: 12,
                       flexShrink: 0,
                       opacity: isBusy ? 0.7 : 1,
@@ -505,17 +505,6 @@ export default function DestinationsPage() {
                   >
                     {isBusy ? "..." : isFollowing ? "Following" : "Follow"}
                   </button>
-
-                  <div
-                    style={{
-                      fontSize: 15,
-                      color: "var(--sub)",
-                      flexShrink: 0,
-                      opacity: 0.55,
-                    }}
-                  >
-                    ›
-                  </div>
                 </div>
               </div>
             );

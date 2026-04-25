@@ -74,7 +74,61 @@ export default function CommentModal({
   const [replyDraft, setReplyDraft] = useState("");
   const [replySending, setReplySending] = useState(false);
 
+  const [expandedReplyIds, setExpandedReplyIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+
   const replyInputRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const getAvatarLabel = (name?: string | null, handle?: string | null) => {
+    const source = name?.trim() || handle?.trim() || "?";
+    return source.slice(0, 1).toUpperCase();
+  };
+
+  const renderAvatar = (
+    avatarUrl?: string | null,
+    name?: string | null,
+    handle?: string | null,
+  ) => {
+    const label = getAvatarLabel(name, handle);
+
+    if (avatarUrl) {
+      return (
+        <img
+          src={fileUrl(avatarUrl)}
+          alt={name || handle || "User"}
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: "50%",
+            objectFit: "cover",
+            border: "1px solid var(--border)",
+            flexShrink: 0,
+          }}
+        />
+      );
+    }
+
+    return (
+      <div
+        style={{
+          width: 34,
+          height: 34,
+          borderRadius: "50%",
+          border: "1px solid var(--border)",
+          background: "var(--card)",
+          display: "grid",
+          placeItems: "center",
+          fontSize: 13,
+          fontWeight: 900,
+          color: "var(--text)",
+          flexShrink: 0,
+        }}
+      >
+        {label}
+      </div>
+    );
+  };
 
   const validImages =
     post.images?.filter(
@@ -243,6 +297,20 @@ export default function CommentModal({
     } catch (err) {
       console.error("Comment like toggle failed", err);
     }
+  };
+
+  const toggleReplies = (commentId: string) => {
+    setExpandedReplyIds((prev) => {
+      const next = new Set(prev);
+
+      if (next.has(commentId)) {
+        next.delete(commentId);
+      } else {
+        next.add(commentId);
+      }
+
+      return next;
+    });
   };
 
   const openReplyBox = (commentId: string) => {
@@ -469,193 +537,229 @@ export default function CommentModal({
 
   const renderComment = (comment: CommentItem): React.ReactNode => {
     const isReplyBoxOpen = replyTargetId === comment.id;
+    const replyCount = comment.replies?.length ?? 0;
 
     return (
-      <div key={comment.id} style={{ display: "grid", gap: 10 }}>
+      <div key={comment.id} style={{ display: "grid", gap: 8 }}>
         <div
           style={{
-            border: "1px solid var(--border)",
-            borderRadius: 12,
-            padding: 12,
-            background: "var(--card)",
+            display: "flex",
+            gap: 10,
+            alignItems: "flex-start",
           }}
         >
-          <button
-            type="button"
-            onClick={() => {
-              const handle = comment.user?.handle?.trim();
-              if (!handle) return;
-              nav(`/u/${handle}`);
-            }}
-            disabled={!comment.user?.handle}
-            title={
-              comment.user?.handle ? `Open @${comment.user.handle}` : undefined
-            }
-            style={{
-              border: "none",
-              background: "transparent",
-              padding: 0,
-              margin: 0,
-              fontWeight: 700,
-              color: "var(--text)",
-              cursor: comment.user?.handle ? "pointer" : "default",
-              textAlign: "left",
-            }}
-          >
-            @{comment.user?.handle ?? "user"}
-          </button>
+          {renderAvatar(
+            comment.user?.avatarUrl,
+            comment.user?.name,
+            comment.user?.handle,
+          )}
 
-          <div
-            style={{
-              fontSize: 12,
-              color: "var(--sub)",
-              marginTop: 2,
-            }}
-          >
-            {comment.createdAt
-              ? new Date(comment.createdAt).toLocaleString()
-              : ""}
-          </div>
-
-          <div
-            style={{
-              fontSize: 14,
-              marginTop: 6,
-              lineHeight: 1.5,
-              whiteSpace: "pre-wrap",
-            }}
-          >
-            {comment.content}
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              gap: 12,
-              marginTop: 8,
-              alignItems: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => handleToggleCommentLike(comment.id)}
-              style={{
-                border: "none",
-                background: "transparent",
-                color: comment.likedByMe ? "#ff4d6d" : "var(--text)",
-                fontWeight: 700,
-                cursor: "pointer",
-                padding: 0,
-              }}
-            >
-              {comment.likedByMe ? "❤️" : "♡"} {comment._count?.likes ?? 0}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => openReplyBox(comment.id)}
-              style={{
-                border: "none",
-                background: "transparent",
-                color: "var(--text)",
-                fontWeight: 700,
-                cursor: "pointer",
-                padding: 0,
-              }}
-            >
-              {isReplyBoxOpen ? "Cancel" : "Reply"}
-            </button>
-
-            {comment.replies?.length ? (
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "var(--sub)",
-                }}
-              >
-                {comment.replies.length} repl
-                {comment.replies.length === 1 ? "y" : "ies"}
-              </div>
-            ) : null}
-          </div>
-        </div>
-
-        {isReplyBoxOpen ? (
-          <div
-            style={{
-              marginLeft: 8,
-              display: "grid",
-              gap: 8,
-            }}
-          >
-            <textarea
-              ref={replyInputRef}
-              value={replyDraft}
-              onChange={(e) => setReplyDraft(e.target.value)}
-              placeholder={`Reply to @${comment.user?.handle ?? "user"}...`}
-              rows={2}
-              style={{
-                width: "100%",
-                boxSizing: "border-box",
-                padding: 10,
-                borderRadius: 12,
-                border: "1px solid var(--border)",
-                background: "var(--card)",
-                color: "var(--text)",
-                resize: "vertical",
-              }}
-            />
-
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: 8,
+                display: "inline-block",
+                maxWidth: "100%",
+                padding: "9px 12px",
+                borderRadius: 18,
+                background: "var(--card)",
+                border: "1px solid var(--border)",
               }}
             >
               <button
                 type="button"
                 onClick={() => {
-                  setReplyTargetId(null);
-                  setReplyDraft("");
+                  const handle = comment.user?.handle?.trim();
+                  if (!handle) return;
+                  nav(`/u/${handle}`);
                 }}
+                disabled={!comment.user?.handle}
                 style={{
-                  padding: "8px 12px",
-                  borderRadius: 10,
-                  border: "1px solid var(--border)",
+                  border: "none",
                   background: "transparent",
+                  padding: 0,
+                  margin: 0,
+                  fontWeight: 800,
+                  fontSize: 13,
                   color: "var(--text)",
-                  fontWeight: 700,
-                  cursor: "pointer",
+                  cursor: comment.user?.handle ? "pointer" : "default",
+                  textAlign: "left",
                 }}
               >
-                Cancel
+                {comment.user?.name || `@${comment.user?.handle ?? "user"}`}
+              </button>
+
+              <div
+                style={{
+                  fontSize: 14,
+                  marginTop: 3,
+                  lineHeight: 1.45,
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                }}
+              >
+                {comment.content}
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                alignItems: "center",
+                flexWrap: "wrap",
+                marginTop: 5,
+                paddingLeft: 8,
+                fontSize: 12,
+                color: "var(--sub)",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => handleToggleCommentLike(comment.id)}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  color: comment.likedByMe ? "#ff4d6d" : "var(--sub)",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  padding: 0,
+                  fontSize: 12,
+                }}
+              >
+                {comment.likedByMe ? "Liked" : "Like"}
               </button>
 
               <button
                 type="button"
-                onClick={handlePostReply}
-                disabled={!replyDraft.trim() || replySending}
+                onClick={() => openReplyBox(comment.id)}
                 style={{
-                  padding: "8px 12px",
-                  borderRadius: 10,
-                  border: "1px solid var(--border)",
-                  background: "var(--muted)",
-                  color: "var(--text)",
+                  border: "none",
+                  background: "transparent",
+                  color: "var(--sub)",
                   fontWeight: 800,
-                  cursor:
-                    replyDraft.trim() && !replySending ? "pointer" : "default",
-                  opacity: replyDraft.trim() && !replySending ? 1 : 0.5,
+                  cursor: "pointer",
+                  padding: 0,
+                  fontSize: 12,
                 }}
               >
-                {replySending ? "Posting..." : "Post reply"}
+                {isReplyBoxOpen ? "Cancel" : "Reply"}
               </button>
-            </div>
-          </div>
-        ) : null}
 
-        {renderReplies(comment.replies)}
+              <span>
+                {comment.createdAt
+                  ? new Date(comment.createdAt).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : ""}
+              </span>
+
+              {(comment._count?.likes ?? 0) > 0 ? (
+                <span>❤️ {comment._count?.likes ?? 0}</span>
+              ) : null}
+            </div>
+
+            {replyCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => toggleReplies(comment.id)}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  padding: "6px 0 0 8px",
+                  fontSize: 12,
+                  color: "var(--sub)",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                {expandedReplyIds.has(comment.id)
+                  ? "Antworten ausblenden"
+                  : `${replyCount} Antwort${replyCount === 1 ? "" : "en"} anzeigen`}
+              </button>
+            ) : null}
+
+            {isReplyBoxOpen ? (
+              <div
+                style={{
+                  marginTop: 8,
+                  display: "grid",
+                  gap: 8,
+                }}
+              >
+                <textarea
+                  ref={replyInputRef}
+                  value={replyDraft}
+                  onChange={(e) => setReplyDraft(e.target.value)}
+                  placeholder={`Reply to @${comment.user?.handle ?? "user"}...`}
+                  rows={2}
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    padding: 10,
+                    borderRadius: 16,
+                    border: "1px solid var(--border)",
+                    background: "var(--card)",
+                    color: "var(--text)",
+                    resize: "vertical",
+                  }}
+                />
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: 8,
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReplyTargetId(null);
+                      setReplyDraft("");
+                    }}
+                    style={{
+                      padding: "7px 11px",
+                      borderRadius: 999,
+                      border: "1px solid var(--border)",
+                      background: "transparent",
+                      color: "var(--text)",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handlePostReply}
+                    disabled={!replyDraft.trim() || replySending}
+                    style={{
+                      padding: "7px 11px",
+                      borderRadius: 999,
+                      border: "1px solid var(--border)",
+                      background: "var(--muted)",
+                      color: "var(--text)",
+                      fontWeight: 800,
+                      cursor:
+                        replyDraft.trim() && !replySending
+                          ? "pointer"
+                          : "default",
+                      opacity: replyDraft.trim() && !replySending ? 1 : 0.5,
+                    }}
+                  >
+                    {replySending ? "Posting..." : "Post reply"}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {expandedReplyIds.has(comment.id)
+              ? renderReplies(comment.replies)
+              : null}
+          </div>
+        </div>
       </div>
     );
   };
@@ -667,7 +771,7 @@ export default function CommentModal({
         position: "fixed",
         inset: 0,
         background: isMobile ? "var(--bg)" : "rgba(0,0,0,0.55)",
-        zIndex: 2000,
+        zIndex: 10000,
         display: "flex",
         alignItems: isMobile ? "stretch" : "center",
         justifyContent: "center",
@@ -740,7 +844,7 @@ export default function CommentModal({
               overflowY: "auto",
               display: "grid",
               gap: 14,
-              paddingBottom: 8,
+              paddingBottom: isMobile ? 120 : 16,
               WebkitOverflowScrolling: "touch",
             }}
           >
@@ -863,7 +967,9 @@ export default function CommentModal({
           <div
             style={{
               borderTop: "1px solid var(--border)",
-              padding: "12px 16px 16px 16px",
+              padding: isMobile
+                ? "12px 16px calc(92px + env(safe-area-inset-bottom)) 16px"
+                : "12px 16px 16px 16px",
               display: "grid",
               gap: 10,
               background: isMobile ? "var(--bg)" : "var(--card)",
@@ -878,7 +984,7 @@ export default function CommentModal({
               onChange={(e) => setCommentDraft(e.target.value)}
               onKeyDown={handleCommentKeyDown}
               placeholder="Write a comment..."
-              rows={3}
+              rows={2}
               style={{
                 width: "100%",
                 boxSizing: "border-box",
