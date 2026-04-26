@@ -255,7 +255,7 @@ export default function ProfileSetup({
           </div>
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {(["en", "de", "fr", "it", "es"] as Lang[]).map((code) => (
+            {(["en", "de", "fr", "it", "es", "ko", "th"] as Lang[]).map((code) => (
               <button
                 key={code}
                 type="button"
@@ -278,7 +278,7 @@ export default function ProfileSetup({
                 }}
                 title={code.toUpperCase()}
               >
-                {code.toUpperCase()}
+                {code === "ko" ? "한국어" : code === "th" ? "ไทย" : code.toUpperCase()}
               </button>
             ))}
           </div>

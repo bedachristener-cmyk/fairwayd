@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../api/base";
 import { fileUrl } from "../api/fileUrl";
 import { useAuth } from "../auth/AuthContext";
+import { t } from "../i18n/strings";
 
 type PostImage = {
   id: string;
@@ -129,6 +130,17 @@ export default function CommentModal({
       (img): img is { id: string; url: string } =>
         typeof img?.url === "string" && img.url.length > 0,
     ) ?? [];
+
+  const getVisibilityLabel = (visibility?: string | null) => {
+    if (visibility === "PUBLIC") return `\u{1F30D} ${t("visibility_public")}`;
+    if (visibility === "FOLLOWERS")
+      return `\u{1F465} ${t("visibility_followers")}`;
+    if (visibility === "PRIVATE") return `\u{1F512} ${t("visibility_private")}`;
+    return null;
+  };
+
+  const getReplyCountLabel = (count: number) =>
+    `${count} ${count === 1 ? t("reply_singular") : t("reply_plural")}`;
 
   function handleCommentKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
@@ -432,7 +444,7 @@ export default function CommentModal({
                         fontSize: 12,
                       }}
                     >
-                      {reply.likedByMe ? "Liked" : "Like"}
+                      {reply.likedByMe ? t("liked") : t("like")}
                     </button>
 
                     <button
@@ -448,7 +460,7 @@ export default function CommentModal({
                         fontSize: 12,
                       }}
                     >
-                      {isReplyBoxOpen ? "Cancel" : "Reply"}
+                      {isReplyBoxOpen ? t("cancel") : t("reply")}
                     </button>
 
                     <span>
@@ -516,7 +528,7 @@ export default function CommentModal({
                         cursor: "pointer",
                       }}
                     >
-                      Cancel
+                      {t("cancel")}
                     </button>
 
                     <button
@@ -537,7 +549,7 @@ export default function CommentModal({
                         opacity: replyDraft.trim() && !replySending ? 1 : 0.5,
                       }}
                     >
-                      {replySending ? "Posting..." : "Post reply"}
+                      {replySending ? t("posting") : t("reply_post")}
                     </button>
                   </div>
                 </div>
@@ -640,7 +652,7 @@ export default function CommentModal({
                   fontSize: 12,
                 }}
               >
-                {comment.likedByMe ? "Liked" : "Like"}
+                {comment.likedByMe ? t("liked") : t("like")}
               </button>
 
               <button
@@ -656,7 +668,7 @@ export default function CommentModal({
                   fontSize: 12,
                 }}
               >
-                {isReplyBoxOpen ? "Cancel" : "Reply"}
+                {isReplyBoxOpen ? t("cancel") : t("reply")}
               </button>
 
               <span>
@@ -688,8 +700,8 @@ export default function CommentModal({
                 }}
               >
                 {expandedReplyIds.has(comment.id)
-                  ? "Hide replies"
-                  : `${replyCount} repl${replyCount === 1 ? "y" : "ies"}`}
+                  ? t("replies_hide")
+                  : getReplyCountLabel(replyCount)}
               </button>
             ) : null}
 
@@ -742,7 +754,7 @@ export default function CommentModal({
                       cursor: "pointer",
                     }}
                   >
-                    Cancel
+                    {t("cancel")}
                   </button>
 
                   <button
@@ -763,7 +775,7 @@ export default function CommentModal({
                       opacity: replyDraft.trim() && !replySending ? 1 : 0.5,
                     }}
                   >
-                    {replySending ? "Posting..." : "Post reply"}
+                    {replySending ? t("posting") : t("reply_post")}
                   </button>
                 </div>
               </div>
@@ -821,7 +833,9 @@ export default function CommentModal({
             background: isMobile ? "var(--bg)" : "var(--card)",
           }}
         >
-          <div style={{ fontWeight: 900, fontSize: 16 }}>Post & Comments</div>
+          <div style={{ fontWeight: 900, fontSize: 16 }}>
+            {t("comments_title")}
+          </div>
 
           <button
             type="button"
@@ -836,7 +850,7 @@ export default function CommentModal({
               cursor: "pointer",
             }}
           >
-            Close
+            {t("close")}
           </button>
         </div>
 
@@ -923,9 +937,7 @@ export default function CommentModal({
                         <>
                           <span>·</span>
                           <span>
-                            {post.visibility === "PUBLIC" && "🌍 Public"}
-                            {post.visibility === "FOLLOWERS" && "👥 Followers"}
-                            {post.visibility === "PRIVATE" && "🔒 Private"}
+                            {getVisibilityLabel(post.visibility)}
                           </span>
                         </>
                       ) : null}
@@ -983,11 +995,11 @@ export default function CommentModal({
             >
               {loading ? (
                 <div style={{ fontSize: 13, color: "var(--sub)" }}>
-                  Loading comments...
+                  {t("comments_loading")}
                 </div>
               ) : comments.length === 0 ? (
                 <div style={{ fontSize: 13, color: "var(--sub)" }}>
-                  No comments yet.
+                  {t("comments_empty")}
                 </div>
               ) : (
                 comments.map((comment) => renderComment(comment))
@@ -1014,7 +1026,7 @@ export default function CommentModal({
               value={commentDraft}
               onChange={(e) => setCommentDraft(e.target.value)}
               onKeyDown={handleCommentKeyDown}
-              placeholder="Write a comment..."
+              placeholder={t("comment_placeholder")}
               rows={2}
               style={{
                 width: "100%",
@@ -1050,7 +1062,7 @@ export default function CommentModal({
                   opacity: commentDraft.trim() && !sending ? 1 : 0.5,
                 }}
               >
-                {sending ? "Posting..." : "Post comment"}
+                {sending ? t("posting") : t("comment_post")}
               </button>
             </div>
           </div>

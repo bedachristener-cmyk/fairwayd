@@ -17,6 +17,7 @@ import {
   type RatingSummary,
   type MyRating,
 } from "../api/ratings";
+import { t } from "../i18n/strings";
 
 type PostImage = { id: string; url: string };
 
@@ -593,7 +594,7 @@ export default function FeedPage() {
     if (posting) return;
 
     if (!selectedCourse) {
-      setComposerHint("Please choose a course first ⛳");
+      setComposerHint(`${t("composer_choose_course_first")} ⛳`);
       draftRef.current?.focus();
       return;
     }
@@ -606,7 +607,7 @@ export default function FeedPage() {
     if (posting) return;
 
     if (!selectedCourse) {
-      setComposerHint("Please choose a course first ⛳");
+      setComposerHint(`${t("composer_choose_course_first")} ⛳`);
       draftRef.current?.focus();
       return;
     }
@@ -677,8 +678,8 @@ export default function FeedPage() {
     });
 
     if (!selectedCourse) {
-      setErr("Choose a course first.");
-      alert("Choose a course first.");
+      setErr(t("composer_choose_course_first"));
+      alert(t("composer_choose_course_first"));
       return;
     }
 
@@ -692,8 +693,8 @@ export default function FeedPage() {
 
     const text = draft.trim();
     if (!text && !file) {
-      setErr("Write something or add a photo.");
-      alert("Write something or add a photo.");
+      setErr(t("composer_write_or_add_image"));
+      alert(t("composer_write_or_add_image"));
       return;
     }
 
@@ -792,9 +793,9 @@ export default function FeedPage() {
             : 0,
         }}
       >
-        <Card title="Feed">
+        <Card title={t("feed")}>
           <div style={{ color: "var(--sub)", fontSize: 13 }}>
-            Bitte neu einloggen (DB Reset hat den alten Token ungültig gemacht).
+            {t("feed_relogin_required")}
           </div>
         </Card>
       </div>
@@ -814,11 +815,11 @@ export default function FeedPage() {
               fontSize: 13,
             }}
           >
-            <strong>Error:</strong> {err}
+            <strong>{t("error")}:</strong> {err}
           </div>
         )}
 
-        <Card title="Feed">
+        <Card title={t("feed")}>
           <div
             style={{
               position: "sticky",
@@ -870,7 +871,7 @@ export default function FeedPage() {
                         fontWeight: composerHint ? 800 : 400,
                       }}
                     >
-                      {composerHint ?? "Pick a course before posting."}
+                      {composerHint ?? t("composer_pick_course_before_posting")}
                     </div>
                   ) : (
                     <div
@@ -907,7 +908,7 @@ export default function FeedPage() {
                             letterSpacing: 0.5,
                           }}
                         >
-                          Selected course
+                          {t("selected_course")}
                         </div>
 
                         <button
@@ -939,7 +940,7 @@ export default function FeedPage() {
                             lineHeight: 1.35,
                           }}
                         >
-                          Posts and images will be linked to this course
+                          {t("selected_course_help")}
                         </div>
 
                         {(selectedLocationLabel ||
@@ -980,7 +981,7 @@ export default function FeedPage() {
                                   background: "var(--bg)",
                                 }}
                               >
-                                ⛳ {selectedHoles} holes
+                                ⛳ {selectedHoles} {t("holes")}
                               </span>
                             ) : null}
 
@@ -995,7 +996,9 @@ export default function FeedPage() {
                                   background: "var(--bg)",
                                 }}
                               >
-                                {selectedIsPrivate ? "🔒 Private" : "🌍 Public"}
+                                {selectedIsPrivate
+                                  ? `🔒 ${t("visibility_private")}`
+                                  : `🌍 ${t("visibility_public")}`}
                               </span>
                             ) : null}
 
@@ -1015,7 +1018,7 @@ export default function FeedPage() {
                                   fontWeight: 700,
                                 }}
                               >
-                                Website
+                                {t("website")}
                               </a>
                             ) : null}
                           </div>
@@ -1065,10 +1068,10 @@ export default function FeedPage() {
                         }}
                       >
                         {isSelectedCourseFollowBusy
-                          ? "Updating..."
+                          ? t("updating")
                           : isSelectedCourseFollowed
-                            ? "Following"
-                            : "Follow"}
+                            ? t("following")
+                            : t("follow")}
                       </button>
                     </div>
                   )}
@@ -1120,7 +1123,7 @@ export default function FeedPage() {
                         color: "var(--text)",
                       }}
                     >
-                      🌍 Public
+                      🌍 {t("visibility_public")}
                     </option>
                     <option
                       value="FOLLOWERS"
@@ -1129,7 +1132,7 @@ export default function FeedPage() {
                         color: "var(--text)",
                       }}
                     >
-                      👥 Followers
+                      👥 {t("visibility_followers")}
                     </option>
                     <option
                       value="PRIVATE"
@@ -1138,7 +1141,7 @@ export default function FeedPage() {
                         color: "var(--text)",
                       }}
                     >
-                      🔒 Private
+                      🔒 {t("visibility_private")}
                     </option>
                   </select>
                 </div>
@@ -1152,7 +1155,7 @@ export default function FeedPage() {
                   if (err) setErr(null);
                   if (composerHint) setComposerHint(null);
                 }}
-                placeholder="What’s your golf moment?"
+                placeholder={t("composer_moment_placeholder")}
                 rows={3}
                 style={{
                   width: "100%",
@@ -1228,7 +1231,7 @@ export default function FeedPage() {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        📸 Camera
+                        📸 {t("camera")}
                       </button>
 
                       <button
@@ -1251,7 +1254,7 @@ export default function FeedPage() {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        🖼️ Gallery
+                        🖼️ {t("gallery")}
                       </button>
                     </>
                   ) : (
@@ -1275,7 +1278,7 @@ export default function FeedPage() {
                         whiteSpace: "nowrap",
                       }}
                     >
-                      📷 Add image
+                      📷 {t("add_image")}
                     </button>
                   )}
                 </div>
@@ -1310,7 +1313,7 @@ export default function FeedPage() {
                           color: "var(--text)",
                         }}
                       >
-                        1 image ready
+                        {t("image_ready_count")}
                       </span>
 
                       <span
@@ -1357,7 +1360,7 @@ export default function FeedPage() {
                         opacity: posting ? 0.6 : 1,
                       }}
                     >
-                      Edit
+                      {t("edit")}
                     </button>
 
                     <button
@@ -1381,7 +1384,7 @@ export default function FeedPage() {
                         opacity: posting ? 0.6 : 1,
                       }}
                     >
-                      Remove
+                      {t("remove")}
                     </button>
                   </div>
                 ) : null}
@@ -1404,7 +1407,7 @@ export default function FeedPage() {
                         fontWeight: 700,
                       }}
                     >
-                      Choose a course first to enable posting
+                      {t("composer_choose_course_first_to_post")}
                     </span>
                   )}
 
@@ -1416,7 +1419,7 @@ export default function FeedPage() {
                         fontWeight: 700,
                       }}
                     >
-                      Write something or add an image
+                      {t("composer_write_or_add_image")}
                     </span>
                   )}
 
@@ -1427,7 +1430,7 @@ export default function FeedPage() {
                         color: "var(--sub)",
                       }}
                     >
-                      Image ready to post
+                      {t("composer_image_ready_to_post")}
                     </span>
                   )}
 
@@ -1455,10 +1458,10 @@ export default function FeedPage() {
                     type="button"
                   >
                     {posting
-                      ? "Posting..."
+                      ? t("posting")
                       : file && !draft.trim()
-                        ? "Post image"
-                        : "Post"}
+                        ? t("post_image")
+                        : t("post")}
                   </button>
                 </div>
               </div>
@@ -1480,7 +1483,7 @@ export default function FeedPage() {
                       color: "var(--sub)",
                     }}
                   >
-                    Image preview
+                    {t("image_preview")}
                   </div>
 
                   <div
@@ -1543,7 +1546,7 @@ export default function FeedPage() {
                       >
                         <div>
                           <div style={{ fontWeight: 900, fontSize: 16 }}>
-                            Edit image
+                            {t("edit_image")}
                           </div>
                           <div
                             style={{
@@ -1552,7 +1555,7 @@ export default function FeedPage() {
                               marginTop: 4,
                             }}
                           >
-                            Crop freely and rotate before posting
+                            {t("edit_image_help")}
                           </div>
                         </div>
 
@@ -1574,7 +1577,7 @@ export default function FeedPage() {
                             opacity: applyingEdit ? 0.6 : 1,
                           }}
                         >
-                          Close
+                          {t("close")}
                         </button>
                       </div>
 
@@ -1607,7 +1610,7 @@ export default function FeedPage() {
                             <img
                               ref={editorImageRef}
                               src={editorImageSrc}
-                              alt="Edit preview"
+                              alt={t("edit_preview_alt")}
                               style={{
                                 display: "block",
                                 maxWidth: "100%",
@@ -1657,7 +1660,7 @@ export default function FeedPage() {
                               width: "100%",
                             }}
                           >
-                            ↺ Rotate -90°
+                            ↺ {t("rotate_minus_90")}
                           </button>
 
                           <button
@@ -1676,7 +1679,7 @@ export default function FeedPage() {
                               width: "100%",
                             }}
                           >
-                            ↻ Rotate +90°
+                            ↻ {t("rotate_plus_90")}
                           </button>
                         </div>
 
@@ -1706,7 +1709,7 @@ export default function FeedPage() {
                               width: "100%",
                             }}
                           >
-                            Cancel
+                            {t("cancel")}
                           </button>
 
                           <button
@@ -1728,7 +1731,7 @@ export default function FeedPage() {
                               width: "100%",
                             }}
                           >
-                            {applyingEdit ? "Applying..." : "Apply"}
+                            {applyingEdit ? t("applying") : t("apply")}
                           </button>
                         </div>
                       </div>
@@ -1767,12 +1770,11 @@ export default function FeedPage() {
                     color: "var(--text)",
                   }}
                 >
-                  Dein Feed ist noch leer 👀
+                  {t("feed_empty_title")} 👀
                 </div>
 
                 <div style={{ opacity: 0.85, lineHeight: 1.5 }}>
-                  Folge anderen Golfern oder Golfplätzen, um Posts in deinem
-                  Feed zu sehen.
+                  {t("feed_empty_text")}
                 </div>
 
                 <div style={{ marginTop: 12 }}>
@@ -1788,7 +1790,7 @@ export default function FeedPage() {
                       cursor: "pointer",
                     }}
                   >
-                    Plätze entdecken
+                    {t("discover_courses")}
                   </button>
                 </div>
               </div>
@@ -1900,7 +1902,7 @@ export default function FeedPage() {
             >
               <div>
                 <div style={{ fontSize: 18, fontWeight: 900 }}>
-                  Rate this course
+                  {t("rate_this_course")}
                 </div>
                 <div
                   style={{
@@ -1909,7 +1911,7 @@ export default function FeedPage() {
                     color: "var(--sub)",
                   }}
                 >
-                  Selected course id: {activeRatingCourseId}
+                  {t("selected_course_id")}: {activeRatingCourseId}
                 </div>
               </div>
 
@@ -1934,7 +1936,7 @@ export default function FeedPage() {
                     cursor: "pointer",
                   }}
                 >
-                  Close
+                  {t("close")}
                 </button>
               </div>
             </div>
@@ -1961,7 +1963,7 @@ export default function FeedPage() {
                     lineHeight: 1.5,
                   }}
                 >
-                  Set your overall rating for this course.
+                  {t("set_overall_rating")}
                 </div>
 
                 <div

@@ -14,6 +14,7 @@ import {
 } from "../theme/theme";
 import PostCard from "../components/PostCard";
 import CommentModal from "../components/CommentModal";
+import { getLang, setLang, t, type Lang } from "../i18n/strings";
 
 type PostImage = { id: string; url: string };
 
@@ -202,7 +203,7 @@ function AvatarCircle({
         fontWeight: 900,
         color: "var(--text)",
       }}
-      title="Avatar placeholder"
+      title={t("avatar_placeholder")}
     >
       {letter}
     </div>
@@ -225,7 +226,7 @@ function ThemePicker() {
 
   return (
     <Card
-      title="Theme"
+      title={t("theme")}
       right={<span style={{ fontSize: 11, color: "var(--sub)" }}>{theme}</span>}
     >
       <div
@@ -256,6 +257,68 @@ function ThemePicker() {
             }}
           >
             {tName.toUpperCase()}
+          </button>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function LanguagePicker() {
+  const [language, setLanguage] = useState<Lang>(() => getLang());
+
+  const languages: { code: Lang; label: string }[] = [
+    { code: "en", label: "English" },
+    { code: "de", label: "Deutsch" },
+    { code: "fr", label: "Français" },
+    { code: "it", label: "Italiano" },
+    { code: "es", label: "Español" },
+    { code: "ko", label: "한국어" },
+    { code: "th", label: "ไทย" },
+  ];
+
+  return (
+    <Card
+      title={t("language")}
+      right={
+        <span style={{ fontSize: 11, color: "var(--sub)" }}>
+          {language.toUpperCase()}
+        </span>
+      }
+    >
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          flexWrap: "wrap",
+          paddingLeft: 12,
+          paddingRight: 12,
+        }}
+      >
+        {languages.map((item) => (
+          <button
+            key={item.code}
+            type="button"
+            onClick={() => {
+              setLanguage(item.code);
+              setLang(item.code);
+            }}
+            style={{
+              border: "1px solid var(--border)",
+              background:
+                language === item.code
+                  ? "rgba(39,196,107,0.18)"
+                  : "rgba(0,0,0,0.14)",
+              color: "var(--text)",
+              borderRadius: 8,
+              padding: "5px 8px",
+              cursor: "pointer",
+              fontWeight: 800,
+              fontSize: 11,
+              minWidth: 72,
+            }}
+          >
+            {item.label}
           </button>
         ))}
       </div>
@@ -552,10 +615,10 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
   const followLabel = useMemo(() => {
     if (isSelf) return null;
-    if (followStatus === "ACCEPTED") return "✓ Following";
-    if (followStatus === "PENDING") return "Requested";
-    if (followStatus === "NONE") return "+ Follow";
-    if (followStatus === "UNKNOWN") return "+ Follow";
+    if (followStatus === "ACCEPTED") return `✓ ${t("following")}`;
+    if (followStatus === "PENDING") return t("requested");
+    if (followStatus === "NONE") return `+ ${t("follow")}`;
+    if (followStatus === "UNKNOWN") return `+ ${t("follow")}`;
     return null;
   }, [followStatus, isSelf]);
 
@@ -852,6 +915,12 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
   const backTo = (loc.state as any)?.from || "/feed";
 
+  const formatPostCount = (count: number) =>
+    `${count} ${count === 1 ? t("post_singular") : t("post_plural")}`;
+
+  const formatCourseCount = (count: number) =>
+    `${count} ${count === 1 ? t("course_singular") : t("course_plural")}`;
+
   const summaryButtonStyle = (
     section: "posts" | "following" | "followers" | "courses",
   ): CSSProperties => ({
@@ -885,7 +954,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
             color: "var(--text)",
           }}
         >
-          <strong>Error:</strong> {err}
+          <strong>{t("error")}:</strong> {err}
         </div>
       )}
 
@@ -912,7 +981,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                 padding: "4px 6px",
               }}
             >
-              ← Back
+              ← {t("back")}
             </button>
 
             {mode === "me" ? (
@@ -930,7 +999,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                   cursor: "pointer",
                 }}
               >
-                Edit
+                {t("edit")}
               </button>
             ) : (
               <button
@@ -947,7 +1016,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                   cursor: "pointer",
                 }}
               >
-                My Profile
+                {t("my_profile")}
               </button>
             )}
           </div>
@@ -1093,7 +1162,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                     }}
                   >
                     <span>📝</span>
-                    <span>Posts</span>
+                    <span>{t("posts")}</span>
                   </span>
                 </button>
 
@@ -1127,7 +1196,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                     }}
                   >
                     <span>➕</span>
-                    <span>Following</span>
+                    <span>{t("following")}</span>
                   </span>
                 </button>
 
@@ -1161,7 +1230,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                     }}
                   >
                     <span>👥</span>
-                    <span>Followers</span>
+                    <span>{t("followers")}</span>
                   </span>
                 </button>
 
@@ -1195,7 +1264,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                     }}
                   >
                     <span>⛳</span>
-                    <span>Courses</span>
+                    <span>{t("courses")}</span>
                   </span>
                 </button>
               </div>
@@ -1209,7 +1278,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                     marginTop: 2,
                   }}
                 >
-                  Member since {prettyDate(profile.createdAt)}
+                  {t("member_since")} {prettyDate(profile.createdAt)}
                 </div>
               ) : null}
             </div>
@@ -1226,10 +1295,10 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                 disabled={followDisabled}
                 title={
                   followStatus === "PENDING"
-                    ? "Follow request sent (click to cancel)"
+                    ? t("follow_request_sent_title")
                     : followStatus === "ACCEPTED"
-                      ? "Following (click to unfollow)"
-                      : "Follow"
+                      ? t("following_click_unfollow_title")
+                      : t("follow")
                 }
                 style={{
                   ...followButtonStyle,
@@ -1245,20 +1314,25 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
         </div>
       </Card>
 
-      {mode === "me" ? <ThemePicker /> : null}
+      {mode === "me" ? (
+        <>
+          <ThemePicker />
+          <LanguagePicker />
+        </>
+      ) : null}
 
       {mode === "me" && activeSection === "courses" && (
-        <Card title="Following Courses">
+        <Card title={t("following_courses")}>
           <div style={{ padding: 12 }}>
             <div
               style={{ fontSize: 12, color: "var(--sub)", marginBottom: 10 }}
             >
-              {followingCourses.length} courses
+              {formatCourseCount(followingCourses.length)}
             </div>
 
             {followingCourses.length === 0 ? (
               <div style={{ padding: 12, color: "var(--sub)" }}>
-                No followed courses yet.
+                {t("no_followed_courses_yet")}
               </div>
             ) : (
               <div style={{ display: "grid", gap: 8 }}>
@@ -1322,7 +1396,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                           {c.name}
                         </span>
                         <span style={{ fontSize: 12, color: "var(--sub)" }}>
-                          Golf course
+                          {t("golf_course")}
                         </span>
                       </div>
                     </button>
@@ -1336,7 +1410,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
       {mode === "me" && (
         <Card
-          title="Follow Requests"
+          title={t("follow_requests")}
           right={
             <span style={{ fontSize: 11, color: "var(--sub)" }}>
               {followRequests.length}
@@ -1345,7 +1419,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
         >
           {followRequests.length === 0 ? (
             <div style={{ padding: 10, color: "var(--sub)", fontSize: 13 }}>
-              No open requests
+              {t("no_open_requests")}
             </div>
           ) : (
             <div style={{ display: "grid", gap: 8 }}>
@@ -1445,7 +1519,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                           cursor: "pointer",
                         }}
                       >
-                        Reject
+                        {t("reject")}
                       </button>
 
                       <button
@@ -1462,7 +1536,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                           cursor: "pointer",
                         }}
                       >
-                        Accept
+                        {t("accept")}
                       </button>
                     </div>
                   </div>
@@ -1475,7 +1549,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
       {mode === "me" && (
         <Card
-          title="Sent Requests"
+          title={t("sent_requests")}
           right={
             <span style={{ fontSize: 11, color: "var(--sub)" }}>
               {sentFollowRequests.length}
@@ -1484,7 +1558,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
         >
           {sentFollowRequests.length === 0 ? (
             <div style={{ padding: 10, color: "var(--sub)", fontSize: 13 }}>
-              No open sent requests
+              {t("no_open_sent_requests")}
             </div>
           ) : (
             <div style={{ display: "grid", gap: 8 }}>
@@ -1583,7 +1657,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                           flexShrink: 0,
                         }}
                       >
-                        Requested
+                        {t("requested")}
                       </div>
 
                       <button
@@ -1600,7 +1674,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                           cursor: busy ? "default" : "pointer",
                         }}
                       >
-                        {busy ? "..." : "Cancel"}
+                        {busy ? "..." : t("cancel")}
                       </button>
                     </div>
                   </div>
@@ -1614,7 +1688,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
       {mode === "me" && activeSection === "following" && (
         <div ref={followingUsersRef}>
           <UserListCard
-            title="Following Users"
+            title={t("following_users")}
             count={followingUsers.length}
             users={followingUsers
               .map((row) => row.following)
@@ -1625,7 +1699,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                 handle: u.handle,
                 avatarUrl: u.avatarUrl ? fileUrl(u.avatarUrl) : null,
               }))}
-            emptyText="No followed users yet."
+            emptyText={t("no_followed_users_yet")}
             onUserClick={(user) => {
               if (!user.handle) return;
               nav(`/u/${user.handle}`);
@@ -1637,7 +1711,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
       {mode === "me" && activeSection === "followers" && (
         <div ref={followersRef}>
           <UserListCard
-            title="Followers"
+            title={t("followers")}
             count={followers.length}
             users={followers
               .map((row) => row.follower)
@@ -1648,7 +1722,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                 handle: u.handle,
                 avatarUrl: u.avatarUrl ? fileUrl(u.avatarUrl) : null,
               }))}
-            emptyText="No followers yet."
+            emptyText={t("no_followers_yet")}
             onUserClick={(user) => {
               if (!user.handle) return;
               nav(`/u/${user.handle}`);
@@ -1660,16 +1734,16 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
       {activeSection === "posts" && (
         <div ref={postsRef}>
           <Card
-            title="Posts"
+            title={t("posts")}
             right={
               <div style={{ fontSize: 12, color: "var(--sub)" }}>
-                {loading ? "Loading..." : `${posts.length} posts`}
+                {loading ? t("loading") : formatPostCount(posts.length)}
               </div>
             }
           >
             {!loading && posts.length === 0 && (
               <div style={{ padding: 12, color: "var(--sub)" }}>
-                No posts yet.
+                {t("no_posts_yet")}
               </div>
             )}
 

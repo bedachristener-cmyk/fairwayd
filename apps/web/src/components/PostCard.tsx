@@ -3,6 +3,7 @@ import { fileUrl } from "../api/fileUrl";
 import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { t } from "../i18n/strings";
 
 function avatarSrc(url?: string | null) {
   if (!url) return null;
@@ -219,6 +220,13 @@ export default function PostCard({
   const displayName = post.user?.name?.trim() || post.user?.handle || "User";
   const avatarLabel = displayName.slice(0, 1).toUpperCase();
 
+  const getVisibilityLabel = (visibility?: string | null) => {
+    if (visibility === "PUBLIC") return `🌍 ${t("visibility_public")}`;
+    if (visibility === "FOLLOWERS") return `👥 ${t("visibility_followers")}`;
+    if (visibility === "PRIVATE") return `🔒 ${t("visibility_private")}`;
+    return "";
+  };
+
   const auth = useAuth() as any;
 
   const viewerId =
@@ -311,7 +319,7 @@ export default function PostCard({
     const currentTrimmed = (localContent ?? "").trim();
 
     if (!trimmed && currentTrimmed) {
-      setEditError("Post content cannot be empty.");
+      setEditError(t("post_content_empty"));
       return;
     }
 
@@ -362,7 +370,7 @@ export default function PostCard({
       setIsEditing(false);
     } catch (err) {
       console.error("Post update failed", err);
-      setEditError("Could not save changes.");
+      setEditError(t("save_changes_failed"));
     } finally {
       setSaveBusy(false);
     }
@@ -374,7 +382,7 @@ export default function PostCard({
     if (!auth?.token) return;
     if (deleteBusy) return;
 
-    const confirmed = window.confirm("Do you really want to delete this post?");
+    const confirmed = window.confirm(t("delete_post_confirm"));
 
     if (!confirmed) return;
 
@@ -395,7 +403,7 @@ export default function PostCard({
       onPostDeleted?.(post.id);
     } catch (err) {
       console.error("Post delete failed", err);
-      window.alert("Could not delete post.");
+      window.alert(t("delete_post_failed"));
     } finally {
       setDeleteBusy(false);
     }
@@ -571,7 +579,7 @@ export default function PostCard({
                   lineHeight: 1.2,
                   maxWidth: "100%",
                 }}
-                title={`Open @${post.user.handle}`}
+                title={`${t("open_user_profile")} @${post.user.handle}`}
               >
                 {displayName}
               </button>
@@ -607,7 +615,7 @@ export default function PostCard({
                     onSelectCourse?.();
                   }}
                   disabled={!onSelectCourse}
-                  title={onSelectCourse ? "Open this course" : undefined}
+                  title={onSelectCourse ? t("open_this_course") : undefined}
                   style={{
                     background: "transparent",
                     border: "none",
@@ -672,7 +680,7 @@ export default function PostCard({
                               fontWeight: 800,
                             }}
                           >
-                            You: {myRating.overall.toFixed(1)}
+                            {t("your_rating")}: {myRating.overall.toFixed(1)}
                           </span>
                         ) : null}
                       </div>
@@ -695,7 +703,7 @@ export default function PostCard({
                       e.preventDefault();
                       e.stopPropagation();
                     }}
-                    title={myRating ? "Edit your rating" : "Rate this course"}
+                    title={myRating ? t("edit_your_rating") : t("rate_this_course")}
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
@@ -718,7 +726,7 @@ export default function PostCard({
                       pointerEvents: "auto",
                     }}
                   >
-                    {myRating ? "Edit your rating" : "Rate this course"}
+                    {myRating ? t("edit_your_rating") : t("rate_this_course")}
                   </button>
                 </div>
               </div>
@@ -755,9 +763,7 @@ export default function PostCard({
                   whiteSpace: "nowrap",
                 }}
               >
-                {localVisibility === "PUBLIC" && "🌍 Public"}
-                {localVisibility === "FOLLOWERS" && "👥 Followers"}
-                {localVisibility === "PRIVATE" && "🔒 Private"}
+                {getVisibilityLabel(localVisibility)}
               </div>
             ) : null}
             {onCourseFollowToggle ? (
@@ -792,8 +798,8 @@ export default function PostCard({
                 {courseFollowBusy
                   ? "..."
                   : courseFollowed
-                    ? "✓ Following"
-                    : "+ Follow"}
+                    ? `✓ ${t("following")}`
+                    : `+ ${t("follow")}`}
               </button>
             ) : null}
             {isOwnPost ? (
@@ -813,8 +819,8 @@ export default function PostCard({
                     e.stopPropagation();
                     setIsMenuOpen((v) => !v);
                   }}
-                  title="Post actions"
-                  aria-label="Post actions"
+                  title={t("post_actions")}
+                  aria-label={t("post_actions")}
                   style={{
                     border: "none",
                     background: isMenuOpen
@@ -881,7 +887,7 @@ export default function PostCard({
                         minHeight: isMobile ? 40 : 36,
                       }}
                     >
-                      Edit post
+                      {t("edit_post")}
                     </button>
 
                     <button
@@ -908,7 +914,7 @@ export default function PostCard({
                         minHeight: isMobile ? 40 : 36,
                       }}
                     >
-                      Delete post
+                      {t("delete_post")}
                     </button>
                   </div>
                 ) : null}
@@ -961,9 +967,9 @@ export default function PostCard({
                 font: "inherit",
               }}
             >
-              <option value="PUBLIC">🌍 Public</option>
-              <option value="FOLLOWERS">👥 Followers</option>
-              <option value="PRIVATE">🔒 Private</option>
+              <option value="PUBLIC">🌍 {t("visibility_public")}</option>
+              <option value="FOLLOWERS">👥 {t("visibility_followers")}</option>
+              <option value="PRIVATE">🔒 {t("visibility_private")}</option>
             </select>
 
             {editError ? (
@@ -1003,7 +1009,7 @@ export default function PostCard({
                   opacity: saveBusy ? 0.7 : 1,
                 }}
               >
-                {saveBusy ? "Saving..." : "Save"}
+                {saveBusy ? t("saving") : t("save")}
               </button>
 
               <button
@@ -1026,7 +1032,7 @@ export default function PostCard({
                   opacity: saveBusy ? 0.7 : 1,
                 }}
               >
-                Cancel
+                {t("cancel")}
               </button>
             </div>
           </div>
@@ -1070,7 +1076,7 @@ export default function PostCard({
                   cursor: "pointer",
                 }}
               >
-                {expanded ? "Show less" : "More"}
+                {expanded ? t("show_less") : t("more")}
               </button>
             ) : null}
           </div>
@@ -1115,7 +1121,7 @@ export default function PostCard({
                 <img
                   className="fw-post-img"
                   src={fileUrl(img.url)}
-                  alt="Post image"
+                  alt={t("post_image_alt")}
                   loading="lazy"
                   style={{
                     width: "100%",
@@ -1204,7 +1210,7 @@ export default function PostCard({
             onCommentClick?.(post.id);
           }}
         >
-          💬 Comments {commentCount}
+          💬 {t("comments")} {commentCount}
         </button>
 
         <button
@@ -1214,9 +1220,9 @@ export default function PostCard({
             e.stopPropagation();
             handleShareClick();
           }}
-          title="Copy post link"
+          title={t("copy_post_link")}
         >
-          🔗 {shareCopied ? "Copied" : "Share"}
+          🔗 {shareCopied ? t("copied") : t("share")}
         </button>
       </div>
     </div>
