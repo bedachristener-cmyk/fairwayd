@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { API_BASE } from "../api/base";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { t } from "../i18n/strings";
 
 type CountryItem = {
   country: string;
@@ -298,7 +299,7 @@ export default function DestinationsPage() {
             color: "var(--text)",
           }}
         >
-          🌍 Golf Destinations
+          🌍 {t("golf_destinations")}
         </div>
 
         <div
@@ -308,7 +309,7 @@ export default function DestinationsPage() {
             lineHeight: 1.5,
           }}
         >
-          Discover golf by country. Start broad, then drill down into courses.
+          {t("destinations_subtitle")}
         </div>
 
         {!loading && !err ? (
@@ -318,8 +319,9 @@ export default function DestinationsPage() {
               color: "var(--sub)",
             }}
           >
-            {items.length} countries
-            {totalCourses > 0 ? ` · ${totalCourses} courses` : ""}
+            {items.length}{" "}
+            {items.length === 1 ? t("country_singular") : t("country_plural")}
+            {totalCourses > 0 ? ` · ${totalCourses} ${t("course_plural")}` : ""}
           </div>
         ) : null}
       </div>
@@ -335,7 +337,7 @@ export default function DestinationsPage() {
             fontSize: 13,
           }}
         >
-          <strong>Error:</strong> {err}
+          <strong>{t("error")}:</strong> {err}
         </div>
       ) : null}
 
@@ -350,7 +352,7 @@ export default function DestinationsPage() {
             fontSize: 13,
           }}
         >
-          Loading destinations...
+          {t("loading_destinations")}
         </div>
       ) : null}
 
@@ -448,7 +450,7 @@ export default function DestinationsPage() {
                       textOverflow: "ellipsis",
                     }}
                   >
-                    Explore courses, local posts and golf activity
+                    {t("destination_card_subtitle")}
                   </div>
 
                   <div
@@ -462,10 +464,15 @@ export default function DestinationsPage() {
                     }}
                   >
                     {item.courseCount > 0 ? (
-                      <span>{item.courseCount} courses</span>
+                      <span>{item.courseCount} {t("course_plural")}</span>
                     ) : null}
 
-                    <span>{item.followerCount || 0} followers</span>
+                    <span>
+                      {item.followerCount || 0}{" "}
+                      {(item.followerCount || 0) === 1
+                        ? t("follower_singular")
+                        : t("follower_plural")}
+                    </span>
                   </div>
                 </div>
 
@@ -503,7 +510,7 @@ export default function DestinationsPage() {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {isBusy ? "..." : isFollowing ? "Following" : "Follow"}
+                    {isBusy ? "..." : isFollowing ? t("following") : t("follow")}
                   </button>
                 </div>
               </div>

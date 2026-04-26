@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { t } from "../i18n/strings";
 
 export default function Sidebar() {
   const nav = useNavigate();
@@ -53,7 +54,7 @@ export default function Sidebar() {
           }}
           type="button"
         >
-          🗺️ Map
+          🗺️ {t("map")}
         </button>
 
         <button
@@ -67,7 +68,7 @@ export default function Sidebar() {
           }}
           type="button"
         >
-          🌍 Explore
+          🌍 {t("explore")}
         </button>
 
         <button
@@ -84,7 +85,7 @@ export default function Sidebar() {
           }}
           type="button"
         >
-          📰 Feed
+          📰 {t("feed")}
         </button>
 
         <button
@@ -101,11 +102,11 @@ export default function Sidebar() {
           }}
           type="button"
         >
-          👤 Profile
+          👤 {t("profile")}
         </button>
       </nav>
       <div style={{ marginTop: 20, fontSize: 12, color: "var(--sub)" }}>
-        Golf social. Simple & fast.
+        {t("golf_social_tagline")}
       </div>
     </div>
   );

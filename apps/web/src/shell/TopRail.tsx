@@ -33,6 +33,7 @@ import {
   type ThemeName,
 } from "../theme/theme";
 import { fileUrl } from "../api/fileUrl";
+import { t } from "../i18n/strings";
 
 function initialsFromHandle(handle: string) {
   const h = (handle || "").trim();
@@ -352,10 +353,10 @@ export default function TopRail() {
   }
 
   function getFollowLabel(status?: UserSearchItem["followStatus"]) {
-    if (status === "ACCEPTED") return "Following";
-    if (status === "PENDING") return "Requested";
-    if (status === "SELF") return "You";
-    return "Follow";
+    if (status === "ACCEPTED") return t("following");
+    if (status === "PENDING") return t("requested");
+    if (status === "SELF") return t("your_rating");
+    return t("follow");
   }
 
   async function handleToggleFollow(
@@ -446,8 +447,8 @@ export default function TopRail() {
   const mainMenuItems: MainMenuItem[] = [
     {
       key: "profile",
-      label: "Profile",
-      subtitle: "Your profile and posts",
+      label: t("profile"),
+      subtitle: t("your_profile_posts"),
       icon: <User size={18} strokeWidth={2.2} />,
       action: () => navigateFromMenu("/profile"),
       isActive:
@@ -455,48 +456,48 @@ export default function TopRail() {
     },
     {
       key: "feed",
-      label: "Feed",
-      subtitle: "Latest activity",
+      label: t("feed"),
+      subtitle: t("latest_activity"),
       icon: <Home size={18} strokeWidth={2.2} />,
       action: () => navigateFromMenu("/feed"),
       isActive: location.pathname === "/feed",
     },
     {
       key: "map",
-      label: "Map / Explore",
-      subtitle: "Discover courses",
+      label: t("map_explore"),
+      subtitle: t("discover_courses"),
       icon: <Map size={18} strokeWidth={2.2} />,
       action: () => navigateFromMenu("/map"),
       isActive: location.pathname === "/map",
     },
     {
       key: "friends",
-      label: "Friends / Following",
-      subtitle: "Your network",
+      label: t("friends_following"),
+      subtitle: t("your_network"),
       icon: <Users size={18} strokeWidth={2.2} />,
       action: () => navigateFromMenu("/friends"),
       isActive: location.pathname === "/friends",
     },
     {
       key: "destinations",
-      label: "Destinations",
-      subtitle: "Golf by country",
+      label: t("destinations"),
+      subtitle: t("golf_by_country"),
       icon: <Globe size={18} strokeWidth={2.2} />,
       action: () => navigateFromMenu("/destinations"),
       isActive: location.pathname.startsWith("/destinations"),
     },
     {
       key: "notifications",
-      label: "Notifications",
-      subtitle: "Follow requests and activity",
+      label: t("notifications"),
+      subtitle: t("follow_requests_activity"),
       icon: <Bell size={18} strokeWidth={2.2} />,
       action: () => navigateFromMenu("/notifications"),
       isActive: location.pathname === "/notifications",
     },
     {
       key: "feedback",
-      label: "Feedback",
-      subtitle: "Send feedback about Fairwayd",
+      label: t("feedback"),
+      subtitle: t("feedback_subtitle"),
       icon: <MessageSquare size={18} strokeWidth={2.2} />,
       action: () => navigateFromMenu("/feedback"),
       isActive: location.pathname === "/feedback",
@@ -505,8 +506,8 @@ export default function TopRail() {
       ? [
           {
             key: "feedback-admin",
-            label: "Feedback Admin",
-            subtitle: "Review tester feedback",
+            label: t("feedback_admin"),
+            subtitle: t("feedback_admin_subtitle"),
             icon: <MessageSquare size={18} strokeWidth={2.2} />,
             action: () => navigateFromMenu("/feedback-admin"),
             isActive: location.pathname === "/feedback-admin",
@@ -515,8 +516,8 @@ export default function TopRail() {
       : []),
     {
       key: "settings",
-      label: "Settings",
-      subtitle: "Theme and app preferences",
+      label: t("settings"),
+      subtitle: t("theme_app_preferences"),
       icon: <Settings size={18} strokeWidth={2.2} />,
       action: () => {
         closeAllMenus();
@@ -526,24 +527,24 @@ export default function TopRail() {
     },
     {
       key: "privacy",
-      label: "Privacy / Security",
-      subtitle: "Account privacy and safety",
+      label: t("privacy_security"),
+      subtitle: t("account_privacy_safety"),
       icon: <Shield size={18} strokeWidth={2.2} />,
       action: () => navigateFromMenu("/privacy-security"),
       isActive: location.pathname === "/privacy-security",
     },
     {
       key: "help",
-      label: "Help / FAQ",
-      subtitle: "Quick help and guidance",
+      label: t("help_faq"),
+      subtitle: t("quick_help_guidance"),
       icon: <HelpCircle size={18} strokeWidth={2.2} />,
       action: () => navigateFromMenu("/help"),
       isActive: location.pathname === "/help",
     },
     {
       key: "logout",
-      label: "Logout",
-      subtitle: "Sign out of Fairwayd",
+      label: t("logout"),
+      subtitle: t("sign_out_fairwayd"),
       icon: <LogOut size={18} strokeWidth={2.2} />,
       action: doLogout,
       danger: true,
@@ -575,8 +576,8 @@ export default function TopRail() {
               setSearchOpen(false);
               setMainMenuOpen((v) => !v);
             }}
-            aria-label="Open main menu"
-            title="Open main menu"
+            aria-label={t("open_main_menu")}
+            title={t("open_main_menu")}
             style={hamburgerButtonStyle}
           >
             <Menu size={18} strokeWidth={2.4} />
@@ -595,7 +596,7 @@ export default function TopRail() {
           <div style={{ display: "flex", flexDirection: "column" }}>
             <span style={{ fontWeight: 800 }}>Fairwayd</span>
             <span style={{ color: "var(--sub)", fontSize: 12 }}>
-              {isAuthenticated ? "Your golf social" : "Explore courses"}
+              {isAuthenticated ? t("your_golf_social") : t("explore_courses")}
             </span>
           </div>
         </div>
@@ -653,7 +654,7 @@ export default function TopRail() {
                         flexShrink: 0,
                       }
                 }
-                title="Find golfers"
+                title={t("find_golfers")}
               >
                 {isMobile ? (
                   <span style={{ fontSize: 18, lineHeight: 1 }}>🔍</span>
@@ -667,7 +668,7 @@ export default function TopRail() {
                     }}
                   >
                     <span style={{ fontSize: 15, lineHeight: 1 }}>🔍</span>
-                    <span>Find golfers</span>
+                    <span>{t("find_golfers")}</span>
                   </span>
                 )}
               </button>
@@ -679,7 +680,7 @@ export default function TopRail() {
                   closeAllMenus();
                   nav("/notifications");
                 }}
-                title="Notifications"
+                title={t("notifications")}
                 style={{
                   position: "relative",
                   border: "none",
@@ -744,7 +745,7 @@ export default function TopRail() {
                   gap: 8,
                   color: "var(--text)",
                 }}
-                title="Account"
+                title={t("account")}
               >
                 {avatarUrl ? (
                   <img
@@ -822,7 +823,7 @@ export default function TopRail() {
                   >
                     <div style={{ fontWeight: 900 }}>@{handle}</div>
                     <div style={{ fontSize: 12, color: "var(--sub)" }}>
-                      Account
+                      {t("account")}
                     </div>
                   </div>
 
@@ -834,7 +835,7 @@ export default function TopRail() {
                       nav("/profile");
                     }}
                   >
-                    Edit Profile
+                    {t("edit_profile")}
                   </button>
 
                   <button
@@ -842,7 +843,8 @@ export default function TopRail() {
                     style={menuItem}
                     onClick={doToggleTheme}
                   >
-                    Anzeige: {theme === "dark" ? "Dark" : "Light"}
+                    {t("theme")}:{" "}
+                    {theme === "dark" ? t("theme_dark") : t("theme_light")}
                   </button>
 
                   <div
@@ -858,7 +860,7 @@ export default function TopRail() {
                     style={menuItemDanger}
                     onClick={doLogout}
                   >
-                    Logoff
+                    {t("logoff")}
                   </button>
                 </div>
               ) : null}
@@ -877,7 +879,7 @@ export default function TopRail() {
                 fontWeight: 800,
               }}
             >
-              Sign in
+              {t("sign_in")}
             </button>
           )}
         </div>
@@ -1004,7 +1006,7 @@ export default function TopRail() {
                         textOverflow: "ellipsis",
                       }}
                     >
-                      {isAuthenticated ? "Your account" : "Fairwayd"}
+                      {isAuthenticated ? t("your_account") : "Fairwayd"}
                     </div>
 
                     <div
@@ -1018,7 +1020,7 @@ export default function TopRail() {
                         textOverflow: "ellipsis",
                       }}
                     >
-                      {isAuthenticated ? displayName : "Welcome"}
+                      {isAuthenticated ? displayName : t("welcome")}
                     </div>
 
                     <div
@@ -1032,7 +1034,7 @@ export default function TopRail() {
                     >
                       {isAuthenticated
                         ? `@${handle}`
-                        : "Explore courses and golfers"}
+                        : t("explore_courses_golfers")}
                     </div>
                   </div>
                 </div>
@@ -1041,8 +1043,8 @@ export default function TopRail() {
                   type="button"
                   onClick={() => setMainMenuOpen(false)}
                   style={drawerCloseButton}
-                  aria-label="Close main menu"
-                  title="Close main menu"
+                  aria-label={t("close_main_menu")}
+                  title={t("close_main_menu")}
                 >
                   <X size={18} strokeWidth={2.4} />
                 </button>
@@ -1076,7 +1078,7 @@ export default function TopRail() {
                         color: "var(--sub)",
                       }}
                     >
-                      Jump back into your profile
+                      {t("jump_back_profile")}
                     </div>
 
                     <div
@@ -1088,7 +1090,7 @@ export default function TopRail() {
                         textOverflow: "ellipsis",
                       }}
                     >
-                      Posts, followers and account details
+                      {t("posts_followers_account")}
                     </div>
                   </div>
 
@@ -1109,7 +1111,7 @@ export default function TopRail() {
                       flexShrink: 0,
                     }}
                   >
-                    View profile
+                    {t("view_profile")}
                   </button>
                 </div>
               ) : null}
@@ -1307,7 +1309,7 @@ export default function TopRail() {
                   padding: "0 2px",
                 }}
               >
-                Suggested golfers
+                {t("suggested_golfers")}
               </div>
 
               {suggestions.map((u) => (
@@ -1506,7 +1508,7 @@ export default function TopRail() {
                   fontSize: 13,
                 }}
               >
-                No users found
+                {t("no_users_found")}
               </div>
             ) : null}
           </div>

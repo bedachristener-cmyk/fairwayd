@@ -6,6 +6,7 @@ import { useAuth } from "../auth/AuthContext";
 import PostCard from "../components/PostCard";
 import CommentModal from "../components/CommentModal";
 import { DESTINATION_INFO } from "../data/destinationInfo";
+import { t } from "../i18n/strings";
 
 const COUNTRY_NAMES: Record<string, string> = {
   TH: "Thailand",
@@ -418,8 +419,8 @@ export default function DestinationPage() {
   const activeCommentPost =
     posts.find((p) => p.id === activeCommentPostId) ?? null;
 
-  if (loading) return <div style={{ padding: 20 }}>Loading...</div>;
-  if (!data) return <div style={{ padding: 20 }}>No data</div>;
+  if (loading) return <div style={{ padding: 20 }}>{t("loading")}</div>;
+  if (!data) return <div style={{ padding: 20 }}>{t("no_data")}</div>;
 
   const filteredItems = (data.items || []).filter((c: Course) => {
     const q = search.toLowerCase();
@@ -452,7 +453,7 @@ export default function DestinationPage() {
           cursor: "pointer",
         }}
       >
-        ← Back to destinations
+        ← {t("back_to_destinations")}
       </button>
 
       <div
@@ -479,9 +480,9 @@ export default function DestinationPage() {
           }}
         >
           {[
-            { key: "overview", label: "Overview" },
-            { key: "courses", label: "Courses" },
-            { key: "posts", label: "Posts" },
+            { key: "overview", label: t("overview") },
+            { key: "courses", label: t("courses") },
+            { key: "posts", label: t("posts") },
           ].map((tab) => {
             const isActive = activeTab === tab.key;
 
@@ -516,7 +517,7 @@ export default function DestinationPage() {
       {activeTab === "courses" && (
         <input
           type="text"
-          placeholder="Search courses..."
+          placeholder={t("search_courses")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{
@@ -608,7 +609,7 @@ export default function DestinationPage() {
                       textTransform: "uppercase",
                     }}
                   >
-                    Golf destination
+                    {t("golf_destination")}
                   </div>
 
                   <div
@@ -640,10 +641,9 @@ export default function DestinationPage() {
                     maxWidth: 760,
                   }}
                 >
-                  Discover courses, explore local golf activity, and turn{" "}
-                  {data.destination?.name || getCountryName(data.country)} into
-                  a real destination experience instead of just a simple list of
-                  places.
+                  {t("destination_intro_prefix")}
+                  {data.destination?.name || getCountryName(data.country)}
+                  {t("destination_intro_suffix")}
                 </div>
               </div>
 
@@ -665,7 +665,7 @@ export default function DestinationPage() {
                     fontWeight: 700,
                   }}
                 >
-                  ⛳ {data.courseCount} courses
+                  ⛳ {data.courseCount} {t("course_plural")}
                 </div>
 
                 <div
@@ -679,7 +679,10 @@ export default function DestinationPage() {
                     fontWeight: 700,
                   }}
                 >
-                  👥 {destinationFollowerCount} followers
+                  👥 {destinationFollowerCount}{" "}
+                  {destinationFollowerCount === 1
+                    ? t("follower_singular")
+                    : t("follower_plural")}
                 </div>
 
                 <div
@@ -712,7 +715,7 @@ export default function DestinationPage() {
                     fontWeight: 700,
                   }}
                 >
-                  🏌️ Explore experience
+                  🏌️ {t("explore_experience")}
                 </div>
               </div>
 
@@ -747,10 +750,10 @@ export default function DestinationPage() {
                   }}
                 >
                   {destinationFollowBusy
-                    ? "Please wait..."
+                    ? t("please_wait")
                     : destinationFollowing
-                      ? "Following destination"
-                      : "Follow destination"}
+                      ? t("following_destination")
+                      : t("follow_destination")}
                 </button>
 
                 <button
@@ -769,7 +772,7 @@ export default function DestinationPage() {
                     width: isMobile ? "100%" : "auto",
                   }}
                 >
-                  Explore courses
+                  {t("explore_courses")}
                 </button>
 
                 <button
@@ -788,7 +791,7 @@ export default function DestinationPage() {
                     width: isMobile ? "100%" : "auto",
                   }}
                 >
-                  View latest posts
+                  {t("view_latest_posts")}
                 </button>
               </div>
             </div>
@@ -812,7 +815,7 @@ export default function DestinationPage() {
                   color: "var(--text)",
                 }}
               >
-                ⛳ Best time to play
+                ⛳ {t("best_time_to_play")}
               </div>
 
               <div
@@ -822,7 +825,7 @@ export default function DestinationPage() {
                   lineHeight: 1.45,
                 }}
               >
-                Seasonal golf overview for{" "}
+                {t("seasonal_golf_overview_prefix")}
                 {data.destination?.name || getCountryName(data.country)}.
               </div>
 
@@ -875,7 +878,7 @@ export default function DestinationPage() {
                   color: "var(--text)",
                 }}
               >
-                📍 Highlights
+                📍 {t("highlights")}
               </div>
 
               <div
@@ -885,7 +888,7 @@ export default function DestinationPage() {
                   lineHeight: 1.45,
                 }}
               >
-                Tap a highlight to jump into matching courses for{" "}
+                {t("highlights_hint_prefix")}
                 {data.destination?.name || getCountryName(data.country)}.
               </div>
 
@@ -957,7 +960,7 @@ export default function DestinationPage() {
                     color: "var(--text)",
                   }}
                 >
-                  Featured Courses
+                  {t("featured_courses")}
                 </div>
                 <div
                   style={{
@@ -966,7 +969,7 @@ export default function DestinationPage() {
                     color: "var(--sub)",
                   }}
                 >
-                  A first look at golf courses in{" "}
+                  {t("featured_courses_intro_prefix")}
                   {data.destination?.name || getCountryName(data.country)}.
                 </div>
               </div>
@@ -986,7 +989,7 @@ export default function DestinationPage() {
                   width: isMobile ? "100%" : "auto",
                 }}
               >
-                See all courses
+                {t("see_all_courses")}
               </button>
             </div>
 
@@ -1001,7 +1004,7 @@ export default function DestinationPage() {
                   fontSize: 14,
                 }}
               >
-                No courses found.
+                {t("no_courses_found")}
               </div>
             ) : (
               <div
@@ -1065,7 +1068,7 @@ export default function DestinationPage() {
                           letterSpacing: 0.2,
                         }}
                       >
-                        {c.access || "Course"}
+                        {c.access || t("course")}
                       </div>
                     </div>
 
@@ -1137,7 +1140,7 @@ export default function DestinationPage() {
                     color: "var(--text)",
                   }}
                 >
-                  Latest Posts
+                  {t("latest_posts")}
                 </div>
                 <div
                   style={{
@@ -1146,7 +1149,7 @@ export default function DestinationPage() {
                     color: "var(--sub)",
                   }}
                 >
-                  Recent golf activity from{" "}
+                  {t("latest_posts_intro_prefix")}
                   {data.destination?.name || getCountryName(data.country)}.
                 </div>
               </div>
@@ -1166,7 +1169,7 @@ export default function DestinationPage() {
                   width: isMobile ? "100%" : "auto",
                 }}
               >
-                See all posts
+                {t("see_all_posts")}
               </button>
             </div>
 
@@ -1181,7 +1184,7 @@ export default function DestinationPage() {
                   fontSize: 14,
                 }}
               >
-                Loading posts...
+                {t("loading_posts")}
               </div>
             ) : featuredPosts.length === 0 ? (
               <div
@@ -1194,7 +1197,7 @@ export default function DestinationPage() {
                   fontSize: 14,
                 }}
               >
-                No posts yet for this destination.
+                {t("no_posts_destination")}
               </div>
             ) : (
               <div
@@ -1267,7 +1270,7 @@ export default function DestinationPage() {
                 fontSize: 14,
               }}
             >
-              No courses found.
+              {t("no_courses_found")}
             </div>
           ) : (
             filteredItems.map((c: Course) => (
@@ -1313,7 +1316,7 @@ export default function DestinationPage() {
                           : "1px solid rgba(39,196,107,0.35)",
                     }}
                   >
-                    {c.access || "Course"}
+                    {c.access || t("course")}
                   </div>
                   <div
                     style={{
@@ -1373,7 +1376,8 @@ export default function DestinationPage() {
               marginBottom: 12,
             }}
           >
-            Posts from {data.destination?.name || getCountryName(data.country)}
+            {t("posts_from")}{" "}
+            {data.destination?.name || getCountryName(data.country)}
           </div>
 
           {postsLoading ? (
@@ -1387,7 +1391,7 @@ export default function DestinationPage() {
                 fontSize: 14,
               }}
             >
-              Loading posts...
+              {t("loading_posts")}
             </div>
           ) : posts.length === 0 ? (
             <div
@@ -1400,7 +1404,7 @@ export default function DestinationPage() {
                 fontSize: 14,
               }}
             >
-              No posts yet for this destination.
+              {t("no_posts_destination")}
             </div>
           ) : (
             <div style={{ display: "grid", gap: 12 }}>
@@ -1415,10 +1419,10 @@ export default function DestinationPage() {
                     }}
                   >
                     {isOwnPost(p)
-                      ? "Your post"
+                      ? t("your_post")
                       : isFromFollowedUser(p)
-                        ? "From someone you follow"
-                        : "Public post"}
+                        ? t("from_someone_you_follow")
+                        : t("public_post")}
                   </div>
 
                   <PostCard

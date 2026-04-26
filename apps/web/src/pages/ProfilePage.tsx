@@ -217,113 +217,231 @@ function prettyDate(d?: string) {
   return t.toLocaleDateString();
 }
 
-function ThemePicker() {
+function ProfileSettingsCard() {
   const [theme, setThemeState] = useState<ThemeName>(() => getInitialTheme());
+  const [language, setLanguage] = useState<Lang>(() => getLang());
+  const [expanded, setExpanded] = useState<"theme" | "language" | null>(null);
+
+  const isMobile = window.innerWidth <= 980;
+
+  const languages: { code: Lang; label: string; flagCode: string }[] = [
+    { code: "en", label: "English", flagCode: "gb" },
+    { code: "de", label: "Deutsch", flagCode: "de" },
+    { code: "fr", label: "Français", flagCode: "fr" },
+    { code: "it", label: "Italiano", flagCode: "it" },
+    { code: "es", label: "Español", flagCode: "es" },
+    { code: "ko", label: "한국어", flagCode: "kr" },
+    { code: "th", label: "ไทย", flagCode: "th" },
+  ];
 
   useEffect(() => {
     setTheme(theme);
   }, [theme]);
 
   return (
-    <Card
-      title={t("theme")}
-      right={<span style={{ fontSize: 11, color: "var(--sub)" }}>{theme}</span>}
-    >
+    <Card title={t("settings")}>
       <div
         style={{
-          display: "flex",
-          gap: 8,
-          flexWrap: "wrap",
-          paddingLeft: 12,
-          paddingRight: 12,
+          display: "grid",
+          gap: 10,
+          padding: isMobile ? "0 12px 4px" : 0,
         }}
       >
-        {THEMES.map((tName) => (
-          <button
-            key={tName}
-            type="button"
-            onClick={() => setThemeState(tName)}
-            style={{
-              border: "1px solid var(--border)",
-              background:
-                theme === tName ? "rgba(39,196,107,0.18)" : "rgba(0,0,0,0.14)",
-              color: "var(--text)",
-              borderRadius: 8,
-              padding: "5px 8px",
-              cursor: "pointer",
-              fontWeight: 800,
-              fontSize: 11,
-              minWidth: 72,
-            }}
-          >
-            {tName.toUpperCase()}
-          </button>
-        ))}
+        <SettingsControlRow
+          icon="Aa"
+          label={t("theme")}
+          value={theme.toUpperCase()}
+          expanded={expanded === "theme"}
+          onClick={() => setExpanded((v) => (v === "theme" ? null : "theme"))}
+        >
+          <SettingsOptions>
+            {THEMES.map((tName) => {
+              const active = theme === tName;
+
+              return (
+                <button
+                  key={tName}
+                  type="button"
+                  onClick={() => setThemeState(tName)}
+                  style={settingsOptionStyle(active)}
+                >
+                  {tName.toUpperCase()}
+                </button>
+              );
+            })}
+          </SettingsOptions>
+        </SettingsControlRow>
+
+        <SettingsControlRow
+          icon="🌐"
+          label={t("language")}
+          value={language.toUpperCase()}
+          expanded={expanded === "language"}
+          onClick={() =>
+            setExpanded((v) => (v === "language" ? null : "language"))
+          }
+        >
+          <SettingsOptions>
+            {languages.map((item) => {
+              const active = language === item.code;
+
+              return (
+                <button
+                  key={item.code}
+                  type="button"
+                  onClick={() => {
+                    setLanguage(item.code);
+                    setLang(item.code);
+                  }}
+                  style={{
+                    ...settingsOptionStyle(active),
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    justifyContent: "flex-start",
+                  }}
+                >
+                  <img
+                    src={`https://flagcdn.com/w20/${item.flagCode}.png`}
+                    alt=""
+                    style={{
+                      width: 14,
+                      height: 10,
+                      minWidth: 14,
+                      maxWidth: 14,
+                      minHeight: 10,
+                      maxHeight: 10,
+                      display: "inline-block",
+                      objectFit: "cover",
+                      borderRadius: 1,
+                      flexShrink: 0,
+                    }}
+                  />
+
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </SettingsOptions>
+        </SettingsControlRow>
       </div>
     </Card>
   );
 }
 
-function LanguagePicker() {
-  const [language, setLanguage] = useState<Lang>(() => getLang());
-
-  const languages: { code: Lang; label: string }[] = [
-    { code: "en", label: "English" },
-    { code: "de", label: "Deutsch" },
-    { code: "fr", label: "Français" },
-    { code: "it", label: "Italiano" },
-    { code: "es", label: "Español" },
-    { code: "ko", label: "한국어" },
-    { code: "th", label: "ไทย" },
-  ];
-
+function SettingsControlRow({
+  icon,
+  label,
+  value,
+  expanded,
+  onClick,
+  children,
+}: {
+  icon: string;
+  label: string;
+  value: string;
+  expanded: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
   return (
-    <Card
-      title={t("language")}
-      right={
-        <span style={{ fontSize: 11, color: "var(--sub)" }}>
-          {language.toUpperCase()}
-        </span>
-      }
+    <div
+      style={{
+        border: "1px solid var(--border)",
+        borderRadius: 14,
+        background: "var(--bg)",
+        overflow: "hidden",
+      }}
     >
-      <div
-        style={{
-          display: "flex",
-          gap: 8,
-          flexWrap: "wrap",
-          paddingLeft: 12,
-          paddingRight: 12,
-        }}
-      >
-        {languages.map((item) => (
-          <button
-            key={item.code}
-            type="button"
-            onClick={() => {
-              setLanguage(item.code);
-              setLang(item.code);
-            }}
-            style={{
-              border: "1px solid var(--border)",
-              background:
-                language === item.code
-                  ? "rgba(39,196,107,0.18)"
-                  : "rgba(0,0,0,0.14)",
-              color: "var(--text)",
-              borderRadius: 8,
-              padding: "5px 8px",
-              cursor: "pointer",
-              fontWeight: 800,
-              fontSize: 11,
-              minWidth: 72,
-            }}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-    </Card>
+      <button type="button" onClick={onClick} style={settingsRowButtonStyle}>
+        <div
+          style={{
+            width: 30,
+            height: 30,
+            borderRadius: 999,
+            border: "1px solid var(--border)",
+            background: "var(--card)",
+            color: "var(--text)",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 12,
+            fontWeight: 900,
+            flexShrink: 0,
+          }}
+        >
+          {icon}
+        </div>
+
+        <div style={{ minWidth: 0, display: "grid", gap: 1, flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 900, color: "var(--text)" }}>
+            {label}
+          </div>
+          <div style={{ fontSize: 11, color: "var(--sub)" }}>
+            {t("current")}: {value}
+          </div>
+        </div>
+
+        <div
+          style={{
+            color: "var(--sub)",
+            fontSize: 18,
+            lineHeight: 1,
+            transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
+            transition: "transform 0.15s ease",
+            flexShrink: 0,
+          }}
+        >
+          ›
+        </div>
+      </button>
+
+      {expanded ? children : null}
+    </div>
   );
+}
+
+function SettingsOptions({ children }: { children: ReactNode }) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gap: 6,
+        padding: "0 10px 10px 49px",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+const settingsRowButtonStyle: CSSProperties = {
+  width: "100%",
+  border: "none",
+  background: "transparent",
+  color: "var(--text)",
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  padding: "10px",
+  textAlign: "left",
+  cursor: "pointer",
+  boxSizing: "border-box",
+};
+
+function settingsOptionStyle(active: boolean): CSSProperties {
+  return {
+    width: "100%",
+    border: "1px solid var(--border)",
+    background: active ? "var(--text)" : "var(--card)",
+    color: active ? "var(--bg)" : "var(--text)",
+    borderRadius: 12,
+    padding: "9px 10px",
+    cursor: "pointer",
+    fontWeight: 800,
+    fontSize: 12,
+    textAlign: "left",
+  };
 }
 
 export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
@@ -1314,12 +1432,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
         </div>
       </Card>
 
-      {mode === "me" ? (
-        <>
-          <ThemePicker />
-          <LanguagePicker />
-        </>
-      ) : null}
+      {mode === "me" ? <ProfileSettingsCard /> : null}
 
       {mode === "me" && activeSection === "courses" && (
         <Card title={t("following_courses")}>

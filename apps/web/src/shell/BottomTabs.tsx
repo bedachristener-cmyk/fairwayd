@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
+import { t } from "../i18n/strings";
 
 export default function BottomTabs() {
   const nav = useNavigate();
@@ -57,10 +58,10 @@ export default function BottomTabs() {
         zIndex: 2000,
       }}
     >
-      <Tab to="/feed" label="Feed" icon="📰" />
-      <Tab to="/map" label="Map" icon="🗺️" />
-      <Tab to="/destinations" label="Explore" icon="🌍" />
-      <Tab to="/profile" label="Me" icon="👤" />
+      <Tab to="/feed" label={t("feed")} icon="📰" />
+      <Tab to="/map" label={t("map")} icon="🗺️" />
+      <Tab to="/destinations" label={t("explore")} icon="🌍" />
+      <Tab to="/profile" label={t("me")} icon="👤" />
     </div>
   );
 }

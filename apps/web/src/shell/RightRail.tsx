@@ -6,6 +6,7 @@ import { API_BASE } from "../api/base";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
 import { useAuth } from "../auth/AuthContext";
 import { useCourseFollow } from "../hooks/useCourseFollow";
+import { t } from "../i18n/strings";
 
 type Course = {
   id: string;
@@ -80,7 +81,7 @@ function RecenterMap({ lat, lng }: { lat?: number; lng?: number }) {
 function CourseBadge() {
   return (
     <span
-      title="Course"
+      title={t("course")}
       style={{
         width: 18,
         height: 18,
@@ -171,7 +172,7 @@ function RequestsBadge({ n }: { n: number }) {
         fontWeight: 950,
         lineHeight: "16px",
       }}
-      title={`${n} pending requests`}
+      title={`${n} ${t("pending_requests")}`}
     >
       {n}
     </span>
@@ -332,7 +333,7 @@ export default function RightRail() {
     : "";
 
   const followingLabel =
-    followingCount == null ? "Following" : `Following (${followingCount})`;
+    followingCount == null ? t("following") : `${t("following")} (${followingCount})`;
 
   return (
     <div
@@ -350,11 +351,11 @@ export default function RightRail() {
     >
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ fontWeight: 900 }}>Map</div>
+        <div style={{ fontWeight: 900 }}>{t("map")}</div>
 
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
           <Link to="/map" style={{ ...pill, textDecoration: "none" }}>
-            Open
+            {t("open")}
           </Link>
 
           {selectedCourse && (
@@ -366,7 +367,7 @@ export default function RightRail() {
               style={{ ...pill }}
               type="button"
             >
-              Clear
+              {t("clear")}
             </button>
           )}
         </div>
@@ -374,7 +375,7 @@ export default function RightRail() {
 
       {!selectedCourse ? (
         <div style={{ marginTop: 10, fontSize: 13, color: "var(--sub)" }}>
-          Select a course by clicking a marker.
+          {t("select_course_marker")}
         </div>
       ) : null}
 
@@ -430,7 +431,7 @@ export default function RightRail() {
               marginBottom: 6,
             }}
           >
-            Courses
+            {t("courses")}
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <Link to="/following" style={{ ...pill, textDecoration: "none" }}>
@@ -448,7 +449,7 @@ export default function RightRail() {
               marginBottom: 6,
             }}
           >
-            People
+            {t("people")}
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <Link
@@ -461,7 +462,7 @@ export default function RightRail() {
               }}
               onClick={() => loadRequestCount()}
             >
-              Requests <RequestsBadge n={requestCount} />
+              {t("requests")} <RequestsBadge n={requestCount} />
             </Link>
           </div>
         </div>
@@ -481,7 +482,7 @@ export default function RightRail() {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <CourseBadge />
             <div style={{ fontSize: 14, fontWeight: 950 }}>
-              {(selectedCourse as any).name ?? "Course"}
+              {(selectedCourse as any).name ?? t("course")}
             </div>
           </div>
 
@@ -504,17 +505,17 @@ export default function RightRail() {
                 cursor: !token ? "not-allowed" : "pointer",
               }}
               type="button"
-              title={!token ? "Please login" : "Follow course"}
+              title={!token ? t("please_login") : t("follow_course")}
             >
-              {isFollowing ? "✓ Following" : "+ Follow"}
+              {isFollowing ? `✓ ${t("following")}` : `+ ${t("follow")}`}
             </button>
           </div>
 
           <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
-            <Row label="Ort" value={locationText || undefined} />
+            <Row label={t("location")} value={locationText || undefined} />
 
             <Row
-              label="Web"
+              label={t("website")}
               value={
                 (selectedCourse as any).website ? (
                   <a
@@ -534,7 +535,7 @@ export default function RightRail() {
             />
 
             <Row
-              label="Löcher"
+              label={t("holes")}
               value={
                 typeof (selectedCourse as any).holes === "number"
                   ? String((selectedCourse as any).holes)
