@@ -80,52 +80,46 @@ export default function CommentModal({
 
   const replyInputRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const getAvatarLabel = (name?: string | null, handle?: string | null) => {
-    const source = name?.trim() || handle?.trim() || "?";
-    return source.slice(0, 1).toUpperCase();
-  };
-
   const renderAvatar = (
     avatarUrl?: string | null,
     name?: string | null,
     handle?: string | null,
   ) => {
-    const label = getAvatarLabel(name, handle);
-
-    if (avatarUrl) {
-      return (
-        <img
-          src={fileUrl(avatarUrl)}
-          alt={name || handle || "User"}
-          style={{
-            width: 34,
-            height: 34,
-            borderRadius: "50%",
-            objectFit: "cover",
-            border: "1px solid var(--border)",
-            flexShrink: 0,
-          }}
-        />
-      );
-    }
+    const label = (name?.trim() || handle?.trim() || "?")
+      .slice(0, 1)
+      .toUpperCase();
 
     return (
       <div
         style={{
-          width: 34,
-          height: 34,
+          width: 28,
+          height: 28,
           borderRadius: "50%",
+          overflow: "hidden",
+          flexShrink: 0,
           border: "1px solid var(--border)",
-          background: "var(--card)",
+          background: "var(--muted)",
           display: "grid",
           placeItems: "center",
           fontSize: 13,
           fontWeight: 900,
           color: "var(--text)",
-          flexShrink: 0,
         }}
       >
-        {label}
+        {avatarUrl ? (
+          <img
+            src={fileUrl(avatarUrl)}
+            alt={name || handle || "avatar"}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+            }}
+          />
+        ) : (
+          label
+        )}
       </div>
     );
   };
@@ -559,8 +553,8 @@ export default function CommentModal({
               style={{
                 display: "inline-block",
                 maxWidth: "100%",
-                padding: "9px 12px",
-                borderRadius: 18,
+                padding: "8px 11px",
+                borderRadius: 16,
                 background: "var(--card)",
                 border: "1px solid var(--border)",
               }}
@@ -857,59 +851,76 @@ export default function CommentModal({
               }}
             >
               <div style={{ padding: "12px 12px 10px 12px" }}>
-                <button
-                  type="button"
-                  onClick={handleOpenCourse}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    padding: 0,
-                    margin: "0 0 4px 0",
-                    fontWeight: 800,
-                    fontSize: 16,
-                    color: "var(--text)",
-                    cursor: "pointer",
-                    textAlign: "left",
-                  }}
-                  title="Open course"
-                >
-                  {post.course.name}
-                </button>
-
                 <div
                   style={{
-                    fontSize: 12,
-                    color: "var(--sub)",
-                    marginBottom: 8,
                     display: "flex",
-                    flexWrap: "wrap",
-                    gap: 6,
-                    alignItems: "center",
+                    gap: 10,
+                    alignItems: "flex-start",
+                    marginBottom: 8,
                   }}
                 >
-                  <span>@{post.user.handle}</span>
-                  <span>·</span>
-                  <span>{new Date(post.createdAt).toLocaleString()}</span>
-                  {post.visibility ? (
-                    <>
-                      <span>·</span>
-                      <span>
-                        {post.visibility === "PUBLIC" && "🌍 Public"}
-                        {post.visibility === "FOLLOWERS" && "👥 Followers"}
-                        {post.visibility === "PRIVATE" && "🔒 Private"}
-                      </span>
-                    </>
-                  ) : null}
-                </div>
+                  {renderAvatar(
+                    post.user?.avatarUrl,
+                    post.user?.name,
+                    post.user?.handle,
+                  )}
 
-                <div
-                  style={{
-                    whiteSpace: "pre-wrap",
-                    lineHeight: 1.5,
-                    color: "var(--text)",
-                  }}
-                >
-                  {post.content}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <button
+                      type="button"
+                      onClick={handleOpenCourse}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        padding: 0,
+                        margin: "0 0 4px 0",
+                        fontWeight: 800,
+                        fontSize: 16,
+                        color: "var(--text)",
+                        cursor: "pointer",
+                        textAlign: "left",
+                      }}
+                      title="Open course"
+                    >
+                      {post.course.name}
+                    </button>
+
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "var(--sub)",
+                        marginBottom: 8,
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: 6,
+                        alignItems: "center",
+                      }}
+                    >
+                      <span>@{post.user.handle}</span>
+                      <span>·</span>
+                      <span>{new Date(post.createdAt).toLocaleString()}</span>
+                      {post.visibility ? (
+                        <>
+                          <span>·</span>
+                          <span>
+                            {post.visibility === "PUBLIC" && "🌍 Public"}
+                            {post.visibility === "FOLLOWERS" && "👥 Followers"}
+                            {post.visibility === "PRIVATE" && "🔒 Private"}
+                          </span>
+                        </>
+                      ) : null}
+                    </div>
+
+                    <div
+                      style={{
+                        whiteSpace: "pre-wrap",
+                        lineHeight: 1.5,
+                        color: "var(--text)",
+                      }}
+                    >
+                      {post.content}
+                    </div>
+                  </div>
                 </div>
               </div>
 
