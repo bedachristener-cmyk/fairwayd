@@ -350,100 +350,120 @@ export default function CommentModal({
             <div key={reply.id} style={{ display: "grid", gap: 8 }}>
               <div
                 style={{
-                  border: "1px solid var(--border)",
-                  borderRadius: 12,
-                  padding: 10,
-                  background: "var(--card)",
+                  display: "flex",
+                  gap: 10,
+                  alignItems: "flex-start",
                 }}
               >
-                <button
-                  type="button"
-                  onClick={() => {
-                    const handle = reply.user?.handle?.trim();
-                    if (!handle) return;
-                    nav(`/u/${handle}`);
-                  }}
-                  disabled={!reply.user?.handle}
-                  title={
-                    reply.user?.handle
-                      ? `Open @${reply.user.handle}`
-                      : undefined
-                  }
-                  style={{
-                    border: "none",
-                    background: "transparent",
-                    padding: 0,
-                    margin: 0,
-                    fontWeight: 700,
-                    color: "var(--text)",
-                    cursor: reply.user?.handle ? "pointer" : "default",
-                    textAlign: "left",
-                  }}
-                >
-                  @{reply.user?.handle ?? "user"}
-                </button>
+                {renderAvatar(
+                  reply.user?.avatarUrl,
+                  reply.user?.name,
+                  reply.user?.handle,
+                )}
 
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: "var(--sub)",
-                    marginTop: 2,
-                  }}
-                >
-                  {reply.createdAt
-                    ? new Date(reply.createdAt).toLocaleString()
-                    : ""}
-                </div>
-
-                <div
-                  style={{
-                    fontSize: 14,
-                    marginTop: 6,
-                    lineHeight: 1.5,
-                    whiteSpace: "pre-wrap",
-                  }}
-                >
-                  {reply.content}
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 12,
-                    marginTop: 8,
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => handleToggleCommentLike(reply.id)}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
                     style={{
-                      border: "none",
-                      background: "transparent",
-                      color: reply.likedByMe ? "#ff4d6d" : "var(--text)",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      padding: 0,
+                      display: "inline-block",
+                      maxWidth: "100%",
+                      padding: "8px 11px",
+                      borderRadius: 16,
+                      background: "var(--card)",
+                      border: "1px solid var(--border)",
                     }}
                   >
-                    {reply.likedByMe ? "❤️" : "♡"} {reply._count?.likes ?? 0}
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const handle = reply.user?.handle?.trim();
+                        if (!handle) return;
+                        nav(`/u/${handle}`);
+                      }}
+                      disabled={!reply.user?.handle}
+                      style={{
+                        border: "none",
+                        background: "transparent",
+                        padding: 0,
+                        margin: 0,
+                        fontWeight: 800,
+                        fontSize: 13,
+                        color: "var(--text)",
+                        cursor: reply.user?.handle ? "pointer" : "default",
+                        textAlign: "left",
+                      }}
+                    >
+                      {reply.user?.name || `@${reply.user?.handle ?? "user"}`}
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => openReplyBox(reply.id)}
+                    <div
+                      style={{
+                        fontSize: 14,
+                        marginTop: 3,
+                        lineHeight: 1.45,
+                        whiteSpace: "pre-wrap",
+                      }}
+                    >
+                      {reply.content}
+                    </div>
+                  </div>
+
+                  <div
                     style={{
-                      border: "none",
-                      background: "transparent",
-                      color: "var(--text)",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      padding: 0,
+                      display: "flex",
+                      gap: 10,
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      marginTop: 5,
+                      paddingLeft: 8,
+                      fontSize: 12,
+                      color: "var(--sub)",
                     }}
                   >
-                    {isReplyBoxOpen ? "Cancel" : "Reply"}
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleCommentLike(reply.id)}
+                      style={{
+                        border: "none",
+                        background: "transparent",
+                        color: reply.likedByMe ? "#ff4d6d" : "var(--sub)",
+                        fontWeight: 800,
+                        cursor: "pointer",
+                        padding: 0,
+                        fontSize: 12,
+                      }}
+                    >
+                      {reply.likedByMe ? "Liked" : "Like"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => openReplyBox(reply.id)}
+                      style={{
+                        border: "none",
+                        background: "transparent",
+                        color: "var(--sub)",
+                        fontWeight: 800,
+                        cursor: "pointer",
+                        padding: 0,
+                        fontSize: 12,
+                      }}
+                    >
+                      {isReplyBoxOpen ? "Cancel" : "Reply"}
+                    </button>
+
+                    <span>
+                      {reply.createdAt
+                        ? new Date(reply.createdAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : ""}
+                    </span>
+
+                    {(reply._count?.likes ?? 0) > 0 ? (
+                      <span>❤️ {reply._count?.likes ?? 0}</span>
+                    ) : null}
+                  </div>
                 </div>
               </div>
 
@@ -668,8 +688,8 @@ export default function CommentModal({
                 }}
               >
                 {expandedReplyIds.has(comment.id)
-                  ? "Antworten ausblenden"
-                  : `${replyCount} Antwort${replyCount === 1 ? "" : "en"} anzeigen`}
+                  ? "Hide replies"
+                  : `${replyCount} repl${replyCount === 1 ? "y" : "ies"}`}
               </button>
             ) : null}
 
