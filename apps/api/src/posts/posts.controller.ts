@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -10,13 +11,13 @@ import {
   Req,
   UseGuards,
   UseInterceptors,
-  UploadedFile,
+  UploadedFiles,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport'; // 👈 DAS HINZUFÜGEN
 import { OptionalJwtAuthGuard } from '../auth/optional-jwt.guard';
 import { PostsService } from './posts.service';
 import { Visibility } from '@prisma/client';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { uploadToR2 } from '../storage/r2.service';
 
@@ -138,7 +139,10 @@ export class PostsController {
   @UseGuards(AuthGuard('jwt'))
   @Post()
   @UseInterceptors(
-    FileInterceptor('image', {
+    FileFieldsInterceptor([
+      { name: 'images', maxCount: 5 },
+      { name: 'image', maxCount: 1 },
+    ], {
       storage: memoryStorage(),
       limits: { fileSize: 5 * 1024 * 1024 },
     }),
@@ -146,25 +150,40 @@ export class PostsController {
   async create(
     @Req() req: any,
     @Body() body: CreatePostBody,
-    @UploadedFile() image?: Express.Multer.File,
+    @UploadedFiles()
+    files?: {
+      images?: Express.Multer.File[];
+      image?: Express.Multer.File[];
+    },
   ) {
     const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
 
-    let imageUrl: string | undefined = undefined;
+    const uploadedImages = [
+      ...(files?.images ?? []),
+      ...(files?.image ?? []),
+    ].slice(0, 6);
 
-    if (image) {
+    if (uploadedImages.length > 5) {
+      throw new BadRequestException('Maximum 5 images per post');
+    }
+
+    const imageUrls: string[] = [];
+
+    for (let i = 0; i < uploadedImages.length; i++) {
+      const image = uploadedImages[i];
       const ext = (image.mimetype?.split('/')[1] || 'bin').replace(
         /[^a-z0-9]/gi,
         '',
       );
-      const key = `posts/${userId}-${Date.now()}.${ext}`;
-      imageUrl = await uploadToR2(
+      const key = `posts/${userId}-${Date.now()}-${i}.${ext}`;
+      const imageUrl = await uploadToR2(
         key,
         image.buffer,
         image.mimetype || 'application/octet-stream',
       );
+      imageUrls.push(imageUrl);
     }
 
-    return this.posts.createPost(userId, body, imageUrl);
+    return this.posts.createPost(userId, body, imageUrls);
   }
 }

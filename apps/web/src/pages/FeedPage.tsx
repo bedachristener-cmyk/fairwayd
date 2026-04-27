@@ -31,6 +31,7 @@ type Post = {
     name: string;
     lat: number;
     lon: number;
+    country?: string | null;
   };
   user: {
     id: string;
@@ -64,6 +65,23 @@ type Course = {
 };
 
 type CourseRatingMap = Record<string, RatingSummary | null>;
+
+type FeedFilter = "following" | "courses" | "destinations" | "trending";
+const MAX_POST_IMAGES = 5;
+
+const FEED_FILTERS: { value: FeedFilter; label: string }[] = [
+  { value: "following", label: "👥 Following" },
+  { value: "courses", label: "⛳ Courses" },
+  { value: "destinations", label: "🌍 Destinations" },
+  { value: "trending", label: "🔥 Trending" },
+];
+
+const FEED_FILTER_MOBILE_LABELS: Record<FeedFilter, string> = {
+  following: "👥 Following",
+  courses: "⛳ Courses",
+  destinations: "🌍 Trips",
+  trending: "🔥 Hot",
+};
 
 async function resizeImage(file: File): Promise<File> {
   const img = document.createElement("img");
@@ -155,6 +173,7 @@ export default function FeedPage() {
   const openComment = openCommentFromState || openCommentFromQuery;
 
   const [posts, setPosts] = useState<Post[]>([]);
+  const [feedFilter, setFeedFilter] = useState<FeedFilter>("following");
   const [courses, setCourses] = useState<Course[]>([]);
   const [courseRatings, setCourseRatings] = useState<CourseRatingMap>({});
   const [myRatings, setMyRatings] = useState<Record<string, MyRating | null>>(
@@ -172,10 +191,13 @@ export default function FeedPage() {
   const [courseFollowBusyId, setCourseFollowBusyId] = useState<string | null>(
     null,
   );
+  const [followedDestinationCodes, setFollowedDestinationCodes] = useState<
+    string[]
+  >([]);
 
   const [draft, setDraft] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
   const [visibility, setVisibility] = useState<
     "PUBLIC" | "FOLLOWERS" | "PRIVATE"
   >("PUBLIC");
@@ -259,14 +281,13 @@ export default function FeedPage() {
   }, []);
 
   useEffect(() => {
-    if (!file) {
-      setPreview(null);
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+    const urls = files.map((picked) => URL.createObjectURL(picked));
+    setPreviews(urls);
+
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [files]);
 
   useEffect(() => {
     if (!editorOpen) return;
@@ -362,6 +383,70 @@ export default function FeedPage() {
     }
   }, [token, logout]);
 
+  const loadFollowedDestinations = useCallback(async () => {
+    if (!token) {
+      setFollowedDestinationCodes([]);
+      return;
+    }
+
+    try {
+      const destinationsRes = await fetch(`${API_BASE}/destinations`);
+
+      if (!destinationsRes.ok) {
+        throw new Error(
+          `Failed to load destinations: ${destinationsRes.status}`,
+        );
+      }
+
+      const destinationsData = await destinationsRes.json();
+      const destinations = Array.isArray(destinationsData?.items)
+        ? destinationsData.items
+        : [];
+
+      const results = await Promise.all(
+        destinations.map(
+          async (destination: { code?: string | null; slug?: string | null }) => {
+            const slug = destination.slug?.trim();
+            const code = destination.code?.trim().toUpperCase();
+
+            if (!slug || !code) return null;
+
+            try {
+              const res = await fetch(
+                `${API_BASE}/destinations/${slug}/follow-status`,
+                {
+                  headers: { Authorization: `Bearer ${token}` },
+                },
+              );
+
+              if (res.status === 401 || res.status === 403) {
+                logout();
+                return null;
+              }
+
+              if (!res.ok) return null;
+
+              const json = await res.json();
+              return json?.following ? code : null;
+            } catch {
+              return null;
+            }
+          },
+        ),
+      );
+
+      setFollowedDestinationCodes(
+        results.filter(
+          (code): code is string =>
+            typeof code === "string" && code.length > 0,
+        ),
+      );
+    } catch (err) {
+      console.error("Failed to load followed destinations", err);
+      setFollowedDestinationCodes([]);
+    }
+  }, [token, logout]);
+
   useEffect(() => {
     if (loading) return;
     if (!token) return;
@@ -373,6 +458,12 @@ export default function FeedPage() {
     if (!token) return;
     loadFollowedCourses();
   }, [loading, token, loadFollowedCourses]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!token) return;
+    loadFollowedDestinations();
+  }, [loading, token, loadFollowedDestinations]);
 
   useEffect(() => {
     if (!selectedCourse) return;
@@ -536,12 +627,14 @@ export default function FeedPage() {
   const handleComposerImageChange = (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const picked = e.target.files?.[0] ?? null;
+    const picked = Array.from(e.target.files ?? []);
     e.target.value = "";
 
-    if (!picked) return;
+    if (picked.length === 0) return;
 
-    setFile(picked);
+    setFiles((current) =>
+      [...current, ...picked].slice(0, MAX_POST_IMAGES),
+    );
     setErr(null);
   };
 
@@ -573,7 +666,9 @@ export default function FeedPage() {
         editorFileName || "image.jpg",
       );
 
-      setFile(editedFile);
+      setFiles((current) =>
+        current.length > 0 ? [editedFile, ...current.slice(1)] : [editedFile],
+      );
       setErr(null);
       resetEditorState();
     } catch (e: any) {
@@ -667,7 +762,7 @@ export default function FeedPage() {
       selectedCourse,
       selectedIsComplete,
       draft,
-      file,
+      files,
       token: Boolean(token),
       visibility,
       selectedName,
@@ -692,7 +787,7 @@ export default function FeedPage() {
     }
 
     const text = draft.trim();
-    if (!text && !file) {
+    if (!text && files.length === 0) {
       setErr(t("composer_write_or_add_image"));
       alert(t("composer_write_or_add_image"));
       return;
@@ -718,9 +813,13 @@ export default function FeedPage() {
         name: selectedName!,
         lat: selectedLat!,
         lon: selectedLon!,
+        country: selectedCountry,
       },
       user: { id: "me", handle },
-      images: preview ? [{ id: "preview", url: preview }] : [],
+      images: previews.map((url, index) => ({
+        id: `preview-${index}`,
+        url,
+      })),
     };
 
     setPosts((prev) => [optimistic, ...prev]);
@@ -730,9 +829,9 @@ export default function FeedPage() {
       fd.append("courseId", selectedCourse.id);
       fd.append("content", text);
       fd.append("visibility", visibility);
-      if (file) {
-        const resized = await resizeImage(file);
-        fd.append("image", resized);
+      for (const picked of files.slice(0, MAX_POST_IMAGES)) {
+        const resized = await resizeImage(picked);
+        fd.append("images", resized);
       }
 
       const res = await fetch(`${API_BASE}/posts`, {
@@ -754,8 +853,7 @@ export default function FeedPage() {
       const created = (await res.json()) as Post;
 
       setDraft("");
-      setFile(null);
-      setPreview(null);
+      setFiles([]);
       resetEditorState();
 
       setPosts((prev) => {
@@ -769,6 +867,34 @@ export default function FeedPage() {
       setPosting(false);
     }
   };
+
+  const filteredPosts = useMemo(() => {
+    if (feedFilter === "following") {
+      return posts;
+    }
+
+    if (feedFilter === "courses") {
+      return posts.filter((post) => followedCourseIds.includes(post.course.id));
+    }
+
+    if (feedFilter === "destinations") {
+      return posts.filter((post) => {
+        const country = post.course.country?.trim().toUpperCase();
+        return country ? followedDestinationCodes.includes(country) : false;
+      });
+    }
+
+    return [...posts].sort((a, b) => {
+      const aScore =
+        (a._count?.likes ?? a.likes?.length ?? 0) +
+        (a._count?.comments ?? a.comments?.length ?? 0);
+      const bScore =
+        (b._count?.likes ?? b.likes?.length ?? 0) +
+        (b._count?.comments ?? b.comments?.length ?? 0);
+
+      return bScore - aScore;
+    });
+  }, [feedFilter, followedCourseIds, followedDestinationCodes, posts]);
 
   const activeCommentPost =
     posts.find((p) => p.id === activeCommentPostId) ?? null;
@@ -1194,6 +1320,7 @@ export default function FeedPage() {
                     ref={galleryInputRef}
                     type="file"
                     accept="image/*"
+                    multiple
                     onChange={handleComposerImageChange}
                     disabled={posting}
                     style={{ display: "none" }}
@@ -1283,7 +1410,7 @@ export default function FeedPage() {
                   )}
                 </div>
 
-                {file ? (
+                {files.length > 0 ? (
                   <div
                     style={{
                       display: "inline-flex",
@@ -1325,49 +1452,53 @@ export default function FeedPage() {
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                         }}
-                        title={file.name}
+                        title={files.map((picked) => picked.name).join(", ")}
                       >
-                        {file.name}
+                        {files.length === 1
+                          ? files[0].name
+                          : `${files.length} / ${MAX_POST_IMAGES} images`}
                       </span>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (!file) return;
+                    {files.length === 1 ? (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const [firstFile] = files;
+                          if (!firstFile) return;
 
-                        try {
-                          await openEditorForFile(file);
-                          setErr(null);
-                        } catch (err: any) {
-                          console.error("Re-open editor failed", err);
-                          setErr(
-                            err?.message ?? "Failed to reopen image editor",
-                          );
-                        }
-                      }}
-                      disabled={posting}
-                      style={{
-                        border: "1px solid var(--border)",
-                        background: "var(--card)",
-                        color: posting ? "var(--sub)" : "var(--text)",
-                        fontSize: 12,
-                        fontWeight: 800,
-                        cursor: posting ? "default" : "pointer",
-                        padding: "8px 10px",
-                        borderRadius: 999,
-                        whiteSpace: "nowrap",
-                        opacity: posting ? 0.6 : 1,
-                      }}
-                    >
-                      {t("edit")}
-                    </button>
+                          try {
+                            await openEditorForFile(firstFile);
+                            setErr(null);
+                          } catch (err: any) {
+                            console.error("Re-open editor failed", err);
+                            setErr(
+                              err?.message ?? "Failed to reopen image editor",
+                            );
+                          }
+                        }}
+                        disabled={posting}
+                        style={{
+                          border: "1px solid var(--border)",
+                          background: "var(--card)",
+                          color: posting ? "var(--sub)" : "var(--text)",
+                          fontSize: 12,
+                          fontWeight: 800,
+                          cursor: posting ? "default" : "pointer",
+                          padding: "8px 10px",
+                          borderRadius: 999,
+                          whiteSpace: "nowrap",
+                          opacity: posting ? 0.6 : 1,
+                        }}
+                      >
+                        {t("edit")}
+                      </button>
+                    ) : null}
 
                     <button
                       type="button"
                       onClick={() => {
-                        setFile(null);
-                        setPreview(null);
+                        setFiles([]);
                         resetEditorState();
                       }}
                       disabled={posting}
@@ -1411,7 +1542,7 @@ export default function FeedPage() {
                     </span>
                   )}
 
-                  {selectedCourse && !draft.trim() && !file && (
+                  {selectedCourse && !draft.trim() && files.length === 0 && (
                     <span
                       style={{
                         fontSize: 12,
@@ -1423,7 +1554,7 @@ export default function FeedPage() {
                     </span>
                   )}
 
-                  {selectedCourse && file && !draft.trim() && (
+                  {selectedCourse && files.length > 0 && !draft.trim() && (
                     <span
                       style={{
                         fontSize: 12,
@@ -1437,7 +1568,9 @@ export default function FeedPage() {
                   <button
                     onClick={submitPost}
                     disabled={
-                      posting || !selectedCourse || (!draft.trim() && !file)
+                      posting ||
+                      !selectedCourse ||
+                      (!draft.trim() && files.length === 0)
                     }
                     style={{
                       padding: "10px 16px",
@@ -1447,11 +1580,15 @@ export default function FeedPage() {
                       color: "var(--bg)",
                       fontWeight: 800,
                       cursor:
-                        posting || !selectedCourse || (!draft.trim() && !file)
+                        posting ||
+                        !selectedCourse ||
+                        (!draft.trim() && files.length === 0)
                           ? "default"
                           : "pointer",
                       opacity:
-                        posting || !selectedCourse || (!draft.trim() && !file)
+                        posting ||
+                        !selectedCourse ||
+                        (!draft.trim() && files.length === 0)
                           ? 0.5
                           : 1,
                     }}
@@ -1459,21 +1596,21 @@ export default function FeedPage() {
                   >
                     {posting
                       ? t("posting")
-                      : file && !draft.trim()
+                      : files.length > 0 && !draft.trim()
                         ? t("post_image")
                         : t("post")}
                   </button>
                 </div>
               </div>
 
-              {preview && (
+              {previews.length > 0 && (
                 <div
                   style={{
                     marginTop: 12,
                     display: "flex",
                     flexDirection: "column",
                     gap: 10,
-                    width: isMobile ? "100%" : "min(420px, 100%)",
+                    width: "100%",
                   }}
                 >
                   <div
@@ -1488,24 +1625,69 @@ export default function FeedPage() {
 
                   <div
                     style={{
-                      borderRadius: 16,
-                      overflow: "hidden",
-                      border: "1px solid var(--border)",
-                      background: "var(--bg)",
-                      boxShadow: "0 4px 18px rgba(0,0,0,0.08)",
+                      display: "grid",
+                      gridTemplateColumns: isMobile
+                        ? "repeat(3, minmax(0, 1fr))"
+                        : "repeat(5, minmax(0, 96px))",
+                      gap: 8,
                     }}
                   >
-                    <img
-                      src={preview}
-                      alt="preview"
-                      style={{
-                        display: "block",
-                        width: "100%",
-                        maxHeight: isMobile ? 320 : 360,
-                        objectFit: "cover",
-                        background: "var(--card)",
-                      }}
-                    />
+                    {previews.map((previewUrl, index) => (
+                      <div
+                        key={previewUrl}
+                        style={{
+                          position: "relative",
+                          aspectRatio: "1 / 1",
+                          borderRadius: 12,
+                          overflow: "hidden",
+                          border: "1px solid var(--border)",
+                          background: "var(--bg)",
+                        }}
+                      >
+                        <img
+                          src={previewUrl}
+                          alt="preview"
+                          style={{
+                            display: "block",
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            background: "var(--card)",
+                          }}
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFiles((current) =>
+                              current.filter((_, i) => i !== index),
+                            )
+                          }
+                          disabled={posting}
+                          aria-label="Remove image"
+                          style={{
+                            position: "absolute",
+                            top: 5,
+                            right: 5,
+                            width: 24,
+                            height: 24,
+                            borderRadius: 999,
+                            border: "1px solid rgba(255,255,255,0.5)",
+                            background: "rgba(0,0,0,0.58)",
+                            color: "#fff",
+                            fontSize: 16,
+                            fontWeight: 900,
+                            lineHeight: 1,
+                            cursor: posting ? "default" : "pointer",
+                            display: "grid",
+                            placeItems: "center",
+                            opacity: posting ? 0.6 : 1,
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -1751,7 +1933,50 @@ export default function FeedPage() {
                 : 0,
             }}
           >
-            {posts.length === 0 ? (
+            <div
+              aria-label="Feed filters"
+              style={{
+                display: "flex",
+                gap: isMobile ? 7 : 10,
+                overflowX: "auto",
+                padding: isMobile ? "2px 0 4px" : "0 0 2px",
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
+                WebkitOverflowScrolling: "touch",
+              }}
+            >
+              {FEED_FILTERS.map((filter) => {
+                const active = feedFilter === filter.value;
+
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => setFeedFilter(filter.value)}
+                    style={{
+                      flex: "0 0 auto",
+                      borderRadius: 999,
+                      border: active
+                        ? "1px solid var(--text)"
+                        : "1px solid var(--border)",
+                      background: active ? "var(--text)" : "var(--card)",
+                      color: active ? "var(--bg)" : "var(--text)",
+                      fontSize: isMobile ? 12 : 13,
+                      fontWeight: 800,
+                      padding: isMobile ? "8px 11px" : "10px 16px",
+                      lineHeight: 1,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {isMobile
+                      ? FEED_FILTER_MOBILE_LABELS[filter.value]
+                      : filter.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {filteredPosts.length === 0 ? (
               <div
                 style={{
                   color: "var(--sub)",
@@ -1796,7 +2021,7 @@ export default function FeedPage() {
               </div>
             ) : null}
 
-            {posts.map((p) => {
+            {filteredPosts.map((p) => {
               const lat = Number(p.course.lat);
               const lon = Number(p.course.lon);
               const canSelectCourse =

@@ -111,6 +111,7 @@ export default function PostCard({
   const [showHeart, setShowHeart] = useState(false);
   const [lastTap, setLastTap] = useState(0);
   const [hoveredImage, setHoveredImage] = useState<string | null>(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [shareCopied, setShareCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -215,6 +216,9 @@ export default function PostCard({
       (img): img is { url: string } =>
         typeof img.url === "string" && img.url.length > 0,
     ) ?? [];
+  const activeImage =
+    validImages[Math.min(activeImageIndex, Math.max(validImages.length - 1, 0))];
+  const hasMultipleImages = validImages.length > 1;
 
   const createdLabel = new Date(post.createdAt).toLocaleString();
   const displayName = post.user?.name?.trim() || post.user?.handle || "User";
@@ -302,6 +306,7 @@ export default function PostCard({
 
     setIsEditing(false);
     setEditError("");
+    setActiveImageIndex(0);
   }, [
     post.id,
     post.content,
@@ -1091,10 +1096,11 @@ export default function PostCard({
             marginTop: 12,
           }}
         >
-          {validImages.map((img) => {
-            const isHovered = hoveredImage === img.url;
+          {(hasMultipleImages && activeImage ? [activeImage] : validImages).map(
+            (img) => {
+              const isHovered = hoveredImage === img.url;
 
-            return (
+              return (
               <div
                 key={img.url}
                 onClick={handleImageTap}
@@ -1132,6 +1138,92 @@ export default function PostCard({
                     transition: "transform 180ms ease",
                   }}
                 />
+
+                {hasMultipleImages ? (
+                  <>
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 10,
+                        right: 10,
+                        padding: "5px 9px",
+                        borderRadius: 999,
+                        background: "rgba(0,0,0,0.58)",
+                        color: "#fff",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        lineHeight: 1,
+                        pointerEvents: "none",
+                      }}
+                    >
+                      {activeImageIndex + 1} / {validImages.length}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setActiveImageIndex((index) =>
+                          index === 0 ? validImages.length - 1 : index - 1,
+                        );
+                      }}
+                      aria-label="Previous image"
+                      style={{
+                        position: "absolute",
+                        left: 10,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        width: isMobile ? 34 : 38,
+                        height: isMobile ? 34 : 38,
+                        borderRadius: 999,
+                        border: "1px solid rgba(255,255,255,0.45)",
+                        background: "rgba(0,0,0,0.52)",
+                        color: "#fff",
+                        fontSize: isMobile ? 22 : 24,
+                        fontWeight: 900,
+                        lineHeight: 1,
+                        cursor: "pointer",
+                        display: "grid",
+                        placeItems: "center",
+                      }}
+                    >
+                      ‹
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setActiveImageIndex((index) =>
+                          index === validImages.length - 1 ? 0 : index + 1,
+                        );
+                      }}
+                      aria-label="Next image"
+                      style={{
+                        position: "absolute",
+                        right: 10,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        width: isMobile ? 34 : 38,
+                        height: isMobile ? 34 : 38,
+                        borderRadius: 999,
+                        border: "1px solid rgba(255,255,255,0.45)",
+                        background: "rgba(0,0,0,0.52)",
+                        color: "#fff",
+                        fontSize: isMobile ? 22 : 24,
+                        fontWeight: 900,
+                        lineHeight: 1,
+                        cursor: "pointer",
+                        display: "grid",
+                        placeItems: "center",
+                      }}
+                    >
+                      ›
+                    </button>
+                  </>
+                ) : null}
 
                 <div
                   style={{

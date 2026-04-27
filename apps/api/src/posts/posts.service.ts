@@ -347,16 +347,21 @@ export class PostsService {
 
   /**
    * Create a post (auth required)
-   * - supports optional imageUrl -> creates PostImage row
+   * - supports optional imageUrls -> creates PostImage rows
    */
-  async createPost(userId: string, body: CreatePostBody, imageUrl?: string) {
+  async createPost(
+    userId: string,
+    body: CreatePostBody,
+    imageUrls: string[] = [],
+  ) {
     const uid = userId?.trim();
     const courseId = body?.courseId?.trim();
     const content = body?.content?.trim();
+    const validImageUrls = imageUrls.filter((url) => url.trim().length > 0);
 
     if (!uid) throw new BadRequestException('Missing userId');
     if (!courseId) throw new BadRequestException('Missing courseId');
-    if (!content && !imageUrl) {
+    if (!content && validImageUrls.length === 0) {
       throw new BadRequestException('Missing content');
     }
 
@@ -383,9 +388,9 @@ export class PostsService {
           courseId,
           content: content ?? '',
           visibility,
-          images: imageUrl
+          images: validImageUrls.length
             ? {
-                create: [{ url: imageUrl }],
+                create: validImageUrls.map((url) => ({ url })),
               }
             : undefined,
         },
