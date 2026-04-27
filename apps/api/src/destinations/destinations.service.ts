@@ -2,11 +2,45 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Visibility } from '@prisma/client';
 
+const DEFAULT_DESTINATIONS = [
+  { code: 'TH', name: 'Thailand', slug: 'thailand' },
+  { code: 'VN', name: 'Vietnam', slug: 'vietnam' },
+  { code: 'PT', name: 'Portugal', slug: 'portugal' },
+  { code: 'ES', name: 'Spain', slug: 'spain' },
+  { code: 'TR', name: 'Turkey', slug: 'turkey' },
+  { code: 'AE', name: 'United Arab Emirates', slug: 'united-arab-emirates' },
+  { code: 'CH', name: 'Switzerland', slug: 'switzerland' },
+  { code: 'DE', name: 'Germany', slug: 'germany' },
+  { code: 'AT', name: 'Austria', slug: 'austria' },
+  { code: 'FR', name: 'France', slug: 'france' },
+  { code: 'IT', name: 'Italy', slug: 'italy' },
+  { code: 'JP', name: 'Japan', slug: 'japan' },
+  { code: 'US', name: 'United States', slug: 'united-states' },
+];
+
 @Injectable()
 export class DestinationsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async ensureDefaultDestinations() {
+    await Promise.all(
+      DEFAULT_DESTINATIONS.map((destination) =>
+        this.prisma.destination.upsert({
+          where: { code: destination.code },
+          update: {
+            name: destination.name,
+            slug: destination.slug,
+            isActive: true,
+          },
+          create: destination,
+        }),
+      ),
+    );
+  }
+
   async findAll() {
+    await this.ensureDefaultDestinations();
+
     const destinations = await this.prisma.destination.findMany({
       where: {
         isActive: true,
@@ -41,6 +75,8 @@ export class DestinationsService {
   }
 
   async findBySlug(slug: string) {
+    await this.ensureDefaultDestinations();
+
     const destination = await this.prisma.destination.findFirst({
       where: {
         slug,
@@ -78,6 +114,8 @@ export class DestinationsService {
   }
 
   async getPostsBySlug(slug: string, userId?: string) {
+    await this.ensureDefaultDestinations();
+
     const destination = await this.prisma.destination.findUnique({
       where: { slug },
     });
@@ -183,6 +221,8 @@ export class DestinationsService {
   }
 
   async followDestination(userId: string, slug: string) {
+    await this.ensureDefaultDestinations();
+
     const destination = await this.prisma.destination.findFirst({
       where: {
         slug,
@@ -234,6 +274,8 @@ export class DestinationsService {
   }
 
   async unfollowDestination(userId: string, slug: string) {
+    await this.ensureDefaultDestinations();
+
     const destination = await this.prisma.destination.findFirst({
       where: {
         slug,
@@ -278,6 +320,8 @@ export class DestinationsService {
   }
 
   async getFollowStatus(userId: string, slug: string) {
+    await this.ensureDefaultDestinations();
+
     const destination = await this.prisma.destination.findFirst({
       where: {
         slug,

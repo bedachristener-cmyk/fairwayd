@@ -18,6 +18,7 @@ async function main() {
     { code: 'AT', name: 'Austria', slug: 'austria' },
     { code: 'FR', name: 'France', slug: 'france' },
     { code: 'IT', name: 'Italy', slug: 'italy' },
+    { code: 'JP', name: 'Japan', slug: 'japan' },
     { code: 'US', name: 'United States', slug: 'united-states' },
   ];
 

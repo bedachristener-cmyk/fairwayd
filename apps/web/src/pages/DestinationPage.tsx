@@ -20,6 +20,7 @@ const COUNTRY_NAMES: Record<string, string> = {
   AT: "Austria",
   FR: "France",
   IT: "Italy",
+  JP: "Japan",
   US: "United States",
 };
 
@@ -33,6 +34,9 @@ function getFlagUrl(countryCode?: string) {
 
   return `https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`;
 }
+
+const TRAVEL_TIP_ICONS = ["✈️", "🕒", "🌦️", "🚗"];
+const LOCAL_KNOWLEDGE_ICONS = ["💡", "🏌️", "📍", "🍽️"];
 
 type Course = {
   id: string;
@@ -556,20 +560,6 @@ export default function DestinationPage() {
           >
             <div
               style={{
-                position: "absolute",
-                left: isMobile ? -40 : -20,
-                bottom: isMobile ? -50 : -30,
-                width: isMobile ? 120 : 180,
-                height: isMobile ? 120 : 180,
-                borderRadius: "50%",
-                background: "rgba(255,255,255,0.05)",
-                filter: "blur(8px)",
-                pointerEvents: "none",
-              }}
-            />
-
-            <div
-              style={{
                 position: "relative",
                 zIndex: 1,
                 display: "grid",
@@ -580,19 +570,35 @@ export default function DestinationPage() {
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 12,
+                  gap: 22,
                 }}
               >
-                <img
-                  src={getFlagUrl(data.destination?.code)}
-                  alt={data.destination?.code || data.country}
+                <div
                   style={{
-                    width: 22,
-                    height: 16,
-                    objectFit: "cover",
-                    borderRadius: 4,
+                    width: 64,
+                    height: 44,
+                    minWidth: 64,
+                    maxWidth: 64,
+                    minHeight: 44,
+                    maxHeight: 44,
+                    borderRadius: 8,
+                    overflow: "hidden",
+                    flexShrink: 0,
+                    border: "1px solid var(--border)",
+                    background: "var(--card)",
                   }}
-                />
+                >
+                  <img
+                    src={getFlagUrl(data.destination?.code)}
+                    alt={data.destination?.code || data.country}
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                </div>
 
                 <div
                   style={{
@@ -863,17 +869,17 @@ export default function DestinationPage() {
           {info?.highlights?.length ? (
             <div
               style={{
-                padding: isMobile ? 16 : 20,
+                padding: isMobile ? 14 : 18,
                 borderRadius: 18,
                 border: "1px solid var(--border)",
                 background: "var(--card)",
                 display: "grid",
-                gap: 12,
+                gap: 10,
               }}
             >
               <div
                 style={{
-                  fontSize: isMobile ? 20 : 22,
+                  fontSize: 15,
                   fontWeight: 800,
                   color: "var(--text)",
                 }}
@@ -883,7 +889,7 @@ export default function DestinationPage() {
 
               <div
                 style={{
-                  fontSize: 14,
+                  fontSize: 13,
                   color: "var(--sub)",
                   lineHeight: 1.45,
                 }}
@@ -916,14 +922,15 @@ export default function DestinationPage() {
                       }}
                       style={{
                         border: "1px solid var(--border)",
-                        borderRadius: 14,
+                        borderRadius: 999,
                         background: "var(--bg)",
-                        padding: "12px 12px",
+                        padding: "8px 11px",
                         fontSize: 13,
                         color: "var(--text)",
-                        lineHeight: 1.45,
+                        lineHeight: 1.2,
                         textAlign: "left",
                         cursor: "pointer",
+                        fontWeight: 700,
                       }}
                     >
                       {item.label}
@@ -933,6 +940,327 @@ export default function DestinationPage() {
               </div>
             </div>
           ) : null}
+
+          {info?.travelTips?.length ? (
+            <div
+              style={{
+                padding: isMobile ? 14 : 18,
+                borderRadius: 18,
+                border: "1px solid var(--border)",
+                background: "var(--card)",
+                display: "grid",
+                gap: 10,
+              }}
+            >
+              <div style={{ display: "grid", gap: 4 }}>
+                <div
+                  style={{
+                    fontSize: isMobile ? 19 : 21,
+                    fontWeight: 850,
+                    color: "var(--text)",
+                  }}
+                >
+                  Travel Tips
+                </div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: "var(--sub)",
+                    lineHeight: 1.45,
+                  }}
+                >
+                  Practical notes for planning a smoother golf trip.
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 8,
+                }}
+              >
+                {info.travelTips.map((item, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      border: "1px solid var(--border)",
+                      borderRadius: 14,
+                      background: "var(--bg)",
+                      padding: "12px",
+                      display: "flex",
+                      gap: 10,
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 999,
+                        border: "1px solid var(--border)",
+                        background: "var(--card)",
+                        color: "var(--text)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 14,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {TRAVEL_TIP_ICONS[i % TRAVEL_TIP_ICONS.length]}
+                    </div>
+                    <div
+                      style={{
+                        minWidth: 0,
+                        display: "grid",
+                        gap: 4,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 800,
+                          color: "var(--text)",
+                        }}
+                      >
+                        {item.label}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "var(--sub)",
+                          lineHeight: 1.45,
+                        }}
+                      >
+                        {item.text}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {info?.localKnowledge?.length ? (
+            <div
+              style={{
+                padding: isMobile ? 16 : 20,
+                borderRadius: 18,
+                border: "1px solid var(--border)",
+                background: "var(--card)",
+                display: "grid",
+                gap: 12,
+              }}
+            >
+              <div style={{ display: "grid", gap: 4 }}>
+                <div
+                  style={{
+                    fontSize: isMobile ? 19 : 21,
+                    fontWeight: 850,
+                    color: "var(--text)",
+                  }}
+                >
+                  Local Knowledge
+                </div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: "var(--sub)",
+                    lineHeight: 1.45,
+                  }}
+                >
+                  Small details that help the destination feel familiar faster.
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: 10,
+                }}
+              >
+                {info.localKnowledge.map((item, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      border: "1px solid var(--border)",
+                      borderRadius: 14,
+                      background: "var(--bg)",
+                      padding: "12px",
+                      display: "flex",
+                      gap: 10,
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 999,
+                        border: "1px solid var(--border)",
+                        background: "var(--card)",
+                        color: "var(--text)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 14,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {LOCAL_KNOWLEDGE_ICONS[i % LOCAL_KNOWLEDGE_ICONS.length]}
+                    </div>
+                    <div
+                      style={{
+                        minWidth: 0,
+                        display: "grid",
+                        gap: 4,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 800,
+                          color: "var(--text)",
+                        }}
+                      >
+                        {item.label}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "var(--sub)",
+                          lineHeight: 1.45,
+                        }}
+                      >
+                        {item.text}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {info?.featuredRegions?.length ? (
+            <div
+              style={{
+                padding: isMobile ? 16 : 20,
+                borderRadius: 18,
+                border: "1px solid var(--border)",
+                background: "var(--card)",
+                display: "grid",
+                gap: 12,
+              }}
+            >
+              <div style={{ display: "grid", gap: 4 }}>
+                <div
+                  style={{
+                    fontSize: isMobile ? 19 : 21,
+                    fontWeight: 850,
+                    color: "var(--text)",
+                  }}
+                >
+                  Featured Regions
+                </div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: "var(--sub)",
+                    lineHeight: 1.45,
+                  }}
+                >
+                  Start with the most recognizable golf areas for this
+                  destination.
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 8,
+                }}
+              >
+                {info.featuredRegions.map((region) => (
+                  <button
+                    key={region.query}
+                    type="button"
+                    onClick={() => {
+                      setSearch(region.query);
+                      setActiveTab("courses");
+                    }}
+                    style={{
+                      border: "1px solid var(--border)",
+                      borderRadius: 999,
+                      background: "var(--bg)",
+                      color: "var(--text)",
+                      padding: "9px 12px",
+                      fontSize: 13,
+                      fontWeight: 800,
+                      lineHeight: 1.2,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {region.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <div
+            style={{
+              padding: isMobile ? 16 : 20,
+              borderRadius: 18,
+              border: "1px solid var(--border)",
+              background: "var(--card)",
+              display: "flex",
+              gap: 12,
+              alignItems: "flex-start",
+            }}
+          >
+            <div
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 999,
+                border: "1px solid var(--border)",
+                background: "var(--bg)",
+                color: "var(--text)",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 15,
+                flexShrink: 0,
+              }}
+            >
+              💬
+            </div>
+
+            <div style={{ minWidth: 0, display: "grid", gap: 5 }}>
+              <div
+                style={{
+                  fontSize: isMobile ? 18 : 20,
+                  fontWeight: 850,
+                  color: "var(--text)",
+                }}
+              >
+                Community Tips
+              </div>
+              <div
+                style={{
+                  fontSize: 13,
+                  color: "var(--sub)",
+                  lineHeight: 1.45,
+                }}
+              >
+                Coming soon: player notes, recent tips, and local updates from
+                Fairwayd golfers.
+              </div>
+            </div>
+          </div>
 
           <div
             style={{

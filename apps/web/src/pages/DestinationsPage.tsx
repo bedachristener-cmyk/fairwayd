@@ -30,6 +30,7 @@ const COUNTRY_LABELS: Record<string, string> = {
   ES: "Spain",
   FR: "France",
   IT: "Italy",
+  JP: "Japan",
   PT: "Portugal",
   TH: "Thailand",
   VN: "Vietnam",

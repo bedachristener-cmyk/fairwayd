@@ -380,6 +380,10 @@ export default function CoursesMap() {
     const sp = new URLSearchParams(location.search);
     return sp.get("courseId");
   }, [location.search]);
+  const countryFromUrl = useMemo(() => {
+    const sp = new URLSearchParams(location.search);
+    return sp.get("country")?.trim().toUpperCase() || null;
+  }, [location.search]);
   const mapTileUrl =
     "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 
@@ -427,13 +431,26 @@ export default function CoursesMap() {
     return [20, 0];
   }, [userPos]);
   useEffect(() => {
-    apiGet<Course[]>("/courses")
+    const path = countryFromUrl
+      ? `/courses/by-country/${encodeURIComponent(countryFromUrl)}`
+      : "/courses";
+
+    apiGet<Course[] | { items?: Course[] }>(path)
       .then((data) => {
-        if (Array.isArray(data)) setCourses(data);
-        else setLoadError("GET /courses returned non-array JSON");
+        if (Array.isArray(data)) {
+          setCourses(data);
+          return;
+        }
+
+        if (Array.isArray(data?.items)) {
+          setCourses(data.items);
+          return;
+        }
+
+        setLoadError(`GET ${path} returned unexpected JSON`);
       })
       .catch((e: any) => setLoadError(e?.message ?? String(e)));
-  }, []);
+  }, [countryFromUrl]);
 
   const loadPostsForCourse = async (courseId: string, force = false) => {
     if (!courseId) return;
@@ -628,13 +645,13 @@ export default function CoursesMap() {
         <PersistMapView />
 
         <FitToData
-          userPos={userPos}
+          userPos={countryFromUrl ? null : userPos}
           courses={courses}
           locked={!!courseIdFromUrl}
         />
 
         <FitToData
-          userPos={userPos}
+          userPos={countryFromUrl ? null : userPos}
           courses={courses}
           locked={!!courseIdFromUrl}
         />
