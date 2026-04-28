@@ -4,6 +4,7 @@ import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { t } from "../i18n/strings";
+import ImageLightbox from "./ImageLightbox";
 
 function avatarSrc(url?: string | null) {
   if (!url) return null;
@@ -112,6 +113,9 @@ export default function PostCard({
   const [lastTap, setLastTap] = useState(0);
   const [hoveredImage, setHoveredImage] = useState<string | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [lightboxImageIndex, setLightboxImageIndex] = useState<number | null>(
+    null,
+  );
   const [shareCopied, setShareCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -187,9 +191,12 @@ export default function PostCard({
 
   const handleImageTap = async (
     e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>,
+    imageIndex: number,
   ) => {
     e.preventDefault();
     e.stopPropagation();
+
+    setLightboxImageIndex(imageIndex);
 
     const now = Date.now();
 
@@ -231,7 +238,10 @@ export default function PostCard({
     imageTouchStartYRef.current = touch.clientY;
   };
 
-  const handleImageTouchEnd = async (e: React.TouchEvent<HTMLDivElement>) => {
+  const handleImageTouchEnd = async (
+    e: React.TouchEvent<HTMLDivElement>,
+    imageIndex: number,
+  ) => {
     const startX = imageTouchStartXRef.current;
     const startY = imageTouchStartYRef.current;
     imageTouchStartXRef.current = null;
@@ -261,7 +271,7 @@ export default function PostCard({
       }
     }
 
-    await handleImageTap(e);
+    await handleImageTap(e, imageIndex);
   };
 
   const stopGalleryControlEvent = (
@@ -282,6 +292,10 @@ export default function PostCard({
   const activeImage =
     validImages[Math.min(activeImageIndex, Math.max(validImages.length - 1, 0))];
   const hasMultipleImages = validImages.length > 1;
+  const displayedImages =
+    hasMultipleImages && activeImage
+      ? [{ image: activeImage, index: activeImageIndex }]
+      : validImages.map((image, index) => ({ image, index }));
 
   const createdLabel = new Date(post.createdAt).toLocaleString();
   const displayName = post.user?.name?.trim() || post.user?.handle || "User";
@@ -1181,16 +1195,15 @@ export default function PostCard({
             overflowX: "hidden",
           }}
         >
-          {(hasMultipleImages && activeImage ? [activeImage] : validImages).map(
-            (img) => {
+          {displayedImages.map(({ image: img, index }) => {
               const isHovered = hoveredImage === img.url;
 
               return (
                 <div
                   key={img.url}
-                  onClick={handleImageTap}
+                  onClick={(event) => handleImageTap(event, index)}
                   onTouchStart={handleImageTouchStart}
-                  onTouchEnd={handleImageTouchEnd}
+                  onTouchEnd={(event) => handleImageTouchEnd(event, index)}
                   onMouseEnter={() => {
                     if (!isMobile) setHoveredImage(img.url);
                   }}
@@ -1361,6 +1374,15 @@ export default function PostCard({
             );
           })}
         </div>
+      ) : null}
+
+      {lightboxImageIndex !== null ? (
+        <ImageLightbox
+          images={validImages}
+          initialIndex={lightboxImageIndex}
+          isMobile={isMobile}
+          onClose={() => setLightboxImageIndex(null)}
+        />
       ) : null}
 
       <div
