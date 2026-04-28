@@ -17,6 +17,12 @@ enum Visibility {
   PUBLIC
 }
 
+enum FieldPrivacy {
+  PUBLIC
+  FOLLOWERS
+  PRIVATE
+}
+
 enum AuthProvider {
   GOOGLE
   APPLE
@@ -44,6 +50,18 @@ model User {
   name      String?
   avatarUrl String?
   privacy   AccountPrivacy @default(PRIVATE)
+
+  bio                     String?
+  handicap                Float?
+  homeGolfClub            String?
+  golfSlogan              String?
+  favoriteGolfDestination String?
+
+  bioPrivacy                     FieldPrivacy @default(PUBLIC)
+  handicapPrivacy                FieldPrivacy @default(PUBLIC)
+  homeGolfClubPrivacy            FieldPrivacy @default(PUBLIC)
+  golfSloganPrivacy              FieldPrivacy @default(PUBLIC)
+  favoriteGolfDestinationPrivacy FieldPrivacy @default(PUBLIC)
 
   termsAcceptedAt DateTime?
   termsVersion    String?

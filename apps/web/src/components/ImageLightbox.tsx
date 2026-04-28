@@ -21,6 +21,7 @@ export default function ImageLightbox({
   const [activeIndex, setActiveIndex] = useState(() =>
     Math.min(Math.max(initialIndex, 0), Math.max(images.length - 1, 0)),
   );
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const touchStartXRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
 
@@ -76,6 +77,18 @@ export default function ImageLightbox({
     );
   }, [images.length, initialIndex]);
 
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
   const stopControlEvent = (
     event:
       | React.MouseEvent<HTMLButtonElement>
@@ -119,6 +132,22 @@ export default function ImageLightbox({
       showNextImage();
     } else {
       showPreviousImage();
+    }
+  };
+
+  const toggleFullscreen = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+
+    if (!document.fullscreenEnabled) return;
+
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch {
+      // Fullscreen can fail when browser policy blocks it; keep the viewer usable.
     }
   };
 
@@ -204,6 +233,36 @@ export default function ImageLightbox({
         >
           X
         </button>
+
+        {!isMobile ? (
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            aria-label={
+              isFullscreen ? "Exit fullscreen" : "Enter fullscreen"
+            }
+            style={{
+              position: "fixed",
+              top: 20,
+              right: 74,
+              width: 42,
+              height: 42,
+              borderRadius: 999,
+              border: "1px solid rgba(255,255,255,0.34)",
+              background: "rgba(0,0,0,0.54)",
+              color: "#fff",
+              fontSize: 20,
+              fontWeight: 900,
+              lineHeight: 1,
+              display: "grid",
+              placeItems: "center",
+              cursor: "pointer",
+              zIndex: 2,
+            }}
+          >
+            {"\u26F6"}
+          </button>
+        ) : null}
 
         {hasMultipleImages ? (
           <>

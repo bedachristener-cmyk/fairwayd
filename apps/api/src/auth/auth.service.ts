@@ -11,6 +11,8 @@ import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 type OAuthProvider = 'GOOGLE' | 'APPLE' | 'FACEBOOK';
 
+const MIN_HANDLE_LENGTH = 3;
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -62,6 +64,10 @@ export class AuthService {
         .toLowerCase()
         .replace(/[^a-z0-9_]+/g, '_')
         .slice(0, 20) || 'dev_user';
+
+    if (safeHandle.length < MIN_HANDLE_LENGTH) {
+      throw new BadRequestException('Handle must be at least 3 characters');
+    }
 
     let user = await this.prisma.user.findUnique({
       where: { handle: safeHandle },

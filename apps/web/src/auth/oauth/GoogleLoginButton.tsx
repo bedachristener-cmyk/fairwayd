@@ -14,13 +14,60 @@ type Props = {
   onError?: (message: string) => void;
 };
 
+const GOOGLE_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
+
+function hasGoogleIdentity() {
+  return Boolean(window.google?.accounts?.id);
+}
+
+function getGoogleScript() {
+  return Array.from(document.scripts).find((script) =>
+    script.src.startsWith(GOOGLE_SCRIPT_SRC),
+  );
+}
+
+function ensureGoogleScript() {
+  const existing = getGoogleScript();
+  if (existing) return existing;
+
+  const script = document.createElement("script");
+  script.src = GOOGLE_SCRIPT_SRC;
+  script.async = true;
+  script.defer = true;
+  document.head.appendChild(script);
+  return script;
+}
+
 async function waitForGoogle(timeoutMs = 8000) {
+  if (hasGoogleIdentity()) return true;
+
+  const script = ensureGoogleScript();
   const start = Date.now();
+  const waitForScriptEvent = new Promise<void>((resolve) => {
+    const done = () => {
+      script.removeEventListener("load", onLoad);
+      script.removeEventListener("error", onError);
+      resolve();
+    };
+    const onLoad = () => done();
+    const onError = () => done();
+
+    script.addEventListener("load", onLoad, { once: true });
+    script.addEventListener("error", onError, { once: true });
+  });
+
   while (Date.now() - start < timeoutMs) {
-    if (window.google?.accounts?.id) return true;
-    await new Promise((r) => setTimeout(r, 50));
+    if (hasGoogleIdentity()) return true;
+
+    const remaining = timeoutMs - (Date.now() - start);
+    await Promise.race([
+      waitForScriptEvent,
+      new Promise((resolve) => setTimeout(resolve, Math.min(100, remaining))),
+    ]);
+
   }
-  return false;
+
+  return hasGoogleIdentity();
 }
 
 function errMsg(e: unknown) {
@@ -29,8 +76,15 @@ function errMsg(e: unknown) {
 
 export default function GoogleLoginButton({ onToken, onError }: Props) {
   const btnRef = useRef<HTMLDivElement | null>(null);
+  const onTokenRef = useRef(onToken);
+  const onErrorRef = useRef(onError);
   const [msg, setMsg] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    onTokenRef.current = onToken;
+    onErrorRef.current = onError;
+  }, [onToken, onError]);
 
   useEffect(() => {
     let cancelled = false;
@@ -39,7 +93,7 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
       if (cancelled) return;
       setMsg(m);
       setReady(false);
-      onError?.(m);
+      onErrorRef.current?.(m);
     };
 
     const init = async () => {
@@ -58,7 +112,7 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
 
       if (!ok) {
         fail(
-          'Google Script nicht geladen. Prüfe, ob in apps/web/index.html folgendes drin ist: <script src="https://accounts.google.com/gsi/client" async defer></script>',
+          "Google Script nicht geladen. Bitte Verbindung, Browser-Blocker oder Google Identity Services prüfen.",
         );
         return;
       }
@@ -118,7 +172,7 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
                 throw new Error("Backend returned no token.");
               }
 
-              onToken(token);
+              onTokenRef.current(token);
             } catch (e: unknown) {
               fail(errMsg(e));
             }
@@ -144,7 +198,7 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [onToken, onError]);
+  }, []);
 
   return (
     <div>

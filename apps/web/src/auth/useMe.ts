@@ -8,11 +8,23 @@ export type Me = {
   name: string | null;
   avatarUrl: string | null;
   privacy: "PRIVATE" | "PUBLIC";
+  bio?: string | null;
+  handicap?: number | null;
+  homeGolfClub?: string | null;
+  golfSlogan?: string | null;
+  favoriteGolfDestination?: string | null;
+  bioPrivacy?: FieldPrivacy;
+  handicapPrivacy?: FieldPrivacy;
+  homeGolfClubPrivacy?: FieldPrivacy;
+  golfSloganPrivacy?: FieldPrivacy;
+  favoriteGolfDestinationPrivacy?: FieldPrivacy;
   termsAcceptedAt: string | null;
   termsVersion: string | null;
   createdAt?: string;
   updatedAt?: string;
 };
+
+export type FieldPrivacy = "PUBLIC" | "FOLLOWERS" | "PRIVATE";
 
 export function useMe(enabled: boolean) {
   const [me, setMe] = useState<Me | null>(null);

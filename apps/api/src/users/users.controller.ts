@@ -64,7 +64,21 @@ export class UsersController {
   @Post('me/profile')
   async updateProfile(
     @Req() req: any,
-    @Body() body: { handle?: string; name?: string | null },
+    @Body()
+    body: {
+      handle?: string;
+      name?: string | null;
+      bio?: string | null;
+      handicap?: number | string | null;
+      homeGolfClub?: string | null;
+      golfSlogan?: string | null;
+      favoriteGolfDestination?: string | null;
+      bioPrivacy?: string;
+      handicapPrivacy?: string;
+      homeGolfClubPrivacy?: string;
+      golfSloganPrivacy?: string;
+      favoriteGolfDestinationPrivacy?: string;
+    },
   ) {
     const userId = req?.user?.userId ?? req?.user?.id;
 
@@ -74,7 +88,20 @@ export class UsersController {
     const name =
       typeof body?.name === 'string' ? body.name.trim() : (body?.name ?? null);
 
-    return this.users.updateProfile(userId, { handle, name });
+    return this.users.updateProfile(userId, {
+      handle,
+      name,
+      bio: body?.bio,
+      handicap: body?.handicap,
+      homeGolfClub: body?.homeGolfClub,
+      golfSlogan: body?.golfSlogan,
+      favoriteGolfDestination: body?.favoriteGolfDestination,
+      bioPrivacy: body?.bioPrivacy,
+      handicapPrivacy: body?.handicapPrivacy,
+      homeGolfClubPrivacy: body?.homeGolfClubPrivacy,
+      golfSloganPrivacy: body?.golfSloganPrivacy,
+      favoriteGolfDestinationPrivacy: body?.favoriteGolfDestinationPrivacy,
+    });
   }
 
   // ---------------------------------------------------------
@@ -259,6 +286,14 @@ export class UsersController {
     return this.users.searchUsers(q ?? '');
   }
 
+  @UseGuards(AuthGuard('jwt'))
+  @Get('handle-available')
+  handleAvailable(@Req() req: any, @Query('handle') handle?: string) {
+    const userId = req?.user?.userId ?? req?.user?.id;
+    if (!handle?.trim()) throw new BadRequestException('Missing handle');
+    return this.users.isHandleAvailable(handle, userId);
+  }
+
   // ---------------------------------------------------------
   // Profile by handle (authenticated for now)
   // Wichtig:
@@ -271,6 +306,20 @@ export class UsersController {
   async getPostsByHandle(@Req() req: any, @Param('handle') handle: string) {
     const viewerId = req?.user?.userId ?? req?.user?.id;
     return this.users.getPostsByHandle(viewerId, handle);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get(':handle/following')
+  async getFollowingByHandle(@Param('handle') handle: string) {
+    const items = await this.users.listFollowingUsersByHandle(handle);
+    return { items };
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get(':handle/followers')
+  async getFollowersByHandle(@Param('handle') handle: string) {
+    const items = await this.users.listFollowerUsersByHandle(handle);
+    return { items };
   }
 
   @UseGuards(AuthGuard('jwt'))

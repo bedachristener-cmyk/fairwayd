@@ -5,7 +5,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { AccountPrivacy, FollowStatus, Prisma } from '@prisma/client';
+import {
+  AccountPrivacy,
+  FieldPrivacy,
+  FollowStatus,
+  Prisma,
+} from '@prisma/client';
+
+const MIN_HANDLE_LENGTH = 3;
+const PROFILE_TEXT_LIMIT = 240;
 
 function normalizeHandle(input: string) {
   return (input ?? '')
@@ -15,6 +23,68 @@ function normalizeHandle(input: string) {
     .replace(/^_+|_+$/g, '')
     .slice(0, 20);
 }
+
+function isHandleUniqueConflict(error: unknown) {
+  if (
+    !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+    error.code !== 'P2002'
+  ) {
+    return false;
+  }
+
+  const target = error.meta?.target;
+  return Array.isArray(target) ? target.includes('handle') : true;
+}
+
+function cleanProfileText(input: string | null | undefined, limit = PROFILE_TEXT_LIMIT) {
+  if (typeof input !== 'string') return input ?? undefined;
+  const value = input.trim();
+  return value ? value.slice(0, limit) : null;
+}
+
+function cleanHandicap(input: unknown) {
+  if (input === null || input === '' || typeof input === 'undefined') {
+    return null;
+  }
+
+  const value = Number(input);
+  if (!Number.isFinite(value)) {
+    throw new BadRequestException('Invalid handicap');
+  }
+
+  return Math.max(-10, Math.min(54, value));
+}
+
+function cleanFieldPrivacy(input: unknown) {
+  if (input === 'PUBLIC' || input === 'FOLLOWERS' || input === 'PRIVATE') {
+    return input as FieldPrivacy;
+  }
+
+  return undefined;
+}
+
+const userProfileSelect = {
+  id: true,
+  email: true,
+  handle: true,
+  name: true,
+  avatarUrl: true,
+  privacy: true,
+  bio: true,
+  handicap: true,
+  homeGolfClub: true,
+  golfSlogan: true,
+  favoriteGolfDestination: true,
+  bioPrivacy: true,
+  handicapPrivacy: true,
+  homeGolfClubPrivacy: true,
+  golfSloganPrivacy: true,
+  favoriteGolfDestinationPrivacy: true,
+  termsAcceptedAt: true,
+  termsVersion: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.UserSelect;
 
 @Injectable()
 export class UsersService {
@@ -27,18 +97,7 @@ export class UsersService {
   async getMe(userId: string) {
     const me = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        handle: true,
-        name: true,
-        avatarUrl: true,
-        privacy: true,
-        termsAcceptedAt: true,
-        termsVersion: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: userProfileSelect,
     });
 
     if (!me) throw new NotFoundException('User not found');
@@ -52,29 +111,31 @@ export class UsersService {
         termsAcceptedAt: new Date(),
         termsVersion,
       },
-      select: {
-        id: true,
-        email: true,
-        handle: true,
-        name: true,
-        avatarUrl: true,
-        privacy: true,
-        termsAcceptedAt: true,
-        termsVersion: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: userProfileSelect,
     });
   }
 
   async updateProfile(
     userId: string,
-    params: { handle: string; name?: string | null },
+    params: {
+      handle: string;
+      name?: string | null;
+      bio?: string | null;
+      handicap?: unknown;
+      homeGolfClub?: string | null;
+      golfSlogan?: string | null;
+      favoriteGolfDestination?: string | null;
+      bioPrivacy?: unknown;
+      handicapPrivacy?: unknown;
+      homeGolfClubPrivacy?: unknown;
+      golfSloganPrivacy?: unknown;
+      favoriteGolfDestinationPrivacy?: unknown;
+    },
   ) {
     const safeHandle = normalizeHandle(params.handle);
 
-    if (!safeHandle) {
-      throw new ConflictException('Invalid handle');
+    if (!safeHandle || safeHandle.length < MIN_HANDLE_LENGTH) {
+      throw new BadRequestException('Handle must be at least 3 characters');
     }
 
     try {
@@ -86,47 +147,54 @@ export class UsersService {
             typeof params.name === 'string'
               ? params.name.trim()
               : (params.name ?? undefined),
+          bio: cleanProfileText(params.bio),
+          handicap: cleanHandicap(params.handicap),
+          homeGolfClub: cleanProfileText(params.homeGolfClub, 120),
+          golfSlogan: cleanProfileText(params.golfSlogan, 140),
+          favoriteGolfDestination: cleanProfileText(
+            params.favoriteGolfDestination,
+            120,
+          ),
+          bioPrivacy: cleanFieldPrivacy(params.bioPrivacy),
+          handicapPrivacy: cleanFieldPrivacy(params.handicapPrivacy),
+          homeGolfClubPrivacy: cleanFieldPrivacy(params.homeGolfClubPrivacy),
+          golfSloganPrivacy: cleanFieldPrivacy(params.golfSloganPrivacy),
+          favoriteGolfDestinationPrivacy: cleanFieldPrivacy(
+            params.favoriteGolfDestinationPrivacy,
+          ),
         },
-        select: {
-          id: true,
-          email: true,
-          handle: true,
-          name: true,
-          avatarUrl: true,
-          privacy: true,
-          termsAcceptedAt: true,
-          termsVersion: true,
-          createdAt: true,
-          updatedAt: true,
-        },
+        select: userProfileSelect,
       });
     } catch (e) {
-      if (
-        e instanceof Prisma.PrismaClientKnownRequestError &&
-        e.code === 'P2002'
-      ) {
-        throw new ConflictException('Handle already taken');
+      if (isHandleUniqueConflict(e)) {
+        throw new ConflictException('Handle is already taken');
       }
       throw e;
     }
+  }
+
+  async isHandleAvailable(handle: string, currentUserId?: string | null) {
+    const safeHandle = normalizeHandle(handle);
+
+    if (!safeHandle || safeHandle.length < MIN_HANDLE_LENGTH) {
+      throw new BadRequestException('Handle must be at least 3 characters');
+    }
+
+    const existing = await this.prisma.user.findUnique({
+      where: { handle: safeHandle },
+      select: { id: true },
+    });
+
+    return {
+      available: !existing || existing.id === currentUserId,
+    };
   }
 
   async setAvatar(userId: string, avatarUrl: string) {
     return this.prisma.user.update({
       where: { id: userId },
       data: { avatarUrl },
-      select: {
-        id: true,
-        email: true,
-        handle: true,
-        name: true,
-        avatarUrl: true,
-        privacy: true,
-        termsAcceptedAt: true,
-        termsVersion: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: userProfileSelect,
     });
   }
 
@@ -287,6 +355,22 @@ export class UsersService {
 
     return rows;
   }
+
+  async listFollowingUsersByHandle(handle: string) {
+    const safeHandle = normalizeHandle(handle);
+
+    if (!safeHandle) throw new NotFoundException('User not found');
+
+    const user = await this.prisma.user.findUnique({
+      where: { handle: safeHandle },
+      select: { id: true },
+    });
+
+    if (!user) throw new NotFoundException('User not found');
+
+    return this.listFollowingUsers(user.id);
+  }
+
   async listFollowerUsers(userId: string) {
     const rows = await this.prisma.follow.findMany({
       where: {
@@ -308,6 +392,22 @@ export class UsersService {
 
     return rows;
   }
+
+  async listFollowerUsersByHandle(handle: string) {
+    const safeHandle = normalizeHandle(handle);
+
+    if (!safeHandle) throw new NotFoundException('User not found');
+
+    const user = await this.prisma.user.findUnique({
+      where: { handle: safeHandle },
+      select: { id: true },
+    });
+
+    if (!user) throw new NotFoundException('User not found');
+
+    return this.listFollowerUsers(user.id);
+  }
+
   // =========================================================
   // Follow (Instagram-style: PUBLIC => ACCEPTED, PRIVATE => PENDING)
   // =========================================================

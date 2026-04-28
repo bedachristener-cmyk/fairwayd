@@ -506,6 +506,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
   const followingUsersRef = useRef<HTMLDivElement | null>(null);
   const followersRef = useRef<HTMLDivElement | null>(null);
   const postsRef = useRef<HTMLDivElement | null>(null);
+  const followStatusRequestRef = useRef(0);
 
   const [followReqBusy, setFollowReqBusy] = useState<string | null>(null);
   const [sentFollowReqBusy, setSentFollowReqBusy] = useState<string | null>(
@@ -640,11 +641,18 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
   const isSelf = useMemo(() => {
     if (mode !== "handle") return true;
+    const myHandle = (me?.handle ?? "").trim().toLowerCase();
+    const profileHandle = (profile?.handle ?? "").trim().toLowerCase();
+
+    if (myHandle && profileHandle && myHandle === profileHandle) return true;
     if (!me?.id || !profile?.id) return false;
     return me.id === profile.id;
-  }, [mode, me?.id, profile?.id]);
+  }, [mode, me?.handle, me?.id, profile?.handle, profile?.id]);
 
   const loadFollowStatus = useCallback(async () => {
+    const requestId = followStatusRequestRef.current + 1;
+    followStatusRequestRef.current = requestId;
+
     if (!token) {
       setFollowStatus("UNKNOWN");
       return;
@@ -653,22 +661,32 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
       setFollowStatus("SELF");
       return;
     }
-    if (!profile?.id) return;
-    if (me?.id && profile.id === me.id) {
+    if (!profile?.id) {
+      setFollowStatus("UNKNOWN");
+      return;
+    }
+    if (isSelf) {
       setFollowStatus("SELF");
       return;
     }
 
+    const profileId = profile.id;
+    setFollowStatus("UNKNOWN");
+
     try {
       const res = await fetch(
-        `${API_BASE}/users/id/${encodeURIComponent(profile.id)}/following-status`,
+        `${API_BASE}/users/id/${encodeURIComponent(profileId)}/following-status`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
+      if (followStatusRequestRef.current !== requestId) return;
+
       if (!res.ok) {
         setFollowStatus("UNKNOWN");
         return;
       }
       const data = await res.json();
+      if (followStatusRequestRef.current !== requestId) return;
+
       const s = String(data?.status ?? "").toUpperCase();
 
       if (s === "ACCEPTED") setFollowStatus("ACCEPTED");
@@ -679,7 +697,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
     } catch {
       setFollowStatus("UNKNOWN");
     }
-  }, [token, mode, profile?.id, me?.id]);
+  }, [token, mode, profile?.id, isSelf]);
 
   const toggleFollow = useCallback(async () => {
     if (!token) {
@@ -688,7 +706,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
     }
     if (mode !== "handle") return;
     if (!profile?.id) return;
-    if (me?.id && profile.id === me.id) return;
+    if (isSelf) return;
     if (followBusy) return;
 
     const currently = followStatus;
@@ -701,7 +719,9 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
     try {
       const res = await fetch(
-        `${API_BASE}/follows/${encodeURIComponent(profile.id)}`,
+        isActive
+          ? `${API_BASE}/follows/${encodeURIComponent(profile.id)}`
+          : `${API_BASE}/users/id/${encodeURIComponent(profile.id)}/follow`,
         {
           method: isActive ? "DELETE" : "POST",
           headers: { Authorization: `Bearer ${token}` },
@@ -730,7 +750,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
     } finally {
       setFollowBusy(false);
     }
-  }, [token, mode, profile?.id, me?.id, followBusy, followStatus]);
+  }, [token, mode, profile?.id, isSelf, followBusy, followStatus]);
 
   const followLabel = useMemo(() => {
     if (isSelf) return null;
@@ -753,9 +773,10 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
   const followButtonStyle: CSSProperties = useMemo(() => {
     if (followStatus === "ACCEPTED") {
       return {
-        background: "rgba(39,196,107,0.18)",
-        border: "1px solid rgba(39,196,107,0.35)",
+        background: "var(--bg)",
+        border: "1px solid var(--border)",
         color: "var(--text)",
+        boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
       };
     }
 
@@ -869,17 +890,34 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
     setProfile(null);
     setPosts([]);
     setErr(null);
+    followStatusRequestRef.current += 1;
     setFollowStatus("UNKNOWN");
+    setActiveSection("posts");
+    window.scrollTo({ top: 0, behavior: "auto" });
     if (!targetHandle) return;
     loadProfile();
   }, [targetHandle, loadProfile]);
 
   useEffect(() => {
-    if (mode !== "handle") return;
-    if (!profile?.id) return;
-    if (!token) return;
+    followStatusRequestRef.current += 1;
+
+    if (mode !== "handle") {
+      setFollowStatus("SELF");
+      return;
+    }
+
+    if (!profile?.id) {
+      setFollowStatus("UNKNOWN");
+      return;
+    }
+
+    if (!token) {
+      setFollowStatus("UNKNOWN");
+      return;
+    }
+
     loadFollowStatus();
-  }, [mode, profile?.id, token, loadFollowStatus]);
+  }, [mode, profile?.id, profile?.handle, token, isSelf, loadFollowStatus]);
 
   useEffect(() => {
     if (!token) {
@@ -909,19 +947,30 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
   }, [token]);
 
   useEffect(() => {
-    if (mode !== "me") {
+    if (!token) {
       setFollowingUsers([]);
       return;
     }
 
-    if (!token) {
+    const profileHandle = (profile?.handle ?? targetHandle ?? "")
+      .trim()
+      .toLowerCase();
+
+    const path =
+      mode === "me"
+        ? "/users/me/following"
+        : profileHandle
+          ? `/users/${encodeURIComponent(profileHandle)}/following`
+          : "";
+
+    if (!path) {
       setFollowingUsers([]);
       return;
     }
 
     const run = async () => {
       try {
-        const res = await fetch(`${API_BASE}/users/me/following`, {
+        const res = await fetch(`${API_BASE}${path}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -938,22 +987,33 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
     };
 
     run();
-  }, [mode, token]);
+  }, [mode, token, profile?.handle, targetHandle]);
 
   useEffect(() => {
-    if (mode !== "me") {
+    if (!token) {
       setFollowers([]);
       return;
     }
 
-    if (!token) {
+    const profileHandle = (profile?.handle ?? targetHandle ?? "")
+      .trim()
+      .toLowerCase();
+
+    const path =
+      mode === "me"
+        ? "/users/me/followers"
+        : profileHandle
+          ? `/users/${encodeURIComponent(profileHandle)}/followers`
+          : "";
+
+    if (!path) {
       setFollowers([]);
       return;
     }
 
     const run = async () => {
       try {
-        const res = await fetch(`${API_BASE}/users/me/followers`, {
+        const res = await fetch(`${API_BASE}${path}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -970,7 +1030,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
     };
 
     run();
-  }, [mode, token]);
+  }, [mode, token, profile?.handle, targetHandle]);
 
   const profileDisplayName = useMemo(() => {
     const rawName = profile?.name?.trim() ?? "";
@@ -1040,25 +1100,6 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
   const formatCourseCount = (count: number) =>
     `${count} ${count === 1 ? t("course_singular") : t("course_plural")}`;
 
-  const summaryButtonStyle = (
-    section: "posts" | "following" | "followers" | "courses",
-  ): CSSProperties => ({
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
-    justifyContent: "center",
-    gap: 2,
-    minWidth: 0,
-    padding: 0,
-    border: "none",
-    background: "transparent",
-    color: "var(--text)",
-    cursor: "pointer",
-    textAlign: "left",
-    boxSizing: "border-box",
-    opacity: activeSection === section ? 1 : 0.6,
-  });
-
   return (
     <div style={{ display: "grid", gap: 12, minWidth: 0 }}>
       {err && (
@@ -1077,151 +1118,149 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
         </div>
       )}
 
-      <Card
-        title=""
-        right={
-          <div
-            style={{
-              display: "flex",
-              gap: 6,
-              alignItems: "center",
-            }}
-          >
-            <button
-              onClick={() => nav(backTo)}
-              type="button"
-              style={{
-                border: "none",
-                background: "transparent",
-                color: "var(--sub)",
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: "pointer",
-                padding: "4px 6px",
-              }}
-            >
-              ← {t("back")}
-            </button>
-
-            {mode === "me" ? (
-              <button
-                onClick={() => nav("/onboarding/profile")}
-                type="button"
-                style={{
-                  border: "none",
-                  background: "rgba(255,255,255,0.06)",
-                  color: "var(--text)",
-                  borderRadius: 999,
-                  padding: "6px 12px",
-                  fontSize: 13,
-                  fontWeight: 800,
-                  cursor: "pointer",
-                }}
-              >
-                {t("edit")}
-              </button>
-            ) : (
-              <button
-                onClick={() => nav("/profile")}
-                type="button"
-                style={{
-                  border: "none",
-                  background: "rgba(255,255,255,0.06)",
-                  color: "var(--text)",
-                  borderRadius: 999,
-                  padding: "6px 12px",
-                  fontSize: 13,
-                  fontWeight: 800,
-                  cursor: "pointer",
-                }}
-              >
-                {t("my_profile")}
-              </button>
-            )}
-          </div>
-        }
+      <div
+        style={{
+          background: isMobile ? "transparent" : "var(--card)",
+          border: isMobile ? "none" : "1px solid var(--border)",
+          borderRadius: isMobile ? 0 : 22,
+          boxShadow: isMobile ? "none" : "0 14px 34px rgba(0,0,0,.24)",
+          overflow: "hidden",
+        }}
       >
         <div
           style={{
+            height: isMobile ? 106 : 152,
+            background:
+              //"linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015))",
+              "linear-gradient(135deg, rgba(90,110,140,0.18), rgba(255,255,255,0.02))",
+            borderBottom: "1px solid var(--border)",
+            position: "relative",
+          }}
+        >
+          <button
+            onClick={() => nav(backTo)}
+            type="button"
+            style={{
+              position: "absolute",
+              top: 12,
+              left: 12,
+              border: "1px solid rgba(255,255,255,0.16)",
+              background: "rgba(0,0,0,0.22)",
+              color: "var(--text)",
+              borderRadius: 999,
+              padding: "7px 11px",
+              fontSize: 13,
+              fontWeight: 800,
+              cursor: "pointer",
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            ← {t("back")}
+          </button>
+
+          <button
+            onClick={() =>
+              mode === "me" ? nav("/onboarding/profile") : nav("/profile")
+            }
+            type="button"
+            style={{
+              position: "absolute",
+              top: 12,
+              right: 12,
+              border: "1px solid rgba(255,255,255,0.16)",
+              background: "rgba(0,0,0,0.22)",
+              color: "var(--text)",
+              borderRadius: 999,
+              padding: "7px 12px",
+              fontSize: 13,
+              fontWeight: 900,
+              cursor: "pointer",
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            {mode === "me" ? t("edit") : t("my_profile")}
+          </button>
+        </div>
+
+        <div
+          style={{
+            padding: isMobile ? "0 14px 16px" : "0 22px 22px",
             display: "grid",
-            gap: 14,
-            paddingLeft: isMobile ? 12 : 0,
-            paddingRight: isMobile ? 12 : 0,
+            gap: isMobile ? 15 : 18,
           }}
         >
           <div
             style={{
               display: "flex",
-              alignItems: "flex-start",
-              gap: 12,
+              alignItems: "flex-end",
+              gap: isMobile ? 13 : 18,
+              marginTop: isMobile ? -44 : -58,
               minWidth: 0,
             }}
           >
-            {profile?.avatarUrl ? (
-              <div
-                style={{
-                  width: isMobile ? 58 : 72,
-                  height: isMobile ? 58 : 72,
-                  minWidth: isMobile ? 58 : 72,
-                  minHeight: isMobile ? 58 : 72,
-                  maxWidth: isMobile ? 58 : 72,
-                  maxHeight: isMobile ? 58 : 72,
-                  borderRadius: "50%",
-                  overflow: "hidden",
-                  clipPath: "circle(50% at 50% 50%)",
-                  WebkitClipPath: "circle(50% at 50% 50%)",
-                  border: "1px solid var(--border)",
-                  backgroundImage: `url(${fileUrl(profile.avatarUrl)})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                  backgroundRepeat: "no-repeat",
-                  flexShrink: 0,
-                  display: "block",
-                  boxSizing: "border-box",
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: isMobile ? 58 : 72,
-                  height: isMobile ? 58 : 72,
-                  minWidth: isMobile ? 58 : 72,
-                  minHeight: isMobile ? 58 : 72,
-                  maxWidth: isMobile ? 58 : 72,
-                  maxHeight: isMobile ? 58 : 72,
-                  borderRadius: "50%",
-                  background: "rgba(39,196,107,0.18)",
-                  border: "1px solid rgba(39,196,107,0.35)",
-                  display: "grid",
-                  placeItems: "center",
-                  fontWeight: 900,
-                  fontSize: isMobile ? 22 : 26,
-                  color: "var(--text)",
-                  flexShrink: 0,
-                }}
-              >
-                {(profile?.handle ?? targetHandle ?? "?")
-                  .slice(0, 1)
-                  .toUpperCase()}
-              </div>
-            )}
+            <div
+              style={{
+                width: isMobile ? 98 : 124,
+                height: isMobile ? 98 : 124,
+                minWidth: isMobile ? 98 : 124,
+                borderRadius: "50%",
+                border: isMobile
+                  ? "5px solid var(--bg)"
+                  : "5px solid var(--card)",
+                background: "var(--bg)",
+                overflow: "hidden",
+                boxShadow:
+                  "0 12px 28px rgba(0,0,0,0.24), 0 0 0 1px var(--border)",
+                display: "grid",
+                placeItems: "center",
+                boxSizing: "border-box",
+              }}
+            >
+              {profile?.avatarUrl ? (
+                <img
+                  src={fileUrl(profile.avatarUrl)}
+                  alt="avatar"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    display: "block",
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    display: "grid",
+                    placeItems: "center",
+                    fontSize: isMobile ? 36 : 44,
+                    fontWeight: 950,
+                    color: "var(--text)",
+                    background: "rgba(255,255,255,0.06)",
+                  }}
+                >
+                  {(profile?.handle ?? targetHandle ?? "?")
+                    .slice(0, 1)
+                    .toUpperCase()}
+                </div>
+              )}
+            </div>
 
             <div
               style={{
                 minWidth: 0,
                 flex: 1,
-                display: "grid",
-                gap: 6,
-                paddingTop: 2,
+                paddingBottom: isMobile ? 7 : 8,
               }}
             >
               <div
                 style={{
-                  fontWeight: 900,
-                  fontSize: isMobile ? 22 : 26,
+                  fontWeight: 950,
+                  fontSize: isMobile ? 27 : 33,
                   color: "var(--text)",
-                  lineHeight: 1.1,
-                  letterSpacing: "-0.02em",
+                  lineHeight: 1.04,
+                  letterSpacing: 0,
                   wordBreak: "break-word",
                 }}
               >
@@ -1229,215 +1268,164 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                   `@${profile?.handle ?? targetHandle ?? "unknown"}`}
               </div>
 
-              {profileDisplayName ? (
-                <div
-                  style={{
-                    fontSize: 14,
-                    color: "var(--sub)",
-                    lineHeight: 1.35,
-                    wordBreak: "break-word",
-                  }}
-                >
-                  @{profile?.handle ?? targetHandle ?? "unknown"}
-                </div>
-              ) : null}
-
               <div
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-                  gap: isMobile ? 10 : 16,
-                  marginTop: 8,
-                  width: "100%",
+                  marginTop: 5,
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: "var(--sub)",
+                  wordBreak: "break-word",
                 }}
               >
-                <button
-                  type="button"
-                  onClick={() => setActiveSection("posts")}
-                  style={summaryButtonStyle("posts")}
-                >
-                  <span
-                    style={{
-                      fontSize: isMobile ? 24 : 26,
-                      fontWeight: 900,
-                      lineHeight: 1,
-                      color: "var(--text)",
-                    }}
-                  >
-                    {posts.length}
-                  </span>
-                  <span
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                      fontSize: 12,
-                      fontWeight: 700,
-                      lineHeight: 1.25,
-                      color:
-                        activeSection === "posts"
-                          ? "var(--text)"
-                          : "var(--sub)",
-                    }}
-                  >
-                    <span>📝</span>
-                    <span>{t("posts")}</span>
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveSection("following")}
-                  style={summaryButtonStyle("following")}
-                >
-                  <span
-                    style={{
-                      fontSize: isMobile ? 20 : 22,
-                      fontWeight: 900,
-                      lineHeight: 1,
-                      color: "var(--text)",
-                    }}
-                  >
-                    {followingUsers.length}
-                  </span>
-                  <span
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                      fontSize: 12,
-                      fontWeight: 700,
-                      lineHeight: 1.25,
-                      color:
-                        activeSection === "following"
-                          ? "var(--text)"
-                          : "var(--sub)",
-                    }}
-                  >
-                    <span>➕</span>
-                    <span>{t("following")}</span>
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveSection("followers")}
-                  style={summaryButtonStyle("followers")}
-                >
-                  <span
-                    style={{
-                      fontSize: isMobile ? 20 : 22,
-                      fontWeight: 900,
-                      lineHeight: 1,
-                      color: "var(--text)",
-                    }}
-                  >
-                    {followers.length}
-                  </span>
-                  <span
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                      fontSize: 12,
-                      fontWeight: 700,
-                      lineHeight: 1.25,
-                      color:
-                        activeSection === "followers"
-                          ? "var(--text)"
-                          : "var(--sub)",
-                    }}
-                  >
-                    <span>👥</span>
-                    <span>{t("followers")}</span>
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveSection("courses")}
-                  style={summaryButtonStyle("courses")}
-                >
-                  <span
-                    style={{
-                      fontSize: isMobile ? 20 : 22,
-                      fontWeight: 900,
-                      lineHeight: 1,
-                      color: "var(--text)",
-                    }}
-                  >
-                    {followingCourses.length}
-                  </span>
-                  <span
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                      fontSize: 12,
-                      fontWeight: 700,
-                      lineHeight: 1.25,
-                      color:
-                        activeSection === "courses"
-                          ? "var(--text)"
-                          : "var(--sub)",
-                    }}
-                  >
-                    <span>⛳</span>
-                    <span>{t("courses")}</span>
-                  </span>
-                </button>
+                @{profile?.handle ?? targetHandle ?? "unknown"}
               </div>
-
-              {profile?.createdAt ? (
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: "var(--sub)",
-                    lineHeight: 1.35,
-                    marginTop: 2,
-                  }}
-                >
-                  {t("member_since")} {prettyDate(profile.createdAt)}
-                </div>
-              ) : null}
             </div>
           </div>
 
-          {mode === "handle" && !isSelf && followLabel ? (
+          {profile?.createdAt ? (
             <div
               style={{
-                width: "100%",
+                fontSize: 12,
+                color: "var(--sub)",
+                fontWeight: 700,
               }}
             >
-              <PillButton
-                onClick={toggleFollow}
-                disabled={followDisabled}
-                title={
-                  followStatus === "PENDING"
-                    ? t("follow_request_sent_title")
-                    : followStatus === "ACCEPTED"
-                      ? t("following_click_unfollow_title")
-                      : t("follow")
-                }
-                style={{
-                  ...followButtonStyle,
-                  width: isMobile ? "100%" : "auto",
-                  minWidth: isMobile ? undefined : 140,
-                  textAlign: "center",
-                }}
-              >
-                {followBusy ? "..." : followLabel}
-              </PillButton>
+              {t("member_since")} {prettyDate(profile.createdAt)}
             </div>
           ) : null}
+
+          {mode === "handle" && !isSelf && followLabel ? (
+            <PillButton
+              onClick={toggleFollow}
+              disabled={followDisabled}
+              title={
+                followStatus === "PENDING"
+                  ? t("follow_request_sent_title")
+                  : followStatus === "ACCEPTED"
+                    ? t("following_click_unfollow_title")
+                    : t("follow")
+              }
+              style={{
+                ...followButtonStyle,
+                width: isMobile ? "100%" : "fit-content",
+                minWidth: isMobile ? undefined : 160,
+                textAlign: "center",
+              }}
+            >
+              {followBusy ? "..." : followLabel}
+            </PillButton>
+          ) : null}
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+              gap: isMobile ? 7 : 10,
+              borderTop: "1px solid var(--border)",
+              paddingTop: isMobile ? 13 : 16,
+            }}
+          >
+            {[
+              {
+                key: "posts" as const,
+                count: posts.length,
+                label: t("posts"),
+                icon: "📝",
+              },
+              {
+                key: "following" as const,
+                count: followingUsers.length,
+                label: t("following"),
+                icon: "➕",
+              },
+              {
+                key: "followers" as const,
+                count: followers.length,
+                label: t("followers"),
+                icon: "👥",
+              },
+              {
+                key: "courses" as const,
+                count: followingCourses.length,
+                label: t("courses"),
+                icon: "⛳",
+              },
+            ].map((item) => {
+              const active = activeSection === item.key;
+
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => setActiveSection(item.key)}
+                  style={{
+                    minWidth: 0,
+                    border: "1px solid var(--border)",
+                    background: active ? "var(--bg)" : "var(--card)",
+                    color: "var(--text)",
+                    borderRadius: 18,
+                    padding: isMobile ? "10px 6px 11px" : "13px 10px",
+                    cursor: "pointer",
+                    display: "grid",
+                    gap: 5,
+                    justifyItems: "center",
+                    textAlign: "center",
+                    boxShadow: active
+                      ? "0 8px 20px rgba(0,0,0,0.12)"
+                      : "0 4px 14px rgba(0,0,0,0.08)",
+                    transition:
+                      "background 160ms ease, box-shadow 160ms ease, transform 160ms ease",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 18,
+                      lineHeight: 1,
+                    }}
+                  >
+                    {item.icon}
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: isMobile ? 18 : 21,
+                      fontWeight: 950,
+                      lineHeight: 1,
+                    }}
+                  >
+                    {item.count}
+                  </div>
+
+                  <div
+                    style={{
+                      maxWidth: "100%",
+                      fontSize: 11,
+                      fontWeight: 800,
+                      color: active ? "var(--text)" : "var(--sub)",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {item.label}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </Card>
+      </div>
 
-      {mode === "me" ? <ProfileSettingsCard /> : null}
+      {mode === "me" ? (
+        <div style={{ order: 20 }}>
+          <ProfileSettingsCard />
+        </div>
+      ) : null}
 
-      {mode === "me" && activeSection === "courses" && (
-        <Card title={t("following_courses")}>
-          <div style={{ padding: 12 }}>
+      {activeSection === "courses" && (
+        <div style={{ order: 1 }}>
+          <Card title={t("following_courses")}>
+            <div style={{ padding: 12 }}>
             <div
               style={{ fontSize: 12, color: "var(--sub)", marginBottom: 10 }}
             >
@@ -1518,19 +1506,21 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                 })}
               </div>
             )}
-          </div>
-        </Card>
+            </div>
+          </Card>
+        </div>
       )}
 
       {mode === "me" && (
-        <Card
-          title={t("follow_requests")}
-          right={
-            <span style={{ fontSize: 11, color: "var(--sub)" }}>
-              {followRequests.length}
-            </span>
-          }
-        >
+        <div style={{ order: 21 }}>
+          <Card
+            title={t("follow_requests")}
+            right={
+              <span style={{ fontSize: 11, color: "var(--sub)" }}>
+                {followRequests.length}
+              </span>
+            }
+          >
           {followRequests.length === 0 ? (
             <div style={{ padding: 10, color: "var(--sub)", fontSize: 13 }}>
               {t("no_open_requests")}
@@ -1658,18 +1648,20 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
               })}
             </div>
           )}
-        </Card>
+          </Card>
+        </div>
       )}
 
       {mode === "me" && (
-        <Card
-          title={t("sent_requests")}
-          right={
-            <span style={{ fontSize: 11, color: "var(--sub)" }}>
-              {sentFollowRequests.length}
-            </span>
-          }
-        >
+        <div style={{ order: 22 }}>
+          <Card
+            title={t("sent_requests")}
+            right={
+              <span style={{ fontSize: 11, color: "var(--sub)" }}>
+                {sentFollowRequests.length}
+              </span>
+            }
+          >
           {sentFollowRequests.length === 0 ? (
             <div style={{ padding: 10, color: "var(--sub)", fontSize: 13 }}>
               {t("no_open_sent_requests")}
@@ -1796,11 +1788,12 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
               })}
             </div>
           )}
-        </Card>
+          </Card>
+        </div>
       )}
 
-      {mode === "me" && activeSection === "following" && (
-        <div ref={followingUsersRef}>
+      {activeSection === "following" && (
+        <div ref={followingUsersRef} style={{ order: 1 }}>
           <UserListCard
             title={t("following_users")}
             count={followingUsers.length}
@@ -1822,8 +1815,8 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
         </div>
       )}
 
-      {mode === "me" && activeSection === "followers" && (
-        <div ref={followersRef}>
+      {activeSection === "followers" && (
+        <div ref={followersRef} style={{ order: 1 }}>
           <UserListCard
             title={t("followers")}
             count={followers.length}
@@ -1846,7 +1839,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
       )}
 
       {activeSection === "posts" && (
-        <div ref={postsRef}>
+        <div ref={postsRef} style={{ order: 1 }}>
           <Card
             title={t("posts")}
             right={
