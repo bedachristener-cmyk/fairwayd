@@ -130,6 +130,11 @@ function Card({
         border: "1px solid var(--border)",
         padding: isMobile ? "0 0 12px" : 12,
         color: "var(--text)",
+        width: "100%",
+        maxWidth: "100%",
+        minWidth: 0,
+        boxSizing: "border-box",
+        overflowX: "hidden",
       }}
     >
       <div
@@ -141,7 +146,17 @@ function Card({
       >
         {title}
       </div>
-      <div style={{ padding: isMobile ? 0 : 0 }}>{children}</div>
+      <div
+        style={{
+          padding: isMobile ? 0 : 0,
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
+          boxSizing: "border-box",
+        }}
+      >
+        {children}
+      </div>
     </div>
   );
 }
@@ -219,6 +234,7 @@ export default function FeedPage() {
   const [err, setErr] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
   const [composerHint, setComposerHint] = useState<string | null>(null);
+  const [composerOpen, setComposerOpen] = useState(false);
 
   const draftRef = useRef<HTMLTextAreaElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
@@ -467,6 +483,7 @@ export default function FeedPage() {
 
   useEffect(() => {
     if (!selectedCourse) return;
+    setComposerOpen(true);
     const t = window.setTimeout(() => {
       draftRef.current?.focus();
     }, 50);
@@ -855,6 +872,7 @@ export default function FeedPage() {
       setDraft("");
       setFiles([]);
       resetEditorState();
+      setComposerOpen(false);
 
       setPosts((prev) => {
         const rest = prev.filter((p) => p.id !== optimisticId);
@@ -899,11 +917,20 @@ export default function FeedPage() {
   const activeCommentPost =
     posts.find((p) => p.id === activeCommentPostId) ?? null;
 
+  const avatarLabel = (user?.name || user?.handle || handle || "M")
+    .slice(0, 1)
+    .toUpperCase();
+
   const composerBoxStyle: React.CSSProperties = {
-    padding: isMobile ? "0 12px 12px" : 12,
-    borderRadius: isMobile ? 0 : 14,
+    padding: isMobile ? 12 : 12,
+    borderRadius: isMobile ? 16 : 14,
     background: "var(--card)",
-    border: isMobile ? "none" : "1px solid var(--border)",
+    border: "1px solid var(--border)",
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+    boxSizing: "border-box",
+    overflowX: "hidden",
   };
 
   if (loading) return null;
@@ -930,7 +957,17 @@ export default function FeedPage() {
 
   return (
     <>
-      <div style={{ display: "grid", gap: 12 }}>
+      <div
+        style={{
+          display: "grid",
+          gap: 12,
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
+          boxSizing: "border-box",
+          overflowX: "hidden",
+        }}
+      >
         {err && (
           <div
             style={{
@@ -952,17 +989,96 @@ export default function FeedPage() {
               top: 12,
               zIndex: 20,
               paddingBottom: 12,
+              width: "100%",
+              maxWidth: "100%",
+              minWidth: 0,
+              boxSizing: "border-box",
+              overflowX: "hidden",
             }}
           >
             <div style={composerBoxStyle}>
-              <div
+              <button
+                type="button"
+                onClick={() => {
+                  setComposerOpen(true);
+                  window.setTimeout(() => draftRef.current?.focus(), 50);
+                }}
                 style={{
+                  width: "100%",
+                  maxWidth: "100%",
+                  minWidth: 0,
+                  boxSizing: "border-box",
                   display: "flex",
+                  alignItems: "center",
                   gap: 10,
-                  alignItems: isMobile ? "stretch" : "flex-start",
-                  flexWrap: "wrap",
+                  padding: 0,
+                  border: "none",
+                  background: "transparent",
+                  color: "var(--text)",
+                  textAlign: "left",
+                  cursor: "pointer",
                 }}
               >
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    minWidth: 36,
+                    borderRadius: "50%",
+                    border: "1px solid var(--border)",
+                    background: "var(--muted)",
+                    color: "var(--text)",
+                    display: "grid",
+                    placeItems: "center",
+                    fontSize: 13,
+                    fontWeight: 900,
+                    overflow: "hidden",
+                    flexShrink: 0,
+                  }}
+                >
+                  {avatarLabel}
+                </div>
+
+                <div
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    borderRadius: 999,
+                    border: "1px solid var(--border)",
+                    background: "var(--bg)",
+                    color: "var(--sub)",
+                    padding: isMobile ? "10px 13px" : "11px 15px",
+                    fontSize: isMobile ? 14 : 15,
+                    fontWeight: 700,
+                    lineHeight: 1.2,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  What's your golf moment?
+                </div>
+              </button>
+
+              {composerOpen ? (
+                <div
+                  style={{
+                    marginTop: 12,
+                    width: "100%",
+                    maxWidth: "100%",
+                    minWidth: 0,
+                    boxSizing: "border-box",
+                    overflowX: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 10,
+                      alignItems: isMobile ? "stretch" : "flex-start",
+                      flexWrap: "wrap",
+                    }}
+                  >
                 <div
                   style={{
                     display: "flex",
@@ -1921,13 +2037,20 @@ export default function FeedPage() {
                   </div>,
                   document.body,
                 )}
+                </div>
+              ) : null}
             </div>
           </div>
 
           <div
             style={{
               display: "grid",
-              gap: 10,
+              gap: isMobile ? 16 : 14,
+              width: "100%",
+              maxWidth: "100%",
+              minWidth: 0,
+              boxSizing: "border-box",
+              overflowX: "hidden",
               paddingBottom: isMobile
                 ? "calc(96px + env(safe-area-inset-bottom, 0px))"
                 : 0,
@@ -1939,7 +2062,10 @@ export default function FeedPage() {
                 display: "flex",
                 gap: isMobile ? 7 : 10,
                 overflowX: "auto",
-                padding: isMobile ? "2px 0 4px" : "0 0 2px",
+                maxWidth: "100%",
+                minWidth: 0,
+                boxSizing: "border-box",
+                padding: isMobile ? "2px 12px 4px" : "0 0 2px",
                 scrollbarWidth: "none",
                 msOverflowStyle: "none",
                 WebkitOverflowScrolling: "touch",
@@ -2030,7 +2156,15 @@ export default function FeedPage() {
               const isCourseFollowBusy = courseFollowBusyId === p.course.id;
 
               return (
-                <div key={p.id}>
+                <div
+                  key={p.id}
+                  style={{
+                    width: "100%",
+                    maxWidth: "100%",
+                    minWidth: 0,
+                    boxSizing: "border-box",
+                  }}
+                >
                   <PostCard
                     post={p}
                     isMobile={isMobile}

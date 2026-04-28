@@ -115,6 +115,8 @@ export default function PostCard({
   const [shareCopied, setShareCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const imageTouchStartXRef = useRef<number | null>(null);
+  const imageTouchStartYRef = useRef<number | null>(null);
   const nav = useNavigate();
 
   useEffect(() => {
@@ -209,6 +211,57 @@ export default function PostCard({
     }
 
     setLastTap(now);
+  };
+
+  const showPreviousImage = () => {
+    setActiveImageIndex((index) =>
+      index === 0 ? validImages.length - 1 : index - 1,
+    );
+  };
+
+  const showNextImage = () => {
+    setActiveImageIndex((index) =>
+      index === validImages.length - 1 ? 0 : index + 1,
+    );
+  };
+
+  const handleImageTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    const touch = e.touches[0];
+    imageTouchStartXRef.current = touch.clientX;
+    imageTouchStartYRef.current = touch.clientY;
+  };
+
+  const handleImageTouchEnd = async (e: React.TouchEvent<HTMLDivElement>) => {
+    const startX = imageTouchStartXRef.current;
+    const startY = imageTouchStartYRef.current;
+    imageTouchStartXRef.current = null;
+    imageTouchStartYRef.current = null;
+
+    const touch = e.changedTouches[0];
+    if (
+      hasMultipleImages &&
+      startX !== null &&
+      startY !== null &&
+      touch
+    ) {
+      const deltaX = touch.clientX - startX;
+      const deltaY = touch.clientY - startY;
+
+      if (Math.abs(deltaX) > 42 && Math.abs(deltaX) > Math.abs(deltaY) * 1.4) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (deltaX < 0) {
+          showNextImage();
+        } else {
+          showPreviousImage();
+        }
+
+        return;
+      }
+    }
+
+    await handleImageTap(e);
   };
 
   const validImages =
@@ -464,26 +517,41 @@ export default function PostCard({
       onClick={handleOpenPost}
       style={{
         padding: isMobile ? "10px 0" : 12,
-        borderRadius: isMobile ? 0 : 14,
+        width: "100%",
+        maxWidth: "100%",
+        minWidth: 0,
+        boxSizing: "border-box",
+        overflowX: "hidden",
+        borderRadius: isMobile ? 14 : 14,
         background: isMobile
-          ? "transparent"
+          ? "var(--card)"
           : isCommentTarget
             ? "rgba(0, 200, 100, 0.08)"
             : "rgba(0,0,0,.10)",
         border: isMobile
-          ? "none"
+          ? "1px solid var(--border)"
           : isCommentTarget
             ? "1px solid var(--green)"
             : "1px solid var(--border)",
         borderBottom: isMobile ? "1px solid var(--border)" : undefined,
         boxShadow: isCommentTarget
           ? "0 0 0 2px rgba(0, 200, 100, 0.25)"
-          : undefined,
+          : isMobile
+            ? "0 6px 18px rgba(0,0,0,0.06)"
+            : undefined,
         color: "var(--text)",
         cursor: onOpenPost && !isEditing && !isMenuOpen ? "pointer" : "default",
       }}
     >
-      <div style={{ padding: "0 12px" }}>
+      <div
+        style={{
+          padding: "0 12px",
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
+          boxSizing: "border-box",
+        }}
+      >
         <div
           style={{
             display: "flex",
@@ -1094,6 +1162,11 @@ export default function PostCard({
             display: "grid",
             gap: 8,
             marginTop: 12,
+            width: "100%",
+            maxWidth: "100%",
+            minWidth: 0,
+            boxSizing: "border-box",
+            overflowX: "hidden",
           }}
         >
           {(hasMultipleImages && activeImage ? [activeImage] : validImages).map(
@@ -1101,29 +1174,31 @@ export default function PostCard({
               const isHovered = hoveredImage === img.url;
 
               return (
-              <div
-                key={img.url}
-                onClick={handleImageTap}
-                onTouchEnd={handleImageTap}
-                onMouseEnter={() => {
-                  if (!isMobile) setHoveredImage(img.url);
-                }}
-                onMouseLeave={() => {
-                  if (!isMobile) setHoveredImage(null);
-                }}
-                className="fw-post-image-wrap"
-                style={{
-                  position: "relative",
-                  overflow: "hidden",
-                  borderRadius: isMobile ? 0 : 12,
-                  background: "var(--muted)",
-                  minHeight: 60,
-                  border: "1px solid var(--border)",
-                  boxShadow: "0 0 0 1px rgba(255,255,255,0.08) inset",
-                  cursor: "pointer",
-                  userSelect: "none",
-                }}
-              >
+                <div
+                  key={img.url}
+                  onClick={handleImageTap}
+                  onTouchStart={handleImageTouchStart}
+                  onTouchEnd={handleImageTouchEnd}
+                  onMouseEnter={() => {
+                    if (!isMobile) setHoveredImage(img.url);
+                  }}
+                  onMouseLeave={() => {
+                    if (!isMobile) setHoveredImage(null);
+                  }}
+                  className="fw-post-image-wrap"
+                  style={{
+                    position: "relative",
+                    overflow: "hidden",
+                    borderRadius: isMobile ? 0 : 12,
+                    background: "var(--muted)",
+                    minHeight: 60,
+                    border: "1px solid var(--border)",
+                    boxShadow: "0 0 0 1px rgba(255,255,255,0.08) inset",
+                    cursor: "pointer",
+                    userSelect: "none",
+                    touchAction: hasMultipleImages ? "pan-y" : "auto",
+                  }}
+                >
                 <img
                   className="fw-post-img"
                   src={fileUrl(img.url)}
@@ -1164,9 +1239,7 @@ export default function PostCard({
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        setActiveImageIndex((index) =>
-                          index === 0 ? validImages.length - 1 : index - 1,
-                        );
+                        showPreviousImage();
                       }}
                       aria-label="Previous image"
                       style={{
@@ -1196,9 +1269,7 @@ export default function PostCard({
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        setActiveImageIndex((index) =>
-                          index === validImages.length - 1 ? 0 : index + 1,
-                        );
+                        showNextImage();
                       }}
                       aria-label="Next image"
                       style={{
