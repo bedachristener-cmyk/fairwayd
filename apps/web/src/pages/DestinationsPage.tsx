@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { API_BASE } from "../api/base";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import BackToTopButton from "../components/BackToTopButton";
 import { t } from "../i18n/strings";
 
 type CountryItem = {
@@ -519,6 +520,8 @@ export default function DestinationsPage() {
           })}
         </div>
       )}
+
+      <BackToTopButton />
     </div>
   );
 }

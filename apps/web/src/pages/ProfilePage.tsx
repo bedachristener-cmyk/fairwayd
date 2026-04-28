@@ -14,6 +14,7 @@ import {
 } from "../theme/theme";
 import PostCard from "../components/PostCard";
 import CommentModal from "../components/CommentModal";
+import BackToTopButton from "../components/BackToTopButton";
 import { getLang, setLang, t, type Lang } from "../i18n/strings";
 
 type PostImage = { id: string; url: string };
@@ -1911,6 +1912,8 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
           onClose={() => setActiveCommentPostId(null)}
         />
       ) : null}
+
+      <BackToTopButton />
     </div>
   );
 }

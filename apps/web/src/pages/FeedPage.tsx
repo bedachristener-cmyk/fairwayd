@@ -4,9 +4,11 @@ import ReactCrop, { type Crop, type PixelCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
+import { useMe } from "../auth/useMe";
 import CourseDropdown, { type CourseLite } from "../components/CourseDropdown";
 import PostCard from "../components/PostCard";
 import CommentModal from "../components/CommentModal";
+import BackToTopButton from "../components/BackToTopButton";
 import { useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
@@ -17,6 +19,7 @@ import {
   type RatingSummary,
   type MyRating,
 } from "../api/ratings";
+import { fileUrl } from "../api/fileUrl";
 import { t } from "../i18n/strings";
 
 type PostImage = { id: string; url: string };
@@ -117,7 +120,7 @@ function Card({
   title,
   children,
 }: {
-  title: string;
+  title?: string;
   children: React.ReactNode;
 }) {
   const isMobile = window.innerWidth <= 980;
@@ -137,15 +140,17 @@ function Card({
         overflowX: "hidden",
       }}
     >
-      <div
-        style={{
-          fontWeight: 900,
-          marginBottom: 10,
-          padding: isMobile ? 12 : 0,
-        }}
-      >
-        {title}
-      </div>
+      {title ? (
+        <div
+          style={{
+            fontWeight: 900,
+            marginBottom: 10,
+            padding: isMobile ? 12 : 0,
+          }}
+        >
+          {title}
+        </div>
+      ) : null}
       <div
         style={{
           padding: isMobile ? 0 : 0,
@@ -168,9 +173,13 @@ export default function FeedPage() {
     useSelectedCourse();
 
   const { token, user, loading, logout, isAuthenticated } = useAuth();
+  const { me } = useMe(true);
 
   const handle =
-    user?.handle || localStorage.getItem("fairwayd_handle") || "me";
+    me?.handle ||
+    user?.handle ||
+    localStorage.getItem("fairwayd_handle") ||
+    "me";
 
   const searchParams = useMemo(
     () => new URLSearchParams(location.search),
@@ -421,7 +430,10 @@ export default function FeedPage() {
 
       const results = await Promise.all(
         destinations.map(
-          async (destination: { code?: string | null; slug?: string | null }) => {
+          async (destination: {
+            code?: string | null;
+            slug?: string | null;
+          }) => {
             const slug = destination.slug?.trim();
             const code = destination.code?.trim().toUpperCase();
 
@@ -453,8 +465,7 @@ export default function FeedPage() {
 
       setFollowedDestinationCodes(
         results.filter(
-          (code): code is string =>
-            typeof code === "string" && code.length > 0,
+          (code): code is string => typeof code === "string" && code.length > 0,
         ),
       );
     } catch (err) {
@@ -649,9 +660,7 @@ export default function FeedPage() {
 
     if (picked.length === 0) return;
 
-    setFiles((current) =>
-      [...current, ...picked].slice(0, MAX_POST_IMAGES),
-    );
+    setFiles((current) => [...current, ...picked].slice(0, MAX_POST_IMAGES));
     setErr(null);
   };
 
@@ -917,7 +926,19 @@ export default function FeedPage() {
   const activeCommentPost =
     posts.find((p) => p.id === activeCommentPostId) ?? null;
 
-  const avatarLabel = (user?.name || user?.handle || handle || "M")
+  const rawComposerAvatarUrl =
+    me?.avatarUrl || user?.avatarUrl || (user as any)?.me?.avatarUrl || "";
+  const composerAvatarUrl = rawComposerAvatarUrl
+    ? fileUrl(rawComposerAvatarUrl)
+    : "";
+  const avatarLabel = (
+    me?.name ||
+    user?.name ||
+    me?.handle ||
+    user?.handle ||
+    handle ||
+    "M"
+  )
     .slice(0, 1)
     .toUpperCase();
 
@@ -946,7 +967,7 @@ export default function FeedPage() {
             : 0,
         }}
       >
-        <Card title={t("feed")}>
+        <Card>
           <div style={{ color: "var(--sub)", fontSize: 13 }}>
             {t("feed_relogin_required")}
           </div>
@@ -982,7 +1003,7 @@ export default function FeedPage() {
           </div>
         )}
 
-        <Card title={t("feed")}>
+        <Card>
           <div
             style={{
               position: "sticky",
@@ -1036,7 +1057,20 @@ export default function FeedPage() {
                     flexShrink: 0,
                   }}
                 >
-                  {avatarLabel}
+                  {composerAvatarUrl ? (
+                    <img
+                      src={composerAvatarUrl}
+                      alt="avatar"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        display: "block",
+                      }}
+                    />
+                  ) : (
+                    avatarLabel
+                  )}
                 </div>
 
                 <div
@@ -1079,964 +1113,979 @@ export default function FeedPage() {
                       flexWrap: "wrap",
                     }}
                   >
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 8,
-                    flex: 1,
-                    minWidth: isMobile ? "100%" : 260,
-                  }}
-                >
-                  <CourseDropdown
-                    courses={coursesLite}
-                    selectedCourseId={selectedCourse?.id ?? null}
-                    onSelect={(id) => {
-                      const c = courses.find((x) => x.id === id);
-                      if (c) {
-                        setSelectedCourse(c);
-                        setComposerHint(null);
-                      }
-                    }}
-                    onClear={() => {
-                      clearSelectedCourse();
-                      setComposerHint(null);
-                    }}
-                    placeholder="Choose course"
-                  />
-
-                  {!selectedCourse ? (
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: composerHint ? "var(--text)" : "var(--sub)",
-                        fontWeight: composerHint ? 800 : 400,
-                      }}
-                    >
-                      {composerHint ?? t("composer_pick_course_before_posting")}
-                    </div>
-                  ) : (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: isMobile ? "stretch" : "center",
-                        justifyContent: "space-between",
-                        gap: 12,
-                        flexWrap: isMobile ? "wrap" : "nowrap",
-                        padding: isMobile ? "12px" : "12px 14px",
-                        borderRadius: 16,
-                        border: "1px solid var(--border)",
-                        background: "var(--card)",
-                        boxShadow: isMobile
-                          ? "none"
-                          : "0 4px 14px rgba(0,0,0,0.04)",
-                      }}
-                    >
-                      <div
-                        style={{
-                          minWidth: 0,
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: 4,
-                          flex: 1,
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 800,
-                            color: "var(--sub)",
-                            textTransform: "uppercase",
-                            letterSpacing: 0.5,
-                          }}
-                        >
-                          {t("selected_course")}
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!selectedCourseId) return;
-                            nav(`/courses/${selectedCourseId}`);
-                          }}
-                          style={{
-                            padding: 0,
-                            margin: 0,
-                            border: "none",
-                            background: "transparent",
-                            color: "var(--text)",
-                            fontSize: isMobile ? 15 : 16,
-                            fontWeight: 900,
-                            textAlign: "left",
-                            cursor: selectedCourseId ? "pointer" : "default",
-                            lineHeight: 1.25,
-                            wordBreak: "break-word",
-                          }}
-                        >
-                          {selectedCourse.name}
-                        </button>
-                        <div
-                          style={{
-                            fontSize: 12,
-                            color: "var(--sub)",
-                            lineHeight: 1.35,
-                          }}
-                        >
-                          {t("selected_course_help")}
-                        </div>
-
-                        {(selectedLocationLabel ||
-                          selectedHoles !== null ||
-                          selectedIsPrivate !== null ||
-                          normalizedSelectedWebsite) && (
-                          <div
-                            style={{
-                              display: "flex",
-                              flexWrap: "wrap",
-                              gap: 8,
-                              marginTop: 4,
-                            }}
-                          >
-                            {selectedLocationLabel ? (
-                              <span
-                                style={{
-                                  fontSize: 12,
-                                  color: "var(--sub)",
-                                  padding: "6px 10px",
-                                  borderRadius: 999,
-                                  border: "1px solid var(--border)",
-                                  background: "var(--bg)",
-                                }}
-                              >
-                                📍 {selectedLocationLabel}
-                              </span>
-                            ) : null}
-
-                            {selectedHoles !== null ? (
-                              <span
-                                style={{
-                                  fontSize: 12,
-                                  color: "var(--sub)",
-                                  padding: "6px 10px",
-                                  borderRadius: 999,
-                                  border: "1px solid var(--border)",
-                                  background: "var(--bg)",
-                                }}
-                              >
-                                ⛳ {selectedHoles} {t("holes")}
-                              </span>
-                            ) : null}
-
-                            {selectedIsPrivate !== null ? (
-                              <span
-                                style={{
-                                  fontSize: 12,
-                                  color: "var(--sub)",
-                                  padding: "6px 10px",
-                                  borderRadius: 999,
-                                  border: "1px solid var(--border)",
-                                  background: "var(--bg)",
-                                }}
-                              >
-                                {selectedIsPrivate
-                                  ? `🔒 ${t("visibility_private")}`
-                                  : `🌍 ${t("visibility_public")}`}
-                              </span>
-                            ) : null}
-
-                            {normalizedSelectedWebsite ? (
-                              <a
-                                href={normalizedSelectedWebsite}
-                                target="_blank"
-                                rel="noreferrer"
-                                style={{
-                                  fontSize: 12,
-                                  color: "var(--text)",
-                                  padding: "6px 10px",
-                                  borderRadius: 999,
-                                  border: "1px solid var(--border)",
-                                  background: "var(--bg)",
-                                  textDecoration: "none",
-                                  fontWeight: 700,
-                                }}
-                              >
-                                {t("website")}
-                              </a>
-                            ) : null}
-                          </div>
-                        )}
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!selectedCourseId || isSelectedCourseFollowBusy) {
-                            return;
-                          }
-                          handleToggleCourseFollow(selectedCourseId);
-                        }}
-                        disabled={
-                          !selectedCourseId || isSelectedCourseFollowBusy
-                        }
-                        style={{
-                          alignSelf: isMobile ? "stretch" : "center",
-                          minWidth: isMobile ? "100%" : 132,
-                          minHeight: 42,
-                          padding: "10px 14px",
-                          borderRadius: 999,
-                          border: isSelectedCourseFollowed
-                            ? "1px solid rgba(39,196,107,0.45)"
-                            : "1px solid var(--border)",
-                          background: isSelectedCourseFollowed
-                            ? "rgba(39,196,107,0.18)"
-                            : "var(--bg)",
-                          color: "var(--text)",
-                          fontWeight: 800,
-                          fontSize: 13,
-                          cursor:
-                            !selectedCourseId || isSelectedCourseFollowBusy
-                              ? "default"
-                              : "pointer",
-                          opacity:
-                            !selectedCourseId || isSelectedCourseFollowBusy
-                              ? 0.7
-                              : 1,
-                          whiteSpace: "nowrap",
-                          boxShadow: isSelectedCourseFollowed
-                            ? "0 0 0 1px rgba(39,196,107,0.12)"
-                            : "none",
-                          transition:
-                            "background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease",
-                        }}
-                      >
-                        {isSelectedCourseFollowBusy
-                          ? t("updating")
-                          : isSelectedCourseFollowed
-                            ? t("following")
-                            : t("follow")}
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <div
-                  style={{
-                    marginLeft: isMobile ? 0 : "auto",
-                    minWidth: isMobile ? "100%" : "auto",
-                    background: "var(--card)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 14,
-                    paddingRight: 10,
-                    display: "flex",
-                    alignItems: "center",
-                    boxShadow: isMobile
-                      ? "none"
-                      : "0 2px 10px rgba(0,0,0,0.03)",
-                  }}
-                >
-                  <select
-                    value={visibility}
-                    onChange={(e) =>
-                      setVisibility(
-                        e.target.value as "PUBLIC" | "FOLLOWERS" | "PRIVATE",
-                      )
-                    }
-                    style={{
-                      padding: "10px 12px",
-                      border: "none",
-                      outline: "none",
-                      background: "var(--card)",
-                      color: "var(--text)",
-                      fontWeight: 800,
-                      fontSize: 13,
-                      appearance: "none",
-                      WebkitAppearance: "none",
-                      MozAppearance: "none",
-                      borderRadius: 14,
-                      cursor: posting ? "default" : "pointer",
-                      width: isMobile ? "100%" : "auto",
-                    }}
-                    disabled={posting}
-                  >
-                    <option
-                      value="PUBLIC"
-                      style={{
-                        background: "var(--card)",
-                        color: "var(--text)",
-                      }}
-                    >
-                      🌍 {t("visibility_public")}
-                    </option>
-                    <option
-                      value="FOLLOWERS"
-                      style={{
-                        background: "var(--card)",
-                        color: "var(--text)",
-                      }}
-                    >
-                      👥 {t("visibility_followers")}
-                    </option>
-                    <option
-                      value="PRIVATE"
-                      style={{
-                        background: "var(--card)",
-                        color: "var(--text)",
-                      }}
-                    >
-                      🔒 {t("visibility_private")}
-                    </option>
-                  </select>
-                </div>
-              </div>
-
-              <textarea
-                ref={draftRef}
-                value={draft}
-                onChange={(e) => {
-                  setDraft(e.target.value);
-                  if (err) setErr(null);
-                  if (composerHint) setComposerHint(null);
-                }}
-                placeholder={t("composer_moment_placeholder")}
-                rows={3}
-                style={{
-                  width: "100%",
-                  boxSizing: "border-box",
-                  marginTop: 10,
-                  borderRadius: isMobile ? 0 : 12,
-                  border: isMobile ? "none" : "1px solid var(--border)",
-                  padding: 12,
-                  background: "var(--bg)",
-                  color: "var(--text)",
-                }}
-                disabled={posting}
-              />
-              <div
-                style={{
-                  display: "flex",
-                  gap: 10,
-                  alignItems: "center",
-                  marginTop: 12,
-                  padding: isMobile ? "12px 0 0" : "12px",
-                  flexWrap: "wrap",
-                  rowGap: 10,
-                  justifyContent: "space-between",
-                  borderTop: "1px solid var(--border)",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <input
-                    ref={galleryInputRef}
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleComposerImageChange}
-                    disabled={posting}
-                    style={{ display: "none" }}
-                  />
-
-                  <input
-                    ref={cameraInputRef}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={handleComposerImageChange}
-                    disabled={posting}
-                    style={{ display: "none" }}
-                  />
-
-                  {supportsDirectCamera ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={openCameraPicker}
-                        disabled={posting}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 8,
-                          padding: "8px 12px",
-                          borderRadius: 999,
-                          border: "1px solid var(--border)",
-                          background: "var(--bg)",
-                          color: posting ? "var(--sub)" : "var(--text)",
-                          fontWeight: 700,
-                          fontSize: 12,
-                          cursor: posting ? "default" : "pointer",
-                          opacity: posting ? 0.6 : 1,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        📸 {t("camera")}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={openGalleryPicker}
-                        disabled={posting}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 8,
-                          padding: "8px 12px",
-                          borderRadius: 999,
-                          border: "1px solid var(--border)",
-                          background: "var(--bg)",
-                          color: posting ? "var(--sub)" : "var(--text)",
-                          fontWeight: 700,
-                          fontSize: 12,
-                          cursor: posting ? "default" : "pointer",
-                          opacity: posting ? 0.6 : 1,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        🖼️ {t("gallery")}
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={openGalleryPicker}
-                      disabled={posting}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "8px 12px",
-                        borderRadius: 999,
-                        border: "1px solid var(--border)",
-                        background: "var(--bg)",
-                        color: posting ? "var(--sub)" : "var(--text)",
-                        fontWeight: 700,
-                        fontSize: 12,
-                        cursor: posting ? "default" : "pointer",
-                        opacity: posting ? 0.6 : 1,
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      📷 {t("add_image")}
-                    </button>
-                  )}
-                </div>
-
-                {files.length > 0 ? (
-                  <div
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 10,
-                      minWidth: 0,
-                      maxWidth: isMobile ? "100%" : 360,
-                      padding: "10px 12px",
-                      borderRadius: 14,
-                      background: "var(--bg)",
-                      border: "1px solid var(--border)",
-                    }}
-                  >
                     <div
                       style={{
                         display: "flex",
                         flexDirection: "column",
-                        minWidth: 0,
-                        gap: 2,
+                        gap: 8,
                         flex: 1,
+                        minWidth: isMobile ? "100%" : 260,
                       }}
                     >
-                      <span
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 800,
-                          color: "var(--text)",
-                        }}
-                      >
-                        {t("image_ready_count")}
-                      </span>
-
-                      <span
-                        style={{
-                          fontSize: 12,
-                          color: "var(--sub)",
-                          minWidth: 0,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                        title={files.map((picked) => picked.name).join(", ")}
-                      >
-                        {files.length === 1
-                          ? files[0].name
-                          : `${files.length} / ${MAX_POST_IMAGES} images`}
-                      </span>
-                    </div>
-
-                    {files.length === 1 ? (
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const [firstFile] = files;
-                          if (!firstFile) return;
-
-                          try {
-                            await openEditorForFile(firstFile);
-                            setErr(null);
-                          } catch (err: any) {
-                            console.error("Re-open editor failed", err);
-                            setErr(
-                              err?.message ?? "Failed to reopen image editor",
-                            );
+                      <CourseDropdown
+                        courses={coursesLite}
+                        selectedCourseId={selectedCourse?.id ?? null}
+                        onSelect={(id) => {
+                          const c = courses.find((x) => x.id === id);
+                          if (c) {
+                            setSelectedCourse(c);
+                            setComposerHint(null);
                           }
                         }}
-                        disabled={posting}
-                        style={{
-                          border: "1px solid var(--border)",
-                          background: "var(--card)",
-                          color: posting ? "var(--sub)" : "var(--text)",
-                          fontSize: 12,
-                          fontWeight: 800,
-                          cursor: posting ? "default" : "pointer",
-                          padding: "8px 10px",
-                          borderRadius: 999,
-                          whiteSpace: "nowrap",
-                          opacity: posting ? 0.6 : 1,
+                        onClear={() => {
+                          clearSelectedCourse();
+                          setComposerHint(null);
                         }}
-                      >
-                        {t("edit")}
-                      </button>
-                    ) : null}
+                        placeholder="Choose course"
+                      />
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFiles([]);
-                        resetEditorState();
-                      }}
-                      disabled={posting}
-                      style={{
-                        border: "1px solid var(--border)",
-                        background: "var(--card)",
-                        color: posting ? "var(--sub)" : "var(--text)",
-                        fontSize: 12,
-                        fontWeight: 800,
-                        cursor: posting ? "default" : "pointer",
-                        padding: "8px 10px",
-                        borderRadius: 999,
-                        whiteSpace: "nowrap",
-                        opacity: posting ? 0.6 : 1,
-                      }}
-                    >
-                      {t("remove")}
-                    </button>
-                  </div>
-                ) : null}
-
-                <div
-                  style={{
-                    marginLeft: "auto",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    flexWrap: "wrap",
-                    justifyContent: "flex-end",
-                  }}
-                >
-                  {!selectedCourse && (
-                    <span
-                      style={{
-                        fontSize: 12,
-                        color: "var(--sub)",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {t("composer_choose_course_first_to_post")}
-                    </span>
-                  )}
-
-                  {selectedCourse && !draft.trim() && files.length === 0 && (
-                    <span
-                      style={{
-                        fontSize: 12,
-                        color: "var(--sub)",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {t("composer_write_or_add_image")}
-                    </span>
-                  )}
-
-                  {selectedCourse && files.length > 0 && !draft.trim() && (
-                    <span
-                      style={{
-                        fontSize: 12,
-                        color: "var(--sub)",
-                      }}
-                    >
-                      {t("composer_image_ready_to_post")}
-                    </span>
-                  )}
-
-                  <button
-                    onClick={submitPost}
-                    disabled={
-                      posting ||
-                      !selectedCourse ||
-                      (!draft.trim() && files.length === 0)
-                    }
-                    style={{
-                      padding: "10px 16px",
-                      borderRadius: 999,
-                      border: "1px solid var(--border)",
-                      background: "var(--text)",
-                      color: "var(--bg)",
-                      fontWeight: 800,
-                      cursor:
-                        posting ||
-                        !selectedCourse ||
-                        (!draft.trim() && files.length === 0)
-                          ? "default"
-                          : "pointer",
-                      opacity:
-                        posting ||
-                        !selectedCourse ||
-                        (!draft.trim() && files.length === 0)
-                          ? 0.5
-                          : 1,
-                    }}
-                    type="button"
-                  >
-                    {posting
-                      ? t("posting")
-                      : files.length > 0 && !draft.trim()
-                        ? t("post_image")
-                        : t("post")}
-                  </button>
-                </div>
-              </div>
-
-              {previews.length > 0 && (
-                <div
-                  style={{
-                    marginTop: 12,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 10,
-                    width: "100%",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 800,
-                      color: "var(--sub)",
-                    }}
-                  >
-                    {t("image_preview")}
-                  </div>
-
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: isMobile
-                        ? "repeat(3, minmax(0, 1fr))"
-                        : "repeat(5, minmax(0, 96px))",
-                      gap: 8,
-                    }}
-                  >
-                    {previews.map((previewUrl, index) => (
-                      <div
-                        key={previewUrl}
-                        style={{
-                          position: "relative",
-                          aspectRatio: "1 / 1",
-                          borderRadius: 12,
-                          overflow: "hidden",
-                          border: "1px solid var(--border)",
-                          background: "var(--bg)",
-                        }}
-                      >
-                        <img
-                          src={previewUrl}
-                          alt="preview"
+                      {!selectedCourse ? (
+                        <div
                           style={{
-                            display: "block",
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                            background: "var(--card)",
-                          }}
-                        />
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setFiles((current) =>
-                              current.filter((_, i) => i !== index),
-                            )
-                          }
-                          disabled={posting}
-                          aria-label="Remove image"
-                          style={{
-                            position: "absolute",
-                            top: 5,
-                            right: 5,
-                            width: 24,
-                            height: 24,
-                            borderRadius: 999,
-                            border: "1px solid rgba(255,255,255,0.5)",
-                            background: "rgba(0,0,0,0.58)",
-                            color: "#fff",
-                            fontSize: 16,
-                            fontWeight: 900,
-                            lineHeight: 1,
-                            cursor: posting ? "default" : "pointer",
-                            display: "grid",
-                            placeItems: "center",
-                            opacity: posting ? 0.6 : 1,
+                            fontSize: 12,
+                            color: composerHint ? "var(--text)" : "var(--sub)",
+                            fontWeight: composerHint ? 800 : 400,
                           }}
                         >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                          {composerHint ??
+                            t("composer_pick_course_before_posting")}
+                        </div>
+                      ) : (
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: isMobile ? "stretch" : "center",
+                            justifyContent: "space-between",
+                            gap: 12,
+                            flexWrap: isMobile ? "wrap" : "nowrap",
+                            padding: isMobile ? "12px" : "12px 14px",
+                            borderRadius: 16,
+                            border: "1px solid var(--border)",
+                            background: "var(--card)",
+                            boxShadow: isMobile
+                              ? "none"
+                              : "0 4px 14px rgba(0,0,0,0.04)",
+                          }}
+                        >
+                          <div
+                            style={{
+                              minWidth: 0,
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 4,
+                              flex: 1,
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 800,
+                                color: "var(--sub)",
+                                textTransform: "uppercase",
+                                letterSpacing: 0.5,
+                              }}
+                            >
+                              {t("selected_course")}
+                            </div>
 
-              {editorOpen &&
-                editorImageSrc &&
-                createPortal(
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!selectedCourseId) return;
+                                nav(`/courses/${selectedCourseId}`);
+                              }}
+                              style={{
+                                padding: 0,
+                                margin: 0,
+                                border: "none",
+                                background: "transparent",
+                                color: "var(--text)",
+                                fontSize: isMobile ? 15 : 16,
+                                fontWeight: 900,
+                                textAlign: "left",
+                                cursor: selectedCourseId
+                                  ? "pointer"
+                                  : "default",
+                                lineHeight: 1.25,
+                                wordBreak: "break-word",
+                              }}
+                            >
+                              {selectedCourse.name}
+                            </button>
+                            <div
+                              style={{
+                                fontSize: 12,
+                                color: "var(--sub)",
+                                lineHeight: 1.35,
+                              }}
+                            >
+                              {t("selected_course_help")}
+                            </div>
+
+                            {(selectedLocationLabel ||
+                              selectedHoles !== null ||
+                              selectedIsPrivate !== null ||
+                              normalizedSelectedWebsite) && (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexWrap: "wrap",
+                                  gap: 8,
+                                  marginTop: 4,
+                                }}
+                              >
+                                {selectedLocationLabel ? (
+                                  <span
+                                    style={{
+                                      fontSize: 12,
+                                      color: "var(--sub)",
+                                      padding: "6px 10px",
+                                      borderRadius: 999,
+                                      border: "1px solid var(--border)",
+                                      background: "var(--bg)",
+                                    }}
+                                  >
+                                    📍 {selectedLocationLabel}
+                                  </span>
+                                ) : null}
+
+                                {selectedHoles !== null ? (
+                                  <span
+                                    style={{
+                                      fontSize: 12,
+                                      color: "var(--sub)",
+                                      padding: "6px 10px",
+                                      borderRadius: 999,
+                                      border: "1px solid var(--border)",
+                                      background: "var(--bg)",
+                                    }}
+                                  >
+                                    ⛳ {selectedHoles} {t("holes")}
+                                  </span>
+                                ) : null}
+
+                                {selectedIsPrivate !== null ? (
+                                  <span
+                                    style={{
+                                      fontSize: 12,
+                                      color: "var(--sub)",
+                                      padding: "6px 10px",
+                                      borderRadius: 999,
+                                      border: "1px solid var(--border)",
+                                      background: "var(--bg)",
+                                    }}
+                                  >
+                                    {selectedIsPrivate
+                                      ? `🔒 ${t("visibility_private")}`
+                                      : `🌍 ${t("visibility_public")}`}
+                                  </span>
+                                ) : null}
+
+                                {normalizedSelectedWebsite ? (
+                                  <a
+                                    href={normalizedSelectedWebsite}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    style={{
+                                      fontSize: 12,
+                                      color: "var(--text)",
+                                      padding: "6px 10px",
+                                      borderRadius: 999,
+                                      border: "1px solid var(--border)",
+                                      background: "var(--bg)",
+                                      textDecoration: "none",
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    {t("website")}
+                                  </a>
+                                ) : null}
+                              </div>
+                            )}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (
+                                !selectedCourseId ||
+                                isSelectedCourseFollowBusy
+                              ) {
+                                return;
+                              }
+                              handleToggleCourseFollow(selectedCourseId);
+                            }}
+                            disabled={
+                              !selectedCourseId || isSelectedCourseFollowBusy
+                            }
+                            style={{
+                              alignSelf: isMobile ? "stretch" : "center",
+                              minWidth: isMobile ? "100%" : 132,
+                              minHeight: 42,
+                              padding: "10px 14px",
+                              borderRadius: 999,
+                              border: isSelectedCourseFollowed
+                                ? "1px solid rgba(39,196,107,0.45)"
+                                : "1px solid var(--border)",
+                              background: isSelectedCourseFollowed
+                                ? "rgba(39,196,107,0.18)"
+                                : "var(--bg)",
+                              color: "var(--text)",
+                              fontWeight: 800,
+                              fontSize: 13,
+                              cursor:
+                                !selectedCourseId || isSelectedCourseFollowBusy
+                                  ? "default"
+                                  : "pointer",
+                              opacity:
+                                !selectedCourseId || isSelectedCourseFollowBusy
+                                  ? 0.7
+                                  : 1,
+                              whiteSpace: "nowrap",
+                              boxShadow: isSelectedCourseFollowed
+                                ? "0 0 0 1px rgba(39,196,107,0.12)"
+                                : "none",
+                              transition:
+                                "background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease",
+                            }}
+                          >
+                            {isSelectedCourseFollowBusy
+                              ? t("updating")
+                              : isSelectedCourseFollowed
+                                ? t("following")
+                                : t("follow")}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div
+                      style={{
+                        marginLeft: isMobile ? 0 : "auto",
+                        minWidth: isMobile ? "100%" : "auto",
+                        background: "var(--card)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 14,
+                        paddingRight: 10,
+                        display: "flex",
+                        alignItems: "center",
+                        boxShadow: isMobile
+                          ? "none"
+                          : "0 2px 10px rgba(0,0,0,0.03)",
+                      }}
+                    >
+                      <select
+                        value={visibility}
+                        onChange={(e) =>
+                          setVisibility(
+                            e.target.value as
+                              | "PUBLIC"
+                              | "FOLLOWERS"
+                              | "PRIVATE",
+                          )
+                        }
+                        style={{
+                          padding: "10px 12px",
+                          border: "none",
+                          outline: "none",
+                          background: "var(--card)",
+                          color: "var(--text)",
+                          fontWeight: 800,
+                          fontSize: 13,
+                          appearance: "none",
+                          WebkitAppearance: "none",
+                          MozAppearance: "none",
+                          borderRadius: 14,
+                          cursor: posting ? "default" : "pointer",
+                          width: isMobile ? "100%" : "auto",
+                        }}
+                        disabled={posting}
+                      >
+                        <option
+                          value="PUBLIC"
+                          style={{
+                            background: "var(--card)",
+                            color: "var(--text)",
+                          }}
+                        >
+                          🌍 {t("visibility_public")}
+                        </option>
+                        <option
+                          value="FOLLOWERS"
+                          style={{
+                            background: "var(--card)",
+                            color: "var(--text)",
+                          }}
+                        >
+                          👥 {t("visibility_followers")}
+                        </option>
+                        <option
+                          value="PRIVATE"
+                          style={{
+                            background: "var(--card)",
+                            color: "var(--text)",
+                          }}
+                        >
+                          🔒 {t("visibility_private")}
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <textarea
+                    ref={draftRef}
+                    value={draft}
+                    onChange={(e) => {
+                      setDraft(e.target.value);
+                      if (err) setErr(null);
+                      if (composerHint) setComposerHint(null);
+                    }}
+                    placeholder={t("composer_moment_placeholder")}
+                    rows={3}
+                    style={{
+                      width: "100%",
+                      boxSizing: "border-box",
+                      marginTop: 10,
+                      borderRadius: isMobile ? 0 : 12,
+                      border: isMobile ? "none" : "1px solid var(--border)",
+                      padding: 12,
+                      background: "var(--bg)",
+                      color: "var(--text)",
+                    }}
+                    disabled={posting}
+                  />
                   <div
                     style={{
-                      position: "fixed",
-                      inset: 0,
-                      zIndex: 2147483647,
-                      background: "rgba(0,0,0,0.82)",
+                      display: "flex",
+                      gap: 10,
+                      alignItems: "center",
+                      marginTop: 12,
+                      padding: isMobile ? "12px 0 0" : "12px",
+                      flexWrap: "wrap",
+                      rowGap: 10,
+                      justifyContent: "space-between",
+                      borderTop: "1px solid var(--border)",
                     }}
                   >
                     <div
                       style={{
-                        position: "absolute",
-                        inset: 0,
-                        background: "var(--card)",
-                        color: "var(--text)",
-                        display: "grid",
-                        gridTemplateRows: "auto minmax(0, 1fr) auto",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        flexWrap: "wrap",
                       }}
                     >
+                      <input
+                        ref={galleryInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleComposerImageChange}
+                        disabled={posting}
+                        style={{ display: "none" }}
+                      />
+
+                      <input
+                        ref={cameraInputRef}
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handleComposerImageChange}
+                        disabled={posting}
+                        style={{ display: "none" }}
+                      />
+
+                      {supportsDirectCamera ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={openCameraPicker}
+                            disabled={posting}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 8,
+                              padding: "8px 12px",
+                              borderRadius: 999,
+                              border: "1px solid var(--border)",
+                              background: "var(--bg)",
+                              color: posting ? "var(--sub)" : "var(--text)",
+                              fontWeight: 700,
+                              fontSize: 12,
+                              cursor: posting ? "default" : "pointer",
+                              opacity: posting ? 0.6 : 1,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            📸 {t("camera")}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={openGalleryPicker}
+                            disabled={posting}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 8,
+                              padding: "8px 12px",
+                              borderRadius: 999,
+                              border: "1px solid var(--border)",
+                              background: "var(--bg)",
+                              color: posting ? "var(--sub)" : "var(--text)",
+                              fontWeight: 700,
+                              fontSize: 12,
+                              cursor: posting ? "default" : "pointer",
+                              opacity: posting ? 0.6 : 1,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            🖼️ {t("gallery")}
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={openGalleryPicker}
+                          disabled={posting}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 8,
+                            padding: "8px 12px",
+                            borderRadius: 999,
+                            border: "1px solid var(--border)",
+                            background: "var(--bg)",
+                            color: posting ? "var(--sub)" : "var(--text)",
+                            fontWeight: 700,
+                            fontSize: 12,
+                            cursor: posting ? "default" : "pointer",
+                            opacity: posting ? 0.6 : 1,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          📷 {t("add_image")}
+                        </button>
+                      )}
+                    </div>
+
+                    {files.length > 0 ? (
                       <div
                         style={{
-                          padding: isMobile
-                            ? "12px 14px 10px"
-                            : "14px 16px 10px",
-                          borderBottom: "1px solid var(--border)",
-                          display: "flex",
+                          display: "inline-flex",
                           alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: 12,
-                          background: "var(--card)",
+                          gap: 10,
+                          minWidth: 0,
+                          maxWidth: isMobile ? "100%" : 360,
+                          padding: "10px 12px",
+                          borderRadius: 14,
+                          background: "var(--bg)",
+                          border: "1px solid var(--border)",
                         }}
                       >
-                        <div>
-                          <div style={{ fontWeight: 900, fontSize: 16 }}>
-                            {t("edit_image")}
-                          </div>
-                          <div
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            minWidth: 0,
+                            gap: 2,
+                            flex: 1,
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 800,
+                              color: "var(--text)",
+                            }}
+                          >
+                            {t("image_ready_count")}
+                          </span>
+
+                          <span
                             style={{
                               fontSize: 12,
                               color: "var(--sub)",
-                              marginTop: 4,
+                              minWidth: 0,
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                            title={files
+                              .map((picked) => picked.name)
+                              .join(", ")}
+                          >
+                            {files.length === 1
+                              ? files[0].name
+                              : `${files.length} / ${MAX_POST_IMAGES} images`}
+                          </span>
+                        </div>
+
+                        {files.length === 1 ? (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const [firstFile] = files;
+                              if (!firstFile) return;
+
+                              try {
+                                await openEditorForFile(firstFile);
+                                setErr(null);
+                              } catch (err: any) {
+                                console.error("Re-open editor failed", err);
+                                setErr(
+                                  err?.message ??
+                                    "Failed to reopen image editor",
+                                );
+                              }
+                            }}
+                            disabled={posting}
+                            style={{
+                              border: "1px solid var(--border)",
+                              background: "var(--card)",
+                              color: posting ? "var(--sub)" : "var(--text)",
+                              fontSize: 12,
+                              fontWeight: 800,
+                              cursor: posting ? "default" : "pointer",
+                              padding: "8px 10px",
+                              borderRadius: 999,
+                              whiteSpace: "nowrap",
+                              opacity: posting ? 0.6 : 1,
                             }}
                           >
-                            {t("edit_image_help")}
-                          </div>
-                        </div>
+                            {t("edit")}
+                          </button>
+                        ) : null}
 
                         <button
                           type="button"
                           onClick={() => {
-                            if (applyingEdit) return;
+                            setFiles([]);
                             resetEditorState();
                           }}
-                          disabled={applyingEdit}
+                          disabled={posting}
                           style={{
                             border: "1px solid var(--border)",
-                            background: "var(--bg)",
-                            color: "var(--text)",
+                            background: "var(--card)",
+                            color: posting ? "var(--sub)" : "var(--text)",
+                            fontSize: 12,
+                            fontWeight: 800,
+                            cursor: posting ? "default" : "pointer",
+                            padding: "8px 10px",
                             borderRadius: 999,
-                            padding: "8px 12px",
-                            fontWeight: 700,
-                            cursor: applyingEdit ? "default" : "pointer",
-                            opacity: applyingEdit ? 0.6 : 1,
+                            whiteSpace: "nowrap",
+                            opacity: posting ? 0.6 : 1,
                           }}
                         >
-                          {t("close")}
+                          {t("remove")}
                         </button>
                       </div>
+                    ) : null}
+
+                    <div
+                      style={{
+                        marginLeft: "auto",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        flexWrap: "wrap",
+                        justifyContent: "flex-end",
+                      }}
+                    >
+                      {!selectedCourse && (
+                        <span
+                          style={{
+                            fontSize: 12,
+                            color: "var(--sub)",
+                            fontWeight: 700,
+                          }}
+                        >
+                          {t("composer_choose_course_first_to_post")}
+                        </span>
+                      )}
+
+                      {selectedCourse &&
+                        !draft.trim() &&
+                        files.length === 0 && (
+                          <span
+                            style={{
+                              fontSize: 12,
+                              color: "var(--sub)",
+                              fontWeight: 700,
+                            }}
+                          >
+                            {t("composer_write_or_add_image")}
+                          </span>
+                        )}
+
+                      {selectedCourse && files.length > 0 && !draft.trim() && (
+                        <span
+                          style={{
+                            fontSize: 12,
+                            color: "var(--sub)",
+                          }}
+                        >
+                          {t("composer_image_ready_to_post")}
+                        </span>
+                      )}
+
+                      <button
+                        onClick={submitPost}
+                        disabled={
+                          posting ||
+                          !selectedCourse ||
+                          (!draft.trim() && files.length === 0)
+                        }
+                        style={{
+                          padding: "10px 16px",
+                          borderRadius: 999,
+                          border: "1px solid var(--border)",
+                          background: "var(--text)",
+                          color: "var(--bg)",
+                          fontWeight: 800,
+                          cursor:
+                            posting ||
+                            !selectedCourse ||
+                            (!draft.trim() && files.length === 0)
+                              ? "default"
+                              : "pointer",
+                          opacity:
+                            posting ||
+                            !selectedCourse ||
+                            (!draft.trim() && files.length === 0)
+                              ? 0.5
+                              : 1,
+                        }}
+                        type="button"
+                      >
+                        {posting
+                          ? t("posting")
+                          : files.length > 0 && !draft.trim()
+                            ? t("post_image")
+                            : t("post")}
+                      </button>
+                    </div>
+                  </div>
+
+                  {previews.length > 0 && (
+                    <div
+                      style={{
+                        marginTop: 12,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 10,
+                        width: "100%",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 800,
+                          color: "var(--sub)",
+                        }}
+                      >
+                        {t("image_preview")}
+                      </div>
 
                       <div
                         style={{
-                          minHeight: 0,
-                          overflow: "auto",
-                          background: "#111",
-                          padding: isMobile ? 10 : 20,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
+                          display: "grid",
+                          gridTemplateColumns: isMobile
+                            ? "repeat(3, minmax(0, 1fr))"
+                            : "repeat(5, minmax(0, 96px))",
+                          gap: 8,
                         }}
                       >
-                        <div
-                          style={{
-                            maxWidth: "100%",
-                            width: "100%",
-                            display: "flex",
-                            justifyContent: "center",
-                          }}
-                        >
-                          <ReactCrop
-                            crop={crop}
-                            onChange={(nextCrop) => setCrop(nextCrop)}
-                            onComplete={(pixelCrop) =>
-                              setCompletedCrop(pixelCrop)
-                            }
+                        {previews.map((previewUrl, index) => (
+                          <div
+                            key={previewUrl}
+                            style={{
+                              position: "relative",
+                              aspectRatio: "1 / 1",
+                              borderRadius: 12,
+                              overflow: "hidden",
+                              border: "1px solid var(--border)",
+                              background: "var(--bg)",
+                            }}
                           >
                             <img
-                              ref={editorImageRef}
-                              src={editorImageSrc}
-                              alt={t("edit_preview_alt")}
+                              src={previewUrl}
+                              alt="preview"
                               style={{
                                 display: "block",
-                                maxWidth: "100%",
-                                maxHeight: isMobile ? "44dvh" : "60vh",
-                                objectFit: "contain",
-                                transform: `rotate(${rotation}deg)`,
-                                transformOrigin: "center center",
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                background: "var(--card)",
                               }}
                             />
-                          </ReactCrop>
-                        </div>
-                      </div>
 
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setFiles((current) =>
+                                  current.filter((_, i) => i !== index),
+                                )
+                              }
+                              disabled={posting}
+                              aria-label="Remove image"
+                              style={{
+                                position: "absolute",
+                                top: 5,
+                                right: 5,
+                                width: 24,
+                                height: 24,
+                                borderRadius: 999,
+                                border: "1px solid rgba(255,255,255,0.5)",
+                                background: "rgba(0,0,0,0.58)",
+                                color: "#fff",
+                                fontSize: 16,
+                                fontWeight: 900,
+                                lineHeight: 1,
+                                cursor: posting ? "default" : "pointer",
+                                display: "grid",
+                                placeItems: "center",
+                                opacity: posting ? 0.6 : 1,
+                              }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {editorOpen &&
+                    editorImageSrc &&
+                    createPortal(
                       <div
                         style={{
-                          padding: isMobile
-                            ? "10px 12px calc(10px + env(safe-area-inset-bottom, 0px))"
-                            : 16,
-                          borderTop: "1px solid var(--border)",
-                          background: "var(--card)",
-                          display: "grid",
-                          gap: 10,
+                          position: "fixed",
+                          inset: 0,
+                          zIndex: 2147483647,
+                          background: "rgba(0,0,0,0.82)",
                         }}
                       >
                         <div
                           style={{
+                            position: "absolute",
+                            inset: 0,
+                            background: "var(--card)",
+                            color: "var(--text)",
                             display: "grid",
-                            gridTemplateColumns: isMobile
-                              ? "1fr 1fr"
-                              : "auto auto",
-                            gap: 10,
+                            gridTemplateRows: "auto minmax(0, 1fr) auto",
                           }}
                         >
-                          <button
-                            type="button"
-                            onClick={() => setRotation((prev) => prev - 90)}
-                            disabled={applyingEdit}
+                          <div
                             style={{
-                              padding: "11px 12px",
-                              borderRadius: 999,
-                              border: "1px solid var(--border)",
-                              background: "var(--bg)",
-                              color: "var(--text)",
-                              fontWeight: 700,
-                              cursor: applyingEdit ? "default" : "pointer",
-                              opacity: applyingEdit ? 0.6 : 1,
-                              width: "100%",
+                              padding: isMobile
+                                ? "12px 14px 10px"
+                                : "14px 16px 10px",
+                              borderBottom: "1px solid var(--border)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              gap: 12,
+                              background: "var(--card)",
                             }}
                           >
-                            ↺ {t("rotate_minus_90")}
-                          </button>
+                            <div>
+                              <div style={{ fontWeight: 900, fontSize: 16 }}>
+                                {t("edit_image")}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  color: "var(--sub)",
+                                  marginTop: 4,
+                                }}
+                              >
+                                {t("edit_image_help")}
+                              </div>
+                            </div>
 
-                          <button
-                            type="button"
-                            onClick={() => setRotation((prev) => prev + 90)}
-                            disabled={applyingEdit}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (applyingEdit) return;
+                                resetEditorState();
+                              }}
+                              disabled={applyingEdit}
+                              style={{
+                                border: "1px solid var(--border)",
+                                background: "var(--bg)",
+                                color: "var(--text)",
+                                borderRadius: 999,
+                                padding: "8px 12px",
+                                fontWeight: 700,
+                                cursor: applyingEdit ? "default" : "pointer",
+                                opacity: applyingEdit ? 0.6 : 1,
+                              }}
+                            >
+                              {t("close")}
+                            </button>
+                          </div>
+
+                          <div
                             style={{
-                              padding: "11px 12px",
-                              borderRadius: 999,
-                              border: "1px solid var(--border)",
-                              background: "var(--bg)",
-                              color: "var(--text)",
-                              fontWeight: 700,
-                              cursor: applyingEdit ? "default" : "pointer",
-                              opacity: applyingEdit ? 0.6 : 1,
-                              width: "100%",
+                              minHeight: 0,
+                              overflow: "auto",
+                              background: "#111",
+                              padding: isMobile ? 10 : 20,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
                             }}
                           >
-                            ↻ {t("rotate_plus_90")}
-                          </button>
+                            <div
+                              style={{
+                                maxWidth: "100%",
+                                width: "100%",
+                                display: "flex",
+                                justifyContent: "center",
+                              }}
+                            >
+                              <ReactCrop
+                                crop={crop}
+                                onChange={(nextCrop) => setCrop(nextCrop)}
+                                onComplete={(pixelCrop) =>
+                                  setCompletedCrop(pixelCrop)
+                                }
+                              >
+                                <img
+                                  ref={editorImageRef}
+                                  src={editorImageSrc}
+                                  alt={t("edit_preview_alt")}
+                                  style={{
+                                    display: "block",
+                                    maxWidth: "100%",
+                                    maxHeight: isMobile ? "44dvh" : "60vh",
+                                    objectFit: "contain",
+                                    transform: `rotate(${rotation}deg)`,
+                                    transformOrigin: "center center",
+                                  }}
+                                />
+                              </ReactCrop>
+                            </div>
+                          </div>
+
+                          <div
+                            style={{
+                              padding: isMobile
+                                ? "10px 12px calc(10px + env(safe-area-inset-bottom, 0px))"
+                                : 16,
+                              borderTop: "1px solid var(--border)",
+                              background: "var(--card)",
+                              display: "grid",
+                              gap: 10,
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns: isMobile
+                                  ? "1fr 1fr"
+                                  : "auto auto",
+                                gap: 10,
+                              }}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => setRotation((prev) => prev - 90)}
+                                disabled={applyingEdit}
+                                style={{
+                                  padding: "11px 12px",
+                                  borderRadius: 999,
+                                  border: "1px solid var(--border)",
+                                  background: "var(--bg)",
+                                  color: "var(--text)",
+                                  fontWeight: 700,
+                                  cursor: applyingEdit ? "default" : "pointer",
+                                  opacity: applyingEdit ? 0.6 : 1,
+                                  width: "100%",
+                                }}
+                              >
+                                ↺ {t("rotate_minus_90")}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setRotation((prev) => prev + 90)}
+                                disabled={applyingEdit}
+                                style={{
+                                  padding: "11px 12px",
+                                  borderRadius: 999,
+                                  border: "1px solid var(--border)",
+                                  background: "var(--bg)",
+                                  color: "var(--text)",
+                                  fontWeight: 700,
+                                  cursor: applyingEdit ? "default" : "pointer",
+                                  opacity: applyingEdit ? 0.6 : 1,
+                                  width: "100%",
+                                }}
+                              >
+                                ↻ {t("rotate_plus_90")}
+                              </button>
+                            </div>
+
+                            <div
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns: "1fr 1fr",
+                                gap: 10,
+                              }}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (applyingEdit) return;
+                                  resetEditorState();
+                                }}
+                                disabled={applyingEdit}
+                                style={{
+                                  padding: "12px 14px",
+                                  borderRadius: 999,
+                                  border: "1px solid var(--border)",
+                                  background: "var(--bg)",
+                                  color: "var(--text)",
+                                  fontWeight: 700,
+                                  cursor: applyingEdit ? "default" : "pointer",
+                                  opacity: applyingEdit ? 0.6 : 1,
+                                  width: "100%",
+                                }}
+                              >
+                                {t("cancel")}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={applyImageEdits}
+                                disabled={applyingEdit || !completedCrop}
+                                style={{
+                                  padding: "12px 14px",
+                                  borderRadius: 999,
+                                  border: "1px solid var(--border)",
+                                  background: "var(--text)",
+                                  color: "var(--bg)",
+                                  fontWeight: 800,
+                                  cursor:
+                                    applyingEdit || !completedCrop
+                                      ? "default"
+                                      : "pointer",
+                                  opacity:
+                                    applyingEdit || !completedCrop ? 0.5 : 1,
+                                  width: "100%",
+                                }}
+                              >
+                                {applyingEdit ? t("applying") : t("apply")}
+                              </button>
+                            </div>
+                          </div>
                         </div>
-
-                        <div
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns: "1fr 1fr",
-                            gap: 10,
-                          }}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (applyingEdit) return;
-                              resetEditorState();
-                            }}
-                            disabled={applyingEdit}
-                            style={{
-                              padding: "12px 14px",
-                              borderRadius: 999,
-                              border: "1px solid var(--border)",
-                              background: "var(--bg)",
-                              color: "var(--text)",
-                              fontWeight: 700,
-                              cursor: applyingEdit ? "default" : "pointer",
-                              opacity: applyingEdit ? 0.6 : 1,
-                              width: "100%",
-                            }}
-                          >
-                            {t("cancel")}
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={applyImageEdits}
-                            disabled={applyingEdit || !completedCrop}
-                            style={{
-                              padding: "12px 14px",
-                              borderRadius: 999,
-                              border: "1px solid var(--border)",
-                              background: "var(--text)",
-                              color: "var(--bg)",
-                              fontWeight: 800,
-                              cursor:
-                                applyingEdit || !completedCrop
-                                  ? "default"
-                                  : "pointer",
-                              opacity: applyingEdit || !completedCrop ? 0.5 : 1,
-                              width: "100%",
-                            }}
-                          >
-                            {applyingEdit ? t("applying") : t("apply")}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>,
-                  document.body,
-                )}
+                      </div>,
+                      document.body,
+                    )}
                 </div>
               ) : null}
             </div>
@@ -2214,6 +2263,8 @@ export default function FeedPage() {
           </div>
         </Card>
       </div>
+
+      <BackToTopButton />
 
       {activeCommentPost ? (
         <CommentModal

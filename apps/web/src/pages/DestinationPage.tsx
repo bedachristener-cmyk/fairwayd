@@ -5,6 +5,7 @@ import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
 import PostCard from "../components/PostCard";
 import CommentModal from "../components/CommentModal";
+import BackToTopButton from "../components/BackToTopButton";
 import { DESTINATION_INFO } from "../data/destinationInfo";
 import { t } from "../i18n/strings";
 
@@ -1807,6 +1808,8 @@ export default function DestinationPage() {
           onClose={() => setActiveCommentPostId(null)}
         />
       ) : null}
+
+      <BackToTopButton />
     </div>
   );
 }

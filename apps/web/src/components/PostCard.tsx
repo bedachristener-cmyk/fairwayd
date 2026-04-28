@@ -264,6 +264,16 @@ export default function PostCard({
     await handleImageTap(e);
   };
 
+  const stopGalleryControlEvent = (
+    e:
+      | React.MouseEvent<HTMLButtonElement>
+      | React.PointerEvent<HTMLButtonElement>
+      | React.TouchEvent<HTMLButtonElement>,
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
   const validImages =
     post.images?.filter(
       (img): img is { url: string } =>
@@ -527,18 +537,20 @@ export default function PostCard({
           ? "var(--card)"
           : isCommentTarget
             ? "rgba(0, 200, 100, 0.08)"
-            : "rgba(0,0,0,.10)",
+            : "var(--card)",
         border: isMobile
-          ? "1px solid var(--border)"
+          ? "1px solid color-mix(in srgb, var(--border) 82%, var(--text) 18%)"
           : isCommentTarget
             ? "1px solid var(--green)"
-            : "1px solid var(--border)",
-        borderBottom: isMobile ? "1px solid var(--border)" : undefined,
+            : "1px solid color-mix(in srgb, var(--border) 82%, var(--text) 18%)",
+        borderBottom: isMobile
+          ? "1px solid color-mix(in srgb, var(--border) 82%, var(--text) 18%)"
+          : undefined,
         boxShadow: isCommentTarget
           ? "0 0 0 2px rgba(0, 200, 100, 0.25)"
           : isMobile
-            ? "0 6px 18px rgba(0,0,0,0.06)"
-            : undefined,
+            ? "0 8px 24px rgba(0,0,0,0.10)"
+            : "0 8px 22px rgba(0,0,0,0.08)",
         color: "var(--text)",
         cursor: onOpenPost && !isEditing && !isMenuOpen ? "pointer" : "default",
       }}
@@ -1236,9 +1248,15 @@ export default function PostCard({
 
                     <button
                       type="button"
+                      onPointerDown={stopGalleryControlEvent}
+                      onMouseDown={stopGalleryControlEvent}
+                      onTouchStart={stopGalleryControlEvent}
+                      onTouchEnd={(e) => {
+                        stopGalleryControlEvent(e);
+                        showPreviousImage();
+                      }}
                       onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
+                        stopGalleryControlEvent(e);
                         showPreviousImage();
                       }}
                       aria-label="Previous image"
@@ -1256,6 +1274,7 @@ export default function PostCard({
                         fontSize: isMobile ? 22 : 24,
                         fontWeight: 900,
                         lineHeight: 1,
+                        zIndex: 3,
                         cursor: "pointer",
                         display: "grid",
                         placeItems: "center",
@@ -1266,9 +1285,15 @@ export default function PostCard({
 
                     <button
                       type="button"
+                      onPointerDown={stopGalleryControlEvent}
+                      onMouseDown={stopGalleryControlEvent}
+                      onTouchStart={stopGalleryControlEvent}
+                      onTouchEnd={(e) => {
+                        stopGalleryControlEvent(e);
+                        showNextImage();
+                      }}
                       onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
+                        stopGalleryControlEvent(e);
                         showNextImage();
                       }}
                       aria-label="Next image"
@@ -1286,6 +1311,7 @@ export default function PostCard({
                         fontSize: isMobile ? 22 : 24,
                         fontWeight: 900,
                         lineHeight: 1,
+                        zIndex: 3,
                         cursor: "pointer",
                         display: "grid",
                         placeItems: "center",
