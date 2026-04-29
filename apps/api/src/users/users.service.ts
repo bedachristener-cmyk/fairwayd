@@ -548,6 +548,16 @@ export class UsersService {
             name: true,
             avatarUrl: true,
             privacy: true,
+            bio: true,
+            handicap: true,
+            homeGolfClub: true,
+            golfSlogan: true,
+            favoriteGolfDestination: true,
+            bioPrivacy: true,
+            handicapPrivacy: true,
+            homeGolfClubPrivacy: true,
+            golfSloganPrivacy: true,
+            favoriteGolfDestinationPrivacy: true,
             createdAt: true,
           },
         },
@@ -561,6 +571,23 @@ export class UsersService {
       followerHandle: r.follower?.handle ?? null,
       followerName: r.follower?.name ?? null,
       followerAvatarUrl: r.follower?.avatarUrl ?? null,
+      bio: r.follower?.bioPrivacy === FieldPrivacy.PUBLIC ? r.follower.bio : null,
+      handicap:
+        r.follower?.handicapPrivacy === FieldPrivacy.PUBLIC
+          ? r.follower.handicap
+          : null,
+      homeGolfClub:
+        r.follower?.homeGolfClubPrivacy === FieldPrivacy.PUBLIC
+          ? r.follower.homeGolfClub
+          : null,
+      golfSlogan:
+        r.follower?.golfSloganPrivacy === FieldPrivacy.PUBLIC
+          ? r.follower.golfSlogan
+          : null,
+      favoriteGolfDestination:
+        r.follower?.favoriteGolfDestinationPrivacy === FieldPrivacy.PUBLIC
+          ? r.follower.favoriteGolfDestination
+          : null,
     }));
   }
 

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, ChevronRight, RefreshCw, X } from "lucide-react";
-import { Link } from "react-router-dom";
+import { ArrowLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import {
   acceptFollowRequest,
@@ -10,9 +9,16 @@ import {
 } from "../api/followRequests";
 import { fileUrl } from "../api/fileUrl";
 
-function Avatar({ url, handle }: { url?: string | null; handle: string }) {
+function Avatar({
+  url,
+  handle,
+  size = 48,
+}: {
+  url?: string | null;
+  handle: string;
+  size?: number;
+}) {
   const letter = (handle?.[0] ?? "?").toUpperCase();
-  const size = 48;
 
   if (url) {
     return (
@@ -24,8 +30,8 @@ function Avatar({ url, handle }: { url?: string | null; handle: string }) {
           height: size,
           minWidth: size,
           minHeight: size,
-          maxWidth: 56,
-          maxHeight: 56,
+          maxWidth: size,
+          maxHeight: size,
           borderRadius: 999,
           objectFit: "cover",
           border: "1px solid var(--border)",
@@ -45,8 +51,8 @@ function Avatar({ url, handle }: { url?: string | null; handle: string }) {
         height: size,
         minWidth: size,
         minHeight: size,
-        maxWidth: 56,
-        maxHeight: 56,
+        maxWidth: size,
+        maxHeight: size,
         borderRadius: 999,
         display: "grid",
         placeItems: "center",
@@ -64,6 +70,32 @@ function Avatar({ url, handle }: { url?: string | null; handle: string }) {
   );
 }
 
+function getRequestHandle(x: FollowRequestItem) {
+  return x.followerHandle || x.followerName || x.followerId.slice(0, 8);
+}
+
+function getRequestLabel(x: FollowRequestItem) {
+  const handle = getRequestHandle(x);
+  return x.followerName ? x.followerName : `@${handle}`;
+}
+
+function getRequestIntroFields(x: FollowRequestItem) {
+  return [
+    x.bio ? { label: "Bio", value: x.bio.trim() } : null,
+    x.homeGolfClub ? { label: "Home club", value: x.homeGolfClub } : null,
+    x.handicap !== null && typeof x.handicap !== "undefined"
+      ? { label: "Handicap", value: String(x.handicap) }
+      : null,
+    x.favoriteGolfDestination
+      ? { label: "Favorite destination", value: x.favoriteGolfDestination }
+      : null,
+    x.golfSlogan ? { label: "Golf slogan", value: x.golfSlogan } : null,
+  ].filter(
+    (item): item is { label: string; value: string } =>
+      Boolean(item?.value?.trim()),
+  );
+}
+
 export default function FollowRequestsPage() {
   const { token } = useAuth() as any;
   const isMobile = window.innerWidth <= 720;
@@ -71,6 +103,9 @@ export default function FollowRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(
+    null,
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -97,6 +132,10 @@ export default function FollowRequestsPage() {
   }, [load]);
 
   const pendingCount = useMemo(() => items.length, [items]);
+  const selectedRequest = useMemo(
+    () => items.find((x) => x.followerId === selectedRequestId) ?? null,
+    [items, selectedRequestId],
+  );
 
   const onAccept = useCallback(
     async (followerId: string) => {
@@ -106,6 +145,7 @@ export default function FollowRequestsPage() {
       try {
         await acceptFollowRequest(token, followerId);
         setItems((prev) => prev.filter((x) => x.followerId !== followerId));
+        setSelectedRequestId(null);
       } catch (e: any) {
         setErr(e?.message ?? String(e));
       } finally {
@@ -123,6 +163,7 @@ export default function FollowRequestsPage() {
       try {
         await rejectFollowRequest(token, followerId);
         setItems((prev) => prev.filter((x) => x.followerId !== followerId));
+        setSelectedRequestId(null);
       } catch (e: any) {
         setErr(e?.message ?? String(e));
       } finally {
@@ -225,6 +266,222 @@ export default function FollowRequestsPage() {
         </div>
       ) : null}
 
+      {selectedRequest ? (
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "100%",
+            boxSizing: "border-box",
+            display: "grid",
+            gap: 14,
+            border: "1px solid var(--border)",
+            borderRadius: 16,
+            background: "var(--card)",
+            padding: 14,
+            overflow: "hidden",
+          }}
+        >
+          {(() => {
+            const handle = getRequestHandle(selectedRequest);
+            const label = getRequestLabel(selectedRequest);
+            const fields = getRequestIntroFields(selectedRequest);
+            const isBusy = busyId === selectedRequest.followerId;
+
+            return (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setSelectedRequestId(null)}
+                  style={{
+                    justifySelf: "start",
+                    border: "1px solid var(--border)",
+                    background: "var(--bg)",
+                    color: "var(--text)",
+                    borderRadius: 999,
+                    padding: "8px 11px",
+                    fontSize: 12,
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <ArrowLeft size={14} strokeWidth={2.4} />
+                  Back to requests
+                </button>
+
+                <div
+                  style={{
+                    display: "grid",
+                    justifyItems: "center",
+                    textAlign: "center",
+                    gap: 8,
+                    minWidth: 0,
+                  }}
+                >
+                  <Avatar
+                    url={selectedRequest.followerAvatarUrl}
+                    handle={handle}
+                    size={72}
+                  />
+
+                  <div style={{ minWidth: 0, maxWidth: "100%" }}>
+                    <div
+                      style={{
+                        color: "var(--text)",
+                        fontSize: 18,
+                        fontWeight: 900,
+                        lineHeight: 1.15,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {label}
+                    </div>
+                    <div
+                      style={{
+                        color: "var(--sub)",
+                        fontSize: 13,
+                        lineHeight: 1.35,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      @{handle}
+                    </div>
+                    <div
+                      style={{
+                        color: "var(--sub)",
+                        fontSize: 12,
+                        lineHeight: 1.35,
+                        marginTop: 3,
+                      }}
+                    >
+                      {selectedRequest.createdAt
+                        ? new Date(selectedRequest.createdAt).toLocaleString()
+                        : "Request received"}
+                    </div>
+                  </div>
+                </div>
+
+                {fields.length > 0 ? (
+                  <div
+                    style={{
+                      display: "grid",
+                      gap: 8,
+                      minWidth: 0,
+                      maxWidth: "100%",
+                    }}
+                  >
+                    {fields.map((field) => (
+                      <div
+                        key={`${field.label}-${field.value}`}
+                        style={{
+                          minWidth: 0,
+                          maxWidth: "100%",
+                          boxSizing: "border-box",
+                          border: "1px solid var(--border)",
+                          borderRadius: 14,
+                          background: "var(--bg)",
+                          padding: "9px 10px",
+                          overflow: "hidden",
+                        }}
+                      >
+                        <div
+                          style={{
+                            color: "var(--sub)",
+                            fontSize: 10,
+                            fontWeight: 900,
+                            lineHeight: 1.2,
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          {field.label}
+                        </div>
+                        <div
+                          style={{
+                            color: "var(--text)",
+                            fontSize: field.label === "Bio" ? 13 : 14,
+                            fontWeight: field.label === "Bio" ? 700 : 900,
+                            lineHeight: 1.35,
+                            marginTop: 3,
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          {field.value}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      color: "var(--sub)",
+                      fontSize: 13,
+                      lineHeight: 1.4,
+                      textAlign: "center",
+                    }}
+                  >
+                    No public intro details shared.
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: isMobile
+                      ? "1fr"
+                      : "repeat(2, minmax(0, 1fr))",
+                    gap: 8,
+                    width: "100%",
+                    maxWidth: "100%",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <button
+                    type="button"
+                    disabled={isBusy}
+                    onClick={() => onReject(selectedRequest.followerId)}
+                    style={{
+                      border: "1px solid var(--border)",
+                      background: "var(--bg)",
+                      color: "var(--text)",
+                      borderRadius: 12,
+                      padding: "11px 12px",
+                      fontWeight: 900,
+                      cursor: isBusy ? "default" : "pointer",
+                      opacity: isBusy ? 0.6 : 1,
+                    }}
+                  >
+                    Reject
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isBusy}
+                    onClick={() => onAccept(selectedRequest.followerId)}
+                    style={{
+                      border: "1px solid var(--border)",
+                      background: "var(--text)",
+                      color: "var(--bg)",
+                      borderRadius: 12,
+                      padding: "11px 12px",
+                      fontWeight: 900,
+                      cursor: isBusy ? "default" : "pointer",
+                      opacity: isBusy ? 0.6 : 1,
+                    }}
+                  >
+                    Accept
+                  </button>
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      ) : (
       <div
         style={{
           borderTop: "1px solid var(--border)",
@@ -254,28 +511,17 @@ export default function FollowRequestsPage() {
           </div>
         ) : (
           items.map((x, index) => {
-            const handle =
-              x.followerHandle || x.followerName || x.followerId.slice(0, 8);
-
-            const label = x.followerName ? x.followerName : `@${handle}`;
+            const handle = getRequestHandle(x);
+            const label = getRequestLabel(x);
             const subLabel = x.followerName
               ? `@${handle}`
               : "Wants to follow you";
-            const isBusy = busyId === x.followerId;
-            const introItems = [
-              x.homeGolfClub ? `Home club: ${x.homeGolfClub}` : null,
-              x.handicap !== null && typeof x.handicap !== "undefined"
-                ? `HCP ${x.handicap}`
-                : null,
-              x.favoriteGolfDestination
-                ? `Favorite: ${x.favoriteGolfDestination}`
-                : null,
-              x.golfSlogan ? x.golfSlogan : null,
-            ].filter((item): item is string => Boolean(item));
 
             return (
-              <div
+              <button
                 key={x.followerId}
+                type="button"
+                onClick={() => setSelectedRequestId(x.followerId)}
                 style={{
                   width: "100%",
                   maxWidth: "100%",
@@ -284,33 +530,21 @@ export default function FollowRequestsPage() {
                   alignItems: "flex-start",
                   gap: 12,
                   padding: "14px 12px",
-                  flexWrap: isMobile ? "wrap" : "nowrap",
                   overflow: "hidden",
                   borderBottom:
                     index === items.length - 1
                       ? "none"
                       : "1px solid var(--border)",
                   background: "transparent",
+                  borderTop: "none",
+                  borderLeft: "none",
+                  borderRight: "none",
+                  color: "var(--text)",
+                  cursor: "pointer",
+                  textAlign: "left",
                 }}
               >
-                <Link
-                  to={`/u/${handle}`}
-                  style={{
-                    textDecoration: "none",
-                    display: "flex",
-                    alignItems: "flex-start",
-                    flexShrink: 0,
-                    width: 48,
-                    height: 48,
-                    maxWidth: 56,
-                    maxHeight: 56,
-                    overflow: "hidden",
-                    borderRadius: 999,
-                  }}
-                  title="Open profile"
-                >
-                  <Avatar url={x.followerAvatarUrl} handle={handle} />
-                </Link>
+                <Avatar url={x.followerAvatarUrl} handle={handle} />
 
                 <div
                   style={{
@@ -321,27 +555,19 @@ export default function FollowRequestsPage() {
                     maxWidth: "100%",
                   }}
                 >
-                  <Link
-                    to={`/u/${handle}`}
+                  <div
                     style={{
-                      textDecoration: "none",
-                      minWidth: 0,
+                      fontSize: 14,
+                      fontWeight: 800,
+                      color: "var(--text)",
+                      lineHeight: 1.2,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
                     }}
                   >
-                    <div
-                      style={{
-                        fontSize: 14,
-                        fontWeight: 800,
-                        color: "var(--text)",
-                        lineHeight: 1.2,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {label}
-                    </div>
-                  </Link>
+                    {label}
+                  </div>
 
                   <div
                     style={{
@@ -367,129 +593,29 @@ export default function FollowRequestsPage() {
                       ? new Date(x.createdAt).toLocaleString()
                       : "Request received"}
                   </div>
-
-                  {introItems.length > 0 ? (
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 6,
-                        flexWrap: "wrap",
-                        marginTop: 4,
-                        minWidth: 0,
-                        maxWidth: "100%",
-                      }}
-                    >
-                      {introItems.map((item) => (
-                        <span
-                          key={item}
-                          style={{
-                            maxWidth: "100%",
-                            minWidth: 0,
-                            border: "1px solid var(--border)",
-                            borderRadius: 999,
-                            background: "var(--bg)",
-                            color: "var(--sub)",
-                            padding: "3px 8px",
-                            fontSize: 11,
-                            fontWeight: 700,
-                            lineHeight: 1.2,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {item}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
                 </div>
 
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: 8,
+                    gap: 6,
                     flexShrink: 0,
-                    width: isMobile ? "100%" : "auto",
-                    justifyContent: isMobile ? "stretch" : "flex-end",
-                    marginLeft: isMobile ? 60 : 0,
-                    maxWidth: isMobile ? "calc(100% - 60px)" : undefined,
+                    color: "var(--sub)",
+                    fontSize: 12,
+                    fontWeight: 800,
+                    alignSelf: "center",
                   }}
                 >
-                  <button
-                    type="button"
-                    disabled={isBusy}
-                    onClick={() => onReject(x.followerId)}
-                    style={{
-                      width: 34,
-                      height: 34,
-                      flex: isMobile ? 1 : undefined,
-                      minWidth: isMobile ? 0 : 34,
-                      borderRadius: 999,
-                      border: "1px solid var(--border)",
-                      background: "var(--bg)",
-                      color: "var(--sub)",
-                      cursor: isBusy ? "default" : "pointer",
-                      opacity: isBusy ? 0.6 : 1,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                    title="Reject"
-                    aria-label="Reject"
-                  >
-                    <X size={16} strokeWidth={2.4} />
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={isBusy}
-                    onClick={() => onAccept(x.followerId)}
-                    style={{
-                      width: 34,
-                      height: 34,
-                      flex: isMobile ? 1 : undefined,
-                      minWidth: isMobile ? 0 : 34,
-                      borderRadius: 999,
-                      border: "1px solid var(--border)",
-                      background: "var(--card)",
-                      color: "var(--text)",
-                      cursor: isBusy ? "default" : "pointer",
-                      opacity: isBusy ? 0.6 : 1,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                    title="Accept"
-                    aria-label="Accept"
-                  >
-                    <Check size={16} strokeWidth={2.6} />
-                  </button>
-
-                  <Link
-                    to={`/u/${handle}`}
-                    style={{
-                      textDecoration: "none",
-                      color: "var(--sub)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                    title="Open profile"
-                    aria-label="Open profile"
-                  >
-                    <ChevronRight size={18} strokeWidth={2.2} />
-                  </Link>
+                  {!isMobile ? <span>View request</span> : null}
+                  <ChevronRight size={18} strokeWidth={2.2} />
                 </div>
-              </div>
+              </button>
             );
           })
         )}
       </div>
+      )}
     </div>
   );
 }

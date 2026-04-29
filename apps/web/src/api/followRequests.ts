@@ -9,6 +9,7 @@ export type FollowRequestItem = {
   handicap?: number | string | null;
   favoriteGolfDestination?: string | null;
   golfSlogan?: string | null;
+  bio?: string | null;
   createdAt?: string;
 };
 
