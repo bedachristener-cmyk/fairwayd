@@ -972,12 +972,14 @@ export default function CommentModal({
                       loading="lazy"
                       style={{
                         width: "100%",
+                        height: "auto",
                         display: "block",
-                        objectFit: "cover",
-                        maxHeight: isMobile ? 220 : 420,
+                        objectFit: "contain",
+                        maxHeight: isMobile ? "min(260px, 32vh)" : 420,
                         borderRadius: 10,
                         border: "1px solid var(--border)",
                         background: "var(--card)",
+                        boxSizing: "border-box",
                       }}
                     />
                   ))}

@@ -5,6 +5,10 @@ export type FollowRequestItem = {
   followerHandle: string;
   followerName?: string | null;
   followerAvatarUrl?: string | null;
+  homeGolfClub?: string | null;
+  handicap?: number | string | null;
+  favoriteGolfDestination?: string | null;
+  golfSlogan?: string | null;
   createdAt?: string;
 };
 

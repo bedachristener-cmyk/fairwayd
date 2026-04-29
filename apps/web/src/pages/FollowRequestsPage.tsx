@@ -12,6 +12,7 @@ import { fileUrl } from "../api/fileUrl";
 
 function Avatar({ url, handle }: { url?: string | null; handle: string }) {
   const letter = (handle?.[0] ?? "?").toUpperCase();
+  const size = 48;
 
   if (url) {
     return (
@@ -19,12 +20,19 @@ function Avatar({ url, handle }: { url?: string | null; handle: string }) {
         src={fileUrl(url)}
         alt={handle}
         style={{
-          width: 40,
-          height: 40,
+          width: size,
+          height: size,
+          minWidth: size,
+          minHeight: size,
+          maxWidth: 56,
+          maxHeight: 56,
           borderRadius: 999,
           objectFit: "cover",
           border: "1px solid var(--border)",
           flexShrink: 0,
+          display: "block",
+          boxSizing: "border-box",
+          overflow: "hidden",
         }}
       />
     );
@@ -33,8 +41,12 @@ function Avatar({ url, handle }: { url?: string | null; handle: string }) {
   return (
     <div
       style={{
-        width: 40,
-        height: 40,
+        width: size,
+        height: size,
+        minWidth: size,
+        minHeight: size,
+        maxWidth: 56,
+        maxHeight: 56,
         borderRadius: 999,
         display: "grid",
         placeItems: "center",
@@ -43,6 +55,8 @@ function Avatar({ url, handle }: { url?: string | null; handle: string }) {
         fontWeight: 900,
         border: "1px solid var(--border)",
         flexShrink: 0,
+        boxSizing: "border-box",
+        overflow: "hidden",
       }}
     >
       {letter}
@@ -52,6 +66,7 @@ function Avatar({ url, handle }: { url?: string | null; handle: string }) {
 
 export default function FollowRequestsPage() {
   const { token } = useAuth() as any;
+  const isMobile = window.innerWidth <= 720;
   const [items, setItems] = useState<FollowRequestItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -247,6 +262,16 @@ export default function FollowRequestsPage() {
               ? `@${handle}`
               : "Wants to follow you";
             const isBusy = busyId === x.followerId;
+            const introItems = [
+              x.homeGolfClub ? `Home club: ${x.homeGolfClub}` : null,
+              x.handicap !== null && typeof x.handicap !== "undefined"
+                ? `HCP ${x.handicap}`
+                : null,
+              x.favoriteGolfDestination
+                ? `Favorite: ${x.favoriteGolfDestination}`
+                : null,
+              x.golfSlogan ? x.golfSlogan : null,
+            ].filter((item): item is string => Boolean(item));
 
             return (
               <div
@@ -256,9 +281,11 @@ export default function FollowRequestsPage() {
                   maxWidth: "100%",
                   boxSizing: "border-box",
                   display: "flex",
-                  alignItems: "center",
+                  alignItems: "flex-start",
                   gap: 12,
                   padding: "14px 12px",
+                  flexWrap: isMobile ? "wrap" : "nowrap",
+                  overflow: "hidden",
                   borderBottom:
                     index === items.length - 1
                       ? "none"
@@ -271,8 +298,14 @@ export default function FollowRequestsPage() {
                   style={{
                     textDecoration: "none",
                     display: "flex",
-                    alignItems: "center",
+                    alignItems: "flex-start",
                     flexShrink: 0,
+                    width: 48,
+                    height: 48,
+                    maxWidth: 56,
+                    maxHeight: 56,
+                    overflow: "hidden",
+                    borderRadius: 999,
                   }}
                   title="Open profile"
                 >
@@ -285,6 +318,7 @@ export default function FollowRequestsPage() {
                     flex: 1,
                     display: "grid",
                     gap: 3,
+                    maxWidth: "100%",
                   }}
                 >
                   <Link
@@ -333,6 +367,42 @@ export default function FollowRequestsPage() {
                       ? new Date(x.createdAt).toLocaleString()
                       : "Request received"}
                   </div>
+
+                  {introItems.length > 0 ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 6,
+                        flexWrap: "wrap",
+                        marginTop: 4,
+                        minWidth: 0,
+                        maxWidth: "100%",
+                      }}
+                    >
+                      {introItems.map((item) => (
+                        <span
+                          key={item}
+                          style={{
+                            maxWidth: "100%",
+                            minWidth: 0,
+                            border: "1px solid var(--border)",
+                            borderRadius: 999,
+                            background: "var(--bg)",
+                            color: "var(--sub)",
+                            padding: "3px 8px",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            lineHeight: 1.2,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
 
                 <div
@@ -341,6 +411,10 @@ export default function FollowRequestsPage() {
                     alignItems: "center",
                     gap: 8,
                     flexShrink: 0,
+                    width: isMobile ? "100%" : "auto",
+                    justifyContent: isMobile ? "stretch" : "flex-end",
+                    marginLeft: isMobile ? 60 : 0,
+                    maxWidth: isMobile ? "calc(100% - 60px)" : undefined,
                   }}
                 >
                   <button
@@ -350,6 +424,8 @@ export default function FollowRequestsPage() {
                     style={{
                       width: 34,
                       height: 34,
+                      flex: isMobile ? 1 : undefined,
+                      minWidth: isMobile ? 0 : 34,
                       borderRadius: 999,
                       border: "1px solid var(--border)",
                       background: "var(--bg)",
@@ -374,6 +450,8 @@ export default function FollowRequestsPage() {
                     style={{
                       width: 34,
                       height: 34,
+                      flex: isMobile ? 1 : undefined,
+                      minWidth: isMobile ? 0 : 34,
                       borderRadius: 999,
                       border: "1px solid var(--border)",
                       background: "var(--card)",
