@@ -256,6 +256,16 @@ export class UsersService {
         name: true,
         avatarUrl: true,
         privacy: true,
+        bio: true,
+        handicap: true,
+        homeGolfClub: true,
+        golfSlogan: true,
+        favoriteGolfDestination: true,
+        bioPrivacy: true,
+        handicapPrivacy: true,
+        homeGolfClubPrivacy: true,
+        golfSloganPrivacy: true,
+        favoriteGolfDestinationPrivacy: true,
         createdAt: true,
       },
     });
@@ -369,6 +379,43 @@ export class UsersService {
     if (!user) throw new NotFoundException('User not found');
 
     return this.listFollowingUsers(user.id);
+  }
+
+  async listFollowedCoursesByHandle(handle: string) {
+    const safeHandle = normalizeHandle(handle);
+
+    if (!safeHandle) throw new NotFoundException('User not found');
+
+    const user = await this.prisma.user.findUnique({
+      where: { handle: safeHandle },
+      select: { id: true },
+    });
+
+    if (!user) throw new NotFoundException('User not found');
+
+    const rows = await this.prisma.courseFollow.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        course: {
+          select: {
+            id: true,
+            name: true,
+            lat: true,
+            lon: true,
+            city: true,
+            country: true,
+            region: true,
+            postalCode: true,
+            website: true,
+            holes: true,
+            access: true,
+          },
+        },
+      },
+    });
+
+    return rows.map((r) => r.course);
   }
 
   async listFollowerUsers(userId: string) {

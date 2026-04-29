@@ -119,8 +119,12 @@ export default function PostCard({
   const [shareCopied, setShareCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const imageTouchStartXRef = useRef<number | null>(null);
-  const imageTouchStartYRef = useRef<number | null>(null);
+  const imagePointerStartRef = useRef<{
+    x: number;
+    y: number;
+    time: number;
+    pointerId: number;
+  } | null>(null);
   const nav = useNavigate();
 
   useEffect(() => {
@@ -189,8 +193,8 @@ export default function PostCard({
     }
   };
 
-  const handleImageTap = async (
-    e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>,
+  const handleIntentionalImageTap = async (
+    e: React.PointerEvent<HTMLDivElement>,
     imageIndex: number,
   ) => {
     e.preventDefault();
@@ -232,31 +236,32 @@ export default function PostCard({
     );
   };
 
-  const handleImageTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    const touch = e.touches[0];
-    imageTouchStartXRef.current = touch.clientX;
-    imageTouchStartYRef.current = touch.clientY;
+  const handleImagePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+
+    imagePointerStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      time: Date.now(),
+      pointerId: e.pointerId,
+    };
   };
 
-  const handleImageTouchEnd = async (
-    e: React.TouchEvent<HTMLDivElement>,
+  const handleImagePointerUp = async (
+    e: React.PointerEvent<HTMLDivElement>,
     imageIndex: number,
   ) => {
-    const startX = imageTouchStartXRef.current;
-    const startY = imageTouchStartYRef.current;
-    imageTouchStartXRef.current = null;
-    imageTouchStartYRef.current = null;
+    const start = imagePointerStartRef.current;
+    imagePointerStartRef.current = null;
 
-    const touch = e.changedTouches[0];
-    if (
-      hasMultipleImages &&
-      startX !== null &&
-      startY !== null &&
-      touch
-    ) {
-      const deltaX = touch.clientX - startX;
-      const deltaY = touch.clientY - startY;
+    if (!start || start.pointerId !== e.pointerId) return;
 
+    const deltaX = e.clientX - start.x;
+    const deltaY = e.clientY - start.y;
+    const distance = Math.hypot(deltaX, deltaY);
+    const duration = Date.now() - start.time;
+
+    if (hasMultipleImages) {
       if (Math.abs(deltaX) > 42 && Math.abs(deltaX) > Math.abs(deltaY) * 1.4) {
         e.preventDefault();
         e.stopPropagation();
@@ -271,7 +276,18 @@ export default function PostCard({
       }
     }
 
-    await handleImageTap(e, imageIndex);
+    if (distance <= 10 && duration < 500) {
+      await handleIntentionalImageTap(e, imageIndex);
+    }
+  };
+
+  const handleImagePointerCancel = () => {
+    imagePointerStartRef.current = null;
+  };
+
+  const suppressImageClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
   };
 
   const stopGalleryControlEvent = (
@@ -1201,9 +1217,10 @@ export default function PostCard({
               return (
                 <div
                   key={img.url}
-                  onClick={(event) => handleImageTap(event, index)}
-                  onTouchStart={handleImageTouchStart}
-                  onTouchEnd={(event) => handleImageTouchEnd(event, index)}
+                  onPointerDown={handleImagePointerDown}
+                  onPointerUp={(event) => handleImagePointerUp(event, index)}
+                  onPointerCancel={handleImagePointerCancel}
+                  onClick={suppressImageClick}
                   onMouseEnter={() => {
                     if (!isMobile) setHoveredImage(img.url);
                   }}

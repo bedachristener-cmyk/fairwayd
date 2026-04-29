@@ -19,6 +19,8 @@ import { getLang, setLang, t, type Lang } from "../i18n/strings";
 
 type PostImage = { id: string; url: string };
 
+type ProfileFieldPrivacy = "PUBLIC" | "FOLLOWERS" | "PRIVATE";
+
 type ProfileUser = {
   id: string;
   handle: string;
@@ -26,6 +28,16 @@ type ProfileUser = {
   avatarUrl: string | null;
   privacy?: string | null;
   createdAt?: string;
+  bio?: string | null;
+  handicap?: number | string | null;
+  homeGolfClub?: string | null;
+  golfSlogan?: string | null;
+  favoriteGolfDestination?: string | null;
+  bioPrivacy?: ProfileFieldPrivacy | null;
+  handicapPrivacy?: ProfileFieldPrivacy | null;
+  homeGolfClubPrivacy?: ProfileFieldPrivacy | null;
+  golfSloganPrivacy?: ProfileFieldPrivacy | null;
+  favoriteGolfDestinationPrivacy?: ProfileFieldPrivacy | null;
 };
 
 type Post = {
@@ -330,6 +342,283 @@ function ProfileSettingsCard() {
   );
 }
 
+function hasProfileFieldValue(value?: number | string | null) {
+  if (value === null || value === undefined) return false;
+  if (typeof value === "number") return Number.isFinite(value);
+  return value.trim().length > 0;
+}
+
+function canShowProfileField(
+  privacy: ProfileFieldPrivacy | null | undefined,
+  isOwnProfile: boolean,
+  followStatus: FollowUiStatus,
+) {
+  if (isOwnProfile) return true;
+  if (privacy === "FOLLOWERS") return followStatus === "ACCEPTED";
+  return privacy === "PUBLIC";
+}
+
+function AboutGolfProfileCard({
+  fields,
+  isMobile,
+  isOwnProfile,
+  onEditProfile,
+}: {
+  fields: {
+    key: string;
+    label: string;
+    value: number | string;
+    privacy?: ProfileFieldPrivacy | null;
+  }[];
+  isMobile: boolean;
+  isOwnProfile: boolean;
+  onEditProfile: () => void;
+}) {
+  if (fields.length === 0 && !isOwnProfile) return null;
+
+  const bioField = fields.find((field) => field.key === "bio");
+  const introChips = fields
+    .map((field) => {
+      if (field.key === "homeGolfClub") {
+        return { ...field, icon: "🏠", label: "Home club" };
+      }
+      if (field.key === "handicap") {
+        return { ...field, icon: "⛳", label: "Handicap" };
+      }
+      if (field.key === "favoriteGolfDestination") {
+        return { ...field, icon: "📍", label: "Favorite destination" };
+      }
+      if (field.key === "golfSlogan") {
+        return { ...field, icon: "✍", label: "Golf slogan" };
+      }
+      return null;
+    })
+    .filter((field): field is {
+      key: string;
+      label: string;
+      value: number | string;
+      privacy?: ProfileFieldPrivacy | null;
+      icon: string;
+    } => Boolean(field));
+
+  return (
+    <div
+      style={{
+        background: isMobile ? "transparent" : "var(--card)",
+        border: isMobile ? "none" : "1px solid var(--border)",
+        borderRadius: isMobile ? 0 : 16,
+        padding: isMobile ? "0 12px" : 12,
+        boxSizing: "border-box",
+        width: "100%",
+        maxWidth: "100%",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          display: "grid",
+          gap: fields.length === 0 ? 8 : 10,
+          boxSizing: "border-box",
+          width: "100%",
+          maxWidth: "100%",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <div style={{ fontWeight: 900, color: "var(--text)" }}>
+            Intro
+          </div>
+        </div>
+
+        {fields.length === 0 ? (
+          <div
+            style={{
+              display: "grid",
+              gap: 10,
+              border: "1px solid var(--border)",
+              borderRadius: 14,
+              background: "var(--bg)",
+              padding: 12,
+            }}
+          >
+            <div style={{ color: "var(--sub)", fontSize: 13, lineHeight: 1.4 }}>
+              Add a few golf profile details so other players can get to know
+              you.
+            </div>
+
+            <button
+              type="button"
+              onClick={onEditProfile}
+              style={{
+                justifySelf: "start",
+                border: "1px solid var(--border)",
+                background: "var(--text)",
+                color: "var(--bg)",
+                borderRadius: 999,
+                padding: "8px 12px",
+                fontWeight: 900,
+                cursor: "pointer",
+              }}
+            >
+              Edit profile
+            </button>
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gap: 12,
+              boxSizing: "border-box",
+              width: "100%",
+              maxWidth: "100%",
+              overflow: "hidden",
+            }}
+          >
+            {introChips.length > 0 ? (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                  gap: isMobile ? 7 : 8,
+                  width: "100%",
+                  maxWidth: "100%",
+                  boxSizing: "border-box",
+                  overflow: "hidden",
+                }}
+              >
+                {introChips.map((chip) => (
+                  <div
+                    key={`intro-${chip.key}`}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "auto minmax(0, 1fr)",
+                      alignItems: "center",
+                      gap: isMobile ? 7 : 9,
+                      minWidth: 0,
+                      maxWidth: "100%",
+                      border: "1px solid var(--border)",
+                      borderRadius: 14,
+                      background: "var(--bg)",
+                      padding: isMobile ? "8px 9px" : "9px 10px",
+                      boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
+                      boxSizing: "border-box",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: isMobile ? 26 : 28,
+                        height: isMobile ? 26 : 28,
+                        minWidth: isMobile ? 26 : 28,
+                        borderRadius: 999,
+                        border: "1px solid var(--border)",
+                        background: "var(--card)",
+                        color: "var(--text)",
+                        display: "grid",
+                        placeItems: "center",
+                        fontSize: isMobile ? 12 : 13,
+                        lineHeight: 1,
+                      }}
+                    >
+                      {chip.icon}
+                    </div>
+
+                    <div
+                      style={{
+                        minWidth: 0,
+                        maxWidth: "100%",
+                        display: "grid",
+                        gap: 1,
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div
+                        style={{
+                          color: "var(--sub)",
+                          fontSize: 9,
+                          fontWeight: 900,
+                          lineHeight: 1.2,
+                          textTransform: "uppercase",
+                          minWidth: 0,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {chip.label}
+                      </div>
+
+                      <div
+                        style={{
+                          color: "var(--text)",
+                          fontSize: isMobile ? 13 : 14,
+                          fontWeight: 950,
+                          lineHeight: 1.25,
+                          minWidth: 0,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {chip.value}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {bioField ? (
+              <div
+                style={{
+                  display: "grid",
+                  gap: 6,
+                  border: "1px solid var(--border)",
+                  borderRadius: 14,
+                  background: "var(--bg)",
+                  padding: "11px 12px",
+                  marginTop: introChips.length > 0 ? 3 : 0,
+                }}
+              >
+                <div
+                  style={{
+                    color: "var(--sub)",
+                    fontSize: 11,
+                    fontWeight: 900,
+                    lineHeight: 1.2,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  About
+                </div>
+
+                <div
+                  style={{
+                    color: "var(--text)",
+                    fontSize: 14,
+                    lineHeight: 1.45,
+                    fontWeight: 700,
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {bioField.value}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SettingsControlRow({
   icon,
   label,
@@ -485,6 +774,9 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
   const [followingCourses, setFollowingCourses] = useState<FollowedCourse[]>(
     [],
   );
+  const [viewerFollowingCourses, setViewerFollowingCourses] = useState<
+    FollowedCourse[]
+  >([]);
   const [followingUsers, setFollowingUsers] = useState<FollowRelation[]>([]);
   const [followers, setFollowers] = useState<FollowRelation[]>([]);
   const [activeSection, setActiveSection] = useState<
@@ -811,6 +1103,17 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
         avatarUrl: me.avatarUrl ?? null,
         privacy: (me as any).privacy ?? null,
         createdAt: (me as any).createdAt,
+        bio: (me as any).bio ?? null,
+        handicap: (me as any).handicap ?? null,
+        homeGolfClub: (me as any).homeGolfClub ?? null,
+        golfSlogan: (me as any).golfSlogan ?? null,
+        favoriteGolfDestination: (me as any).favoriteGolfDestination ?? null,
+        bioPrivacy: (me as any).bioPrivacy ?? null,
+        handicapPrivacy: (me as any).handicapPrivacy ?? null,
+        homeGolfClubPrivacy: (me as any).homeGolfClubPrivacy ?? null,
+        golfSloganPrivacy: (me as any).golfSloganPrivacy ?? null,
+        favoriteGolfDestinationPrivacy:
+          (me as any).favoriteGolfDestinationPrivacy ?? null,
       });
     }
 
@@ -921,13 +1224,56 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
   useEffect(() => {
     if (!token) {
-      setFollowingCourses([]);
+      setViewerFollowingCourses([]);
       return;
     }
 
     const run = async () => {
       try {
         const res = await fetch(`${API_BASE}/courses/me/following`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!res.ok) {
+          setFollowingCourses([]);
+          return;
+        }
+
+        const data = await res.json();
+        setViewerFollowingCourses(Array.isArray(data?.items) ? data.items : []);
+      } catch {
+        setViewerFollowingCourses([]);
+      }
+    };
+
+    run();
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) {
+      setFollowingCourses([]);
+      return;
+    }
+
+    const profileHandle = (profile?.handle ?? targetHandle ?? "")
+      .trim()
+      .toLowerCase();
+
+    const path =
+      mode === "me"
+        ? "/courses/me/following"
+        : profileHandle
+          ? `/users/${encodeURIComponent(profileHandle)}/following-courses`
+          : "";
+
+    if (!path) {
+      setFollowingCourses([]);
+      return;
+    }
+
+    const run = async () => {
+      try {
+        const res = await fetch(`${API_BASE}${path}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -944,7 +1290,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
     };
 
     run();
-  }, [token]);
+  }, [mode, token, profile?.handle, targetHandle]);
 
   useEffect(() => {
     if (!token) {
@@ -1055,7 +1401,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
       if (!token) return;
       if (courseFollowBusyId) return;
 
-      const currentlyFollowed = followingCourses.some(
+      const currentlyFollowed = viewerFollowingCourses.some(
         (c) => c?.id === courseId,
       );
 
@@ -1082,14 +1428,18 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
         }
 
         const data = await refresh.json();
-        setFollowingCourses(Array.isArray(data?.items) ? data.items : []);
+        const items = Array.isArray(data?.items) ? data.items : [];
+        setViewerFollowingCourses(items);
+        if (mode === "me" || isSelf) {
+          setFollowingCourses(items);
+        }
       } catch (err) {
         console.error("Course follow toggle failed", err);
       } finally {
         setCourseFollowBusyId(null);
       }
     },
-    [token, courseFollowBusyId, followingCourses],
+    [token, courseFollowBusyId, viewerFollowingCourses, mode, isSelf],
   );
 
   const backTo = (loc.state as any)?.from || "/feed";
@@ -1099,6 +1449,54 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
   const formatCourseCount = (count: number) =>
     `${count} ${count === 1 ? t("course_singular") : t("course_plural")}`;
+
+  const golfProfileFields = useMemo(
+    () =>
+      [
+        {
+          key: "bio",
+          label: "Bio",
+          value: profile?.bio,
+          privacy: profile?.bioPrivacy,
+        },
+        {
+          key: "handicap",
+          label: "Handicap",
+          value: profile?.handicap,
+          privacy: profile?.handicapPrivacy,
+        },
+        {
+          key: "homeGolfClub",
+          label: "Home golf club",
+          value: profile?.homeGolfClub,
+          privacy: profile?.homeGolfClubPrivacy,
+        },
+        {
+          key: "golfSlogan",
+          label: "Golf slogan",
+          value: profile?.golfSlogan,
+          privacy: profile?.golfSloganPrivacy,
+        },
+        {
+          key: "favoriteGolfDestination",
+          label: "Favorite golf destination",
+          value: profile?.favoriteGolfDestination,
+          privacy: profile?.favoriteGolfDestinationPrivacy,
+        },
+      ]
+        .filter(
+          (field) =>
+            hasProfileFieldValue(field.value) &&
+            canShowProfileField(field.privacy, mode === "me" || isSelf, followStatus),
+        )
+        .map((field) => ({
+          key: field.key,
+          label: field.label,
+          value: field.value as number | string,
+          privacy: field.privacy,
+        })),
+    [followStatus, isSelf, mode, profile],
+  );
 
   return (
     <div style={{ display: "grid", gap: 12, minWidth: 0 }}>
@@ -1130,9 +1528,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
         <div
           style={{
             height: isMobile ? 106 : 152,
-            background:
-              //"linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015))",
-              "linear-gradient(135deg, rgba(90,110,140,0.18), rgba(255,255,255,0.02))",
+            background: "var(--bg)",
             borderBottom: "1px solid var(--border)",
             position: "relative",
           }}
@@ -1144,15 +1540,15 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
               position: "absolute",
               top: 12,
               left: 12,
-              border: "1px solid rgba(255,255,255,0.16)",
-              background: "rgba(0,0,0,0.22)",
+              border: "1px solid var(--border)",
+              background: "var(--card)",
               color: "var(--text)",
               borderRadius: 999,
-              padding: "7px 11px",
-              fontSize: 13,
+              padding: "6px 10px",
+              fontSize: 12,
               fontWeight: 800,
               cursor: "pointer",
-              backdropFilter: "blur(10px)",
+              boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
             }}
           >
             ← {t("back")}
@@ -1167,15 +1563,15 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
               position: "absolute",
               top: 12,
               right: 12,
-              border: "1px solid rgba(255,255,255,0.16)",
-              background: "rgba(0,0,0,0.22)",
+              border: "1px solid var(--border)",
+              background: "var(--card)",
               color: "var(--text)",
               borderRadius: 999,
-              padding: "7px 12px",
-              fontSize: 13,
+              padding: "6px 11px",
+              fontSize: 12,
               fontWeight: 900,
               cursor: "pointer",
-              backdropFilter: "blur(10px)",
+              boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
             }}
           >
             {mode === "me" ? t("edit") : t("my_profile")}
@@ -1210,7 +1606,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                 background: "var(--bg)",
                 overflow: "hidden",
                 boxShadow:
-                  "0 12px 28px rgba(0,0,0,0.24), 0 0 0 1px var(--border)",
+                  "0 16px 34px rgba(0,0,0,0.26), 0 0 0 1px var(--border), 0 0 0 8px var(--card)",
                 display: "grid",
                 placeItems: "center",
                 boxSizing: "border-box",
@@ -1257,9 +1653,9 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
               <div
                 style={{
                   fontWeight: 950,
-                  fontSize: isMobile ? 27 : 33,
+                  fontSize: isMobile ? 26 : 31,
                   color: "var(--text)",
-                  lineHeight: 1.04,
+                  lineHeight: 1.06,
                   letterSpacing: 0,
                   wordBreak: "break-word",
                 }}
@@ -1270,9 +1666,9 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
               <div
                 style={{
-                  marginTop: 5,
-                  fontSize: 14,
-                  fontWeight: 700,
+                  marginTop: 4,
+                  fontSize: isMobile ? 13 : 14,
+                  fontWeight: 650,
                   color: "var(--sub)",
                   wordBreak: "break-word",
                 }}
@@ -1285,9 +1681,10 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
           {profile?.createdAt ? (
             <div
               style={{
-                fontSize: 12,
+                fontSize: 11,
                 color: "var(--sub)",
-                fontWeight: 700,
+                fontWeight: 600,
+                lineHeight: 1.25,
               }}
             >
               {t("member_since")} {prettyDate(profile.createdAt)}
@@ -1322,7 +1719,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
               gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
               gap: isMobile ? 7 : 10,
               borderTop: "1px solid var(--border)",
-              paddingTop: isMobile ? 13 : 16,
+              paddingTop: isMobile ? 11 : 14,
             }}
           >
             {[
@@ -1360,26 +1757,28 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                   onClick={() => setActiveSection(item.key)}
                   style={{
                     minWidth: 0,
-                    border: "1px solid var(--border)",
-                    background: active ? "var(--bg)" : "var(--card)",
+                    border: active
+                      ? "1px solid var(--border)"
+                      : "1px solid transparent",
+                    background: active ? "var(--bg)" : "transparent",
                     color: "var(--text)",
-                    borderRadius: 18,
-                    padding: isMobile ? "10px 6px 11px" : "13px 10px",
+                    borderRadius: 14,
+                    padding: isMobile ? "9px 5px 10px" : "11px 9px",
                     cursor: "pointer",
                     display: "grid",
-                    gap: 5,
+                    gap: 4,
                     justifyItems: "center",
                     textAlign: "center",
                     boxShadow: active
-                      ? "0 8px 20px rgba(0,0,0,0.12)"
-                      : "0 4px 14px rgba(0,0,0,0.08)",
+                      ? "0 8px 18px rgba(0,0,0,0.10)"
+                      : "none",
                     transition:
                       "background 160ms ease, box-shadow 160ms ease, transform 160ms ease",
                   }}
                 >
                   <div
                     style={{
-                      fontSize: 18,
+                      fontSize: 16,
                       lineHeight: 1,
                     }}
                   >
@@ -1388,7 +1787,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
                   <div
                     style={{
-                      fontSize: isMobile ? 18 : 21,
+                      fontSize: isMobile ? 17 : 20,
                       fontWeight: 950,
                       lineHeight: 1,
                     }}
@@ -1399,8 +1798,8 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                   <div
                     style={{
                       maxWidth: "100%",
-                      fontSize: 11,
-                      fontWeight: 800,
+                      fontSize: 10,
+                      fontWeight: 850,
                       color: active ? "var(--text)" : "var(--sub)",
                       whiteSpace: "nowrap",
                       overflow: "hidden",
@@ -1415,6 +1814,13 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
           </div>
         </div>
       </div>
+
+      <AboutGolfProfileCard
+        fields={golfProfileFields}
+        isMobile={isMobile}
+        isOwnProfile={mode === "me" || isSelf}
+        onEditProfile={() => nav("/onboarding/profile")}
+      />
 
       {mode === "me" ? (
         <div style={{ order: 20 }}>
@@ -1868,7 +2274,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                 const lon = Number(p.course.lon);
                 const canSelectCourse =
                   Number.isFinite(lat) && Number.isFinite(lon);
-                const isCourseFollowed = followingCourses.some(
+                const isCourseFollowed = viewerFollowingCourses.some(
                   (c) => c?.id === p.course.id,
                 );
                 const isCourseFollowBusy = courseFollowBusyId === p.course.id;

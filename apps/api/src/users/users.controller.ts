@@ -316,6 +316,13 @@ export class UsersController {
   }
 
   @UseGuards(AuthGuard('jwt'))
+  @Get(':handle/following-courses')
+  async getFollowingCoursesByHandle(@Param('handle') handle: string) {
+    const items = await this.users.listFollowedCoursesByHandle(handle);
+    return { items };
+  }
+
+  @UseGuards(AuthGuard('jwt'))
   @Get(':handle/followers')
   async getFollowersByHandle(@Param('handle') handle: string) {
     const items = await this.users.listFollowerUsersByHandle(handle);
