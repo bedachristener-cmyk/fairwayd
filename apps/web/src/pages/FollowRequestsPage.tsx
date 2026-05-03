@@ -146,6 +146,7 @@ export default function FollowRequestsPage() {
         await acceptFollowRequest(token, followerId);
         setItems((prev) => prev.filter((x) => x.followerId !== followerId));
         setSelectedRequestId(null);
+        window.dispatchEvent(new Event("followRequestsUpdated"));
       } catch (e: any) {
         setErr(e?.message ?? String(e));
       } finally {
@@ -164,6 +165,7 @@ export default function FollowRequestsPage() {
         await rejectFollowRequest(token, followerId);
         setItems((prev) => prev.filter((x) => x.followerId !== followerId));
         setSelectedRequestId(null);
+        window.dispatchEvent(new Event("followRequestsUpdated"));
       } catch (e: any) {
         setErr(e?.message ?? String(e));
       } finally {

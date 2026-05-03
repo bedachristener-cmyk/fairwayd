@@ -8,6 +8,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { OAuth2Client } from 'google-auth-library';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { createHash, randomBytes } from 'node:crypto';
+import { MailService } from './mail.service';
 
 type OAuthProvider = 'GOOGLE' | 'APPLE' | 'FACEBOOK';
 
@@ -18,6 +20,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly mail: MailService,
   ) {}
 
   // Keep one google client instance (less overhead)
@@ -104,6 +107,76 @@ export class AuthService {
     };
   }
 
+  async requestEmailLogin(emailInput: string) {
+    const email = this.normalizeEmail(emailInput);
+    const rawToken = randomBytes(32).toString('base64url');
+    const tokenHash = this.hashMagicToken(rawToken);
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    await this.prisma.emailLoginToken.create({
+      data: {
+        email,
+        tokenHash,
+        expiresAt,
+      },
+    });
+
+    const frontendUrl = this.getFrontendUrl();
+    const link = `${frontendUrl}/auth/email/callback?token=${encodeURIComponent(rawToken)}`;
+
+    try {
+      await this.mail.sendMagicLink(email, link);
+    } catch (err) {
+      console.error('Mail send failed', err);
+      if (process.env.NODE_ENV === 'production') {
+        throw err;
+      }
+    }
+
+    return { ok: true };
+  }
+
+  async verifyEmailLogin(rawToken: string) {
+    const token = String(rawToken ?? '').trim();
+    if (!token) throw new BadRequestException('Missing token');
+
+    const tokenHash = this.hashMagicToken(token);
+    const row = await this.prisma.emailLoginToken.findUnique({
+      where: { tokenHash },
+    });
+
+    if (!row || row.usedAt || row.expiresAt.getTime() <= Date.now()) {
+      throw new BadRequestException('Invalid or expired login link');
+    }
+
+    const user = await this.prisma.$transaction(async (tx) => {
+      await tx.emailLoginToken.update({
+        where: { id: row.id },
+        data: { usedAt: new Date() },
+      });
+
+      const existing = await tx.user.findUnique({
+        where: { email: row.email },
+      });
+
+      if (existing) return existing;
+
+      return tx.user.create({
+        data: {
+          email: row.email,
+          password: null,
+          handle: await this.generateEmailHandle(row.email, tx),
+          name: null,
+          avatarUrl: null,
+          termsAcceptedAt: null,
+          termsVersion: null,
+        },
+      });
+    });
+
+    return this.issueJwtResponse(user);
+  }
+
   // =========================================================
   // Core OAuth logic
   // =========================================================
@@ -178,6 +251,17 @@ export class AuthService {
       throw e;
     }
 
+    return this.issueJwtResponse(user);
+  }
+
+  private async issueJwtResponse(user: {
+    id: string;
+    handle?: string | null;
+    name?: string | null;
+    avatarUrl?: string | null;
+    termsAcceptedAt?: Date | null;
+    termsVersion?: string | null;
+  }) {
     const token = await this.jwt.signAsync({
       sub: user.id,
     });
@@ -189,10 +273,50 @@ export class AuthService {
         handle: user.handle,
         name: user.name,
         avatarUrl: user.avatarUrl,
-        termsAcceptedAt: (user as any).termsAcceptedAt ?? null,
-        termsVersion: (user as any).termsVersion ?? null,
+        termsAcceptedAt: user.termsAcceptedAt ?? null,
+        termsVersion: user.termsVersion ?? null,
       },
     };
+  }
+
+  private normalizeEmail(emailInput: string) {
+    const email = String(emailInput ?? '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new BadRequestException('Invalid email');
+    }
+    return email;
+  }
+
+  private hashMagicToken(token: string) {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
+  private getFrontendUrl() {
+    return String(
+      process.env.FRONTEND_URL || process.env.WEB_URL || 'http://localhost:5173',
+    ).replace(/\/+$/, '');
+  }
+
+  private async generateEmailHandle(
+    email: string,
+    tx: Prisma.TransactionClient,
+  ) {
+    const prefix =
+      email
+        .split('@')[0]
+        .toLowerCase()
+        .replace(/[^a-z0-9_]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 14) || 'golfer';
+
+    for (let i = 0; i < 8; i += 1) {
+      const suffix = randomBytes(3).toString('hex');
+      const handle = `${prefix}_${suffix}`.slice(0, 20);
+      const existing = await tx.user.findUnique({ where: { handle } });
+      if (!existing) return handle;
+    }
+
+    return `golfer_${randomBytes(6).toString('hex')}`.slice(0, 20);
   }
 
   // =========================================================

@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -116,49 +117,48 @@ export default function TopRail() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadNotificationBadgeCount = useCallback(async () => {
+    if (!auth?.token || !isAuthenticated) {
+      setNotificationBadgeCount(0);
+      return;
+    }
 
-    async function loadNotificationBadgeCount() {
-      if (!auth?.token || !isAuthenticated) {
+    try {
+      const res = await fetch(`${API_BASE}/users/me/follow-requests`, {
+        headers: { Authorization: `Bearer ${auth?.token}` },
+      });
+
+      if (!res.ok) {
         setNotificationBadgeCount(0);
         return;
       }
 
-      try {
-        const res = await fetch(`${API_BASE}/users/me/follow-requests`, {
-          headers: { Authorization: `Bearer ${auth?.token}` },
-        });
+      const data = await res.json();
+      const items = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.items)
+          ? data.items
+          : [];
 
-        if (!res.ok) {
-          if (!cancelled) setNotificationBadgeCount(0);
-          return;
-        }
-
-        const data = await res.json();
-        const items = Array.isArray(data)
-          ? data
-          : Array.isArray(data?.items)
-            ? data.items
-            : [];
-
-        if (!cancelled) {
-          setNotificationBadgeCount(items.length);
-        }
-      } catch (err) {
-        console.error("Notification badge load failed", err);
-        if (!cancelled) {
-          setNotificationBadgeCount(0);
-        }
-      }
+      setNotificationBadgeCount(items.length);
+    } catch (err) {
+      console.error("Notification badge load failed", err);
+      setNotificationBadgeCount(0);
     }
+  }, [auth?.token, isAuthenticated]);
 
+  useEffect(() => {
     loadNotificationBadgeCount();
+  }, [loadNotificationBadgeCount, location.pathname]);
 
-    return () => {
-      cancelled = true;
+  useEffect(() => {
+    const handler = () => {
+      void loadNotificationBadgeCount();
     };
-  }, [auth?.token, isAuthenticated, location.pathname]);
+
+    window.addEventListener("followRequestsUpdated", handler);
+    return () => window.removeEventListener("followRequestsUpdated", handler);
+  }, [loadNotificationBadgeCount]);
 
   useEffect(() => {
     if (!searchOpen) return;

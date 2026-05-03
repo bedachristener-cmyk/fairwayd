@@ -74,6 +74,20 @@ export class AuthController {
     });
   }
 
+  @Post('email/request')
+  async requestEmailLogin(@Body() body: { email?: string }) {
+    const email = body?.email;
+    if (!email) throw new BadRequestException('Missing email');
+    return this.auth.requestEmailLogin(email);
+  }
+
+  @Post('email/verify')
+  async verifyEmailLogin(@Body() body: { token?: string }) {
+    const token = body?.token;
+    if (!token) throw new BadRequestException('Missing token');
+    return this.auth.verifyEmailLogin(token);
+  }
+
   /**
    * Dev-only login (local/dev environments)
    */

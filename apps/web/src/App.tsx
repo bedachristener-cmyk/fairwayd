@@ -21,6 +21,7 @@ import PrivacySecurityPage from "./pages/PrivacySecurityPage";
 import FriendsPage from "./pages/FriendsPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import HelpPage from "./pages/HelpPage";
+import EmailLoginCallbackPage from "./pages/EmailLoginCallbackPage";
 
 // Onboarding (frontend)
 import { useMe } from "./auth/useMe";
@@ -131,6 +132,10 @@ export default function App() {
           <Routes>
             {/* Public landing (no shell) */}
             <Route path="/" element={<LandingPage />} />
+            <Route
+              path="/auth/email/callback"
+              element={<EmailLoginCallbackPage />}
+            />
 
             {/* Everything inside the shell */}
             <Route element={<AppShell />}>
