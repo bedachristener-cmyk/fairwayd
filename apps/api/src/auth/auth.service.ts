@@ -280,7 +280,9 @@ export class AuthService {
   }
 
   private normalizeEmail(emailInput: string) {
-    const email = String(emailInput ?? '').trim().toLowerCase();
+    const email = String(emailInput ?? '')
+      .trim()
+      .toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       throw new BadRequestException('Invalid email');
     }
@@ -292,9 +294,16 @@ export class AuthService {
   }
 
   private getFrontendUrl() {
-    return String(
-      process.env.FRONTEND_URL || process.env.WEB_URL || 'http://localhost:5173',
-    ).replace(/\/+$/, '');
+    const raw = String(
+      process.env.FRONTEND_URL ||
+        process.env.WEB_URL ||
+        'http://localhost:5173',
+    ).trim();
+
+    return raw
+      .replace(/^https?:\/\/https?:\/\//i, 'https://')
+      .replace(/\/+$/, '')
+      .replace(/^(?!https?:\/\/)/i, 'https://');
   }
 
   private async generateEmailHandle(
