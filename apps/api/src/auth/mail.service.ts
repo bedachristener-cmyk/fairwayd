@@ -20,17 +20,20 @@ export class MailService {
     <div style="font-family: Arial, sans-serif; line-height:1.5; max-width:560px; margin:0 auto; padding:28px; background:#111827; color:#f9fafb; border-radius:18px; border:1px solid #1f2937;">
 
       <div style="padding-bottom:20px; border-bottom:1px solid #374151; margin-bottom:30px;">
-        <div style="display:flex; align-items:flex-end; gap:14px;">
-          <img 
-            src="https://fairwayd-git-stage-bedachristener-cmyks-projects.vercel.app/logo.png" 
-            alt="Fairwayd" 
-            style="width:52px;height:52px;border-radius:13px;"
-          />
-          <div style="font-size:28px;font-weight:700;line-height:1;color:#f9fafb;letter-spacing:-0.4px;">
-            Fairwayd
-          </div>
-        </div>
-      </div>
+  <div style="display:flex; align-items:flex-end;">
+    
+    <img 
+      src="https://fairwayd-git-stage-bedachristener-cmyks-projects.vercel.app/logo.png" 
+      alt="Fairwayd" 
+      style="width:52px;height:52px;border-radius:13px; margin-right:16px;"
+    />
+
+    <div style="font-size:28px;font-weight:700;line-height:1;color:#f9fafb;letter-spacing:-0.4px;">
+      Fairwayd
+    </div>
+
+  </div>
+</div>
 
       <h2 style="font-size:22px;margin:0 0 12px 0;color:#f9fafb;">
         Login to Fairwayd
