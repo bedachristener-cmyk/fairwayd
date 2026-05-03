@@ -1,4 +1,5 @@
 export type DestinationInfo = {
+  heroImage?: string;
   bestTime?: {
     label: string;
     text: string;
@@ -18,6 +19,11 @@ export type DestinationInfo = {
   highlights?: {
     label: string;
     query: string;
+  }[];
+  galleryImages?: {
+    src: string;
+    alt: string;
+    caption?: string;
   }[];
 };
 
@@ -783,6 +789,21 @@ export const DESTINATION_INFO: Record<string, DestinationInfo> = {
   },
 
   philippines: {
+    heroImage: "/destinations/philippines/ph-1.jpg",
+    galleryImages: [
+      {
+        src: "/destinations/philippines/ph-1.jpg",
+        alt: "Philippines golf 1",
+      },
+      {
+        src: "/destinations/philippines/ph-2.jpg",
+        alt: "Philippines golf 2",
+      },
+      {
+        src: "/destinations/philippines/ph-3.jpg",
+        alt: "Philippines golf 3",
+      },
+    ],
     bestTime: [
       {
         label: "Dec - Feb",

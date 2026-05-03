@@ -6,6 +6,7 @@ import { useAuth } from "../auth/AuthContext";
 import PostCard from "../components/PostCard";
 import CommentModal from "../components/CommentModal";
 import BackToTopButton from "../components/BackToTopButton";
+import ImageLightbox from "../components/ImageLightbox";
 import { DESTINATION_INFO } from "../data/destinationInfo";
 import { t } from "../i18n/strings";
 
@@ -112,6 +113,9 @@ export default function DestinationPage() {
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(
     null,
   );
+  const [galleryImageIndex, setGalleryImageIndex] = useState<number | null>(
+    null,
+  );
   const [activeTab, setActiveTab] = useState<"overview" | "courses" | "posts">(
     "overview",
   );
@@ -126,6 +130,8 @@ export default function DestinationPage() {
   const featuredCourses = (data?.items ?? []).slice(0, 3);
   const featuredPosts = (posts ?? []).slice(0, 2);
   const info = slug ? DESTINATION_INFO[slug] : undefined;
+  const heroImage = info?.heroImage;
+  const galleryImages = info?.galleryImages ?? [];
 
   const isOwnPost = (p: DestinationPost) => {
     return user?.id && p.user?.id === user.id;
@@ -654,6 +660,25 @@ export default function DestinationPage() {
                 </div>
               </div>
 
+              {heroImage ? (
+                <img
+                  src={heroImage}
+                  alt={`${data.destination?.name || getCountryName(data.country)} golf destination`}
+                  loading="lazy"
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    maxWidth: 900,
+                    height: isMobile ? 190 : 280,
+                    objectFit: "cover",
+                    borderRadius: 18,
+                    border: "1px solid var(--border)",
+                    background: "var(--card)",
+                    boxSizing: "border-box",
+                  }}
+                />
+              ) : null}
+
               <div
                 style={{
                   display: "flex",
@@ -803,6 +828,114 @@ export default function DestinationPage() {
               </div>
             </div>
           </div>
+
+          {galleryImages.length > 0 ? (
+            <div
+              style={{
+                padding: isMobile ? 14 : 18,
+                borderRadius: 18,
+                border: "1px solid var(--border)",
+                background: "var(--card)",
+                display: "grid",
+                gap: 12,
+                width: "100%",
+                maxWidth: "100%",
+                boxSizing: "border-box",
+                overflow: "hidden",
+              }}
+            >
+              <div style={{ display: "grid", gap: 4 }}>
+                <div
+                  style={{
+                    fontSize: isMobile ? 19 : 21,
+                    fontWeight: 850,
+                    color: "var(--text)",
+                  }}
+                >
+                  Destination Gallery
+                </div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: "var(--sub)",
+                    lineHeight: 1.45,
+                  }}
+                >
+                  A quick visual preview of{" "}
+                  {data.destination?.name || getCountryName(data.country)}.
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: isMobile ? "flex" : "grid",
+                  gridTemplateColumns: isMobile
+                    ? undefined
+                    : "repeat(3, minmax(0, 1fr))",
+                  gap: 10,
+                  overflowX: isMobile ? "auto" : "hidden",
+                  overflowY: "hidden",
+                  maxWidth: "100%",
+                  width: "100%",
+                  boxSizing: "border-box",
+                  paddingBottom: isMobile ? 2 : 0,
+                  WebkitOverflowScrolling: "touch",
+                }}
+              >
+                {galleryImages.map((image, index) => (
+                  <button
+                    key={image.src}
+                    type="button"
+                    onClick={() => setGalleryImageIndex(index)}
+                    style={{
+                      border: "1px solid var(--border)",
+                      background: "var(--bg)",
+                      color: "var(--text)",
+                      borderRadius: 16,
+                      padding: 0,
+                      minWidth: isMobile ? 245 : 0,
+                      maxWidth: "100%",
+                      width: isMobile ? 245 : "100%",
+                      boxSizing: "border-box",
+                      overflow: "hidden",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      flex: isMobile ? "0 0 auto" : undefined,
+                    }}
+                  >
+                    <img
+                      src={image.src}
+                      alt={image.alt}
+                      loading="lazy"
+                      style={{
+                        display: "block",
+                        width: "100%",
+                        height: isMobile ? 150 : 190,
+                        objectFit: "cover",
+                        background: "var(--card)",
+                      }}
+                    />
+                    {image.caption ? (
+                      <div
+                        style={{
+                          padding: "9px 10px",
+                          color: "var(--sub)",
+                          fontSize: 12,
+                          fontWeight: 750,
+                          lineHeight: 1.25,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {image.caption}
+                      </div>
+                    ) : null}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           {info?.bestTime ? (
             <div
@@ -1806,6 +1939,15 @@ export default function DestinationPage() {
           post={activeCommentPost}
           isMobile={isMobile}
           onClose={() => setActiveCommentPostId(null)}
+        />
+      ) : null}
+
+      {galleryImageIndex !== null ? (
+        <ImageLightbox
+          images={galleryImages.map((image) => ({ url: image.src }))}
+          initialIndex={galleryImageIndex}
+          isMobile={isMobile}
+          onClose={() => setGalleryImageIndex(null)}
         />
       ) : null}
 
