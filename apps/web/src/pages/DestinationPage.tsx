@@ -654,9 +654,15 @@ export default function DestinationPage() {
                     maxWidth: 760,
                   }}
                 >
-                  {t("destination_intro_prefix")}
-                  {data.destination?.name || getCountryName(data.country)}
-                  {t("destination_intro_suffix")}
+                  {info?.overviewDescription ? (
+                    info.overviewDescription
+                  ) : (
+                    <>
+                      {t("destination_intro_prefix")}
+                      {data.destination?.name || getCountryName(data.country)}
+                      {t("destination_intro_suffix")}
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -852,7 +858,7 @@ export default function DestinationPage() {
                     color: "var(--text)",
                   }}
                 >
-                  Destination Gallery
+                  {info?.galleryTitle ?? "Destination Gallery"}
                 </div>
                 <div
                   style={{
@@ -861,8 +867,10 @@ export default function DestinationPage() {
                     lineHeight: 1.45,
                   }}
                 >
-                  A quick visual preview of{" "}
-                  {data.destination?.name || getCountryName(data.country)}.
+                  {info?.gallerySubtitle ??
+                    `A quick visual preview of ${
+                      data.destination?.name || getCountryName(data.country)
+                    }.`}
                 </div>
               </div>
 

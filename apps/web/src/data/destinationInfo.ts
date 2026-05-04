@@ -1,5 +1,8 @@
 export type DestinationInfo = {
   heroImage?: string;
+  overviewDescription?: string;
+  galleryTitle?: string;
+  gallerySubtitle?: string;
   bestTime?: {
     label: string;
     text: string;
@@ -790,11 +793,12 @@ export const DESTINATION_INFO: Record<string, DestinationInfo> = {
 
   philippines: {
     heroImage: "/destinations/philippines/ph-1.jpg",
+    overviewDescription:
+      "The Philippines combines city-club golf, resort courses, island scenery, and warm hospitality across Manila, Clark, Cebu, Boracay, Davao, and other regional golf bases.",
+    galleryTitle: "Philippines Gallery",
+    gallerySubtitle:
+      "A visual preview of island golf, resort settings, and travel scenery in the Philippines.",
     galleryImages: [
-      {
-        src: "/destinations/philippines/ph-1.jpg",
-        alt: "Philippines golf 1",
-      },
       {
         src: "/destinations/philippines/ph-2.jpg",
         alt: "Philippines golf 2",

@@ -1823,13 +1823,13 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
       />
 
       {mode === "me" ? (
-        <div style={{ order: 20 }}>
+        <div style={{ order: 1 }}>
           <ProfileSettingsCard />
         </div>
       ) : null}
 
       {activeSection === "courses" && (
-        <div style={{ order: 1 }}>
+        <div style={{ order: 10 }}>
           <Card title={t("following_courses")}>
             <div style={{ padding: 12 }}>
             <div
@@ -1918,7 +1918,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
       )}
 
       {mode === "me" && (
-        <div style={{ order: 21 }}>
+        <div style={{ order: 2 }}>
           <Card
             title={t("follow_requests")}
             right={
@@ -2059,7 +2059,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
       )}
 
       {mode === "me" && (
-        <div style={{ order: 22 }}>
+        <div style={{ order: 3 }}>
           <Card
             title={t("sent_requests")}
             right={
@@ -2199,7 +2199,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
       )}
 
       {activeSection === "following" && (
-        <div ref={followingUsersRef} style={{ order: 1 }}>
+        <div ref={followingUsersRef} style={{ order: 10 }}>
           <UserListCard
             title={t("following_users")}
             count={followingUsers.length}
@@ -2222,7 +2222,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
       )}
 
       {activeSection === "followers" && (
-        <div ref={followersRef} style={{ order: 1 }}>
+        <div ref={followersRef} style={{ order: 10 }}>
           <UserListCard
             title={t("followers")}
             count={followers.length}
@@ -2245,7 +2245,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
       )}
 
       {activeSection === "posts" && (
-        <div ref={postsRef} style={{ order: 1 }}>
+        <div ref={postsRef} style={{ order: 10 }}>
           <Card
             title={t("posts")}
             right={
