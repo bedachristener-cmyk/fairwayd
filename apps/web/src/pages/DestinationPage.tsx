@@ -558,19 +558,49 @@ export default function DestinationPage() {
             style={{
               position: "relative",
               overflow: "hidden",
-              padding: isMobile ? 18 : 28,
+              minHeight: isMobile ? 300 : 380,
+              padding: isMobile ? "18px 18px 46px" : "30px 30px 38px",
               borderRadius: 24,
-              border: "1px solid var(--border)",
-              background:
-                "linear-gradient(135deg, rgba(39,196,107,0.16) 0%, rgba(255,255,255,0.03) 45%, var(--card) 100%)",
+              border: "1px solid rgba(255,255,255,0.14)",
+              background: "#111",
+              boxSizing: "border-box",
             }}
           >
+            {heroImage ? (
+              <>
+                <img
+                  src={heroImage}
+                  alt={`${data.destination?.name || getCountryName(data.country)} golf destination`}
+                  loading="lazy"
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    display: "block",
+                  }}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    background:
+                      "linear-gradient(to top, rgba(0,0,0,0.75), rgba(0,0,0,0.4), rgba(0,0,0,0.2))",
+                    pointerEvents: "none",
+                  }}
+                />
+              </>
+            ) : null}
+
             <div
               style={{
                 position: "relative",
                 zIndex: 1,
                 display: "grid",
+                alignContent: "end",
                 gap: 18,
+                minHeight: isMobile ? 236 : 312,
               }}
             >
               <div
@@ -582,27 +612,24 @@ export default function DestinationPage() {
               >
                 <div
                   style={{
-                    width: 64,
-                    height: 44,
-                    minWidth: 64,
-                    maxWidth: 64,
-                    minHeight: 44,
-                    maxHeight: 44,
-                    borderRadius: 8,
+                    width: 48,
+                    minWidth: 48,
+                    borderRadius: 6,
                     overflow: "hidden",
                     flexShrink: 0,
-                    border: "1px solid var(--border)",
-                    background: "var(--card)",
+                    alignSelf: "flex-end",
+                    marginBottom: 2,
+                    border: "1px solid rgba(255,255,255,0.28)",
+                    boxShadow: "0 6px 16px rgba(0,0,0,0.22)",
                   }}
                 >
                   <img
-                    src={getFlagUrl(data.destination?.code)}
+                    src={getFlagUrl(data.destination?.code || data.country)}
                     alt={data.destination?.code || data.country}
                     style={{
                       display: "block",
                       width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
+                      height: "auto",
                     }}
                   />
                 </div>
@@ -618,7 +645,7 @@ export default function DestinationPage() {
                       fontSize: 11,
                       fontWeight: 700,
                       letterSpacing: 0.6,
-                      color: "var(--sub)",
+                      color: "rgba(255,255,255,0.76)",
                       textTransform: "uppercase",
                     }}
                   >
@@ -630,8 +657,7 @@ export default function DestinationPage() {
                       fontSize: isMobile ? 36 : 52,
                       fontWeight: 900,
                       lineHeight: 1.05,
-                      color: "var(--text)",
-                      letterSpacing: -0.6,
+                      color: "#fff",
                     }}
                   >
                     {data.destination?.name || getCountryName(data.country)}
@@ -650,7 +676,7 @@ export default function DestinationPage() {
                   style={{
                     fontSize: isMobile ? 15 : 17,
                     lineHeight: 1.65,
-                    color: "var(--sub)",
+                    color: "rgba(255,255,255,0.86)",
                     maxWidth: 760,
                   }}
                 >
@@ -666,25 +692,6 @@ export default function DestinationPage() {
                 </div>
               </div>
 
-              {heroImage ? (
-                <img
-                  src={heroImage}
-                  alt={`${data.destination?.name || getCountryName(data.country)} golf destination`}
-                  loading="lazy"
-                  style={{
-                    display: "block",
-                    width: "100%",
-                    maxWidth: 900,
-                    height: isMobile ? 190 : 280,
-                    objectFit: "cover",
-                    borderRadius: 18,
-                    border: "1px solid var(--border)",
-                    background: "var(--card)",
-                    boxSizing: "border-box",
-                  }}
-                />
-              ) : null}
-
               <div
                 style={{
                   display: "flex",
@@ -696,9 +703,9 @@ export default function DestinationPage() {
                   style={{
                     padding: "9px 13px",
                     borderRadius: 999,
-                    border: "1px solid var(--border)",
-                    background: "rgba(255,255,255,0.05)",
-                    color: "var(--text)",
+                    border: "1px solid rgba(255,255,255,0.24)",
+                    background: "rgba(0,0,0,0.34)",
+                    color: "#fff",
                     fontSize: 13,
                     fontWeight: 700,
                   }}
@@ -710,9 +717,9 @@ export default function DestinationPage() {
                   style={{
                     padding: "9px 13px",
                     borderRadius: 999,
-                    border: "1px solid var(--border)",
-                    background: "rgba(255,255,255,0.05)",
-                    color: "var(--text)",
+                    border: "1px solid rgba(255,255,255,0.24)",
+                    background: "rgba(0,0,0,0.34)",
+                    color: "#fff",
                     fontSize: 13,
                     fontWeight: 700,
                   }}
@@ -730,9 +737,9 @@ export default function DestinationPage() {
                     gap: 8,
                     padding: "9px 13px",
                     borderRadius: 999,
-                    border: "1px solid var(--border)",
-                    background: "rgba(255,255,255,0.05)",
-                    color: "var(--text)",
+                    border: "1px solid rgba(255,255,255,0.24)",
+                    background: "rgba(0,0,0,0.34)",
+                    color: "#fff",
                     fontSize: 13,
                     fontWeight: 700,
                   }}
@@ -746,9 +753,9 @@ export default function DestinationPage() {
                   style={{
                     padding: "9px 13px",
                     borderRadius: 999,
-                    border: "1px solid var(--border)",
-                    background: "rgba(255,255,255,0.05)",
-                    color: "var(--text)",
+                    border: "1px solid rgba(255,255,255,0.24)",
+                    background: "rgba(0,0,0,0.34)",
+                    color: "#fff",
                     fontSize: 13,
                     fontWeight: 700,
                   }}
@@ -760,54 +767,26 @@ export default function DestinationPage() {
               <div
                 style={{
                   display: "flex",
-                  flexDirection: isMobile ? "column" : "row",
+                  flexWrap: "wrap",
                   gap: 12,
-                  alignItems: isMobile ? "stretch" : "center",
+                  alignItems: "center",
                 }}
               >
                 <button
                   type="button"
-                  onClick={handleToggleDestinationFollow}
-                  disabled={destinationFollowBusy}
-                  style={{
-                    border: destinationFollowing
-                      ? "1px solid var(--border)"
-                      : "none",
-                    background: destinationFollowing
-                      ? "rgba(255,255,255,0.05)"
-                      : "var(--text)",
-                    color: destinationFollowing ? "var(--text)" : "var(--bg)",
-                    height: 44,
-                    padding: "0 18px",
-                    borderRadius: 999,
-                    fontWeight: 800,
-                    fontSize: 14,
-                    cursor: destinationFollowBusy ? "default" : "pointer",
-                    width: isMobile ? "100%" : "auto",
-                    opacity: destinationFollowBusy ? 0.7 : 1,
-                  }}
-                >
-                  {destinationFollowBusy
-                    ? t("please_wait")
-                    : destinationFollowing
-                      ? t("following_destination")
-                      : t("follow_destination")}
-                </button>
-
-                <button
-                  type="button"
                   onClick={openCoursesTab}
                   style={{
-                    border: "none",
-                    background: "var(--text)",
-                    color: "var(--bg)",
+                    border: "1px solid rgba(255,255,255,0.92)",
+                    background: "#fff",
+                    color: "#111",
                     height: 44,
                     padding: "0 18px",
                     borderRadius: 999,
                     fontWeight: 800,
                     fontSize: 14,
                     cursor: "pointer",
-                    width: isMobile ? "100%" : "auto",
+                    flex: isMobile ? "1 1 150px" : "0 0 auto",
+                    minWidth: 0,
                   }}
                 >
                   {t("explore_courses")}
@@ -817,22 +796,71 @@ export default function DestinationPage() {
                   type="button"
                   onClick={openPostsTab}
                   style={{
-                    border: "1px solid var(--border)",
-                    background: "rgba(255,255,255,0.05)",
-                    color: "var(--text)",
+                    border: "1px solid rgba(255,255,255,0.32)",
+                    background: "rgba(0,0,0,0.38)",
+                    color: "#fff",
                     height: 44,
                     padding: "0 18px",
                     borderRadius: 999,
                     fontWeight: 800,
                     fontSize: 14,
                     cursor: "pointer",
-                    width: isMobile ? "100%" : "auto",
+                    flex: isMobile ? "1 1 150px" : "0 0 auto",
+                    minWidth: 0,
                   }}
                 >
                   {t("view_latest_posts")}
                 </button>
+
+                <button
+                  type="button"
+                  onClick={handleToggleDestinationFollow}
+                  disabled={destinationFollowBusy}
+                  style={{
+                    border: "1px solid rgba(255,255,255,0.32)",
+                    background: destinationFollowing
+                      ? "rgba(0,0,0,0.38)"
+                      : "rgba(255,255,255,0.92)",
+                    color: destinationFollowing ? "#fff" : "#111",
+                    height: 44,
+                    padding: "0 18px",
+                    borderRadius: 999,
+                    fontWeight: 800,
+                    fontSize: 14,
+                    cursor: destinationFollowBusy ? "default" : "pointer",
+                    flex: isMobile ? "1 1 150px" : "0 0 auto",
+                    minWidth: 0,
+                    opacity: destinationFollowBusy ? 0.7 : 1,
+                  }}
+                >
+                  {destinationFollowBusy
+                    ? t("please_wait")
+                    : destinationFollowing
+                      ? t("following_destination")
+                      : t("follow_destination")}
+                </button>
               </div>
             </div>
+
+            {heroImage ? (
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: 7,
+                  right: 10,
+                  fontSize: 10,
+                  color: "rgba(255,255,255,0.48)",
+                  background: "rgba(0,0,0,0.24)",
+                  padding: "3px 6px",
+                  borderRadius: 6,
+                  backdropFilter: "blur(4px)",
+                  pointerEvents: "none",
+                  zIndex: 2,
+                }}
+              >
+                Images may be AI-generated
+              </div>
+            ) : null}
           </div>
 
           {galleryImages.length > 0 ? (
@@ -871,6 +899,16 @@ export default function DestinationPage() {
                     `A quick visual preview of ${
                       data.destination?.name || getCountryName(data.country)
                     }.`}
+                </div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "var(--sub)",
+                    lineHeight: 1.35,
+                    opacity: 0.78,
+                  }}
+                >
+                  Some destination images may be AI-generated.
                 </div>
               </div>
 
@@ -1358,9 +1396,8 @@ export default function DestinationPage() {
               borderRadius: 18,
               border: "1px solid var(--border)",
               background: "var(--card)",
-              display: "flex",
+              display: "grid",
               gap: 12,
-              alignItems: "flex-start",
             }}
           >
             <div
@@ -1371,7 +1408,7 @@ export default function DestinationPage() {
                 border: "1px solid var(--border)",
                 background: "var(--bg)",
                 color: "var(--text)",
-                display: "inline-flex",
+                display: "none",
                 alignItems: "center",
                 justifyContent: "center",
                 fontSize: 15,
@@ -1384,24 +1421,177 @@ export default function DestinationPage() {
             <div style={{ minWidth: 0, display: "grid", gap: 5 }}>
               <div
                 style={{
-                  fontSize: isMobile ? 18 : 20,
-                  fontWeight: 850,
-                  color: "var(--text)",
+                  display: "flex",
+                  flexDirection: isMobile ? "column" : "row",
+                  alignItems: isMobile ? "stretch" : "center",
+                  justifyContent: "space-between",
+                  gap: 10,
                 }}
               >
-                Community Tips
+                <div
+                  style={{
+                    display: "grid",
+                    gap: 5,
+                    minWidth: 0,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: isMobile ? 18 : 20,
+                      fontWeight: 850,
+                      color: "var(--text)",
+                    }}
+                  >
+                    Community Tips
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: "var(--sub)",
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    Coming soon: experienced golfers will be able to share local
+                    tips for this destination.
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled
+                  style={{
+                    border: "1px solid var(--border)",
+                    background: "var(--bg)",
+                    color: "var(--sub)",
+                    height: 40,
+                    padding: "0 14px",
+                    borderRadius: 999,
+                    fontSize: 13,
+                    fontWeight: 800,
+                    cursor: "not-allowed",
+                    opacity: 0.72,
+                    width: isMobile ? "100%" : "auto",
+                    flexShrink: 0,
+                  }}
+                >
+                  Share a tip
+                  <span style={{ fontWeight: 700 }}> - Coming soon</span>
+                </button>
               </div>
+            </div>
+
+            {info?.communityTips?.length ? (
               <div
                 style={{
-                  fontSize: 13,
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: 10,
+                }}
+              >
+                {info.communityTips.map((tip) => (
+                  <div
+                    key={tip.title}
+                    style={{
+                      border: "1px solid var(--border)",
+                      borderRadius: 14,
+                      background: "var(--bg)",
+                      padding: "12px",
+                      display: "grid",
+                      gap: 9,
+                      minWidth: 0,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 8,
+                        minWidth: 0,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          maxWidth: "100%",
+                          minWidth: 0,
+                          borderRadius: 999,
+                          border: "1px solid var(--border)",
+                          background: "var(--card)",
+                          color: "var(--sub)",
+                          padding: "5px 8px",
+                          fontSize: 11,
+                          fontWeight: 800,
+                          boxSizing: "border-box",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        <span>Preview tip</span>
+                        {tip.category ? <span>{tip.category}</span> : null}
+                      </div>
+                      {tip.author ? (
+                        <div
+                          style={{
+                            color: "var(--sub)",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {tip.author}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div
+                      style={{
+                        display: "grid",
+                        gap: 5,
+                        minWidth: 0,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 850,
+                          color: "var(--text)",
+                          lineHeight: 1.25,
+                        }}
+                      >
+                        {tip.title}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "var(--sub)",
+                          lineHeight: 1.45,
+                        }}
+                      >
+                        {tip.body}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div
+                style={{
+                  padding: 14,
+                  borderRadius: 14,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg)",
                   color: "var(--sub)",
+                  fontSize: 14,
                   lineHeight: 1.45,
                 }}
               >
-                Coming soon: player notes, recent tips, and local updates from
-                Fairwayd golfers.
+                Community tips are coming soon.
               </div>
-            </div>
+            )}
           </div>
 
           <div

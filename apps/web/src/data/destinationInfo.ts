@@ -28,6 +28,12 @@ export type DestinationInfo = {
     alt: string;
     caption?: string;
   }[];
+  communityTips?: {
+    title: string;
+    body: string;
+    author?: string;
+    category?: string;
+  }[];
 };
 
 export const DESTINATION_INFO: Record<string, DestinationInfo> = {
@@ -792,13 +798,17 @@ export const DESTINATION_INFO: Record<string, DestinationInfo> = {
   },
 
   philippines: {
-    heroImage: "/destinations/philippines/ph-1.jpg",
+    heroImage: "/destinations/philippines/ph-hero.jpg",
     overviewDescription:
       "The Philippines combines city-club golf, resort courses, island scenery, and warm hospitality across Manila, Clark, Cebu, Boracay, Davao, and other regional golf bases.",
     galleryTitle: "Philippines Gallery",
     gallerySubtitle:
       "A visual preview of island golf, resort settings, and travel scenery in the Philippines.",
     galleryImages: [
+      {
+        src: "/destinations/philippines/ph-1.jpg",
+        alt: "Philippines golf 2",
+      },
       {
         src: "/destinations/philippines/ph-2.jpg",
         alt: "Philippines golf 2",
@@ -864,6 +874,28 @@ export const DESTINATION_INFO: Record<string, DestinationInfo> = {
       {
         label: "Heat and rain",
         text: "Hydration, sun protection, and flexible tee times matter across both dry and rainy seasons.",
+      },
+    ],
+    communityTips: [
+      {
+        title: "Book tee times early around Manila",
+        body: "Popular city and private-adjacent clubs can fill prime morning slots quickly, especially before weekends and holidays.",
+        category: "Tee times",
+      },
+      {
+        title: "Plan extra travel time between islands",
+        body: "Island golf days work best when flights, ferries, resort transfers, and tee times are not packed too tightly.",
+        category: "Transfers",
+      },
+      {
+        title: "Rain showers can be short but intense",
+        body: "Keep plans flexible in rainy season; a heavy shower may pass quickly, but drainage and traffic can still affect timing.",
+        category: "Weather",
+      },
+      {
+        title: "Resort courses are best early morning",
+        body: "Early rounds usually bring cooler air, calmer conditions, and more time for beach or city plans after golf.",
+        category: "Local rhythm",
       },
     ],
     localKnowledge: [
