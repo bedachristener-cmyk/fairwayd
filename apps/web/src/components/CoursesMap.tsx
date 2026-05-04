@@ -28,6 +28,7 @@ type Course = {
 };
 
 type Geo = { lat: number; lon: number };
+type SavedMapView = { lat: number; lon: number; zoom: number };
 
 type PostImage = {
   id: string;
@@ -104,20 +105,26 @@ function toFiniteNumber(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function useGeolocation() {
-  const [pos, setPos] = useState<Geo | null>(null);
+function readSavedMapView(): SavedMapView | null {
+  try {
+    const saved = localStorage.getItem("fairwayd-map-view");
+    if (!saved) return null;
 
-  useEffect(() => {
-    if (!navigator.geolocation) return;
+    const parsed = JSON.parse(saved);
+    const lat = toFiniteNumber(parsed?.lat);
+    const lon = toFiniteNumber(parsed?.lon);
+    const zoom = toFiniteNumber(parsed?.zoom);
 
-    navigator.geolocation.getCurrentPosition(
-      (p) => setPos({ lat: p.coords.latitude, lon: p.coords.longitude }),
-      () => {},
-      { enableHighAccuracy: true },
-    );
-  }, []);
+    if (lat === null || lon === null || zoom === null) return null;
 
-  return pos;
+    return { lat, lon, zoom };
+  } catch {
+    return null;
+  }
+}
+
+function saveMapView(view: SavedMapView) {
+  localStorage.setItem("fairwayd-map-view", JSON.stringify(view));
 }
 
 function FixLeafletSize() {
@@ -139,14 +146,7 @@ function PersistMapView() {
       const center = map.getCenter();
       const zoom = map.getZoom();
 
-      localStorage.setItem(
-        "fairwayd-map-view",
-        JSON.stringify({
-          lat: center.lat,
-          lon: center.lng,
-          zoom,
-        }),
-      );
+      saveMapView({ lat: center.lat, lon: center.lng, zoom });
     };
 
     map.on("moveend", save);
@@ -161,6 +161,65 @@ function PersistMapView() {
   }, [map]);
 
   return null;
+}
+
+function MyLocationButton({
+  onLocationFound,
+  isMobile,
+}: {
+  onLocationFound: (pos: Geo) => void;
+  isMobile: boolean;
+}) {
+  const map = useMap();
+  const [busy, setBusy] = useState(false);
+
+  const handleClick = () => {
+    if (!navigator.geolocation || busy) return;
+
+    setBusy(true);
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        const pos = { lat: p.coords.latitude, lon: p.coords.longitude };
+        const zoom = Math.max(map.getZoom(), 12);
+
+        onLocationFound(pos);
+        map.setView([pos.lat, pos.lon], zoom, { animate: true });
+        saveMapView({ lat: pos.lat, lon: pos.lon, zoom });
+        setBusy(false);
+      },
+      () => {
+        setBusy(false);
+      },
+      { enableHighAccuracy: true },
+    );
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={busy || !navigator.geolocation}
+      title="Move map to my location"
+      style={{
+        position: "absolute",
+        right: 12,
+        bottom: isMobile ? 92 : 24,
+        zIndex: 1000,
+        border: "1px solid rgba(0,0,0,0.12)",
+        background: "rgba(255,255,255,0.96)",
+        color: "#111",
+        borderRadius: 999,
+        padding: isMobile ? "9px 12px" : "10px 14px",
+        boxShadow: "0 2px 12px rgba(0,0,0,.18)",
+        fontWeight: 800,
+        fontSize: isMobile ? 12 : 13,
+        cursor: busy ? "default" : "pointer",
+        opacity: busy ? 0.72 : 1,
+      }}
+    >
+      {busy ? "Locating..." : "My location"}
+    </button>
+  );
 }
 
 function FitToData({
@@ -350,7 +409,7 @@ function CourseFollowButton({ courseId }: { courseId: string }) {
 }
 
 export default function CoursesMap() {
-  const userPos = useGeolocation();
+  const [userPos, setUserPos] = useState<Geo | null>(null);
   const location = useLocation();
   const nav = useNavigate();
 
@@ -398,6 +457,7 @@ export default function CoursesMap() {
   const satelliteTileAttribution =
     "&copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community";
   const markerRefs = useRef<Record<string, L.Marker | null>>({});
+  const savedMapView = useMemo(() => readSavedMapView(), []);
 
   const stopBtn = (e: any) => {
     e.preventDefault();
@@ -405,21 +465,10 @@ export default function CoursesMap() {
   };
 
   const center = useMemo<[number, number]>(() => {
-    // 1️⃣ zuerst letzte gespeicherte Map Position
-    try {
-      const saved = localStorage.getItem("fairwayd-map-view");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        const sLat = toFiniteNumber(parsed?.lat);
-        const sLon = toFiniteNumber(parsed?.lon);
+    if (savedMapView) {
+      return [savedMapView.lat, savedMapView.lon];
+    }
 
-        if (sLat !== null && sLon !== null) {
-          return [sLat, sLon];
-        }
-      }
-    } catch {}
-
-    // 2️⃣ sonst aktueller Standort
     const lat = toFiniteNumber(userPos?.lat);
     const lon = toFiniteNumber(userPos?.lon);
 
@@ -427,9 +476,8 @@ export default function CoursesMap() {
       return [lat, lon];
     }
 
-    // 3️⃣ neutraler Fallback
     return [20, 0];
-  }, [userPos]);
+  }, [savedMapView, userPos]);
   useEffect(() => {
     const path = countryFromUrl
       ? `/courses/by-country/${encodeURIComponent(countryFromUrl)}`
@@ -623,7 +671,7 @@ export default function CoursesMap() {
 
       <MapContainer
         center={center}
-        zoom={8}
+        zoom={savedMapView?.zoom ?? 8}
         style={{ height: "100%", width: "100%" }}
       >
         {mapStyle === "map" ? (
@@ -643,17 +691,15 @@ export default function CoursesMap() {
 
         <FixLeafletSize />
         <PersistMapView />
-
-        <FitToData
-          userPos={countryFromUrl ? null : userPos}
-          courses={courses}
-          locked={!!courseIdFromUrl}
+        <MyLocationButton
+          isMobile={isMobile}
+          onLocationFound={(pos) => setUserPos(pos)}
         />
 
         <FitToData
           userPos={countryFromUrl ? null : userPos}
           courses={courses}
-          locked={!!courseIdFromUrl}
+          locked={!!courseIdFromUrl || !!savedMapView || !!userPos}
         />
 
         <ZoomToCourse

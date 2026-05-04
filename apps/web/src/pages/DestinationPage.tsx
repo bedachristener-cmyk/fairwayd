@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../api/base";
@@ -100,6 +100,7 @@ export default function DestinationPage() {
   const navigate = useNavigate();
   const { token, logout, user } = useAuth();
   const isMobile = window.innerWidth <= 980;
+  const overviewExperienceRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -143,6 +144,12 @@ export default function DestinationPage() {
 
   const openCoursesTab = () => setActiveTab("courses");
   const openPostsTab = () => setActiveTab("posts");
+  const scrollToOverviewExperience = () => {
+    overviewExperienceRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
 
   const loadDestinationFollowStatus = useCallback(async () => {
     if (!slug) return;
@@ -554,6 +561,7 @@ export default function DestinationPage() {
             gap: 20,
           }}
         >
+          <div>
           <div
             style={{
               position: "relative",
@@ -699,7 +707,12 @@ export default function DestinationPage() {
                   gap: 10,
                 }}
               >
-                <div
+                <button
+                  type="button"
+                  onClick={openCoursesTab}
+                  aria-label={`Show ${data.courseCount} courses for ${
+                    data.destination?.name || getCountryName(data.country)
+                  }`}
                   style={{
                     padding: "9px 13px",
                     borderRadius: 999,
@@ -708,12 +721,20 @@ export default function DestinationPage() {
                     color: "#fff",
                     fontSize: 13,
                     fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(0,0,0,0.48)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "rgba(0,0,0,0.34)";
                   }}
                 >
                   ⛳ {data.courseCount} {t("course_plural")}
-                </div>
+                </button>
 
                 <div
+                  title="Followers list coming soon"
                   style={{
                     padding: "9px 13px",
                     borderRadius: 999,
@@ -749,19 +770,6 @@ export default function DestinationPage() {
                   </span>
                 </div>
 
-                <div
-                  style={{
-                    padding: "9px 13px",
-                    borderRadius: 999,
-                    border: "1px solid rgba(255,255,255,0.24)",
-                    background: "rgba(0,0,0,0.34)",
-                    color: "#fff",
-                    fontSize: 13,
-                    fontWeight: 700,
-                  }}
-                >
-                  🏌️ {t("explore_experience")}
-                </div>
               </div>
 
               <div
@@ -772,46 +780,6 @@ export default function DestinationPage() {
                   alignItems: "center",
                 }}
               >
-                <button
-                  type="button"
-                  onClick={openCoursesTab}
-                  style={{
-                    border: "1px solid rgba(255,255,255,0.92)",
-                    background: "#fff",
-                    color: "#111",
-                    height: 44,
-                    padding: "0 18px",
-                    borderRadius: 999,
-                    fontWeight: 800,
-                    fontSize: 14,
-                    cursor: "pointer",
-                    flex: isMobile ? "1 1 150px" : "0 0 auto",
-                    minWidth: 0,
-                  }}
-                >
-                  {t("explore_courses")}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={openPostsTab}
-                  style={{
-                    border: "1px solid rgba(255,255,255,0.32)",
-                    background: "rgba(0,0,0,0.38)",
-                    color: "#fff",
-                    height: 44,
-                    padding: "0 18px",
-                    borderRadius: 999,
-                    fontWeight: 800,
-                    fontSize: 14,
-                    cursor: "pointer",
-                    flex: isMobile ? "1 1 150px" : "0 0 auto",
-                    minWidth: 0,
-                  }}
-                >
-                  {t("view_latest_posts")}
-                </button>
-
                 <button
                   type="button"
                   onClick={handleToggleDestinationFollow}
@@ -860,7 +828,40 @@ export default function DestinationPage() {
               >
                 Images may be AI-generated
               </div>
-            ) : null}
+          ) : null}
+        </div>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-start",
+              marginTop: 14,
+            }}
+          >
+            <button
+              type="button"
+              onClick={scrollToOverviewExperience}
+              aria-label="Scroll to destination experience overview"
+              style={{
+                padding: "9px 13px",
+                borderRadius: 999,
+                border: "1px solid rgba(255,255,255,0.24)",
+                background: "rgba(0,0,0,0.34)",
+                color: "#fff",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(0,0,0,0.48)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "rgba(0,0,0,0.34)";
+              }}
+            >
+              🏌️ {t("explore_experience")}
+            </button>
+          </div>
           </div>
 
           {galleryImages.length > 0 ? (
@@ -982,6 +983,11 @@ export default function DestinationPage() {
               </div>
             </div>
           ) : null}
+
+          <div
+            ref={overviewExperienceRef}
+            style={{ scrollMarginTop: 90 }}
+          />
 
           {info?.bestTime ? (
             <div
