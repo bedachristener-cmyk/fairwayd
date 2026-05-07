@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import L from "leaflet";
 import {
   MapContainer,
   TileLayer,
-  Marker,
   Popup,
   CircleMarker,
   useMap,
@@ -13,6 +12,10 @@ import { useAuth } from "../auth/AuthContext";
 import { apiGet } from "../api/client";
 import { useCourseFollow } from "../hooks/useCourseFollow";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
+import "leaflet.markercluster";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+//import { saveRating, getMyRating, getRatingSummary } from "../api/ratings";
 
 type Course = {
   id: string;
@@ -28,7 +31,6 @@ type Course = {
 };
 
 type Geo = { lat: number; lon: number };
-type SavedMapView = { lat: number; lon: number; zoom: number };
 
 type PostImage = {
   id: string;
@@ -100,31 +102,64 @@ const golfIcon = L.divIcon({
   popupAnchor: [0, -10],
 });
 
+const golfIconActive = L.divIcon({
+  className: "golf-marker-active",
+  html: `
+  <div style="
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    background: #2ecc71;
+    box-shadow: 0 0 0 4px rgba(46,204,113,0.25), 0 4px 12px rgba(0,0,0,.35);
+    border: 2px solid white;
+    position: relative;
+    box-sizing: border-box;
+  ">
+    <div style="
+      position: absolute;
+      left: 7px;
+      top: 3px;
+      width: 2px;
+      height: 13px;
+      background: white;
+      border-radius: 2px;
+    "></div>
+    <div style="
+      position: absolute;
+      left: 9px;
+      top: 3px;
+      width: 0;
+      height: 0;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+      border-left: 6px solid yellow;
+    "></div>
+  </div>
+  `,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+  popupAnchor: [0, -12],
+});
+
 function toFiniteNumber(v: unknown): number | null {
   const n = typeof v === "number" ? v : Number(v);
   return Number.isFinite(n) ? n : null;
 }
 
-function readSavedMapView(): SavedMapView | null {
-  try {
-    const saved = localStorage.getItem("fairwayd-map-view");
-    if (!saved) return null;
+function useGeolocation() {
+  const [pos, setPos] = useState<Geo | null>(null);
 
-    const parsed = JSON.parse(saved);
-    const lat = toFiniteNumber(parsed?.lat);
-    const lon = toFiniteNumber(parsed?.lon);
-    const zoom = toFiniteNumber(parsed?.zoom);
+  useEffect(() => {
+    if (!navigator.geolocation) return;
 
-    if (lat === null || lon === null || zoom === null) return null;
+    navigator.geolocation.getCurrentPosition(
+      (p) => setPos({ lat: p.coords.latitude, lon: p.coords.longitude }),
+      () => {},
+      { enableHighAccuracy: true },
+    );
+  }, []);
 
-    return { lat, lon, zoom };
-  } catch {
-    return null;
-  }
-}
-
-function saveMapView(view: SavedMapView) {
-  localStorage.setItem("fairwayd-map-view", JSON.stringify(view));
+  return pos;
 }
 
 function FixLeafletSize() {
@@ -138,6 +173,7 @@ function FixLeafletSize() {
 
   return null;
 }
+
 function PersistMapView() {
   const map = useMap();
 
@@ -146,7 +182,14 @@ function PersistMapView() {
       const center = map.getCenter();
       const zoom = map.getZoom();
 
-      saveMapView({ lat: center.lat, lon: center.lng, zoom });
+      localStorage.setItem(
+        "fairwayd-map-view",
+        JSON.stringify({
+          lat: center.lat,
+          lon: center.lng,
+          zoom,
+        }),
+      );
     };
 
     map.on("moveend", save);
@@ -161,65 +204,6 @@ function PersistMapView() {
   }, [map]);
 
   return null;
-}
-
-function MyLocationButton({
-  onLocationFound,
-  isMobile,
-}: {
-  onLocationFound: (pos: Geo) => void;
-  isMobile: boolean;
-}) {
-  const map = useMap();
-  const [busy, setBusy] = useState(false);
-
-  const handleClick = () => {
-    if (!navigator.geolocation || busy) return;
-
-    setBusy(true);
-    navigator.geolocation.getCurrentPosition(
-      (p) => {
-        const pos = { lat: p.coords.latitude, lon: p.coords.longitude };
-        const zoom = Math.max(map.getZoom(), 12);
-
-        onLocationFound(pos);
-        map.setView([pos.lat, pos.lon], zoom, { animate: true });
-        saveMapView({ lat: pos.lat, lon: pos.lon, zoom });
-        setBusy(false);
-      },
-      () => {
-        setBusy(false);
-      },
-      { enableHighAccuracy: true },
-    );
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={handleClick}
-      disabled={busy || !navigator.geolocation}
-      title="Move map to my location"
-      style={{
-        position: "absolute",
-        right: 12,
-        bottom: isMobile ? 92 : 24,
-        zIndex: 1000,
-        border: "1px solid rgba(0,0,0,0.12)",
-        background: "rgba(255,255,255,0.96)",
-        color: "#111",
-        borderRadius: 999,
-        padding: isMobile ? "9px 12px" : "10px 14px",
-        boxShadow: "0 2px 12px rgba(0,0,0,.18)",
-        fontWeight: 800,
-        fontSize: isMobile ? 12 : 13,
-        cursor: busy ? "default" : "pointer",
-        opacity: busy ? 0.72 : 1,
-      }}
-    >
-      {busy ? "Locating..." : "My location"}
-    </button>
-  );
 }
 
 function FitToData({
@@ -272,11 +256,13 @@ function ZoomToCourse({
   courses,
   markerRefs,
   onOpenCourse,
+  onSelectCourse,
 }: {
   courseId: string | null;
   courses: Course[];
   markerRefs: React.MutableRefObject<Record<string, L.Marker | null>>;
   onOpenCourse: (courseId: string) => void;
+  onSelectCourse: (courseId: string) => void;
 }) {
   const map = useMap();
 
@@ -298,6 +284,7 @@ function ZoomToCourse({
 
     map.setView([lat as number, lon as number], 14, { animate: true });
 
+    onSelectCourse(courseId);
     onOpenCourse(courseId);
 
     setTimeout(() => {
@@ -308,7 +295,7 @@ function ZoomToCourse({
       url.searchParams.delete("courseId");
       window.history.replaceState({}, "", url.pathname + url.search);
     }, 150);
-  }, [courseId, courses, map, markerRefs, onOpenCourse]);
+  }, [courseId, courses, map, markerRefs, onOpenCourse, onSelectCourse]);
 
   return null;
 }
@@ -332,6 +319,7 @@ function formatWhen(iso: string) {
     return iso;
   }
 }
+
 function normalizeWebsite(url?: string | null) {
   if (!url) return null;
 
@@ -408,8 +396,76 @@ function CourseFollowButton({ courseId }: { courseId: string }) {
   );
 }
 
+function ClusteredCourseMarkers({
+  courses,
+  markerRefs,
+  onSelectCourse,
+}: {
+  courses: Course[];
+  markerRefs: React.MutableRefObject<Record<string, L.Marker | null>>;
+  onSelectCourse: (courseId: string) => void;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    const clusterGroup = L.markerClusterGroup({
+      chunkedLoading: true,
+      showCoverageOnHover: false,
+      spiderfyOnMaxZoom: true,
+      disableClusteringAtZoom: 13,
+    });
+
+    courses.forEach((c) => {
+      const lat = toFiniteNumber(c.lat);
+      const lon = toFiniteNumber(c.lon);
+
+      if (
+        lat == null ||
+        lon == null ||
+        !Number.isFinite(lat) ||
+        !Number.isFinite(lon) ||
+        lat < -90 ||
+        lat > 90 ||
+        lon < -180 ||
+        lon > 180
+      ) {
+        return;
+      }
+
+      const isActive = c.id === (window as any).__activeCourseId;
+
+      const marker = L.marker([lat, lon], {
+        icon: isActive ? golfIconActive : golfIcon,
+      });
+
+      marker.on("click", () => {
+        onSelectCourse(c.id);
+      });
+
+      markerRefs.current[c.id] = marker;
+      clusterGroup.addLayer(marker);
+    });
+
+    map.addLayer(clusterGroup);
+
+    return () => {
+      clusterGroup.clearLayers();
+      map.removeLayer(clusterGroup);
+      markerRefs.current = {};
+    };
+  }, [
+    courses,
+    map,
+    markerRefs,
+    onSelectCourse,
+    (window as any).__activeCourseId,
+  ]);
+
+  return null;
+}
+
 export default function CoursesMap() {
-  const [userPos, setUserPos] = useState<Geo | null>(null);
+  const userPos = useGeolocation();
   const location = useLocation();
   const nav = useNavigate();
 
@@ -433,15 +489,14 @@ export default function CoursesMap() {
   const [errByCourse, setErrByCourse] = useState<Record<string, string | null>>(
     {},
   );
+  const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
+  (window as any).__activeCourseId = activeCourseId;
+
   const isMobile = typeof window !== "undefined" && window.innerWidth <= 980;
 
   const courseIdFromUrl = useMemo(() => {
     const sp = new URLSearchParams(location.search);
     return sp.get("courseId");
-  }, [location.search]);
-  const countryFromUrl = useMemo(() => {
-    const sp = new URLSearchParams(location.search);
-    return sp.get("country")?.trim().toUpperCase() || null;
   }, [location.search]);
   const mapTileUrl =
     "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
@@ -457,7 +512,11 @@ export default function CoursesMap() {
   const satelliteTileAttribution =
     "&copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community";
   const markerRefs = useRef<Record<string, L.Marker | null>>({});
-  const savedMapView = useMemo(() => readSavedMapView(), []);
+
+  const activeCourse = useMemo(() => {
+    if (!activeCourseId) return null;
+    return courses.find((c) => c.id === activeCourseId) ?? null;
+  }, [activeCourseId, courses]);
 
   const stopBtn = (e: any) => {
     e.preventDefault();
@@ -465,9 +524,18 @@ export default function CoursesMap() {
   };
 
   const center = useMemo<[number, number]>(() => {
-    if (savedMapView) {
-      return [savedMapView.lat, savedMapView.lon];
-    }
+    try {
+      const saved = localStorage.getItem("fairwayd-map-view");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const sLat = toFiniteNumber(parsed?.lat);
+        const sLon = toFiniteNumber(parsed?.lon);
+
+        if (sLat !== null && sLon !== null) {
+          return [sLat, sLon];
+        }
+      }
+    } catch {}
 
     const lat = toFiniteNumber(userPos?.lat);
     const lon = toFiniteNumber(userPos?.lon);
@@ -477,68 +545,67 @@ export default function CoursesMap() {
     }
 
     return [20, 0];
-  }, [savedMapView, userPos]);
+  }, [userPos]);
+
   useEffect(() => {
-    const path = countryFromUrl
-      ? `/courses/by-country/${encodeURIComponent(countryFromUrl)}`
-      : "/courses";
-
-    apiGet<Course[] | { items?: Course[] }>(path)
+    apiGet<Course[]>("/courses")
       .then((data) => {
-        if (Array.isArray(data)) {
-          setCourses(data);
-          return;
-        }
-
-        if (Array.isArray(data?.items)) {
-          setCourses(data.items);
-          return;
-        }
-
-        setLoadError(`GET ${path} returned unexpected JSON`);
+        if (Array.isArray(data)) setCourses(data);
+        else setLoadError("GET /courses returned non-array JSON");
       })
       .catch((e: any) => setLoadError(e?.message ?? String(e)));
-  }, [countryFromUrl]);
+  }, []);
 
-  const loadPostsForCourse = async (courseId: string, force = false) => {
-    if (!courseId) return;
+  const loadPostsForCourse = useCallback(
+    async (courseId: string, force = false) => {
+      if (!courseId) return;
 
-    if (!force && postsByCourse[courseId]) return;
+      if (!force && postsByCourse[courseId]) return;
 
-    if (!isAuthenticated || !token) {
-      setErrByCourse((m) => ({ ...m, [courseId]: "Login to see posts." }));
-      return;
-    }
+      if (!isAuthenticated || !token) {
+        setErrByCourse((m) => ({ ...m, [courseId]: "Login to see posts." }));
+        return;
+      }
 
-    setBusyByCourse((m) => ({ ...m, [courseId]: true }));
-    setErrByCourse((m) => ({ ...m, [courseId]: null }));
+      setBusyByCourse((m) => ({ ...m, [courseId]: true }));
+      setErrByCourse((m) => ({ ...m, [courseId]: null }));
 
-    try {
-      const res = await apiGet<CoursePostsResponse>(
-        `/posts/course/${courseId}`,
-        {
-          token,
-        },
-      );
+      try {
+        const res = await apiGet<CoursePostsResponse>(
+          `/posts/course/${courseId}`,
+          {
+            token,
+          },
+        );
 
-      const items = Array.isArray(res?.items) ? res.items : [];
+        const items = Array.isArray(res?.items) ? res.items : [];
 
-      setPostsByCourse((m) => ({
-        ...m,
-        [courseId]: items,
-      }));
-    } catch (e: any) {
-      setErrByCourse((m) => ({ ...m, [courseId]: e?.message ?? String(e) }));
-      setPostsByCourse((m) => ({ ...m, [courseId]: [] }));
-    } finally {
-      setBusyByCourse((m) => ({ ...m, [courseId]: false }));
-    }
-  };
+        setPostsByCourse((m) => ({
+          ...m,
+          [courseId]: items,
+        }));
+      } catch (e: any) {
+        setErrByCourse((m) => ({ ...m, [courseId]: e?.message ?? String(e) }));
+        setPostsByCourse((m) => ({ ...m, [courseId]: [] }));
+      } finally {
+        setBusyByCourse((m) => ({ ...m, [courseId]: false }));
+      }
+    },
+    [isAuthenticated, postsByCourse, token],
+  );
 
   const postsForCourse = (courseId: string) => {
     const list = postsByCourse[courseId] ?? [];
     return list.slice().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
   };
+
+  const handleSelectCourse = useCallback(
+    (courseId: string) => {
+      setActiveCourseId(courseId);
+      void loadPostsForCourse(courseId, false);
+    },
+    [loadPostsForCourse],
+  );
 
   if (loadError) {
     return (
@@ -671,7 +738,7 @@ export default function CoursesMap() {
 
       <MapContainer
         center={center}
-        zoom={savedMapView?.zoom ?? 8}
+        zoom={8}
         style={{ height: "100%", width: "100%" }}
       >
         {mapStyle === "map" ? (
@@ -691,15 +758,11 @@ export default function CoursesMap() {
 
         <FixLeafletSize />
         <PersistMapView />
-        <MyLocationButton
-          isMobile={isMobile}
-          onLocationFound={(pos) => setUserPos(pos)}
-        />
 
         <FitToData
-          userPos={countryFromUrl ? null : userPos}
+          userPos={userPos}
           courses={courses}
-          locked={!!courseIdFromUrl || !!savedMapView || !!userPos}
+          locked={!!courseIdFromUrl}
         />
 
         <ZoomToCourse
@@ -707,6 +770,7 @@ export default function CoursesMap() {
           courses={courses}
           markerRefs={markerRefs}
           onOpenCourse={(id) => loadPostsForCourse(id, false)}
+          onSelectCourse={setActiveCourseId}
         />
 
         {userPos &&
@@ -717,60 +781,46 @@ export default function CoursesMap() {
             </CircleMarker>
           )}
 
-        {courses.map((c) => {
-          const lat = toFiniteNumber(c.lat);
-          const lon = toFiniteNumber(c.lon);
+        <ClusteredCourseMarkers
+          courses={courses}
+          markerRefs={markerRefs}
+          onSelectCourse={handleSelectCourse}
+        />
 
-          if (
-            lat == null ||
-            lon == null ||
-            !Number.isFinite(lat) ||
-            !Number.isFinite(lon) ||
-            lat < -90 ||
-            lat > 90 ||
-            lon < -180 ||
-            lon > 180
-          ) {
-            return null;
-          }
+        {activeCourse &&
+          (() => {
+            const c = activeCourse;
+            const lat = toFiniteNumber(c.lat);
+            const lon = toFiniteNumber(c.lon);
 
-          if (
-            lat == null ||
-            lon == null ||
-            !Number.isFinite(lat) ||
-            !Number.isFinite(lon) ||
-            lat < -90 ||
-            lat > 90 ||
-            lon < -180 ||
-            lon > 180
-          ) {
-            return null;
-          }
+            if (
+              lat == null ||
+              lon == null ||
+              !Number.isFinite(lat) ||
+              !Number.isFinite(lon) ||
+              lat < -90 ||
+              lat > 90 ||
+              lon < -180 ||
+              lon > 180
+            ) {
+              return null;
+            }
 
-          const busy = !!busyByCourse[c.id];
-          const err = errByCourse[c.id];
-          const loaded = postsByCourse[c.id] !== undefined;
-          const list = postsForCourse(c.id);
+            const busy = !!busyByCourse[c.id];
+            const err = errByCourse[c.id];
+            const loaded = postsByCourse[c.id] !== undefined;
+            const list = postsForCourse(c.id);
 
-          return (
-            <Marker
-              key={c.id}
-              position={[lat, lon]}
-              icon={golfIcon}
-              ref={(r) => {
-                markerRefs.current[c.id] = (r as any) ?? null;
-              }}
-              eventHandlers={{
-                click: () => {
-                  nav(`/courses/${c.id}`);
-                },
-              }}
-            >
+            return (
               <Popup
+                position={[lat, lon]}
                 offset={[0, 12]}
                 autoPan={true}
                 autoPanPaddingTopLeft={[20, 140]}
                 autoPanPaddingBottomRight={[20, 80]}
+                eventHandlers={{
+                  remove: () => setActiveCourseId(null),
+                }}
               >
                 <div
                   style={{
@@ -832,15 +882,36 @@ export default function CoursesMap() {
 
                         <div
                           style={{
-                            fontSize: 12,
+                            marginTop: 6,
+                            fontSize: 11,
                             color: "var(--sub)",
+                            opacity: 0.75,
                             lineHeight: 1.4,
+                            fontFamily: "monospace",
                           }}
                         >
-                          {[c.city, c.region, c.country]
-                            .filter(Boolean)
-                            .join(", ")}
+                          Lat: {lat}
+                          <br />
+                          Lon: {lon}
                         </div>
+
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${lat},${lon}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          onMouseDown={stopBtn}
+                          onClick={(e) => e.stopPropagation()}
+                          style={{
+                            display: "inline-block",
+                            marginTop: 6,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: "var(--green)",
+                            textDecoration: "none",
+                          }}
+                        >
+                          Open coordinates in Google Maps ↗
+                        </a>
                       </div>
                     </div>
 
@@ -1205,9 +1276,8 @@ export default function CoursesMap() {
                   </div>
                 </div>
               </Popup>
-            </Marker>
-          );
-        })}
+            );
+          })()}
       </MapContainer>
     </div>
   );

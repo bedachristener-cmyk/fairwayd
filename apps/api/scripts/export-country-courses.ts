@@ -46,16 +46,17 @@ function googleCoordUrl(lat: number, lon: number) {
 
 async function main() {
   const country = (process.argv[2] || '').trim().toUpperCase();
-  const outputArg = process.argv[3];
 
-  if (!country || !outputArg) {
+  if (!country) {
     console.error(
-      'Usage: npx ts-node scripts/export-country-courses.ts <countryCode> <output-csv-path>',
+      'Usage: npx ts-node scripts/export-country-courses.ts <countryCode>',
     );
     process.exit(1);
   }
 
-  const outputPath = path.resolve(outputArg);
+  const outputPath = path.resolve(
+    `data/courses/${country.toLowerCase()}.csv`,
+  );
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 
   const courses = await prisma.course.findMany({
