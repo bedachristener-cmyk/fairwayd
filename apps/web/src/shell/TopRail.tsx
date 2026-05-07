@@ -11,6 +11,7 @@ import {
   Globe,
   HelpCircle,
   Home,
+  MapPinPlus,
   LogOut,
   Map,
   Menu,
@@ -485,6 +486,14 @@ export default function TopRail() {
       icon: <Globe size={18} strokeWidth={2.2} />,
       action: () => navigateFromMenu("/destinations"),
       isActive: location.pathname.startsWith("/destinations"),
+    },
+    {
+      key: "suggest-course",
+      label: "Suggest missing course",
+      subtitle: "Send a course for review",
+      icon: <MapPinPlus size={18} strokeWidth={2.2} />,
+      action: () => navigateFromMenu("/course-submissions/new"),
+      isActive: location.pathname === "/course-submissions/new",
     },
     {
       key: "notifications",

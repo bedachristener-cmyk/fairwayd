@@ -42,6 +42,12 @@ enum FollowStatus {
   ACCEPTED
 }
 
+enum CourseSubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id        String         @id @default(cuid())
   email     String?        @unique
@@ -84,6 +90,7 @@ model User {
   destinationFollows DestinationFollow[]
 
   courseRatings CourseRating[]
+  courseSubmissions CourseSubmission[]
 }
 
 model AuthAccount {
@@ -189,6 +196,30 @@ model Course {
   @@index([access])
   @@index([holes])
   @@index([location], type: Gist)
+}
+
+model CourseSubmission {
+  id                String                 @id @default(cuid())
+  name              String
+  country           String
+  city              String?
+  region            String?
+  website           String?
+  lat               Float?
+  lon               Float?
+  holes             Int?
+  par               Int?
+  notes             String?
+  imageUrl          String?
+  status            CourseSubmissionStatus @default(PENDING)
+  submittedByUserId String?
+  submittedBy       User?                  @relation(fields: [submittedByUserId], references: [id], onDelete: SetNull)
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  @@index([status])
+  @@index([country])
+  @@index([submittedByUserId])
 }
 
 model CourseRating {

@@ -12,6 +12,7 @@ import { FollowsModule } from './follows/follows.module';
 import { FeedbackModule } from './feedback/feedback.module';
 import { DestinationsModule } from './destinations/destinations.module';
 import { RatingsModule } from './ratings/ratings.module';
+import { CourseSubmissionsModule } from './course-submissions/course-submissions.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { RatingsModule } from './ratings/ratings.module';
     FeedbackModule,
     DestinationsModule,
     RatingsModule,
+    CourseSubmissionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

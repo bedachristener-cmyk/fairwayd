@@ -37,6 +37,7 @@ import FeedbackPage from "./pages/FeedbackPage";
 import UserSearchPage from "./pages/UserSearchPage";
 import DestinationsPage from "./pages/DestinationsPage";
 import DestinationPage from "./pages/DestinationPage";
+import NewCourseSubmissionPage from "./pages/NewCourseSubmissionPage";
 
 /**
  * Wrap any protected page with this:
@@ -209,6 +210,16 @@ export default function App() {
 
               {/* Course detail */}
               <Route path="/courses/:courseId" element={<CoursePage />} />
+              <Route
+                path="/course-submissions/new"
+                element={
+                  <ProtectedRoute>
+                    <OnboardingGuard>
+                      <NewCourseSubmissionPage />
+                    </OnboardingGuard>
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/friends" element={<FriendsPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/help" element={<HelpPage />} />

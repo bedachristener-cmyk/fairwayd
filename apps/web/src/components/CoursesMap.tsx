@@ -490,9 +490,13 @@ export default function CoursesMap() {
     {},
   );
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
+  const [mapRef, setMapRef] = useState<L.Map | null>(null);
   (window as any).__activeCourseId = activeCourseId;
 
   const isMobile = typeof window !== "undefined" && window.innerWidth <= 980;
+  const userLat = toFiniteNumber(userPos?.lat);
+  const userLon = toFiniteNumber(userPos?.lon);
+  const hasValidUserPos = userLat !== null && userLon !== null;
 
   const courseIdFromUrl = useMemo(() => {
     const sp = new URLSearchParams(location.search);
@@ -740,6 +744,7 @@ export default function CoursesMap() {
         center={center}
         zoom={8}
         style={{ height: "100%", width: "100%" }}
+        ref={setMapRef}
       >
         {mapStyle === "map" ? (
           <TileLayer attribution={mapTileAttribution} url={mapTileUrl} />
@@ -1279,6 +1284,41 @@ export default function CoursesMap() {
             );
           })()}
       </MapContainer>
+
+      {hasValidUserPos && (
+        <button
+          type="button"
+          title="My location"
+          aria-label="My location"
+          onClick={() => {
+            if (!mapRef || userLat === null || userLon === null) return;
+            mapRef.setView([userLat, userLon], 13, { animate: true });
+          }}
+          style={{
+            position: "absolute",
+            top: isMobile ? 62 : 72,
+            left: isMobile ? 12 : 12,
+            zIndex: 1000,
+            width: 38,
+            height: 38,
+            borderRadius: 999,
+            border: "1px solid var(--border)",
+            background: "var(--card)",
+            color: "var(--text)",
+            boxShadow: "0 4px 14px rgba(0,0,0,.16)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            fontSize: 19,
+            fontWeight: 800,
+            lineHeight: 1,
+            userSelect: "none",
+          }}
+        >
+          ⌖
+        </button>
+      )}
     </div>
   );
 }
