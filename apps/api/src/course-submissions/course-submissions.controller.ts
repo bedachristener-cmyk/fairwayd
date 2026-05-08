@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { CourseSubmissionsService } from './course-submissions.service';
 
@@ -27,5 +37,11 @@ export class CourseSubmissionsController {
   @Patch(':id/approve')
   approve(@Param('id') id: string) {
     return this.courseSubmissionsService.approve(id);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Patch(':id/reject')
+  reject(@Param('id') id: string) {
+    return this.courseSubmissionsService.reject(id);
   }
 }

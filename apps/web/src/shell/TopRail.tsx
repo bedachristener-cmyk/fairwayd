@@ -8,6 +8,7 @@ import {
 } from "react";
 import {
   ChevronRight,
+  ClipboardList,
   Globe,
   HelpCircle,
   Home,
@@ -520,6 +521,14 @@ export default function TopRail() {
             icon: <MessageSquare size={18} strokeWidth={2.2} />,
             action: () => navigateFromMenu("/feedback-admin"),
             isActive: location.pathname === "/feedback-admin",
+          },
+          {
+            key: "course-submissions-admin",
+            label: "Course submissions",
+            subtitle: "Review suggested courses",
+            icon: <ClipboardList size={18} strokeWidth={2.2} />,
+            action: () => navigateFromMenu("/admin/course-submissions"),
+            isActive: location.pathname === "/admin/course-submissions",
           },
         ]
       : []),
