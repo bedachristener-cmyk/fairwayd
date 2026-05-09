@@ -62,6 +62,7 @@ type MainMenuItem = {
   subtitle?: string;
   icon: React.ReactNode;
   action: () => void;
+  children?: MainMenuItem[];
   danger?: boolean;
   disabled?: boolean;
   isActive?: boolean;
@@ -76,6 +77,7 @@ export default function TopRail() {
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mainMenuOpen, setMainMenuOpen] = useState(false);
+  const [adminMenuExpanded, setAdminMenuExpanded] = useState(false);
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<UserSearchItem[]>([]);
@@ -515,20 +517,32 @@ export default function TopRail() {
     ...(isAdmin
       ? [
           {
-            key: "feedback-admin",
-            label: t("feedback_admin"),
-            subtitle: t("feedback_admin_subtitle"),
-            icon: <MessageSquare size={18} strokeWidth={2.2} />,
-            action: () => navigateFromMenu("/feedback-admin"),
-            isActive: location.pathname === "/feedback-admin",
-          },
-          {
-            key: "course-submissions-admin",
-            label: "Course submissions",
-            subtitle: "Review suggested courses",
+            key: "admin",
+            label: "Admin",
+            subtitle: "Moderation tools",
             icon: <ClipboardList size={18} strokeWidth={2.2} />,
-            action: () => navigateFromMenu("/admin/course-submissions"),
-            isActive: location.pathname === "/admin/course-submissions",
+            action: () => setAdminMenuExpanded((value) => !value),
+            isActive:
+              location.pathname === "/feedback-admin" ||
+              location.pathname === "/admin/course-submissions",
+            children: [
+              {
+                key: "feedback-admin",
+                label: t("feedback_admin"),
+                subtitle: t("feedback_admin_subtitle"),
+                icon: <MessageSquare size={18} strokeWidth={2.2} />,
+                action: () => navigateFromMenu("/feedback-admin"),
+                isActive: location.pathname === "/feedback-admin",
+              },
+              {
+                key: "course-submissions-admin",
+                label: "Course submissions",
+                subtitle: "Review suggested courses",
+                icon: <ClipboardList size={18} strokeWidth={2.2} />,
+                action: () => navigateFromMenu("/admin/course-submissions"),
+                isActive: location.pathname === "/admin/course-submissions",
+              },
+            ],
           },
         ]
       : []),
@@ -569,6 +583,137 @@ export default function TopRail() {
       isActive: false,
     },
   ];
+
+  const renderDrawerMenuItem = (item: MainMenuItem, nested = false) => (
+    <button
+      key={item.key}
+      type="button"
+      onClick={item.action}
+      style={{
+        ...drawerListItem,
+        paddingLeft: nested ? 34 : drawerListItem.paddingLeft,
+        color: item.danger
+          ? "rgba(255,140,140,1)"
+          : item.isActive
+            ? "var(--text)"
+            : "var(--text)",
+        opacity: item.disabled ? 0.72 : 1,
+        background: item.isActive ? "rgba(255,255,255,0.06)" : "transparent",
+        borderLeft: item.isActive
+          ? "3px solid var(--text)"
+          : "3px solid transparent",
+      }}
+    >
+      <div
+        style={{
+          width: 28,
+          height: 28,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: item.danger
+            ? "rgba(255,140,140,1)"
+            : item.isActive
+              ? "var(--text)"
+              : "var(--sub)",
+          flexShrink: 0,
+        }}
+      >
+        {item.icon}
+      </div>
+
+      <div
+        style={{
+          minWidth: 0,
+          flex: 1,
+          textAlign: "left",
+        }}
+      >
+        <div
+          style={{
+            fontWeight: item.isActive ? 900 : 800,
+            fontSize: 14,
+            lineHeight: 1.2,
+            color: item.danger
+              ? "rgba(255,140,140,1)"
+              : item.isActive
+                ? "var(--text)"
+                : "var(--text)",
+          }}
+        >
+          {item.label}
+        </div>
+
+        <div
+          style={{
+            fontSize: 12,
+            color: item.danger
+              ? "rgba(255,180,180,0.9)"
+              : item.isActive
+                ? "rgba(39,196,107,0.95)"
+                : "var(--sub)",
+            marginTop: 2,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {item.subtitle}
+        </div>
+      </div>
+
+      <div
+        style={{
+          flexShrink: 0,
+          paddingLeft: 8,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
+        {item.key === "notifications" && notificationBadgeCount > 0 ? (
+          <div
+            style={{
+              minWidth: 20,
+              height: 20,
+              padding: "0 6px",
+              borderRadius: 999,
+              border: "1px solid var(--border)",
+              background: "var(--bg)",
+              color: "var(--text)",
+              fontSize: 11,
+              fontWeight: 900,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {notificationBadgeCount}
+          </div>
+        ) : null}
+
+        <div
+          style={{
+            color: item.danger
+              ? "rgba(255,180,180,0.9)"
+              : item.isActive
+                ? "var(--text)"
+                : "var(--sub)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transform:
+              item.children && (adminMenuExpanded || item.isActive)
+                ? "rotate(90deg)"
+                : undefined,
+          }}
+        >
+          <ChevronRight size={18} strokeWidth={2.2} />
+        </div>
+      </div>
+    </button>
+  );
+
   return (
     <>
       <div
@@ -1147,131 +1292,16 @@ export default function TopRail() {
               }}
             >
               {mainMenuItems.map((item) => (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={item.action}
-                  style={{
-                    ...drawerListItem,
-                    color: item.danger
-                      ? "rgba(255,140,140,1)"
-                      : item.isActive
-                        ? "var(--text)"
-                        : "var(--text)",
-                    opacity: item.disabled ? 0.72 : 1,
-                    background: item.isActive
-                      ? "rgba(255,255,255,0.06)"
-                      : "transparent",
-                    borderLeft: item.isActive
-                      ? "3px solid var(--text)"
-                      : "3px solid transparent",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 28,
-                      height: 28,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: item.danger
-                        ? "rgba(255,140,140,1)"
-                        : item.isActive
-                          ? "var(--text)"
-                          : "var(--sub)",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {item.icon}
-                  </div>
-
-                  <div
-                    style={{
-                      minWidth: 0,
-                      flex: 1,
-                      textAlign: "left",
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontWeight: item.isActive ? 900 : 800,
-                        fontSize: 14,
-                        lineHeight: 1.2,
-                        color: item.danger
-                          ? "rgba(255,140,140,1)"
-                          : item.isActive
-                            ? "var(--text)"
-                            : "var(--text)",
-                      }}
-                    >
-                      {item.label}
+                <div key={item.key} style={{ display: "grid", gap: 4 }}>
+                  {renderDrawerMenuItem(item)}
+                  {item.children && (adminMenuExpanded || item.isActive) ? (
+                    <div style={{ display: "grid", gap: 4 }}>
+                      {item.children.map((child) =>
+                        renderDrawerMenuItem(child, true),
+                      )}
                     </div>
-
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: item.danger
-                          ? "rgba(255,180,180,0.9)"
-                          : item.isActive
-                            ? "rgba(39,196,107,0.95)"
-                            : "var(--sub)",
-                        marginTop: 2,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {item.subtitle}
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      flexShrink: 0,
-                      paddingLeft: 8,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                    }}
-                  >
-                    {item.key === "notifications" &&
-                    notificationBadgeCount > 0 ? (
-                      <div
-                        style={{
-                          minWidth: 20,
-                          height: 20,
-                          padding: "0 6px",
-                          borderRadius: 999,
-                          border: "1px solid var(--border)",
-                          background: "var(--bg)",
-                          color: "var(--text)",
-                          fontSize: 11,
-                          fontWeight: 900,
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        {notificationBadgeCount}
-                      </div>
-                    ) : null}
-
-                    <div
-                      style={{
-                        color: item.danger
-                          ? "rgba(255,180,180,0.9)"
-                          : item.isActive
-                            ? "var(--text)"
-                            : "var(--sub)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <ChevronRight size={18} strokeWidth={2.2} />
-                    </div>
-                  </div>
-                </button>
+                  ) : null}
+                </div>
               ))}
             </div>
           </div>
