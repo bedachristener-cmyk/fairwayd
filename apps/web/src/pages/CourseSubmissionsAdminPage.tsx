@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { ExternalLink, MapPinned } from "lucide-react";
+import { API_BASE } from "../api/base";
 import { apiGet, apiPatch } from "../api/client";
-import { fileUrl } from "../api/fileUrl";
 import { useAuth } from "../auth/AuthContext";
 
 type CourseSubmissionImage = {
@@ -57,6 +57,14 @@ const valueStyle: CSSProperties = {
   lineHeight: 1.4,
   overflowWrap: "anywhere",
 };
+
+const apiOrigin = API_BASE.replace(/\/api\/?$/, "");
+
+function submissionImageUrl(url: string) {
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  if (url.startsWith("/uploads")) return `${apiOrigin}${url}`;
+  return url;
+}
 
 function Field({
   label,
@@ -248,7 +256,7 @@ export default function CourseSubmissionsAdminPage() {
                       {item.images.map((image, index) => (
                         <a
                           key={image.id}
-                          href={fileUrl(image.url)}
+                          href={submissionImageUrl(image.url)}
                           target="_blank"
                           rel="noreferrer"
                           style={{
@@ -260,7 +268,7 @@ export default function CourseSubmissionsAdminPage() {
                           }}
                         >
                           <img
-                            src={fileUrl(image.url)}
+                            src={submissionImageUrl(image.url)}
                             alt={
                               image.originalName ||
                               `${item.name} submission image ${index + 1}`
