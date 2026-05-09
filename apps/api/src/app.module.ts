@@ -13,6 +13,7 @@ import { FeedbackModule } from './feedback/feedback.module';
 import { DestinationsModule } from './destinations/destinations.module';
 import { RatingsModule } from './ratings/ratings.module';
 import { CourseSubmissionsModule } from './course-submissions/course-submissions.module';
+import { TripsModule } from './trips/trips.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { CourseSubmissionsModule } from './course-submissions/course-submissions
     DestinationsModule,
     RatingsModule,
     CourseSubmissionsModule,
+    TripsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

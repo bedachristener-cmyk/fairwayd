@@ -1,96 +1,48 @@
-datasource db {
-  provider = "postgresql"
-}
-
 generator client {
   provider = "prisma-client-js"
 }
 
-enum AccountPrivacy {
-  PRIVATE
-  PUBLIC
-}
-
-enum Visibility {
-  PRIVATE
-  FOLLOWERS
-  PUBLIC
-}
-
-enum FieldPrivacy {
-  PUBLIC
-  FOLLOWERS
-  PRIVATE
-}
-
-enum AuthProvider {
-  GOOGLE
-  APPLE
-  FACEBOOK
-}
-
-enum CourseAccess {
-  PUBLIC
-  PRIVATE
-  RESORT
-  MUNICIPAL
-  SEMI_PRIVATE
-}
-
-enum FollowStatus {
-  PENDING
-  ACCEPTED
-}
-
-enum CourseSubmissionStatus {
-  PENDING
-  APPROVED
-  REJECTED
+datasource db {
+  provider = "postgresql"
 }
 
 model User {
-  id        String         @id @default(cuid())
-  email     String?        @unique
-  password  String?
-  handle    String?        @unique
-  name      String?
-  avatarUrl String?
-  privacy   AccountPrivacy @default(PRIVATE)
-
-  bio                     String?
-  handicap                Float?
-  homeGolfClub            String?
-  golfSlogan              String?
-  favoriteGolfDestination String?
-
-  bioPrivacy                     FieldPrivacy @default(PUBLIC)
-  handicapPrivacy                FieldPrivacy @default(PUBLIC)
-  homeGolfClubPrivacy            FieldPrivacy @default(PUBLIC)
-  golfSloganPrivacy              FieldPrivacy @default(PUBLIC)
-  favoriteGolfDestinationPrivacy FieldPrivacy @default(PUBLIC)
-
-  termsAcceptedAt DateTime?
-  termsVersion    String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  accounts     AuthAccount[]
-  posts        Post[]
-  reviews      Review[]
-  comments     Comment[]
-  likes        Like[]
-  commentLikes CommentLike[] // 👈 NEU
-  feedbacks    Feedback[]
-
-  followers Follow[] @relation("followers")
-  following Follow[] @relation("following")
-
-  courseFollows      CourseFollow[]
-  destinationFollows DestinationFollow[]
-
-  courseRatings CourseRating[]
-  courseSubmissions CourseSubmission[]
+  id                             String              @id @default(cuid())
+  email                          String?             @unique
+  password                       String?
+  handle                         String?             @unique
+  name                           String?
+  avatarUrl                      String?
+  privacy                        AccountPrivacy      @default(PRIVATE)
+  createdAt                      DateTime            @default(now())
+  updatedAt                      DateTime            @updatedAt
+  termsAcceptedAt                DateTime?
+  termsVersion                   String?
+  bio                            String?
+  handicap                       Float?
+  homeGolfClub                   String?
+  golfSlogan                     String?
+  favoriteGolfDestination        String?
+  bioPrivacy                     FieldPrivacy        @default(PUBLIC)
+  handicapPrivacy                FieldPrivacy        @default(PUBLIC)
+  homeGolfClubPrivacy            FieldPrivacy        @default(PUBLIC)
+  golfSloganPrivacy              FieldPrivacy        @default(PUBLIC)
+  favoriteGolfDestinationPrivacy FieldPrivacy        @default(PUBLIC)
+  accounts                       AuthAccount[]
+  comments                       Comment[]
+  commentLikes                   CommentLike[]
+  courseFollows                  CourseFollow[]
+  courseRatings                  CourseRating[]
+  courseSubmissions              CourseSubmission[]
+  destinationFollows             DestinationFollow[]
+  feedbacks                      Feedback[]
+  following                      Follow[]            @relation("following")
+  followers                      Follow[]            @relation("followers")
+  likes                          Like[]
+  posts                          Post[]
+  reviews                        Review[]
+  createdTrips                   Trip[]              @relation("TripCreator")
+  tripMemberships                TripMember[]
 }
 
 model AuthAccount {
@@ -101,8 +53,7 @@ model AuthAccount {
   email          String?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerUserId])
   @@index([userId])
@@ -124,12 +75,11 @@ model Follow {
   id          String       @id @default(cuid())
   followerId  String
   followingId String
-  status      FollowStatus @default(PENDING)
   createdAt   DateTime     @default(now())
   decidedAt   DateTime?
-
-  follower  User @relation("following", fields: [followerId], references: [id], onDelete: Cascade)
-  following User @relation("followers", fields: [followingId], references: [id], onDelete: Cascade)
+  status      FollowStatus @default(PENDING)
+  follower    User         @relation("following", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User         @relation("followers", fields: [followingId], references: [id], onDelete: Cascade)
 
   @@unique([followerId, followingId])
   @@index([followingId])
@@ -137,17 +87,16 @@ model Follow {
 }
 
 model Destination {
-  id          String   @id @default(cuid())
-  code        String   @unique
+  id          String              @id @default(cuid())
+  code        String              @unique
   name        String
-  slug        String   @unique
+  slug        String              @unique
   description String?
   coverImage  String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  followers DestinationFollow[]
+  isActive    Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  followers   DestinationFollow[]
 
   @@index([code])
   @@index([slug])
@@ -155,39 +104,32 @@ model Destination {
 }
 
 model Course {
-  id         String  @id @default(cuid())
-  name       String
-  city       String?
-  postalCode String?
-  region     String?
-  country    String
-  lat        Float
-  lon        Float
-
-  location Unsupported("geography(Point,4326)")?
-
-  holes       Int?
-  par         Int?
-  access      CourseAccess?
-  website     String?
-  phone       String?
+  id          String                    @id @default(cuid())
+  name        String
+  country     String
+  region      String?
+  city        String?
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+  lat         Float
+  lon         Float
+  postalCode  String?
+  active      Boolean                   @default(true)
   description String?
-
-  source   String  @default("csv")
-  osmId    String?
-  verified Boolean @default(false)
-  active   Boolean @default(true)
-
-  posts   Post[]
-  reviews Review[]
-
-  // Users following this course
-  followers CourseFollow[]
-
-  ratings CourseRating[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  holes       Int?
+  location    Unsupported("geography")?
+  osmId       String?
+  par         Int?
+  phone       String?
+  source      String                    @default("csv")
+  verified    Boolean                   @default(false)
+  website     String?
+  access      CourseAccess?
+  followers   CourseFollow[]
+  ratings     CourseRating[]
+  posts       Post[]
+  reviews     Review[]
+  tripItems   TripItem[]
 
   @@unique([country, name, lat, lon], name: "course_unique_import_key")
   @@index([country])
@@ -199,7 +141,7 @@ model Course {
 }
 
 model CourseSubmission {
-  id                String                 @id @default(cuid())
+  id                String                  @id @default(cuid())
   name              String
   country           String
   city              String?
@@ -211,12 +153,12 @@ model CourseSubmission {
   par               Int?
   notes             String?
   imageUrl          String?
-  status            CourseSubmissionStatus @default(PENDING)
+  status            CourseSubmissionStatus  @default(PENDING)
   submittedByUserId String?
-  submittedBy       User?                  @relation(fields: [submittedByUserId], references: [id], onDelete: SetNull)
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  submittedBy       User?                   @relation(fields: [submittedByUserId], references: [id])
   images            CourseSubmissionImage[]
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
 
   @@index([status])
   @@index([country])
@@ -226,13 +168,13 @@ model CourseSubmission {
 model CourseSubmissionImage {
   id                 String           @id @default(cuid())
   courseSubmissionId String
-  courseSubmission   CourseSubmission @relation(fields: [courseSubmissionId], references: [id], onDelete: Cascade)
   url                String
   path               String
   originalName       String?
   mimeType           String
   size               Int
   createdAt          DateTime         @default(now())
+  courseSubmission   CourseSubmission @relation(fields: [courseSubmissionId], references: [id], onDelete: Cascade)
 
   @@index([courseSubmissionId])
 }
@@ -241,43 +183,34 @@ model CourseRating {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  // Relations
-  userId   String
-  courseId String
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
-
-  // Ratings
+  userId    String
+  courseId  String
   overall   Float
   condition Float?
   layout    Float?
   scenery   Float?
   value     Float?
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, courseId]) // 1 rating per user per course
+  @@unique([userId, courseId])
 }
 
 model Post {
-  id         String     @id @default(cuid())
+  id         String      @id @default(cuid())
   userId     String
   courseId   String
   content    String
-  visibility Visibility @default(FOLLOWERS)
-
-  lat Float?
-  lon Float?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
-
-  comments Comment[]
-  likes    Like[]
-  images   PostImage[]
+  visibility Visibility  @default(FOLLOWERS)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  lat        Float?
+  lon        Float?
+  comments   Comment[]
+  likes      Like[]
+  course     Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  images     PostImage[]
 
   @@index([courseId, createdAt])
   @@index([lat, lon])
@@ -287,25 +220,23 @@ model PostImage {
   id     String @id @default(cuid())
   postId String
   url    String
-
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@index([postId])
 }
 
 model Comment {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   postId    String
   userId    String
-  parentId  String?
   content   String
-  createdAt DateTime @default(now())
-
-  post    Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parent  Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies Comment[]     @relation("CommentReplies")
-  likes   CommentLike[]
+  createdAt DateTime      @default(now())
+  parentId  String?
+  parent    Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[]     @relation("CommentReplies")
+  post      Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes     CommentLike[]
 
   @@index([postId, createdAt])
   @@index([parentId])
@@ -316,9 +247,8 @@ model CommentLike {
   commentId String
   userId    String
   createdAt DateTime @default(now())
-
-  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([commentId, userId])
   @@index([commentId])
@@ -330,9 +260,8 @@ model Like {
   postId    String
   userId    String
   createdAt DateTime @default(now())
-
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId])
 }
@@ -342,45 +271,40 @@ model CourseFollow {
   userId    String
   courseId  String
   createdAt DateTime @default(now())
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
   @@index([courseId])
 }
 
 model DestinationFollow {
-  id            String   @id @default(cuid())
+  id            String      @id @default(cuid())
   userId        String
   destinationId String
-  createdAt     DateTime @default(now())
-
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  destination Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+  destination   Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, destinationId])
   @@index([destinationId])
 }
 
 model Review {
-  id       String @id @default(cuid())
-  userId   String
-  courseId String
-
+  id           String   @id @default(cuid())
+  userId       String
+  courseId     String
   overall      Int
   maintenance  Int?
   layout       Int?
   value        Int?
   organization Int?
   scenery      Int?
-
-  text      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  text         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  course       Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
   @@index([courseId])
@@ -389,12 +313,149 @@ model Review {
 model Feedback {
   id        String   @id @default(cuid())
   message   String
-  category  String   @default("other")
   url       String?
-  device    String?
-  userAgent String?
   userId    String?
   createdAt DateTime @default(now())
+  category  String   @default("other")
+  device    String?
+  userAgent String?
+  user      User?    @relation(fields: [userId], references: [id])
+}
 
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+model Trip {
+  id          String         @id @default(cuid())
+  description String?
+  visibility  TripVisibility @default(PRIVATE)
+  createdById String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  title       String
+  destination String?
+  createdBy   User           @relation("TripCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  items       TripItem[]
+  members     TripMember[]
+
+  @@index([createdById])
+  @@index([visibility])
+}
+
+model TripMember {
+  id        String   @id @default(cuid())
+  tripId    String
+  userId    String
+  role      TripRole @default(MEMBER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, userId])
+  @@index([userId])
+}
+
+model TripItem {
+  id            String       @id @default(cuid())
+  tripId        String
+  courseId      String?
+  type          TripItemType @default(COURSE)
+  title         String?
+  notes         String?
+  startsAt      DateTime?
+  sortOrder     Int          @default(0)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  address       String?
+  bookingRef    String?
+  caddyFee      Float?
+  cartFee       Float?
+  currency      String?
+  date          DateTime?
+  directPrice   Float?
+  endTime       String?
+  locationName  String?
+  provider      String?
+  providerPrice Float?
+  startTime     String?
+  course        Course?      @relation(fields: [courseId], references: [id])
+  trip          Trip         @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@index([courseId])
+  @@index([tripId, sortOrder])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model spatial_ref_sys {
+  srid      Int     @id
+  auth_name String? @db.VarChar(256)
+  auth_srid Int?
+  srtext    String? @db.VarChar(2048)
+  proj4text String? @db.VarChar(2048)
+}
+
+enum AccountPrivacy {
+  PRIVATE
+  PUBLIC
+}
+
+enum Visibility {
+  FOLLOWERS
+  PUBLIC
+  PRIVATE
+}
+
+enum FieldPrivacy {
+  PUBLIC
+  FOLLOWERS
+  PRIVATE
+}
+
+enum AuthProvider {
+  GOOGLE
+  APPLE
+  FACEBOOK
+}
+
+enum CourseAccess {
+  PUBLIC
+  PRIVATE
+  RESORT
+  SEMI_PRIVATE
+  MUNICIPAL
+}
+
+enum FollowStatus {
+  PENDING
+  ACCEPTED
+}
+
+enum CourseSubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TripVisibility {
+  PRIVATE
+  SHARED
+  PUBLIC
+}
+
+enum TripRole {
+  OWNER
+  EDITOR
+  VIEWER
+  ADMIN
+  MEMBER
+}
+
+enum TripItemType {
+  COURSE
+  NOTE
+  golf_round
+  hotel
+  transfer
+  car_rental
+  free_day
+  note
 }

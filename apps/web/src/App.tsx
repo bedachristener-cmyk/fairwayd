@@ -40,6 +40,10 @@ import DestinationPage from "./pages/DestinationPage";
 import NewCourseSubmissionPage from "./pages/NewCourseSubmissionPage";
 import CourseSubmissionsAdminPage from "./pages/CourseSubmissionsAdminPage";
 import CourseSubmissionHistoryAdminPage from "./pages/CourseSubmissionHistoryAdminPage";
+import AddTripItemPage from "./pages/AddTripItemPage";
+import CreateTripPage from "./pages/CreateTripPage";
+import TripDetailPage from "./pages/TripDetailPage";
+import TripsPage from "./pages/TripsPage";
 
 /**
  * Wrap any protected page with this:
@@ -162,6 +166,50 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+
+              {/* Trips must stay before dynamic app routes */}
+              <Route path="/trips">
+                <Route
+                  index
+                  element={
+                    <ProtectedRoute>
+                      <OnboardingGuard>
+                        <TripsPage />
+                      </OnboardingGuard>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="new"
+                  element={
+                    <ProtectedRoute>
+                      <OnboardingGuard>
+                        <CreateTripPage />
+                      </OnboardingGuard>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path=":tripId/add-item"
+                  element={
+                    <ProtectedRoute>
+                      <OnboardingGuard>
+                        <AddTripItemPage />
+                      </OnboardingGuard>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path=":tripId"
+                  element={
+                    <ProtectedRoute>
+                      <OnboardingGuard>
+                        <TripDetailPage />
+                      </OnboardingGuard>
+                    </ProtectedRoute>
+                  }
+                />
+              </Route>
 
               {/* Protected + Onboarding-gated feed */}
               <Route

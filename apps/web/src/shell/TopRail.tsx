@@ -19,6 +19,7 @@ import {
   MessageSquare,
   Shield,
   Bell,
+  CalendarDays,
   Settings,
   User,
   Users,
@@ -489,6 +490,14 @@ export default function TopRail() {
       icon: <Globe size={18} strokeWidth={2.2} />,
       action: () => navigateFromMenu("/destinations"),
       isActive: location.pathname.startsWith("/destinations"),
+    },
+    {
+      key: "trips",
+      label: "Trips",
+      subtitle: "Golf trip planner",
+      icon: <CalendarDays size={18} strokeWidth={2.2} />,
+      action: () => navigateFromMenu("/trips"),
+      isActive: location.pathname.startsWith("/trips"),
     },
     {
       key: "suggest-course",

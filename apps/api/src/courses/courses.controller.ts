@@ -34,7 +34,7 @@ export class CoursesController {
       q: q ?? '',
       country,
       region,
-      take: Math.min(parseInt(take || '20', 10) || 20, 50),
+      take: Math.min(parseInt(take || '10', 10) || 10, 10),
     });
   }
 

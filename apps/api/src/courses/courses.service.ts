@@ -26,7 +26,7 @@ export class CoursesService {
     take: number;
   }) {
     const q = (params.q || '').trim();
-    const take = Math.max(5, Math.min(50, params.take || 20));
+    const take = Math.max(1, Math.min(10, params.take || 10));
 
     if (q.length < 2) {
       return { items: [] };
@@ -46,15 +46,8 @@ export class CoursesService {
       select: {
         id: true,
         name: true,
-        city: true,
-        postalCode: true,
         region: true,
         country: true,
-        lat: true,
-        lon: true,
-        holes: true,
-        access: true,
-        website: true,
       },
     });
 

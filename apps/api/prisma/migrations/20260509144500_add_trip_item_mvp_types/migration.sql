@@ -1,0 +1,6 @@
+ALTER TYPE "TripItemType" ADD VALUE IF NOT EXISTS 'golf_round';
+ALTER TYPE "TripItemType" ADD VALUE IF NOT EXISTS 'hotel';
+ALTER TYPE "TripItemType" ADD VALUE IF NOT EXISTS 'transfer';
+ALTER TYPE "TripItemType" ADD VALUE IF NOT EXISTS 'car_rental';
+ALTER TYPE "TripItemType" ADD VALUE IF NOT EXISTS 'free_day';
+ALTER TYPE "TripItemType" ADD VALUE IF NOT EXISTS 'note';
