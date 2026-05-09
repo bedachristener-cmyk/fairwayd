@@ -214,12 +214,27 @@ model CourseSubmission {
   status            CourseSubmissionStatus @default(PENDING)
   submittedByUserId String?
   submittedBy       User?                  @relation(fields: [submittedByUserId], references: [id], onDelete: SetNull)
+  images            CourseSubmissionImage[]
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
 
   @@index([status])
   @@index([country])
   @@index([submittedByUserId])
+}
+
+model CourseSubmissionImage {
+  id                 String           @id @default(cuid())
+  courseSubmissionId String
+  courseSubmission   CourseSubmission @relation(fields: [courseSubmissionId], references: [id], onDelete: Cascade)
+  url                String
+  path               String
+  originalName       String?
+  mimeType           String
+  size               Int
+  createdAt          DateTime         @default(now())
+
+  @@index([courseSubmissionId])
 }
 
 model CourseRating {

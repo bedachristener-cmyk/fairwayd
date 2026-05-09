@@ -12,13 +12,22 @@ type CreateCourseSubmissionInput = {
   city?: string;
   region?: string;
   website?: string;
-  lat?: number | string | null;
-  lon?: number | string | null;
-  holes?: number | string | null;
-  par?: number | string | null;
+  lat?: number | string | string[] | null;
+  lon?: number | string | string[] | null;
+  holes?: number | string | string[] | null;
+  par?: number | string | string[] | null;
   notes?: string;
   imageUrl?: string;
+  images?: CourseSubmissionImageInput[];
   submittedByUserId?: string | null;
+};
+
+type CourseSubmissionImageInput = {
+  url: string;
+  path: string;
+  originalName?: string | null;
+  mimeType: string;
+  size: number;
 };
 
 function cleanString(value: unknown) {
@@ -27,8 +36,16 @@ function cleanString(value: unknown) {
 }
 
 function cleanNumber(value: unknown) {
-  if (value === null || value === undefined || value === '') return null;
-  const n = Number(value);
+  const scalar = Array.isArray(value)
+    ? value.find((item) => String(item ?? '').trim() !== '')
+    : value;
+
+  if (scalar === null || scalar === undefined) return null;
+
+  const text = String(scalar).trim();
+  if (!text) return null;
+
+  const n = Number(text);
   return Number.isFinite(n) ? n : null;
 }
 
@@ -123,6 +140,14 @@ export class CourseSubmissionsService {
         imageUrl: cleanString(input.imageUrl),
         submittedByUserId: input.submittedByUserId || null,
         status: CourseSubmissionStatus.PENDING,
+        images: input.images?.length
+          ? {
+              create: input.images,
+            }
+          : undefined,
+      },
+      include: {
+        images: true,
       },
     });
   }
@@ -134,6 +159,9 @@ export class CourseSubmissionsService {
       },
       orderBy: { createdAt: 'desc' },
       include: {
+        images: {
+          orderBy: { createdAt: 'asc' },
+        },
         submittedBy: {
           select: {
             id: true,

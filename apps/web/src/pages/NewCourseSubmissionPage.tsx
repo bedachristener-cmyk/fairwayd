@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
@@ -31,6 +31,9 @@ const initialForm: FormState = {
   notes: "",
 };
 
+const maxImages = 5;
+const maxImageSize = 5 * 1024 * 1024;
+
 function numberOrNull(value: string) {
   const trimmed = value.trim();
   if (!trimmed) return null;
@@ -45,10 +48,47 @@ export default function NewCourseSubmissionPage() {
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
   const [err, setErr] = useState("");
+  const [images, setImages] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+  const [fileInputKey, setFileInputKey] = useState(0);
+
+  useEffect(() => {
+    const urls = images.map((file) => URL.createObjectURL(file));
+    setPreviews(urls);
+
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [images]);
 
   const setField = (key: keyof FormState, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
+
+  function handleImagesChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const selected = Array.from(event.target.files ?? []);
+
+    if (selected.length > maxImages) {
+      setErr(`You can upload up to ${maxImages} images.`);
+      setImages([]);
+      event.target.value = "";
+      return;
+    }
+
+    const invalid = selected.find(
+      (file) => !file.type.startsWith("image/") || file.size > maxImageSize,
+    );
+
+    if (invalid) {
+      setErr("Images must be image files and 5 MB or smaller.");
+      setImages([]);
+      event.target.value = "";
+      return;
+    }
+
+    setErr("");
+    setImages(selected);
+  }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -64,25 +104,41 @@ export default function NewCourseSubmissionPage() {
       setErr("");
       setDone(false);
 
+      const payload = {
+        name: form.name.trim(),
+        country: form.country.trim().toUpperCase(),
+        city: form.city.trim() || null,
+        region: form.region.trim() || null,
+        website: form.website.trim() || null,
+        lat: numberOrNull(form.lat),
+        lon: numberOrNull(form.lon),
+        holes: numberOrNull(form.holes),
+        par: numberOrNull(form.par),
+        imageUrl: form.imageUrl.trim() || null,
+        notes: form.notes.trim() || null,
+      };
+
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${token}`,
+      };
+      let body: BodyInit;
+
+      if (images.length > 0) {
+        const data = new FormData();
+        Object.entries(payload).forEach(([key, value]) => {
+          if (value !== null && value !== undefined) data.append(key, String(value));
+        });
+        images.forEach((image) => data.append("images", image));
+        body = data;
+      } else {
+        headers["Content-Type"] = "application/json";
+        body = JSON.stringify(payload);
+      }
+
       const res = await fetch(`${API_BASE}/course-submissions`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: form.name.trim(),
-          country: form.country.trim().toUpperCase(),
-          city: form.city.trim() || null,
-          region: form.region.trim() || null,
-          website: form.website.trim() || null,
-          lat: numberOrNull(form.lat),
-          lon: numberOrNull(form.lon),
-          holes: numberOrNull(form.holes),
-          par: numberOrNull(form.par),
-          imageUrl: form.imageUrl.trim() || null,
-          notes: form.notes.trim() || null,
-        }),
+        headers,
+        body,
       });
 
       if (!res.ok) {
@@ -91,6 +147,8 @@ export default function NewCourseSubmissionPage() {
       }
 
       setForm(initialForm);
+      setImages([]);
+      setFileInputKey((value) => value + 1);
       setDone(true);
     } catch (error) {
       console.error("Course submission failed", error);
@@ -204,6 +262,56 @@ export default function NewCourseSubmissionPage() {
         {field("imageUrl", "Image URL", "https://...", "url")}
 
         <label style={{ display: "grid", gap: 6 }}>
+          <span style={labelStyle}>Images</span>
+          <input
+            key={fileInputKey}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleImagesChange}
+            style={{
+              width: "100%",
+              borderRadius: 12,
+              border: "1px solid var(--border)",
+              background: "var(--bg)",
+              color: "var(--text)",
+              padding: "10px 12px",
+              boxSizing: "border-box",
+              fontSize: 14,
+            }}
+          />
+          <span style={{ fontSize: 12, color: "var(--sub)" }}>
+            Up to {maxImages} images, 5 MB each.
+          </span>
+        </label>
+
+        {previews.length > 0 ? (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(96px, 1fr))",
+              gap: 8,
+            }}
+          >
+            {previews.map((preview, index) => (
+              <img
+                key={preview}
+                src={preview}
+                alt={`Selected course upload ${index + 1}`}
+                style={{
+                  width: "100%",
+                  aspectRatio: "1 / 1",
+                  objectFit: "cover",
+                  borderRadius: 12,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg)",
+                }}
+              />
+            ))}
+          </div>
+        ) : null}
+
+        <label style={{ display: "grid", gap: 6 }}>
           <span style={labelStyle}>Notes</span>
           <textarea
             value={form.notes}
@@ -226,7 +334,9 @@ export default function NewCourseSubmissionPage() {
           />
         </label>
 
-        {err ? <div style={{ fontSize: 13, color: "crimson" }}>{err}</div> : null}
+        {err ? (
+          <div style={{ fontSize: 13, color: "crimson" }}>{err}</div>
+        ) : null}
         {done ? (
           <div style={{ fontSize: 13, color: "var(--sub)" }}>
             Suggestion submitted for review.

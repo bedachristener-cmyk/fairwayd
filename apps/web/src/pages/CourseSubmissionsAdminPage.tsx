@@ -1,7 +1,14 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { ExternalLink, MapPinned } from "lucide-react";
 import { apiGet, apiPatch } from "../api/client";
+import { fileUrl } from "../api/fileUrl";
 import { useAuth } from "../auth/AuthContext";
+
+type CourseSubmissionImage = {
+  id: string;
+  url: string;
+  originalName?: string | null;
+};
 
 type CourseSubmission = {
   id: string;
@@ -14,6 +21,7 @@ type CourseSubmission = {
   lon?: number | null;
   notes?: string | null;
   status: string;
+  images?: CourseSubmissionImage[];
 };
 
 const pageStyle: CSSProperties = {
@@ -225,6 +233,50 @@ export default function CourseSubmissionsAdminPage() {
 
                 <Field label="Website" value={item.website} />
                 <Field label="Notes" value={item.notes} />
+
+                {item.images?.length ? (
+                  <div style={{ display: "grid", gap: 8 }}>
+                    <div style={labelStyle}>Images</div>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns:
+                          "repeat(auto-fill, minmax(112px, 1fr))",
+                        gap: 8,
+                      }}
+                    >
+                      {item.images.map((image, index) => (
+                        <a
+                          key={image.id}
+                          href={fileUrl(image.url)}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            display: "block",
+                            borderRadius: 12,
+                            overflow: "hidden",
+                            border: "1px solid var(--border)",
+                            background: "var(--bg)",
+                          }}
+                        >
+                          <img
+                            src={fileUrl(image.url)}
+                            alt={
+                              image.originalName ||
+                              `${item.name} submission image ${index + 1}`
+                            }
+                            style={{
+                              width: "100%",
+                              aspectRatio: "1 / 1",
+                              objectFit: "cover",
+                              display: "block",
+                            }}
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
 
               <div
