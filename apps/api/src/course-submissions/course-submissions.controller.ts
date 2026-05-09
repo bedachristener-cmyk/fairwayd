@@ -14,17 +14,10 @@ import {
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '@nestjs/passport';
-import { randomUUID } from 'crypto';
-import { mkdirSync } from 'fs';
-import { diskStorage } from 'multer';
-import { extname, join } from 'path';
+import { memoryStorage } from 'multer';
+import { uploadToR2 } from '../storage/r2.service';
 import { CourseSubmissionsService } from './course-submissions.service';
 
-const courseSubmissionUploadDir = join(
-  process.cwd(),
-  'uploads',
-  'course-submissions',
-);
 const maxCourseSubmissionImages = 5;
 const maxCourseSubmissionImageSize = 5 * 1024 * 1024;
 
@@ -53,16 +46,7 @@ export class CourseSubmissionsController {
   @Post()
   @UseInterceptors(
     FilesInterceptor('images', maxCourseSubmissionImages, {
-      storage: diskStorage({
-        destination: (_req, _file, callback) => {
-          mkdirSync(courseSubmissionUploadDir, { recursive: true });
-          callback(null, courseSubmissionUploadDir);
-        },
-        filename: (_req, file, callback) => {
-          const safeExt = extname(file.originalname || '').toLowerCase();
-          callback(null, `${randomUUID()}${safeExt}`);
-        },
-      }),
+      storage: memoryStorage(),
       fileFilter: courseSubmissionImageFileFilter,
       limits: {
         files: maxCourseSubmissionImages,
@@ -70,21 +54,46 @@ export class CourseSubmissionsController {
       },
     }),
   )
-  create(
+  async create(
     @Body() body: any,
     @Req() req: any,
     @UploadedFiles() files: Express.Multer.File[] = [],
   ) {
-    return this.courseSubmissionsService.create({
-      ...body,
-      images: files.map((file) => ({
-        url: `/uploads/course-submissions/${file.filename}`,
-        path: file.path,
+    const userId = req.user?.userId ?? req.user?.id ?? req.user?.sub;
+    const images: {
+      url: string;
+      path: string;
+      originalName: string;
+      mimeType: string;
+      size: number;
+    }[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const ext = (file.mimetype?.split('/')[1] || 'bin').replace(
+        /[^a-z0-9]/gi,
+        '',
+      );
+      const key = `course-submissions/${userId || 'anonymous'}-${Date.now()}-${i}.${ext}`;
+      const url = await uploadToR2(
+        key,
+        file.buffer,
+        file.mimetype || 'application/octet-stream',
+      );
+
+      images.push({
+        url,
+        path: key,
         originalName: file.originalname,
         mimeType: file.mimetype,
         size: file.size,
-      })),
-      submittedByUserId: req.user?.userId ?? req.user?.id ?? req.user?.sub,
+      });
+    }
+
+    return this.courseSubmissionsService.create({
+      ...body,
+      images,
+      submittedByUserId: userId,
     });
   }
 
