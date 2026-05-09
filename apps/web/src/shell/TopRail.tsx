@@ -524,7 +524,8 @@ export default function TopRail() {
             action: () => setAdminMenuExpanded((value) => !value),
             isActive:
               location.pathname === "/feedback-admin" ||
-              location.pathname === "/admin/course-submissions",
+              location.pathname === "/admin/course-submissions" ||
+              location.pathname === "/admin/course-submissions/history",
             children: [
               {
                 key: "feedback-admin",
@@ -541,6 +542,16 @@ export default function TopRail() {
                 icon: <ClipboardList size={18} strokeWidth={2.2} />,
                 action: () => navigateFromMenu("/admin/course-submissions"),
                 isActive: location.pathname === "/admin/course-submissions",
+              },
+              {
+                key: "course-submissions-history-admin",
+                label: "Course submission history",
+                subtitle: "Approved and rejected",
+                icon: <ClipboardList size={18} strokeWidth={2.2} />,
+                action: () =>
+                  navigateFromMenu("/admin/course-submissions/history"),
+                isActive:
+                  location.pathname === "/admin/course-submissions/history",
               },
             ],
           },

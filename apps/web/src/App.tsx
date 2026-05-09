@@ -39,6 +39,7 @@ import DestinationsPage from "./pages/DestinationsPage";
 import DestinationPage from "./pages/DestinationPage";
 import NewCourseSubmissionPage from "./pages/NewCourseSubmissionPage";
 import CourseSubmissionsAdminPage from "./pages/CourseSubmissionsAdminPage";
+import CourseSubmissionHistoryAdminPage from "./pages/CourseSubmissionHistoryAdminPage";
 
 /**
  * Wrap any protected page with this:
@@ -271,6 +272,16 @@ export default function App() {
                   <ProtectedRoute>
                     <OnboardingGuard>
                       <CourseSubmissionsAdminPage />
+                    </OnboardingGuard>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/course-submissions/history"
+                element={
+                  <ProtectedRoute>
+                    <OnboardingGuard>
+                      <CourseSubmissionHistoryAdminPage />
                     </OnboardingGuard>
                   </ProtectedRoute>
                 }

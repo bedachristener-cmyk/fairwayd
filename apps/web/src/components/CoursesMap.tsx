@@ -490,8 +490,13 @@ export default function CoursesMap() {
     {},
   );
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
+  const [highlightedCourseId, setHighlightedCourseId] = useState<string | null>(
+    null,
+  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [mapRef, setMapRef] = useState<L.Map | null>(null);
-  (window as any).__activeCourseId = activeCourseId;
+  (window as any).__activeCourseId = activeCourseId ?? highlightedCourseId;
 
   const isMobile = typeof window !== "undefined" && window.innerWidth <= 980;
   const userLat = toFiniteNumber(userPos?.lat);
@@ -521,6 +526,21 @@ export default function CoursesMap() {
     if (!activeCourseId) return null;
     return courses.find((c) => c.id === activeCourseId) ?? null;
   }, [activeCourseId, courses]);
+
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (q.length < 2) return [];
+
+    return courses
+      .filter((course) =>
+        [course.name, course.city, course.country]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(q),
+      )
+      .slice(0, 8);
+  }, [courses, searchQuery]);
 
   const stopBtn = (e: any) => {
     e.preventDefault();
@@ -605,10 +625,25 @@ export default function CoursesMap() {
 
   const handleSelectCourse = useCallback(
     (courseId: string) => {
+      const course = courses.find((c) => c.id === courseId);
+      if (course) setSelectedCourse(course);
+      setHighlightedCourseId(null);
       setActiveCourseId(courseId);
       void loadPostsForCourse(courseId, false);
     },
-    [loadPostsForCourse],
+    [courses, loadPostsForCourse, setSelectedCourse],
+  );
+
+  const handleSearchSelectCourse = useCallback(
+    (course: Course) => {
+      setSearchQuery(course.name);
+      setSearchOpen(false);
+      setSelectedCourse(course);
+      setActiveCourseId(null);
+      setHighlightedCourseId(course.id);
+      mapRef?.setView([course.lat, course.lon], 14, { animate: true });
+    },
+    [mapRef, setSelectedCourse],
   );
 
   if (loadError) {
@@ -679,6 +714,161 @@ export default function CoursesMap() {
         style={{
           position: "absolute",
           top: 12,
+          left: "50%",
+          width: isMobile ? "min(68vw, 190px)" : "min(23vw, 245px)",
+          transform: "translateX(-50%)",
+          zIndex: 1200,
+        }}
+      >
+        <div
+          style={{
+            position: "relative",
+            border: "1px solid rgba(255,255,255,0.46)",
+            background: "rgba(255,255,255,0.58)",
+            borderRadius: 999,
+            boxShadow: "0 4px 12px rgba(0,0,0,.12)",
+            backdropFilter: "blur(14px)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              height: 32,
+              padding: "0 6px 0 10px",
+            }}
+          >
+            <input
+              value={searchQuery}
+              onChange={(event) => {
+                setSearchQuery(event.target.value);
+                setSearchOpen(true);
+              }}
+              onFocus={() => setSearchOpen(true)}
+              placeholder="Search courses"
+              style={{
+                flex: 1,
+                minWidth: 0,
+                border: 0,
+                outline: "none",
+                background: "transparent",
+                color: "#111",
+                fontSize: 12,
+                fontWeight: 700,
+                height: 30,
+              }}
+            />
+            {searchQuery ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setSearchOpen(false);
+                }}
+                aria-label="Clear course search"
+                title="Clear"
+                style={{
+                  border: "1px solid var(--border)",
+                  background: "rgba(255,255,255,0.34)",
+                  color: "#111",
+                  width: 22,
+                  height: 22,
+                  borderRadius: 999,
+                  cursor: "pointer",
+                  fontWeight: 900,
+                  lineHeight: 1,
+                }}
+              >
+                x
+              </button>
+            ) : null}
+          </div>
+
+          {searchOpen && searchQuery.trim().length >= 2 ? (
+            <div
+              style={{
+                position: "absolute",
+                top: "calc(100% + 6px)",
+                left: 0,
+                right: 0,
+                display: "grid",
+                gap: 2,
+                padding: 4,
+                border: "1px solid rgba(255,255,255,0.48)",
+                background: "rgba(255,255,255,0.72)",
+                borderRadius: 12,
+                boxShadow: "0 8px 20px rgba(0,0,0,.16)",
+                backdropFilter: "blur(14px)",
+                maxHeight: 260,
+                overflowY: "auto",
+              }}
+            >
+              {searchResults.length > 0 ? (
+                searchResults.map((course) => {
+                  const subtitle = [course.city, course.country]
+                    .filter(Boolean)
+                    .join(", ");
+
+                  return (
+                    <button
+                      key={course.id}
+                      type="button"
+                      onClick={() => handleSearchSelectCourse(course)}
+                      style={{
+                        border: 0,
+                        background: "transparent",
+                        color: "#111",
+                        textAlign: "left",
+                        padding: "7px 8px",
+                        borderRadius: 9,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 900,
+                          lineHeight: 1.2,
+                        }}
+                      >
+                        {course.name}
+                      </div>
+                      {subtitle ? (
+                        <div
+                          style={{
+                            marginTop: 3,
+                            fontSize: 11,
+                            color: "rgba(17,17,17,0.62)",
+                            lineHeight: 1.3,
+                          }}
+                        >
+                          {subtitle}
+                        </div>
+                      ) : null}
+                    </button>
+                  );
+                })
+              ) : (
+                <div
+                  style={{
+                    padding: "8px 8px",
+                    fontSize: 12,
+                    color: "rgba(17,17,17,0.62)",
+                  }}
+                >
+                  No courses found.
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <div
+        style={{
+          position: "absolute",
+          top: isMobile ? 72 : 76,
           left: isMobile ? 52 : 12,
           zIndex: 1000,
           display: "flex",
@@ -775,7 +965,7 @@ export default function CoursesMap() {
           courses={courses}
           markerRefs={markerRefs}
           onOpenCourse={(id) => loadPostsForCourse(id, false)}
-          onSelectCourse={setActiveCourseId}
+          onSelectCourse={handleSelectCourse}
         />
 
         {userPos &&
@@ -1296,7 +1486,7 @@ export default function CoursesMap() {
           }}
           style={{
             position: "absolute",
-            top: isMobile ? 62 : 72,
+            top: isMobile ? 126 : 132,
             left: isMobile ? 12 : 12,
             zIndex: 1000,
             width: 38,
