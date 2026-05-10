@@ -32,6 +32,10 @@ type TripItem = {
   currency?: string | null;
   locationName?: string | null;
   address?: string | null;
+  lat?: number | string | null;
+  lon?: number | string | null;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
   courseId?: string | null;
   course?: {
     id: string;
@@ -97,9 +101,15 @@ type TripMapMarker = {
   id: string;
   number: number;
   title: string;
+  typeLabel: string;
+  typeKey: string;
   dateLabel: string;
   startTime: string;
-  courseId: string;
+  timeLabel: string;
+  courseId?: string | null;
+  courseName?: string | null;
+  locationName?: string | null;
+  address?: string | null;
   lat: number;
   lon: number;
 };
@@ -404,27 +414,86 @@ function toFiniteNumber(value: unknown) {
   return Number.isFinite(n) ? n : null;
 }
 
-function tripMarkerIcon(number: number) {
+function markerTypeStyles(typeKey: string) {
+  const value = String(typeKey ?? "").toLowerCase();
+
+  if (value === "golf_round" || value === "course") {
+    return {
+      background: "var(--text)",
+      color: "var(--bg)",
+      ring: "var(--card)",
+      glyph: "G",
+    };
+  }
+
+  if (value === "hotel") {
+    return {
+      background: "var(--card)",
+      color: "var(--text)",
+      ring: "var(--text)",
+      glyph: "H",
+    };
+  }
+
+  if (value === "transfer" || value === "car_rental") {
+    return {
+      background: "var(--bg)",
+      color: "var(--text)",
+      ring: "var(--sub)",
+      glyph: "T",
+    };
+  }
+
+  if (value === "free_day") {
+    return {
+      background: "var(--bg)",
+      color: "var(--sub)",
+      ring: "var(--text)",
+      glyph: "A",
+    };
+  }
+
+  return {
+    background: "var(--card)",
+    color: "var(--sub)",
+    ring: "var(--border)",
+    glyph: "O",
+  };
+}
+
+function tripMarkerIcon(marker: TripMapMarker) {
+  const styles = markerTypeStyles(marker.typeKey);
+
   return L.divIcon({
     className: "",
     html: `
       <div style="
-        width: 28px;
-        height: 28px;
+        width: 32px;
+        height: 32px;
         border-radius: 999px;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: var(--text);
-        color: var(--bg);
-        border: 2px solid var(--card);
+        background: ${styles.background};
+        color: ${styles.color};
+        border: 2px solid ${styles.ring};
         box-shadow: 0 4px 14px rgba(0,0,0,.22);
-        font: 900 12px system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      ">${number}</div>
+        font: 950 11px system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      ">
+        <span style="
+          display: inline-flex;
+          align-items: baseline;
+          gap: 1px;
+          line-height: 1;
+        ">
+          <span>${marker.number}</span>
+          <span style="font-size: 8px;">${styles.glyph}</span>
+        </span>
+      </div>
     `,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-    popupAnchor: [0, -14],
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -16],
   });
 }
 
@@ -443,7 +512,7 @@ function FitTripMapBounds({ markers }: { markers: TripMapMarker[] }) {
     const bounds = L.latLngBounds(points);
 
     if (markers.length === 1) {
-      map.setView(points[0], 12);
+      map.setView(points[0], 13);
       return;
     }
 
@@ -474,18 +543,35 @@ function TripMapView({
 
   if (markers.length === 0) {
     return (
-      <div
-        style={{
-          padding: 14,
-          borderRadius: 12,
-          background: "var(--card)",
-          border: "1px solid var(--border)",
-          color: "var(--sub)",
-          fontSize: 13,
-        }}
-      >
-        No mapped golf rounds yet
-      </div>
+      <section style={{ display: "grid", gap: 12 }}>
+        <div style={{ display: "grid", gap: 2 }}>
+          <div style={{ fontSize: 16, fontWeight: 950, color: "var(--text)" }}>
+            Trip Map
+          </div>
+          <div style={{ fontSize: 13, color: "var(--sub)" }}>
+            Timeline items with valid coordinates
+          </div>
+        </div>
+        <div
+          style={{
+            padding: 14,
+            borderRadius: 14,
+            background: "var(--card)",
+            border: "1px solid var(--border)",
+            color: "var(--sub)",
+            fontSize: 13,
+            display: "grid",
+            gap: 4,
+          }}
+        >
+          <div style={{ color: "var(--text)", fontWeight: 950 }}>
+            No mapped stops yet
+          </div>
+          <div>
+            Add a linked course or a timeline item with coordinates to see it on the trip map.
+          </div>
+        </div>
+      </section>
     );
   }
 
@@ -496,7 +582,7 @@ function TripMapView({
           Trip Map
         </div>
         <div style={{ fontSize: 13, color: "var(--sub)" }}>
-          Golf rounds with linked course locations
+          Timeline stops with valid coordinates
         </div>
       </div>
 
@@ -542,19 +628,50 @@ function TripMapView({
             <Marker
               key={marker.id}
               position={[marker.lat, marker.lon]}
-              icon={tripMarkerIcon(marker.number)}
+              icon={tripMarkerIcon(marker)}
             >
               <Popup>
                 <div
                   style={{
-                    minWidth: 190,
+                    minWidth: 210,
                     display: "grid",
-                    gap: 8,
+                    gap: 9,
                     color: "var(--text)",
                     fontFamily: "system-ui",
                   }}
                 >
-                  <div style={{ fontWeight: 950 }}>{marker.title}</div>
+                  <div style={{ display: "grid", gap: 4 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <span
+                        style={{
+                          borderRadius: 999,
+                          border: "1px solid var(--border)",
+                          padding: "3px 7px",
+                          color: "var(--sub)",
+                          fontSize: 11,
+                          fontWeight: 950,
+                        }}
+                      >
+                        {marker.number}. {marker.typeLabel}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        fontWeight: 950,
+                        fontSize: 14,
+                        lineHeight: 1.25,
+                      }}
+                    >
+                      {marker.title}
+                    </div>
+                  </div>
                   <div
                     style={{
                       display: "flex",
@@ -566,26 +683,58 @@ function TripMapView({
                     }}
                   >
                     <span>{marker.dateLabel}</span>
-                    {marker.startTime ? <span>{marker.startTime}</span> : null}
+                    {marker.timeLabel ? <span>{marker.timeLabel}</span> : null}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => onOpenCourse(marker.courseId)}
-                    style={{
-                      width: "fit-content",
-                      height: 30,
-                      padding: "0 10px",
-                      borderRadius: 999,
-                      border: "1px solid var(--border)",
-                      background: "transparent",
-                      color: "var(--sub)",
-                      cursor: "pointer",
-                      fontWeight: 900,
-                      fontSize: 12,
-                    }}
-                  >
-                    Open course
-                  </button>
+                  {marker.courseName ||
+                  marker.locationName ||
+                  marker.address ? (
+                    <div style={{ display: "grid", gap: 5, fontSize: 12 }}>
+                      {marker.courseName ? (
+                        <div style={{ color: "var(--sub)", lineHeight: 1.35 }}>
+                          <span style={{ fontWeight: 950 }}>Course </span>
+                          <span style={{ color: "var(--text)" }}>
+                            {marker.courseName}
+                          </span>
+                        </div>
+                      ) : null}
+                      {marker.locationName ? (
+                        <div style={{ color: "var(--sub)", lineHeight: 1.35 }}>
+                          <span style={{ fontWeight: 950 }}>Location </span>
+                          <span style={{ color: "var(--text)" }}>
+                            {marker.locationName}
+                          </span>
+                        </div>
+                      ) : null}
+                      {marker.address ? (
+                        <div style={{ color: "var(--sub)", lineHeight: 1.35 }}>
+                          <span style={{ fontWeight: 950 }}>Address </span>
+                          <span style={{ color: "var(--text)" }}>
+                            {marker.address}
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {marker.courseId ? (
+                    <button
+                      type="button"
+                      onClick={() => onOpenCourse(marker.courseId as string)}
+                      style={{
+                        width: "fit-content",
+                        height: 30,
+                        padding: "0 10px",
+                        borderRadius: 999,
+                        border: "1px solid var(--border)",
+                        background: "transparent",
+                        color: "var(--sub)",
+                        cursor: "pointer",
+                        fontWeight: 900,
+                        fontSize: 12,
+                      }}
+                    >
+                      Open course
+                    </button>
+                  ) : null}
                 </div>
               </Popup>
             </Marker>
@@ -1173,19 +1322,16 @@ export default function TripDetailPage() {
 
   const mapMarkers = useMemo<TripMapMarker[]>(() => {
     return (trip?.items ?? [])
-      .filter((item) => {
+      .map((item): TripMapMarker | null => {
         const itemType = String(item.type ?? "").toLowerCase();
-        return itemType === "golf_round" || itemType === "course";
-      })
-      .map((item) => {
-        const lat = toFiniteNumber(item.course?.lat);
-        const lon = toFiniteNumber(item.course?.lon);
+        const lat = toFiniteNumber(item.course?.lat ?? item.lat ?? item.latitude);
+        const lon = toFiniteNumber(item.course?.lon ?? item.lon ?? item.longitude);
         const courseId = item.course?.id ?? item.courseId;
+        const courseName = item.course?.name?.trim() || "";
 
         if (
           lat == null ||
           lon == null ||
-          !courseId ||
           lat < -90 ||
           lat > 90 ||
           lon < -180 ||
@@ -1197,17 +1343,25 @@ export default function TripDetailPage() {
         return {
           id: item.id,
           number: 0,
-          title: item.title || item.course?.name || "Golf round",
+          title:
+            item.title ||
+            courseName ||
+            item.locationName ||
+            itemTypeLabel(item.type),
+          typeLabel: itemTypeLabel(item.type),
+          typeKey: itemType || "note",
           dateLabel: formatDateLabel(dateKey(item)),
           startTime: formatTime(item),
+          timeLabel: formatTimeRange(item),
           courseId,
+          courseName: courseName || null,
+          locationName: item.locationName?.trim() || null,
+          address: item.address?.trim() || null,
           lat,
           lon,
         };
       })
-      .filter((marker): marker is Omit<TripMapMarker, "number"> & {
-        number: number;
-      } => marker !== null)
+      .filter((marker): marker is TripMapMarker => marker !== null)
       .map((marker, index) => ({
         ...marker,
         number: index + 1,
