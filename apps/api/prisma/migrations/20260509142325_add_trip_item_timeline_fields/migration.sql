@@ -23,5 +23,4 @@ ADD COLUMN     "provider" TEXT,
 ADD COLUMN     "providerPrice" DOUBLE PRECISION,
 ADD COLUMN     "startTime" TEXT;
 
--- AlterTable
-ALTER TABLE "TripMember" ALTER COLUMN "role" SET DEFAULT 'MEMBER';
+
