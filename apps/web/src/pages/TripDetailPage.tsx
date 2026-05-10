@@ -95,7 +95,7 @@ type EditDraft = {
   currency: string;
 };
 
-type TripView = "timeline" | "map";
+type TripView = "timeline" | "calendar" | "map";
 
 type TripMapMarker = {
   id: string;
@@ -136,6 +136,18 @@ type BudgetSummary = {
 type TimelineDetail = {
   label: string;
   value: string;
+};
+
+type CalendarIndicator = "Golf" | "Hotel" | "Transfer" | "Flight" | "Other";
+
+type CalendarSection = "Golf" | "Hotel" | "Transfers / Car" | "Flights" | "Other";
+
+type CalendarDay = {
+  key: string;
+  label: string;
+  weekday: string;
+  items: TripItem[];
+  indicators: Record<CalendarIndicator, number>;
 };
 
 const memberAvatarSize = 28;
@@ -210,7 +222,28 @@ function itemTypeLabel(type?: string | null) {
   if (value === "hotel") return "Hotel";
   if (value === "transfer") return "Transfer";
   if (value === "car_rental") return "Car rental";
+  if (value === "flight" || value === "flights") return "Flight";
   if (value === "free_day") return "Activity";
+  return "Other";
+}
+
+function calendarIndicator(type?: string | null): CalendarIndicator {
+  const value = String(type ?? "").toLowerCase();
+
+  if (value === "golf_round" || value === "course") return "Golf";
+  if (value === "hotel") return "Hotel";
+  if (value === "transfer" || value === "car_rental") return "Transfer";
+  if (value === "flight" || value === "flights") return "Flight";
+  return "Other";
+}
+
+function calendarSection(type?: string | null): CalendarSection {
+  const value = String(type ?? "").toLowerCase();
+
+  if (value === "golf_round" || value === "course") return "Golf";
+  if (value === "hotel") return "Hotel";
+  if (value === "transfer" || value === "car_rental") return "Transfers / Car";
+  if (value === "flight" || value === "flights") return "Flights";
   return "Other";
 }
 
@@ -234,6 +267,36 @@ function dateKey(item: TripItem) {
   return date.toISOString().slice(0, 10);
 }
 
+function dayKeyFromValue(value?: string | null) {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toISOString().slice(0, 10);
+}
+
+function dayKeysBetween(startKey: string, endKey: string) {
+  const keys: string[] = [];
+  if (!startKey) return keys;
+
+  const start = new Date(`${startKey}T00:00:00.000Z`);
+  const end = new Date(`${endKey || startKey}T00:00:00.000Z`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return [startKey];
+  }
+
+  const last = end.getTime() < start.getTime() ? start : end;
+  const cursor = new Date(start);
+
+  while (cursor.getTime() <= last.getTime()) {
+    keys.push(cursor.toISOString().slice(0, 10));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+
+  return keys;
+}
+
 function formatDateLabel(key: string) {
   if (key === "unscheduled") return "Unscheduled";
 
@@ -244,6 +307,15 @@ function formatDateLabel(key: string) {
     day: "numeric",
     month: "short",
     year: "numeric",
+  }).format(date);
+}
+
+function formatWeekdayLabel(key: string) {
+  const date = new Date(`${key}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
   }).format(date);
 }
 
@@ -279,6 +351,10 @@ function formatTimeRange(item: TripItem) {
 
   if (start && end) return `${start} - ${end}`;
   return start || end;
+}
+
+function timeSortValue(item: TripItem) {
+  return formatTime(item) || "99:99";
 }
 
 function formatMoney(value?: number | null, currency?: string | null) {
@@ -745,6 +821,373 @@ function TripMapView({
   );
 }
 
+function TripCalendarView({
+  days,
+  selectedDay,
+  onSelectDay,
+  canEditTrip,
+  onAddItem,
+  onOpenCourse,
+}: {
+  days: CalendarDay[];
+  selectedDay: string;
+  onSelectDay: (key: string) => void;
+  canEditTrip: boolean;
+  onAddItem: () => void;
+  onOpenCourse: (courseId: string) => void;
+}) {
+  const selected = days.find((day) => day.key === selectedDay) ?? days[0];
+  const sections = useMemo(() => {
+    const grouped = new Map<CalendarSection, TripItem[]>();
+    const order: CalendarSection[] = [
+      "Golf",
+      "Hotel",
+      "Transfers / Car",
+      "Flights",
+      "Other",
+    ];
+
+    for (const item of selected?.items ?? []) {
+      const section = calendarSection(item.type);
+      grouped.set(section, [...(grouped.get(section) ?? []), item]);
+    }
+
+    return order
+      .map((section) => [section, grouped.get(section) ?? []] as const)
+      .filter(([, items]) => items.length > 0);
+  }, [selected]);
+
+  if (days.length === 0) {
+    return (
+      <section style={{ display: "grid", gap: 12 }}>
+        <div style={{ display: "grid", gap: 2 }}>
+          <div style={{ fontSize: 16, fontWeight: 950, color: "var(--text)" }}>
+            Trip Calendar
+          </div>
+          <div style={{ fontSize: 13, color: "var(--sub)" }}>
+            Day-by-day overview from dated timeline items
+          </div>
+        </div>
+        <div
+          style={{
+            display: "grid",
+            gap: 8,
+            padding: 16,
+            borderRadius: 14,
+            background: "var(--card)",
+            border: "1px solid var(--border)",
+          }}
+        >
+          <div style={{ color: "var(--text)", fontWeight: 950 }}>
+            No calendar days yet
+          </div>
+          <div style={{ color: "var(--sub)", fontSize: 13, lineHeight: 1.45 }}>
+            {canEditTrip
+              ? "Add dated timeline items to build the day-by-day trip sheet."
+              : "Trip admins have not added dated timeline items yet."}
+          </div>
+          {canEditTrip ? (
+            <button
+              type="button"
+              onClick={onAddItem}
+              style={{
+                width: "fit-content",
+                height: 34,
+                padding: "0 12px",
+                borderRadius: 999,
+                border: "1px solid var(--border)",
+                background: "var(--text)",
+                color: "var(--bg)",
+                cursor: "pointer",
+                fontWeight: 900,
+                fontSize: 12,
+              }}
+            >
+              + Add first item
+            </button>
+          ) : null}
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section style={{ display: "grid", gap: 12 }}>
+      <div style={{ display: "grid", gap: 2 }}>
+        <div style={{ fontSize: 16, fontWeight: 950, color: "var(--text)" }}>
+          Trip Calendar
+        </div>
+        <div style={{ fontSize: 13, color: "var(--sub)" }}>
+          Day-by-day overview for golf, stays, transfers, flights, and notes
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridAutoFlow: "column",
+          gridAutoColumns: "minmax(132px, 1fr)",
+          gap: 8,
+          overflowX: "auto",
+          paddingBottom: 2,
+          maxWidth: "100%",
+          boxSizing: "border-box",
+        }}
+      >
+        {days.map((day) => {
+          const active = day.key === selected.key;
+          const indicators = Object.entries(day.indicators).filter(
+            ([, count]) => count > 0,
+          ) as [CalendarIndicator, number][];
+
+          return (
+            <button
+              key={day.key}
+              type="button"
+              onClick={() => onSelectDay(day.key)}
+              style={{
+                minWidth: 0,
+                textAlign: "left",
+                padding: 10,
+                borderRadius: 14,
+                border: active
+                  ? "1px solid var(--text)"
+                  : "1px solid var(--border)",
+                background: active ? "var(--text)" : "var(--card)",
+                color: active ? "var(--bg)" : "var(--text)",
+                cursor: "pointer",
+                display: "grid",
+                gap: 7,
+              }}
+            >
+              <div style={{ fontSize: 11, fontWeight: 950, opacity: 0.78 }}>
+                {day.weekday}
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 950, lineHeight: 1.25 }}>
+                {day.label}
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                {indicators.map(([label, count]) => (
+                  <span
+                    key={label}
+                    style={{
+                      borderRadius: 999,
+                      border: active
+                        ? "1px solid var(--bg)"
+                        : "1px solid var(--border)",
+                      padding: "2px 6px",
+                      fontSize: 10,
+                      fontWeight: 950,
+                      opacity: active ? 0.9 : 1,
+                    }}
+                  >
+                    {label} {count}
+                  </span>
+                ))}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gap: 12,
+          padding: 14,
+          borderRadius: 14,
+          background: "var(--card)",
+          border: "1px solid var(--border)",
+        }}
+      >
+        <div style={{ display: "grid", gap: 2 }}>
+          <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 950 }}>
+            {selected.weekday}
+          </div>
+          <div style={{ color: "var(--text)", fontSize: 18, fontWeight: 950 }}>
+            {selected.label}
+          </div>
+        </div>
+
+        {sections.map(([section, items]) => (
+          <div key={section} style={{ display: "grid", gap: 8 }}>
+            <div
+              style={{
+                color: "var(--text)",
+                fontSize: 13,
+                fontWeight: 950,
+                paddingTop: 4,
+              }}
+            >
+              {section}
+            </div>
+            <div style={{ display: "grid", gap: 8 }}>
+              {items.map((item) => {
+                const itemType = String(item.type ?? "").toLowerCase();
+                const isGolf =
+                  itemType === "golf_round" || itemType === "course";
+                const courseId = item.course?.id ?? item.courseId;
+                const courseName = item.course?.name?.trim();
+                const time = formatTimeRange(item);
+                const prices = pricingParts(item);
+                const title =
+                  (isGolf && courseName) ||
+                  item.title ||
+                  item.locationName ||
+                  itemTypeLabel(item.type);
+
+                return (
+                  <article
+                    key={`${selected.key}-${item.id}-${section}`}
+                    style={{
+                      display: "grid",
+                      gap: 7,
+                      padding: 10,
+                      borderRadius: 12,
+                      border: "1px solid var(--border)",
+                      background: "var(--bg)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: 10,
+                        alignItems: "flex-start",
+                      }}
+                    >
+                      <div style={{ minWidth: 0, display: "grid", gap: 3 }}>
+                        <div
+                          style={{
+                            color: "var(--text)",
+                            fontWeight: 950,
+                            overflowWrap: "anywhere",
+                            lineHeight: 1.25,
+                          }}
+                        >
+                          {title}
+                        </div>
+                        {isGolf && courseName && item.title ? (
+                          <div
+                            style={{
+                              color: "var(--sub)",
+                              fontSize: 12,
+                              fontWeight: 850,
+                              overflowWrap: "anywhere",
+                            }}
+                          >
+                            {item.title}
+                          </div>
+                        ) : null}
+                      </div>
+                      {time ? (
+                        <div
+                          style={{
+                            color: "var(--text)",
+                            fontSize: 12,
+                            fontWeight: 950,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {time}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {item.locationName || item.address ? (
+                      <div style={{ display: "grid", gap: 3 }}>
+                        {item.locationName ? (
+                          <div style={{ color: "var(--sub)", fontSize: 12 }}>
+                            {item.locationName}
+                          </div>
+                        ) : null}
+                        {item.address ? (
+                          <div style={{ color: "var(--sub)", fontSize: 12 }}>
+                            {item.address}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {item.provider || item.bookingRef ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: 8,
+                          color: "var(--sub)",
+                          fontSize: 12,
+                          fontWeight: 850,
+                        }}
+                      >
+                        {item.provider ? <span>{item.provider}</span> : null}
+                        {item.bookingRef ? (
+                          <span>Booking {item.bookingRef}</span>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {prices.length > 0 ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: 8,
+                          color: "var(--sub)",
+                          fontSize: 12,
+                          fontWeight: 850,
+                        }}
+                      >
+                        {prices.map((price) => (
+                          <span key={price}>{price}</span>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {item.notes ? (
+                      <div
+                        style={{
+                          color: "var(--text)",
+                          fontSize: 12,
+                          lineHeight: 1.4,
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {item.notes}
+                      </div>
+                    ) : null}
+
+                    {isGolf && courseId ? (
+                      <button
+                        type="button"
+                        onClick={() => onOpenCourse(courseId)}
+                        style={{
+                          width: "fit-content",
+                          height: 30,
+                          padding: "0 10px",
+                          borderRadius: 999,
+                          border: "1px solid var(--border)",
+                          background: "transparent",
+                          color: "var(--sub)",
+                          cursor: "pointer",
+                          fontWeight: 900,
+                          fontSize: 12,
+                        }}
+                      >
+                        Open course
+                      </button>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function MemberAvatar({ user }: { user?: UserSearchResult | null }) {
   const label = displayUserName(user);
 
@@ -807,6 +1250,7 @@ export default function TripDetailPage() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<TripView>("timeline");
+  const [selectedCalendarDay, setSelectedCalendarDay] = useState("");
   const [uploadingCover, setUploadingCover] = useState(false);
   const [editingTrip, setEditingTrip] = useState(false);
   const [tripDraft, setTripDraft] = useState<TripEditDraft | null>(null);
@@ -1319,6 +1763,63 @@ export default function TripDetailPage() {
 
     return Array.from(groups.entries());
   }, [trip?.items]);
+
+  const calendarDays = useMemo<CalendarDay[]>(() => {
+    const groups = new Map<string, TripItem[]>();
+    const itemOrder = new Map<string, number>();
+
+    (trip?.items ?? []).forEach((item, index) => {
+      itemOrder.set(item.id, index);
+      const startKey = dayKeyFromValue(itemDateValue(item));
+      if (!startKey) return;
+
+      const endKey = dayKeyFromValue(item.endDate) || startKey;
+      for (const key of dayKeysBetween(startKey, endKey)) {
+        groups.set(key, [...(groups.get(key) ?? []), item]);
+      }
+    });
+
+    return Array.from(groups.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, items]) => {
+        const indicators: Record<CalendarIndicator, number> = {
+          Golf: 0,
+          Hotel: 0,
+          Transfer: 0,
+          Flight: 0,
+          Other: 0,
+        };
+
+        const sortedItems = [...items].sort((a, b) => {
+          const timeCompare = timeSortValue(a).localeCompare(timeSortValue(b));
+          if (timeCompare !== 0) return timeCompare;
+          return (itemOrder.get(a.id) ?? 0) - (itemOrder.get(b.id) ?? 0);
+        });
+
+        for (const item of sortedItems) {
+          indicators[calendarIndicator(item.type)] += 1;
+        }
+
+        return {
+          key,
+          label: formatDateLabel(key),
+          weekday: formatWeekdayLabel(key),
+          items: sortedItems,
+          indicators,
+        };
+      });
+  }, [trip?.items]);
+
+  useEffect(() => {
+    if (calendarDays.length === 0) {
+      if (selectedCalendarDay) setSelectedCalendarDay("");
+      return;
+    }
+
+    if (!calendarDays.some((day) => day.key === selectedCalendarDay)) {
+      setSelectedCalendarDay(calendarDays[0].key);
+    }
+  }, [calendarDays, selectedCalendarDay]);
 
   const mapMarkers = useMemo<TripMapMarker[]>(() => {
     return (trip?.items ?? [])
@@ -2386,7 +2887,7 @@ export default function TripDetailPage() {
           border: "1px solid var(--border)",
         }}
       >
-        {(["timeline", "map"] as TripView[]).map((view) => {
+        {(["timeline", "calendar", "map"] as TripView[]).map((view) => {
           const active = activeView === view;
           return (
             <button
@@ -2405,7 +2906,11 @@ export default function TripDetailPage() {
                 fontSize: 12,
               }}
             >
-              {view === "timeline" ? "Timeline" : "Map"}
+              {view === "timeline"
+                ? "Timeline"
+                : view === "calendar"
+                  ? "Calendar"
+                  : "Map"}
             </button>
           );
         })}
@@ -3080,6 +3585,17 @@ export default function TripDetailPage() {
           </section>
         ))}
       </section>
+      ) : activeView === "calendar" ? (
+        <TripCalendarView
+          days={calendarDays}
+          selectedDay={selectedCalendarDay}
+          onSelectDay={setSelectedCalendarDay}
+          canEditTrip={canEditTrip}
+          onAddItem={() => {
+            if (tripId) nav(`/trips/${tripId}/add-item`);
+          }}
+          onOpenCourse={(courseId) => nav(`/courses/${courseId}`)}
+        />
       ) : (
         <TripMapView
           markers={mapMarkers}
