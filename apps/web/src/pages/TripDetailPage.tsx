@@ -109,6 +109,20 @@ type TripSummaryStat = {
   value: number;
 };
 
+type BudgetCategory = "Golf" | "Hotel" | "Transfer" | "Activity" | "Other";
+
+type BudgetSummary = {
+  mixedCurrencies: boolean;
+  currency: string;
+  total: number;
+  perPerson: number;
+  directTotal: number;
+  providerTotal: number;
+  caddyTotal: number;
+  cartTotal: number;
+  categories: Record<BudgetCategory, number>;
+};
+
 type TimelineDetail = {
   label: string;
   value: string;
@@ -190,6 +204,16 @@ function itemTypeLabel(type?: string | null) {
   return "Other";
 }
 
+function budgetCategory(type?: string | null): BudgetCategory {
+  const value = String(type ?? "").toLowerCase();
+
+  if (value === "golf_round" || value === "course") return "Golf";
+  if (value === "hotel") return "Hotel";
+  if (value === "transfer" || value === "car_rental") return "Transfer";
+  if (value === "free_day") return "Activity";
+  return "Other";
+}
+
 function dateKey(item: TripItem) {
   const value = itemDateValue(item);
   if (!value) return "unscheduled";
@@ -261,6 +285,11 @@ function formatMoney(value?: number | null, currency?: string | null) {
   } catch {
     return `${value} ${code}`.trim();
   }
+}
+
+function budgetAmount(value: number, summary: BudgetSummary) {
+  if (summary.mixedCurrencies) return value > 0 ? "Mixed currencies" : formatMoney(0, summary.currency);
+  return formatMoney(value, summary.currency);
 }
 
 function pricingParts(item: TripItem) {
@@ -1233,8 +1262,80 @@ export default function TripDetailPage() {
     ];
   }, [trip?.items, trip?.members]);
 
+  const budgetSummary = useMemo<BudgetSummary>(() => {
+    const categories: Record<BudgetCategory, number> = {
+      Golf: 0,
+      Hotel: 0,
+      Transfer: 0,
+      Activity: 0,
+      Other: 0,
+    };
+    const currencies = new Set<string>();
+    let directTotal = 0;
+    let providerTotal = 0;
+    let caddyTotal = 0;
+    let cartTotal = 0;
+
+    for (const item of trip?.items ?? []) {
+      const direct = typeof item.directPrice === "number" && Number.isFinite(item.directPrice) ? item.directPrice : 0;
+      const provider =
+        typeof item.providerPrice === "number" && Number.isFinite(item.providerPrice)
+          ? item.providerPrice
+          : 0;
+      const caddy = typeof item.caddyFee === "number" && Number.isFinite(item.caddyFee) ? item.caddyFee : 0;
+      const cart = typeof item.cartFee === "number" && Number.isFinite(item.cartFee) ? item.cartFee : 0;
+      const itemTotal = direct + provider + caddy + cart;
+
+      if (itemTotal > 0) {
+        currencies.add(item.currency?.trim() || "CHF");
+      }
+
+      directTotal += direct;
+      providerTotal += provider;
+      caddyTotal += caddy;
+      cartTotal += cart;
+      categories[budgetCategory(item.type)] += itemTotal;
+    }
+
+    const total = directTotal + providerTotal + caddyTotal + cartTotal;
+    const people = trip?.members?.length ?? 0;
+    const currency = Array.from(currencies)[0] || "CHF";
+
+    return {
+      mixedCurrencies: currencies.size > 1,
+      currency,
+      total,
+      perPerson: people > 0 ? total / people : total,
+      directTotal,
+      providerTotal,
+      caddyTotal,
+      cartTotal,
+      categories,
+    };
+  }, [trip?.items, trip?.members]);
+
   const memberCount = trip?.members?.length ?? 0;
   const itemCount = trip?.items?.length ?? 0;
+  const budgetCards = [
+    { label: "Total budget", value: budgetSummary.total },
+    { label: "Golf cost", value: budgetSummary.categories.Golf },
+    { label: "Hotel cost", value: budgetSummary.categories.Hotel },
+    { label: "Transport cost", value: budgetSummary.categories.Transfer },
+    { label: "Estimated per person", value: budgetSummary.perPerson },
+  ];
+  const budgetFieldTotals = [
+    { label: "Direct", value: budgetSummary.directTotal },
+    { label: "Provider", value: budgetSummary.providerTotal },
+    { label: "Caddy", value: budgetSummary.caddyTotal },
+    { label: "Cart", value: budgetSummary.cartTotal },
+  ];
+  const budgetCategoryTotals: { label: BudgetCategory; value: number }[] = [
+    { label: "Golf", value: budgetSummary.categories.Golf },
+    { label: "Hotel", value: budgetSummary.categories.Hotel },
+    { label: "Transfer", value: budgetSummary.categories.Transfer },
+    { label: "Activity", value: budgetSummary.categories.Activity },
+    { label: "Other", value: budgetSummary.categories.Other },
+  ];
 
   return (
     <div
@@ -1545,6 +1646,179 @@ export default function TripDetailPage() {
             </button>
             </div>
           ) : null}
+        </div>
+      </section>
+
+      <section
+        style={{
+          ...safeSectionStyle,
+          display: "grid",
+          gap: 10,
+          padding: 12,
+          borderRadius: 14,
+          background: "var(--card)",
+          border: "1px solid var(--border)",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            ...safeSectionStyle,
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 10,
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ minWidth: 0, display: "grid", gap: 2 }}>
+            <div style={{ fontSize: 15, fontWeight: 950, color: "var(--text)" }}>
+              Budget Summary
+            </div>
+            <div style={{ fontSize: 12, color: "var(--sub)" }}>
+              Estimated costs from timeline item pricing
+            </div>
+          </div>
+          {budgetSummary.mixedCurrencies ? (
+            <div
+              style={{
+                borderRadius: 999,
+                border: "1px solid var(--border)",
+                color: "var(--sub)",
+                fontSize: 11,
+                fontWeight: 900,
+                padding: "5px 8px",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Mixed currencies
+            </div>
+          ) : null}
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(118px, 1fr))",
+            gap: 8,
+            width: "100%",
+            maxWidth: "100%",
+            boxSizing: "border-box",
+          }}
+        >
+          {budgetCards.map((card) => (
+            <div
+              key={card.label}
+              style={{
+                minWidth: 0,
+                padding: "10px 10px",
+                borderRadius: 12,
+                border: "1px solid var(--border)",
+                background: "var(--bg)",
+                display: "grid",
+                gap: 4,
+              }}
+            >
+              <div
+                style={{
+                  color: "var(--text)",
+                  fontSize: budgetSummary.mixedCurrencies && card.value > 0 ? 13 : 18,
+                  lineHeight: 1.15,
+                  fontWeight: 950,
+                  overflowWrap: "anywhere",
+                }}
+              >
+                {budgetAmount(card.value, budgetSummary)}
+              </div>
+              <div
+                style={{
+                  color: "var(--sub)",
+                  fontSize: 11,
+                  fontWeight: 900,
+                  overflowWrap: "anywhere",
+                }}
+              >
+                {card.label}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div
+          style={{
+            ...safeSectionStyle,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: 8,
+          }}
+        >
+          <div
+            style={{
+              minWidth: 0,
+              display: "grid",
+              gap: 7,
+              padding: 10,
+              borderRadius: 12,
+              border: "1px solid var(--border)",
+              background: "var(--bg)",
+            }}
+          >
+            <div style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
+              Cost Sources
+            </div>
+            {budgetFieldTotals.map((row) => (
+              <div
+                key={row.label}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  color: "var(--sub)",
+                  fontSize: 12,
+                  fontWeight: 850,
+                }}
+              >
+                <span>{row.label}</span>
+                <span style={{ color: "var(--text)", textAlign: "right" }}>
+                  {budgetAmount(row.value, budgetSummary)}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div
+            style={{
+              minWidth: 0,
+              display: "grid",
+              gap: 7,
+              padding: 10,
+              borderRadius: 12,
+              border: "1px solid var(--border)",
+              background: "var(--bg)",
+            }}
+          >
+            <div style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
+              Category Breakdown
+            </div>
+            {budgetCategoryTotals.map((row) => (
+              <div
+                key={row.label}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  color: "var(--sub)",
+                  fontSize: 12,
+                  fontWeight: 850,
+                }}
+              >
+                <span>{row.label}</span>
+                <span style={{ color: "var(--text)", textAlign: "right" }}>
+                  {budgetAmount(row.value, budgetSummary)}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
