@@ -100,6 +100,11 @@ type TripMapMarker = {
   lon: number;
 };
 
+type TripSummaryStat = {
+  label: string;
+  value: number;
+};
+
 const memberAvatarSize = 28;
 
 const satelliteTileUrl =
@@ -594,7 +599,7 @@ export default function TripDetailPage() {
   const [addingMember, setAddingMember] = useState(false);
 
   const myMembership = trip?.members?.find((member) => member.userId === user?.id);
-  const canManageMembers =
+  const canEditTrip =
     myMembership?.role === "OWNER" || myMembership?.role === "ADMIN";
 
   async function loadTrip() {
@@ -638,7 +643,7 @@ export default function TripDetailPage() {
     let cancelled = false;
 
     async function searchUsers() {
-      if (!token || !canManageMembers) {
+      if (!token || !canEditTrip) {
         setMemberResults([]);
         return;
       }
@@ -679,7 +684,7 @@ export default function TripDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [canManageMembers, memberQuery, selectedUser, token, trip?.members]);
+  }, [canEditTrip, memberQuery, selectedUser, token, trip?.members]);
 
   function startEdit(item: TripItem) {
     setErr(null);
@@ -1130,6 +1135,54 @@ export default function TripDetailPage() {
       }));
   }, [trip?.items]);
 
+  const summaryStats = useMemo<TripSummaryStat[]>(() => {
+    const items = trip?.items ?? [];
+    const dateTimes: number[] = [];
+    let golfRounds = 0;
+    let hotels = 0;
+    let transfers = 0;
+
+    for (const item of items) {
+      const itemType = String(item.type ?? "").toLowerCase();
+      if (itemType === "golf_round" || itemType === "course") golfRounds += 1;
+      if (itemType === "hotel") hotels += 1;
+      if (itemType === "transfer") transfers += 1;
+
+      for (const value of [itemDateValue(item), item.endDate]) {
+        if (!value) continue;
+        const date = new Date(value);
+        if (!Number.isNaN(date.getTime())) {
+          const day = new Date(
+            Date.UTC(
+              date.getUTCFullYear(),
+              date.getUTCMonth(),
+              date.getUTCDate(),
+            ),
+          );
+          dateTimes.push(day.getTime());
+        }
+      }
+    }
+
+    const tripDays =
+      dateTimes.length === 0
+        ? 0
+        : Math.max(
+            1,
+            Math.round(
+              (Math.max(...dateTimes) - Math.min(...dateTimes)) / 86400000,
+            ) + 1,
+          );
+
+    return [
+      { label: "Members", value: trip?.members?.length ?? 0 },
+      { label: "Golf rounds", value: golfRounds },
+      { label: "Hotels", value: hotels },
+      { label: "Transfers", value: transfers },
+      { label: "Trip days", value: tripDays },
+    ];
+  }, [trip?.items, trip?.members]);
+
   const memberCount = trip?.members?.length ?? 0;
   const itemCount = trip?.items?.length ?? 0;
 
@@ -1347,42 +1400,39 @@ export default function TripDetailPage() {
             )}
           </div>
 
-          <div style={wrappingActionRowStyle}>
-            {!editingTrip ? (
+          {canEditTrip ? (
+            <div style={wrappingActionRowStyle}>
+              {!editingTrip ? (
               <>
-                {canManageMembers ? (
-                  <>
-                    <input
-                      ref={coverInputRef}
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      onChange={(e) => uploadCover(e.target.files?.[0])}
-                      style={{ display: "none" }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => coverInputRef.current?.click()}
-                      disabled={!trip || deletingTrip || uploadingCover}
-                      style={{
-                        height: 32,
-                        padding: "0 10px",
-                        borderRadius: 999,
-                        border: "1px solid var(--border)",
-                        background: "transparent",
-                        color: "var(--sub)",
-                        cursor:
-                          !trip || deletingTrip || uploadingCover
-                            ? "default"
-                            : "pointer",
-                        fontWeight: 900,
-                        fontSize: 12,
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {uploadingCover ? "Uploading..." : "Upload Cover"}
-                    </button>
-                  </>
-                ) : null}
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={(e) => uploadCover(e.target.files?.[0])}
+                  style={{ display: "none" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => coverInputRef.current?.click()}
+                  disabled={!trip || deletingTrip || uploadingCover}
+                  style={{
+                    height: 32,
+                    padding: "0 10px",
+                    borderRadius: 999,
+                    border: "1px solid var(--border)",
+                    background: "transparent",
+                    color: "var(--sub)",
+                    cursor:
+                      !trip || deletingTrip || uploadingCover
+                        ? "default"
+                        : "pointer",
+                    fontWeight: 900,
+                    fontSize: 12,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {uploadingCover ? "Uploading..." : "Upload Cover"}
+                </button>
                 <button
                   type="button"
                   onClick={startTripEdit}
@@ -1443,7 +1493,77 @@ export default function TripDetailPage() {
             >
               + Add Item
             </button>
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      <section
+        style={{
+          ...safeSectionStyle,
+          display: "grid",
+          gap: 10,
+          padding: 12,
+          borderRadius: 14,
+          background: "var(--card)",
+          border: "1px solid var(--border)",
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ display: "grid", gap: 2 }}>
+          <div style={{ fontSize: 15, fontWeight: 950, color: "var(--text)" }}>
+            Trip Summary
           </div>
+          <div style={{ fontSize: 12, color: "var(--sub)" }}>
+            Key trip counts from the timeline
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(104px, 1fr))",
+            gap: 8,
+            width: "100%",
+            maxWidth: "100%",
+            boxSizing: "border-box",
+          }}
+        >
+          {summaryStats.map((stat) => (
+            <div
+              key={stat.label}
+              style={{
+                minWidth: 0,
+                padding: "10px 10px",
+                borderRadius: 12,
+                border: "1px solid var(--border)",
+                background: "var(--bg)",
+                display: "grid",
+                gap: 3,
+              }}
+            >
+              <div
+                style={{
+                  color: "var(--text)",
+                  fontSize: 20,
+                  lineHeight: 1,
+                  fontWeight: 950,
+                }}
+              >
+                {stat.value}
+              </div>
+              <div
+                style={{
+                  color: "var(--sub)",
+                  fontSize: 11,
+                  fontWeight: 900,
+                  overflowWrap: "anywhere",
+                }}
+              >
+                {stat.label}
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -1477,7 +1597,7 @@ export default function TripDetailPage() {
               People who can view this trip
             </div>
           </div>
-          {canManageMembers ? (
+          {canEditTrip ? (
             <div
               style={{
                 color: "var(--sub)",
@@ -1491,7 +1611,7 @@ export default function TripDetailPage() {
           ) : null}
         </div>
 
-        {canManageMembers ? (
+        {canEditTrip ? (
           <div style={{ ...safeSectionStyle, display: "grid", gap: 8 }}>
             <div
               style={{
@@ -1691,7 +1811,7 @@ export default function TripDetailPage() {
                   ) : null}
                 </div>
 
-                {canManageMembers ? (
+                {canEditTrip ? (
                   <select
                     value={member.role}
                     disabled={memberBusyId === member.id}
@@ -1730,7 +1850,7 @@ export default function TripDetailPage() {
                   </span>
                 )}
 
-                {canManageMembers ? (
+                {canEditTrip ? (
                   <button
                     type="button"
                     onClick={() => removeMember(member.id)}
@@ -1874,9 +1994,9 @@ export default function TripDetailPage() {
                 const isEditing = editingItemId === item.id && !!editDraft;
                 const isMoving = movingItemId === item.id;
                 const canMoveUp =
-                  canManageMembers && itemIndex > 0 && !isMoving;
+                  canEditTrip && itemIndex > 0 && !isMoving;
                 const canMoveDown =
-                  canManageMembers &&
+                  canEditTrip &&
                   itemIndex < items.length - 1 &&
                   !isMoving;
 
@@ -2230,7 +2350,7 @@ export default function TripDetailPage() {
                               alignItems: "center",
                             }}
                           >
-                            {canManageMembers ? (
+                            {canEditTrip ? (
                               <>
                                 <button
                                   type="button"
@@ -2292,50 +2412,54 @@ export default function TripDetailPage() {
                                 Open course
                               </button>
                             ) : null}
-                            <button
-                              type="button"
-                              onClick={() => startEdit(item)}
-                              disabled={deletingItemId === item.id}
-                              style={{
-                                height: 30,
-                                padding: "0 10px",
-                                borderRadius: 999,
-                                border: "1px solid var(--border)",
-                                background: "transparent",
-                                color: "var(--sub)",
-                                cursor:
-                                  deletingItemId === item.id
-                                    ? "default"
-                                    : "pointer",
-                                fontWeight: 900,
-                                fontSize: 12,
-                              }}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => deleteItem(item.id)}
-                              disabled={deletingItemId === item.id}
-                              style={{
-                                height: 30,
-                                padding: "0 10px",
-                                borderRadius: 999,
-                                border: "1px solid var(--border)",
-                                background: "transparent",
-                                color: "var(--sub)",
-                                cursor:
-                                  deletingItemId === item.id
-                                    ? "default"
-                                    : "pointer",
-                                fontWeight: 900,
-                                fontSize: 12,
-                              }}
-                            >
-                              {deletingItemId === item.id
-                                ? "Deleting..."
-                                : "Delete"}
-                            </button>
+                            {canEditTrip ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => startEdit(item)}
+                                  disabled={deletingItemId === item.id}
+                                  style={{
+                                    height: 30,
+                                    padding: "0 10px",
+                                    borderRadius: 999,
+                                    border: "1px solid var(--border)",
+                                    background: "transparent",
+                                    color: "var(--sub)",
+                                    cursor:
+                                      deletingItemId === item.id
+                                        ? "default"
+                                        : "pointer",
+                                    fontWeight: 900,
+                                    fontSize: 12,
+                                  }}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => deleteItem(item.id)}
+                                  disabled={deletingItemId === item.id}
+                                  style={{
+                                    height: 30,
+                                    padding: "0 10px",
+                                    borderRadius: 999,
+                                    border: "1px solid var(--border)",
+                                    background: "transparent",
+                                    color: "var(--sub)",
+                                    cursor:
+                                      deletingItemId === item.id
+                                        ? "default"
+                                        : "pointer",
+                                    fontWeight: 900,
+                                    fontSize: 12,
+                                  }}
+                                >
+                                  {deletingItemId === item.id
+                                    ? "Deleting..."
+                                    : "Delete"}
+                                </button>
+                              </>
+                            ) : null}
                           </div>
                         </>
                       )}
