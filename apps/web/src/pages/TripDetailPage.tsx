@@ -22,12 +22,16 @@ type TripItem = {
   endDate?: string | null;
   startsAt?: string | null;
   startTime?: string | null;
+  endTime?: string | null;
   provider?: string | null;
+  bookingRef?: string | null;
   directPrice?: number | null;
   caddyFee?: number | null;
   cartFee?: number | null;
   providerPrice?: number | null;
   currency?: string | null;
+  locationName?: string | null;
+  address?: string | null;
   courseId?: string | null;
   course?: {
     id: string;
@@ -105,6 +109,11 @@ type TripSummaryStat = {
   value: number;
 };
 
+type TimelineDetail = {
+  label: string;
+  value: string;
+};
+
 const memberAvatarSize = 28;
 
 const satelliteTileUrl =
@@ -170,6 +179,17 @@ function itemDateValue(item: TripItem) {
   return item.date ?? item.startsAt ?? null;
 }
 
+function itemTypeLabel(type?: string | null) {
+  const value = String(type ?? "").toLowerCase();
+
+  if (value === "golf_round" || value === "course") return "Golf";
+  if (value === "hotel") return "Hotel";
+  if (value === "transfer") return "Transfer";
+  if (value === "car_rental") return "Car rental";
+  if (value === "free_day") return "Activity";
+  return "Other";
+}
+
 function dateKey(item: TripItem) {
   const value = itemDateValue(item);
   if (!value) return "unscheduled";
@@ -217,6 +237,14 @@ function formatTime(item: TripItem) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
+}
+
+function formatTimeRange(item: TripItem) {
+  const start = formatTime(item);
+  const end = item.endTime?.trim() || "";
+
+  if (start && end) return `${start} - ${end}`;
+  return start || end;
 }
 
 function formatMoney(value?: number | null, currency?: string | null) {
@@ -281,6 +309,28 @@ function formatDateRange(item: TripItem) {
 
   if (!endKey || startKey === endKey) return "";
   return `${start} - ${end}`;
+}
+
+function timelineDetails(item: TripItem) {
+  const details: TimelineDetail[] = [];
+
+  if (item.provider?.trim()) {
+    details.push({ label: "Provider", value: item.provider.trim() });
+  }
+
+  if (item.locationName?.trim()) {
+    details.push({ label: "Location", value: item.locationName.trim() });
+  }
+
+  if (item.address?.trim()) {
+    details.push({ label: "Address", value: item.address.trim() });
+  }
+
+  if (item.bookingRef?.trim()) {
+    details.push({ label: "Booking", value: item.bookingRef.trim() });
+  }
+
+  return details;
 }
 
 function numberInputValue(value?: number | null) {
@@ -1947,15 +1997,44 @@ export default function TripDetailPage() {
         {!loading && !err && trip && groupedItems.length === 0 ? (
           <div
             style={{
-              padding: 14,
-              borderRadius: 12,
+              display: "grid",
+              gap: 8,
+              padding: 16,
+              borderRadius: 14,
               background: "var(--card)",
               border: "1px solid var(--border)",
-              color: "var(--sub)",
-              fontSize: 13,
             }}
           >
-            No timeline items yet
+            <div style={{ color: "var(--text)", fontWeight: 950 }}>
+              No timeline items yet
+            </div>
+            <div style={{ color: "var(--sub)", fontSize: 13, lineHeight: 1.45 }}>
+              {canEditTrip
+                ? "Add the first round, hotel, transfer, or note to start building this trip."
+                : "Trip admins have not added timeline items yet."}
+            </div>
+            {canEditTrip ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (tripId) nav(`/trips/${tripId}/add-item`);
+                }}
+                style={{
+                  width: "fit-content",
+                  height: 34,
+                  padding: "0 12px",
+                  borderRadius: 999,
+                  border: "1px solid var(--border)",
+                  background: "var(--text)",
+                  color: "var(--bg)",
+                  cursor: "pointer",
+                  fontWeight: 900,
+                  fontSize: 12,
+                }}
+              >
+                + Add first item
+              </button>
+            ) : null}
           </div>
         ) : null}
 
@@ -1983,11 +2062,13 @@ export default function TripDetailPage() {
             <div style={{ display: "grid", gap: 10 }}>
               {items.map((item, itemIndex) => {
                 const prices = pricingParts(item);
-                const time = formatTime(item);
+                const time = formatTimeRange(item);
                 const dateRange = formatDateRange(item);
+                const details = timelineDetails(item);
                 const courseId = item.course?.id ?? item.courseId;
                 const courseName = item.course?.name;
                 const itemType = String(item.type ?? "").toLowerCase();
+                const typeLabel = itemTypeLabel(item.type);
                 const isGolf =
                   itemType === "golf_round" || itemType === "course";
                 const canOpenCourse = isGolf && !!courseId;
@@ -2075,17 +2156,63 @@ export default function TripDetailPage() {
                         <div style={{ minWidth: 0, display: "grid", gap: 4 }}>
                           <div
                             style={{
+                              display: "flex",
+                              flexWrap: "wrap",
+                              alignItems: "center",
+                              gap: 8,
+                            }}
+                          >
+                            <span
+                              style={{
+                                border: "1px solid var(--border)",
+                                borderRadius: 999,
+                                padding: "3px 8px",
+                                background: "var(--bg)",
+                                color: "var(--sub)",
+                                fontSize: 11,
+                                fontWeight: 950,
+                              }}
+                            >
+                              {typeLabel}
+                            </span>
+                            {isGolf && courseName ? (
+                              <span
+                                style={{
+                                  border: "1px solid var(--border)",
+                                  borderRadius: 999,
+                                  padding: "3px 8px",
+                                  background: "var(--bg)",
+                                  color: "var(--text)",
+                                  fontSize: 11,
+                                  fontWeight: 950,
+                                }}
+                              >
+                                Linked course
+                              </span>
+                            ) : null}
+                          </div>
+
+                          <div
+                            style={{
                               fontWeight: 950,
                               color: "var(--text)",
                               lineHeight: 1.25,
+                              overflowWrap: "anywhere",
                             }}
                           >
                             {item.title || "Untitled item"}
                           </div>
 
                           {courseName ? (
-                            <div style={{ color: "var(--sub)", fontSize: 13 }}>
-                              {courseName}
+                            <div
+                              style={{
+                                color: "var(--sub)",
+                                fontSize: 13,
+                                fontWeight: isGolf ? 900 : 700,
+                                overflowWrap: "anywhere",
+                              }}
+                            >
+                              {isGolf ? `Course: ${courseName}` : courseName}
                             </div>
                           ) : null}
                         </div>
@@ -2314,20 +2441,74 @@ export default function TripDetailPage() {
                         <>
                           <div
                             style={{
-                              display: "flex",
-                              flexWrap: "wrap",
-                              gap: 8,
-                              color: "var(--sub)",
-                              fontSize: 12,
-                              fontWeight: 800,
+                              display: "grid",
+                              gap: 7,
+                              padding: "8px 10px",
+                              borderRadius: 12,
+                              background: "var(--bg)",
+                              border: "1px solid var(--border)",
                             }}
                           >
-                            {dateRange ? <span>{dateRange}</span> : null}
-                            {time ? <span>{time}</span> : null}
-                            {item.provider ? <span>{item.provider}</span> : null}
-                            {prices.map((price) => (
-                              <span key={price}>{price}</span>
-                            ))}
+                            <div
+                              style={{
+                                display: "flex",
+                                flexWrap: "wrap",
+                                gap: 8,
+                                color: "var(--text)",
+                                fontSize: 12,
+                                fontWeight: 950,
+                              }}
+                            >
+                              <span>{dateRange || formatDateLabel(dateKey(item))}</span>
+                              {time ? <span>{time}</span> : null}
+                            </div>
+
+                            {details.length > 0 ? (
+                              <div style={{ display: "grid", gap: 5 }}>
+                                {details.map((detail) => (
+                                  <div
+                                    key={`${detail.label}-${detail.value}`}
+                                    style={{
+                                      display: "grid",
+                                      gridTemplateColumns: "72px minmax(0, 1fr)",
+                                      gap: 8,
+                                      color: "var(--sub)",
+                                      fontSize: 12,
+                                      lineHeight: 1.35,
+                                    }}
+                                  >
+                                    <span style={{ fontWeight: 900 }}>
+                                      {detail.label}
+                                    </span>
+                                    <span
+                                      style={{
+                                        color: "var(--text)",
+                                        overflowWrap: "anywhere",
+                                      }}
+                                    >
+                                      {detail.value}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : null}
+
+                            {prices.length > 0 ? (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexWrap: "wrap",
+                                  gap: 8,
+                                  color: "var(--sub)",
+                                  fontSize: 12,
+                                  fontWeight: 800,
+                                }}
+                              >
+                                {prices.map((price) => (
+                                  <span key={price}>{price}</span>
+                                ))}
+                              </div>
+                            ) : null}
                           </div>
 
                           {item.notes ? (
