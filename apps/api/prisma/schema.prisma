@@ -323,17 +323,18 @@ model Feedback {
 }
 
 model Trip {
-  id          String         @id @default(cuid())
-  description String?
-  visibility  TripVisibility @default(PRIVATE)
-  createdById String
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  title       String
-  destination String?
-  createdBy   User           @relation("TripCreator", fields: [createdById], references: [id], onDelete: Cascade)
-  items       TripItem[]
-  members     TripMember[]
+  id            String         @id @default(cuid())
+  description   String?
+  visibility    TripVisibility @default(PRIVATE)
+  createdById   String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  title         String
+  destination   String?
+  coverImageUrl String?
+  createdBy     User           @relation("TripCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  items         TripItem[]
+  members       TripMember[]
 
   @@index([createdById])
   @@index([visibility])
@@ -371,6 +372,7 @@ model TripItem {
   currency      String?
   date          DateTime?
   directPrice   Float?
+  endDate       DateTime?
   endTime       String?
   locationName  String?
   provider      String?

@@ -13,4 +13,8 @@ export class UpdateTripDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsString()
+  coverImageUrl?: string;
 }

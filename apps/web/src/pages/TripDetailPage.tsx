@@ -1,5 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import L from "leaflet";
+import {
+  MapContainer,
+  Marker,
+  Polyline,
+  Popup,
+  TileLayer,
+  useMap,
+} from "react-leaflet";
 import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
 import { fileUrl } from "../api/fileUrl";
@@ -10,6 +19,7 @@ type TripItem = {
   title?: string | null;
   notes?: string | null;
   date?: string | null;
+  endDate?: string | null;
   startsAt?: string | null;
   startTime?: string | null;
   provider?: string | null;
@@ -22,6 +32,8 @@ type TripItem = {
   course?: {
     id: string;
     name?: string | null;
+    lat?: number | string | null;
+    lon?: number | string | null;
   } | null;
 };
 
@@ -30,6 +42,7 @@ type Trip = {
   title: string;
   destination?: string | null;
   description?: string | null;
+  coverImageUrl?: string | null;
   members?: TripMember[];
   items?: TripItem[];
 };
@@ -65,6 +78,7 @@ type EditDraft = {
   type: string;
   title: string;
   date: string;
+  endDate: string;
   startTime: string;
   provider: string;
   notes: string;
@@ -72,6 +86,30 @@ type EditDraft = {
   providerPrice: string;
   currency: string;
 };
+
+type TripView = "timeline" | "map";
+
+type TripMapMarker = {
+  id: string;
+  number: number;
+  title: string;
+  dateLabel: string;
+  startTime: string;
+  courseId: string;
+  lat: number;
+  lon: number;
+};
+
+const memberAvatarSize = 28;
+
+const satelliteTileUrl =
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+
+const satelliteLabelsUrl =
+  "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
+
+const satelliteTileAttribution =
+  "&copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community";
 
 const itemTypeOptions = [
   { value: "golf_round", label: "Golf round" },
@@ -86,6 +124,7 @@ const memberRoleOptions: TripRole[] = ["MEMBER", "ADMIN", "OWNER"];
 
 const editFieldStyle: React.CSSProperties = {
   width: "100%",
+  maxWidth: "100%",
   boxSizing: "border-box",
   borderRadius: 10,
   border: "1px solid var(--border)",
@@ -93,6 +132,22 @@ const editFieldStyle: React.CSSProperties = {
   color: "var(--text)",
   padding: "9px 10px",
   font: "inherit",
+};
+
+const safeSectionStyle: React.CSSProperties = {
+  width: "100%",
+  maxWidth: "100%",
+  boxSizing: "border-box",
+};
+
+const wrappingActionRowStyle: React.CSSProperties = {
+  ...safeSectionStyle,
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 8,
+  alignItems: "center",
+  justifyContent: "flex-start",
+  minWidth: 0,
 };
 
 function itemIcon(type?: string | null) {
@@ -125,6 +180,19 @@ function formatDateLabel(key: string) {
 
   const date = new Date(`${key}T00:00:00.000Z`);
   if (Number.isNaN(date.getTime())) return "Unscheduled";
+
+  return new Intl.DateTimeFormat(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatItemDate(value?: string | null) {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
 
   return new Intl.DateTimeFormat(undefined, {
     day: "numeric",
@@ -185,6 +253,31 @@ function dateInputValue(item: TripItem) {
   return date.toISOString().slice(0, 10);
 }
 
+function endDateInputValue(item: TripItem) {
+  if (!item.endDate) return "";
+
+  const date = new Date(item.endDate);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toISOString().slice(0, 10);
+}
+
+function formatDateRange(item: TripItem) {
+  const start = formatItemDate(itemDateValue(item));
+  const end = formatItemDate(item.endDate);
+
+  if (!start || !end) return "";
+
+  const startKey = dateKey(item);
+  const endDate = new Date(item.endDate as string);
+  const endKey = Number.isNaN(endDate.getTime())
+    ? ""
+    : endDate.toISOString().slice(0, 10);
+
+  if (!endKey || startKey === endKey) return "";
+  return `${start} - ${end}`;
+}
+
 function numberInputValue(value?: number | null) {
   return typeof value === "number" && Number.isFinite(value) ? String(value) : "";
 }
@@ -222,6 +315,203 @@ function displayUserName(user?: UserSearchResult | null) {
   return user?.name || user?.handle || "Fairwayd user";
 }
 
+function toFiniteNumber(value: unknown) {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function tripMarkerIcon(number: number) {
+  return L.divIcon({
+    className: "",
+    html: `
+      <div style="
+        width: 28px;
+        height: 28px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--text);
+        color: var(--bg);
+        border: 2px solid var(--card);
+        box-shadow: 0 4px 14px rgba(0,0,0,.22);
+        font: 900 12px system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      ">${number}</div>
+    `,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -14],
+  });
+}
+
+function FitTripMapBounds({ markers }: { markers: TripMapMarker[] }) {
+  const map = useMap();
+
+  useEffect(() => {
+    window.setTimeout(() => map.invalidateSize(), 50);
+
+    if (markers.length === 0) return;
+
+    const points = markers.map((marker) => [marker.lat, marker.lon] as [
+      number,
+      number,
+    ]);
+    const bounds = L.latLngBounds(points);
+
+    if (markers.length === 1) {
+      map.setView(points[0], 12);
+      return;
+    }
+
+    map.fitBounds(bounds, {
+      padding: [28, 28],
+      maxZoom: 12,
+    });
+  }, [map, markers]);
+
+  return null;
+}
+
+function TripMapView({
+  markers,
+  onOpenCourse,
+}: {
+  markers: TripMapMarker[];
+  onOpenCourse: (courseId: string) => void;
+}) {
+  const center = useMemo<[number, number]>(() => {
+    const first = markers[0];
+    return first ? [first.lat, first.lon] : [20, 0];
+  }, [markers]);
+  const line = markers.map((marker) => [marker.lat, marker.lon] as [
+    number,
+    number,
+  ]);
+
+  if (markers.length === 0) {
+    return (
+      <div
+        style={{
+          padding: 14,
+          borderRadius: 12,
+          background: "var(--card)",
+          border: "1px solid var(--border)",
+          color: "var(--sub)",
+          fontSize: 13,
+        }}
+      >
+        No mapped golf rounds yet
+      </div>
+    );
+  }
+
+  return (
+    <section style={{ display: "grid", gap: 12 }}>
+      <div style={{ display: "grid", gap: 2 }}>
+        <div style={{ fontSize: 16, fontWeight: 950, color: "var(--text)" }}>
+          Trip Map
+        </div>
+        <div style={{ fontSize: 13, color: "var(--sub)" }}>
+          Golf rounds with linked course locations
+        </div>
+      </div>
+
+      <div
+        style={{
+          height: 380,
+          minHeight: 320,
+          maxHeight: "62vh",
+          borderRadius: 14,
+          overflow: "hidden",
+          border: "1px solid var(--border)",
+          background: "var(--card)",
+        }}
+      >
+        <MapContainer
+          center={center}
+          zoom={8}
+          style={{ height: "100%", width: "100%" }}
+          scrollWheelZoom={false}
+        >
+          <TileLayer
+            attribution={satelliteTileAttribution}
+            url={satelliteTileUrl}
+          />
+          <TileLayer
+            attribution={satelliteTileAttribution}
+            url={satelliteLabelsUrl}
+          />
+          <FitTripMapBounds markers={markers} />
+
+          {line.length > 1 ? (
+            <Polyline
+              positions={line}
+              pathOptions={{
+                color: "var(--text)",
+                opacity: 0.72,
+                weight: 3,
+              }}
+            />
+          ) : null}
+
+          {markers.map((marker) => (
+            <Marker
+              key={marker.id}
+              position={[marker.lat, marker.lon]}
+              icon={tripMarkerIcon(marker.number)}
+            >
+              <Popup>
+                <div
+                  style={{
+                    minWidth: 190,
+                    display: "grid",
+                    gap: 8,
+                    color: "var(--text)",
+                    fontFamily: "system-ui",
+                  }}
+                >
+                  <div style={{ fontWeight: 950 }}>{marker.title}</div>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 6,
+                      color: "var(--sub)",
+                      fontSize: 12,
+                      fontWeight: 800,
+                    }}
+                  >
+                    <span>{marker.dateLabel}</span>
+                    {marker.startTime ? <span>{marker.startTime}</span> : null}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onOpenCourse(marker.courseId)}
+                    style={{
+                      width: "fit-content",
+                      height: 30,
+                      padding: "0 10px",
+                      borderRadius: 999,
+                      border: "1px solid var(--border)",
+                      background: "transparent",
+                      color: "var(--sub)",
+                      cursor: "pointer",
+                      fontWeight: 900,
+                      fontSize: 12,
+                    }}
+                  >
+                    Open course
+                  </button>
+                </div>
+              </Popup>
+            </Marker>
+          ))}
+        </MapContainer>
+      </div>
+    </section>
+  );
+}
+
 function MemberAvatar({ user }: { user?: UserSearchResult | null }) {
   const label = displayUserName(user);
 
@@ -231,10 +521,16 @@ function MemberAvatar({ user }: { user?: UserSearchResult | null }) {
         src={fileUrl(user.avatarUrl)}
         alt={label}
         style={{
-          width: 34,
-          height: 34,
+          width: memberAvatarSize,
+          height: memberAvatarSize,
+          minWidth: memberAvatarSize,
+          maxWidth: memberAvatarSize,
+          minHeight: memberAvatarSize,
+          maxHeight: memberAvatarSize,
+          boxSizing: "border-box",
           borderRadius: 999,
           objectFit: "cover",
+          display: "block",
           border: "1px solid var(--border)",
           flexShrink: 0,
         }}
@@ -246,8 +542,13 @@ function MemberAvatar({ user }: { user?: UserSearchResult | null }) {
     <div
       aria-hidden="true"
       style={{
-        width: 34,
-        height: 34,
+        width: memberAvatarSize,
+        height: memberAvatarSize,
+        minWidth: memberAvatarSize,
+        maxWidth: memberAvatarSize,
+        minHeight: memberAvatarSize,
+        maxHeight: memberAvatarSize,
+        boxSizing: "border-box",
         borderRadius: 999,
         display: "grid",
         placeItems: "center",
@@ -255,6 +556,7 @@ function MemberAvatar({ user }: { user?: UserSearchResult | null }) {
         border: "1px solid var(--border)",
         color: "var(--text)",
         fontWeight: 950,
+        fontSize: 12,
         flexShrink: 0,
       }}
     >
@@ -267,9 +569,12 @@ export default function TripDetailPage() {
   const { tripId } = useParams();
   const nav = useNavigate();
   const { token, user } = useAuth();
+  const coverInputRef = useRef<HTMLInputElement | null>(null);
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [activeView, setActiveView] = useState<TripView>("timeline");
+  const [uploadingCover, setUploadingCover] = useState(false);
   const [editingTrip, setEditingTrip] = useState(false);
   const [tripDraft, setTripDraft] = useState<TripEditDraft | null>(null);
   const [savingTrip, setSavingTrip] = useState(false);
@@ -278,6 +583,7 @@ export default function TripDetailPage() {
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
   const [savingItemId, setSavingItemId] = useState<string | null>(null);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
+  const [movingItemId, setMovingItemId] = useState<string | null>(null);
   const [memberQuery, setMemberQuery] = useState("");
   const [memberResults, setMemberResults] = useState<UserSearchResult[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(
@@ -382,6 +688,7 @@ export default function TripDetailPage() {
       type: item.type || "note",
       title: item.title || "",
       date: dateInputValue(item),
+      endDate: endDateInputValue(item),
       startTime: item.startTime || "",
       provider: item.provider || "",
       notes: item.notes || "",
@@ -478,6 +785,46 @@ export default function TripDetailPage() {
       setErr(e?.message ?? "Failed to delete trip");
     } finally {
       setDeletingTrip(false);
+    }
+  }
+
+  async function uploadCover(file?: File | null) {
+    if (!tripId || !token || !file) return;
+
+    try {
+      setUploadingCover(true);
+      setErr(null);
+
+      const form = new FormData();
+      form.append("cover", file);
+
+      const res = await fetch(
+        `${API_BASE}/trips/${encodeURIComponent(tripId)}/cover`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: form,
+        },
+      );
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(
+          tripErrorMessageForResponse(
+            res.status,
+            `HTTP ${res.status} ${res.statusText} ${text}`.trim(),
+          ),
+        );
+      }
+
+      await loadTrip();
+    } catch (e: any) {
+      setErr(e?.message ?? "Failed to upload trip cover");
+    } finally {
+      setUploadingCover(false);
+      if (coverInputRef.current) coverInputRef.current.value = "";
     }
   }
 
@@ -620,6 +967,7 @@ export default function TripDetailPage() {
             type: editDraft.type,
             title: editDraft.title.trim(),
             date: editDraft.date,
+            endDate: optionalText(editDraft.endDate),
             startTime: optionalText(editDraft.startTime),
             provider: optionalText(editDraft.provider),
             notes: optionalText(editDraft.notes),
@@ -691,6 +1039,43 @@ export default function TripDetailPage() {
     }
   }
 
+  async function moveItem(itemId: string, direction: "up" | "down") {
+    if (!tripId || !token) return;
+
+    try {
+      setMovingItemId(itemId);
+      setErr(null);
+
+      const res = await fetch(
+        `${API_BASE}/trips/${encodeURIComponent(tripId)}/items/${encodeURIComponent(itemId)}/move`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ direction }),
+        },
+      );
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(
+          errorMessageForResponse(
+            res.status,
+            `HTTP ${res.status} ${res.statusText} ${text}`.trim(),
+          ),
+        );
+      }
+
+      await loadTrip();
+    } catch (e: any) {
+      setErr(e?.message ?? "Failed to move trip item");
+    } finally {
+      setMovingItemId(null);
+    }
+  }
+
   const groupedItems = useMemo(() => {
     const groups = new Map<string, TripItem[]>();
 
@@ -702,13 +1087,69 @@ export default function TripDetailPage() {
     return Array.from(groups.entries());
   }, [trip?.items]);
 
+  const mapMarkers = useMemo<TripMapMarker[]>(() => {
+    return (trip?.items ?? [])
+      .filter((item) => {
+        const itemType = String(item.type ?? "").toLowerCase();
+        return itemType === "golf_round" || itemType === "course";
+      })
+      .map((item) => {
+        const lat = toFiniteNumber(item.course?.lat);
+        const lon = toFiniteNumber(item.course?.lon);
+        const courseId = item.course?.id ?? item.courseId;
+
+        if (
+          lat == null ||
+          lon == null ||
+          !courseId ||
+          lat < -90 ||
+          lat > 90 ||
+          lon < -180 ||
+          lon > 180
+        ) {
+          return null;
+        }
+
+        return {
+          id: item.id,
+          number: 0,
+          title: item.title || item.course?.name || "Golf round",
+          dateLabel: formatDateLabel(dateKey(item)),
+          startTime: formatTime(item),
+          courseId,
+          lat,
+          lon,
+        };
+      })
+      .filter((marker): marker is Omit<TripMapMarker, "number"> & {
+        number: number;
+      } => marker !== null)
+      .map((marker, index) => ({
+        ...marker,
+        number: index + 1,
+      }));
+  }, [trip?.items]);
+
   const memberCount = trip?.members?.length ?? 0;
   const itemCount = trip?.items?.length ?? 0;
 
   return (
-    <div style={{ padding: 16, display: "grid", gap: 16 }}>
+    <div
+      style={{
+        width: "100%",
+        maxWidth: 760,
+        margin: "0 auto",
+        boxSizing: "border-box",
+        overflowX: "hidden",
+        padding: "16px 16px calc(96px + env(safe-area-inset-bottom, 0px))",
+        display: "grid",
+        gap: 16,
+      }}
+    >
       <section
         style={{
+          ...safeSectionStyle,
+          overflow: "hidden",
           display: "grid",
           gap: 14,
           padding: 14,
@@ -736,8 +1177,36 @@ export default function TripDetailPage() {
           Back to Trips
         </button>
 
+        {trip?.coverImageUrl ? (
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "100%",
+              boxSizing: "border-box",
+              aspectRatio: "16 / 9",
+              maxHeight: 340,
+              borderRadius: 14,
+              overflow: "hidden",
+              border: "1px solid var(--border)",
+              background: "var(--bg)",
+            }}
+          >
+            <img
+              src={fileUrl(trip.coverImageUrl)}
+              alt={trip.title ? `${trip.title} cover` : "Trip cover"}
+              style={{
+                width: "100%",
+                height: "100%",
+                display: "block",
+                objectFit: "cover",
+              }}
+            />
+          </div>
+        ) : null}
+
         <div
           style={{
+            ...safeSectionStyle,
             display: "flex",
             alignItems: "flex-start",
             justifyContent: "space-between",
@@ -745,7 +1214,16 @@ export default function TripDetailPage() {
             flexWrap: "wrap",
           }}
         >
-          <div style={{ minWidth: 0, display: "grid", gap: 6, flex: 1 }}>
+          <div
+            style={{
+              minWidth: 0,
+              width: "100%",
+              maxWidth: "100%",
+              display: "grid",
+              gap: 6,
+              flex: "1 1 240px",
+            }}
+          >
             {editingTrip && tripDraft ? (
               <div style={{ display: "grid", gap: 10 }}>
                 <input
@@ -779,7 +1257,7 @@ export default function TripDetailPage() {
                   rows={3}
                   style={{ ...editFieldStyle, resize: "vertical" }}
                 />
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                <div style={wrappingActionRowStyle}>
                   <button
                     type="button"
                     onClick={saveTripEdit}
@@ -869,9 +1347,42 @@ export default function TripDetailPage() {
             )}
           </div>
 
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          <div style={wrappingActionRowStyle}>
             {!editingTrip ? (
               <>
+                {canManageMembers ? (
+                  <>
+                    <input
+                      ref={coverInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(e) => uploadCover(e.target.files?.[0])}
+                      style={{ display: "none" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => coverInputRef.current?.click()}
+                      disabled={!trip || deletingTrip || uploadingCover}
+                      style={{
+                        height: 32,
+                        padding: "0 10px",
+                        borderRadius: 999,
+                        border: "1px solid var(--border)",
+                        background: "transparent",
+                        color: "var(--sub)",
+                        cursor:
+                          !trip || deletingTrip || uploadingCover
+                            ? "default"
+                            : "pointer",
+                        fontWeight: 900,
+                        fontSize: 12,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {uploadingCover ? "Uploading..." : "Upload Cover"}
+                    </button>
+                  </>
+                ) : null}
                 <button
                   type="button"
                   onClick={startTripEdit}
@@ -938,6 +1449,8 @@ export default function TripDetailPage() {
 
       <section
         style={{
+          ...safeSectionStyle,
+          overflow: "hidden",
           display: "grid",
           gap: 12,
           padding: 14,
@@ -948,14 +1461,15 @@ export default function TripDetailPage() {
       >
         <div
           style={{
+            ...safeSectionStyle,
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
+            justifyContent: "flex-start",
             gap: 10,
             flexWrap: "wrap",
           }}
         >
-          <div>
+          <div style={{ minWidth: 0, flex: "1 1 180px" }}>
             <div style={{ fontSize: 15, fontWeight: 950, color: "var(--text)" }}>
               Members
             </div>
@@ -969,6 +1483,7 @@ export default function TripDetailPage() {
                 color: "var(--sub)",
                 fontSize: 12,
                 fontWeight: 900,
+                flex: "0 1 auto",
               }}
             >
               Admin tools
@@ -977,11 +1492,12 @@ export default function TripDetailPage() {
         </div>
 
         {canManageMembers ? (
-          <div style={{ display: "grid", gap: 8 }}>
+          <div style={{ ...safeSectionStyle, display: "grid", gap: 8 }}>
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "minmax(0, 1fr) 104px",
+                ...safeSectionStyle,
+                display: "flex",
+                flexWrap: "wrap",
                 gap: 8,
               }}
             >
@@ -992,12 +1508,16 @@ export default function TripDetailPage() {
                   setSelectedUser(null);
                 }}
                 placeholder="Search Fairwayd user"
-                style={editFieldStyle}
+                style={{ ...editFieldStyle, flex: "1 1 180px", minWidth: 0 }}
               />
               <select
                 value={newMemberRole}
                 onChange={(e) => setNewMemberRole(e.target.value as TripRole)}
-                style={editFieldStyle}
+                style={{
+                  ...editFieldStyle,
+                  flex: "1 0 104px",
+                  minWidth: 104,
+                }}
               >
                 {memberRoleOptions.map((role) => (
                   <option key={role} value={role}>
@@ -1012,15 +1532,26 @@ export default function TripDetailPage() {
                 style={{
                   display: "flex",
                   alignItems: "center",
+                  flexWrap: "wrap",
                   gap: 8,
                   padding: "8px 10px",
                   borderRadius: 12,
                   background: "var(--bg)",
                   border: "1px solid var(--border)",
                   fontSize: 13,
+                  boxSizing: "border-box",
+                  maxWidth: "100%",
                 }}
               >
-                <span style={{ color: "var(--text)", fontWeight: 900 }}>
+                <span
+                  style={{
+                    color: "var(--text)",
+                    fontWeight: 900,
+                    minWidth: 0,
+                    overflowWrap: "anywhere",
+                    flex: "1 1 160px",
+                  }}
+                >
                   Selected: {displayUserName(selectedUser)}
                 </span>
                 <button
@@ -1030,7 +1561,6 @@ export default function TripDetailPage() {
                     setMemberQuery("");
                   }}
                   style={{
-                    marginLeft: "auto",
                     border: "none",
                     background: "transparent",
                     color: "var(--sub)",
@@ -1052,6 +1582,8 @@ export default function TripDetailPage() {
                   borderRadius: 12,
                   background: "var(--bg)",
                   border: "1px solid var(--border)",
+                  boxSizing: "border-box",
+                  maxWidth: "100%",
                 }}
               >
                 {memberResults.map((result) => (
@@ -1066,18 +1598,21 @@ export default function TripDetailPage() {
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 10,
-                      padding: "8px 10px",
+                      gap: 8,
+                      padding: "7px 8px",
                       borderRadius: 10,
                       border: "1px solid var(--border)",
                       background: "var(--card)",
                       color: "var(--text)",
                       cursor: "pointer",
                       textAlign: "left",
+                      minWidth: 0,
+                      boxSizing: "border-box",
+                      maxWidth: "100%",
                     }}
                   >
                     <MemberAvatar user={result} />
-                    <div style={{ minWidth: 0 }}>
+                    <div style={{ minWidth: 0, overflowWrap: "anywhere" }}>
                       <div style={{ fontWeight: 900 }}>
                         {displayUserName(result)}
                       </div>
@@ -1114,25 +1649,39 @@ export default function TripDetailPage() {
           </div>
         ) : null}
 
-        <div style={{ display: "grid", gap: 8 }}>
+        <div style={{ ...safeSectionStyle, display: "grid", gap: 8 }}>
           {(trip?.members ?? []).map((member) => {
             const memberUser = member.user;
             return (
               <div
                 key={member.id}
                 style={{
+                  ...safeSectionStyle,
                   display: "flex",
                   alignItems: "center",
-                  gap: 10,
-                  padding: "9px 10px",
+                  flexWrap: "wrap",
+                  gap: 8,
+                  padding: "7px 8px",
                   borderRadius: 12,
                   background: "var(--bg)",
                   border: "1px solid var(--border)",
                 }}
               >
                 <MemberAvatar user={memberUser} />
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ color: "var(--text)", fontWeight: 900 }}>
+                <div
+                  style={{
+                    minWidth: 0,
+                    flex: "1 1 130px",
+                    overflowWrap: "anywhere",
+                  }}
+                >
+                  <div
+                    style={{
+                      color: "var(--text)",
+                      fontWeight: 900,
+                      overflowWrap: "anywhere",
+                    }}
+                  >
                     {displayUserName(memberUser)}
                   </div>
                   {memberUser?.handle ? (
@@ -1151,7 +1700,8 @@ export default function TripDetailPage() {
                     }
                     style={{
                       ...editFieldStyle,
-                      width: 96,
+                      width: "auto",
+                      flex: "0 1 96px",
                       padding: "7px 8px",
                       fontSize: 12,
                       fontWeight: 900,
@@ -1172,6 +1722,8 @@ export default function TripDetailPage() {
                       color: "var(--sub)",
                       fontSize: 11,
                       fontWeight: 900,
+                      maxWidth: "100%",
+                      boxSizing: "border-box",
                     }}
                   >
                     {member.role}
@@ -1186,6 +1738,7 @@ export default function TripDetailPage() {
                     style={{
                       height: 30,
                       padding: "0 10px",
+                      flexShrink: 0,
                       borderRadius: 999,
                       border: "1px solid var(--border)",
                       background: "transparent",
@@ -1224,6 +1777,43 @@ export default function TripDetailPage() {
         </div>
       ) : null}
 
+      <div
+        style={{
+          display: "inline-flex",
+          width: "fit-content",
+          maxWidth: "100%",
+          padding: 4,
+          borderRadius: 999,
+          background: "var(--card)",
+          border: "1px solid var(--border)",
+        }}
+      >
+        {(["timeline", "map"] as TripView[]).map((view) => {
+          const active = activeView === view;
+          return (
+            <button
+              key={view}
+              type="button"
+              onClick={() => setActiveView(view)}
+              style={{
+                height: 32,
+                padding: "0 14px",
+                borderRadius: 999,
+                border: "1px solid transparent",
+                background: active ? "var(--text)" : "transparent",
+                color: active ? "var(--bg)" : "var(--sub)",
+                cursor: "pointer",
+                fontWeight: 950,
+                fontSize: 12,
+              }}
+            >
+              {view === "timeline" ? "Timeline" : "Map"}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeView === "timeline" ? (
       <section style={{ display: "grid", gap: 12 }}>
         <div style={{ display: "grid", gap: 2 }}>
           <div style={{ fontSize: 16, fontWeight: 950, color: "var(--text)" }}>
@@ -1271,9 +1861,10 @@ export default function TripDetailPage() {
             </div>
 
             <div style={{ display: "grid", gap: 10 }}>
-              {items.map((item) => {
+              {items.map((item, itemIndex) => {
                 const prices = pricingParts(item);
                 const time = formatTime(item);
+                const dateRange = formatDateRange(item);
                 const courseId = item.course?.id ?? item.courseId;
                 const courseName = item.course?.name;
                 const itemType = String(item.type ?? "").toLowerCase();
@@ -1281,6 +1872,13 @@ export default function TripDetailPage() {
                   itemType === "golf_round" || itemType === "course";
                 const canOpenCourse = isGolf && !!courseId;
                 const isEditing = editingItemId === item.id && !!editDraft;
+                const isMoving = movingItemId === item.id;
+                const canMoveUp =
+                  canManageMembers && itemIndex > 0 && !isMoving;
+                const canMoveDown =
+                  canManageMembers &&
+                  itemIndex < items.length - 1 &&
+                  !isMoving;
 
                 return (
                   <div
@@ -1426,7 +2024,7 @@ export default function TripDetailPage() {
                             style={{
                               display: "grid",
                               gridTemplateColumns:
-                                "minmax(0, 1fr) minmax(0, 1fr)",
+                                "repeat(auto-fit, minmax(140px, 1fr))",
                               gap: 8,
                             }}
                           >
@@ -1437,6 +2035,17 @@ export default function TripDetailPage() {
                                 setEditDraft({
                                   ...editDraft,
                                   date: e.target.value,
+                                })
+                              }
+                              style={editFieldStyle}
+                            />
+                            <input
+                              type="date"
+                              value={editDraft.endDate}
+                              onChange={(e) =>
+                                setEditDraft({
+                                  ...editDraft,
+                                  endDate: e.target.value,
                                 })
                               }
                               style={editFieldStyle}
@@ -1593,6 +2202,7 @@ export default function TripDetailPage() {
                               fontWeight: 800,
                             }}
                           >
+                            {dateRange ? <span>{dateRange}</span> : null}
                             {time ? <span>{time}</span> : null}
                             {item.provider ? <span>{item.provider}</span> : null}
                             {prices.map((price) => (
@@ -1620,6 +2230,48 @@ export default function TripDetailPage() {
                               alignItems: "center",
                             }}
                           >
+                            {canManageMembers ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => moveItem(item.id, "up")}
+                                  disabled={!canMoveUp}
+                                  style={{
+                                    height: 30,
+                                    padding: "0 9px",
+                                    borderRadius: 999,
+                                    border: "1px solid var(--border)",
+                                    background: "transparent",
+                                    color: "var(--sub)",
+                                    cursor: canMoveUp ? "pointer" : "default",
+                                    opacity: canMoveUp ? 1 : 0.45,
+                                    fontWeight: 900,
+                                    fontSize: 12,
+                                  }}
+                                >
+                                  Up
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => moveItem(item.id, "down")}
+                                  disabled={!canMoveDown}
+                                  style={{
+                                    height: 30,
+                                    padding: "0 9px",
+                                    borderRadius: 999,
+                                    border: "1px solid var(--border)",
+                                    background: "transparent",
+                                    color: "var(--sub)",
+                                    cursor: canMoveDown ? "pointer" : "default",
+                                    opacity: canMoveDown ? 1 : 0.45,
+                                    fontWeight: 900,
+                                    fontSize: 12,
+                                  }}
+                                >
+                                  Down
+                                </button>
+                              </>
+                            ) : null}
                             {canOpenCourse ? (
                               <button
                                 type="button"
@@ -1695,6 +2347,12 @@ export default function TripDetailPage() {
           </section>
         ))}
       </section>
+      ) : (
+        <TripMapView
+          markers={mapMarkers}
+          onOpenCourse={(courseId) => nav(`/courses/${courseId}`)}
+        />
+      )}
     </div>
   );
 }

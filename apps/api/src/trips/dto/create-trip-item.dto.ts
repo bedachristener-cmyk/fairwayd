@@ -25,6 +25,10 @@ export class CreateTripItemDto {
   date!: string;
 
   @IsOptional()
+  @IsDateString()
+  endDate?: string;
+
+  @IsOptional()
   @IsString()
   startTime?: string;
 

@@ -30,10 +30,11 @@ type CourseSearchResult = {
 
 const fieldStyle: CSSProperties = {
   width: "100%",
+  maxWidth: "100%",
   boxSizing: "border-box",
   borderRadius: 12,
   border: "1px solid var(--border)",
-  background: "var(--card)",
+  background: "var(--bg)",
   color: "var(--text)",
   padding: "10px 12px",
   font: "inherit",
@@ -46,6 +47,13 @@ const labelStyle: CSSProperties = {
   fontWeight: 900,
   color: "var(--text)",
 };
+
+const dateRangeTypes = new Set<TripItemType>([
+  "hotel",
+  "car_rental",
+  "transfer",
+  "free_day",
+]);
 
 function optionalText(value: string) {
   const text = value.trim();
@@ -68,6 +76,7 @@ export default function AddTripItemPage() {
   const [type, setType] = useState<TripItemType>("golf_round");
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [provider, setProvider] = useState("");
   const [notes, setNotes] = useState("");
@@ -154,6 +163,7 @@ export default function AddTripItemPage() {
         type,
         title: title.trim(),
         date,
+        endDate: optionalText(endDate),
         startTime: optionalText(startTime),
         provider: optionalText(provider),
         notes: optionalText(notes),
@@ -189,9 +199,49 @@ export default function AddTripItemPage() {
   }
 
   return (
-    <div style={{ padding: 16, display: "grid", gap: 14 }}>
-      <div style={{ display: "grid", gap: 4 }}>
-        <div style={{ fontSize: 18, fontWeight: 950 }}>Add Item</div>
+    <div
+      style={{
+        width: "100%",
+        maxWidth: 760,
+        margin: "0 auto",
+        boxSizing: "border-box",
+        overflowX: "hidden",
+        padding: "16px 16px calc(96px + env(safe-area-inset-bottom, 0px))",
+        display: "grid",
+        gap: 14,
+      }}
+    >
+      <div
+        style={{
+          display: "grid",
+          gap: 4,
+          width: "100%",
+          maxWidth: "100%",
+          boxSizing: "border-box",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => nav(`/trips/${tripId}`)}
+          style={{
+            width: "fit-content",
+            height: 32,
+            padding: "0 12px",
+            borderRadius: 999,
+            border: "1px solid var(--border)",
+            background: "transparent",
+            color: "var(--sub)",
+            cursor: "pointer",
+            fontWeight: 900,
+            fontSize: 12,
+            marginBottom: 4,
+          }}
+        >
+          Back to Trip
+        </button>
+        <div style={{ fontSize: 22, lineHeight: 1.15, fontWeight: 950 }}>
+          Add Item
+        </div>
         <div style={{ fontSize: 13, color: "var(--sub)" }}>
           Add a simple timeline item to this trip
         </div>
@@ -204,10 +254,13 @@ export default function AddTripItemPage() {
             borderRadius: 12,
             background: "var(--card)",
             border: "1px solid var(--border)",
-            color: "var(--text)",
-            fontSize: 13,
-          }}
-        >
+          color: "var(--text)",
+          fontSize: 13,
+          width: "100%",
+          maxWidth: "100%",
+          boxSizing: "border-box",
+        }}
+      >
           {err}
         </div>
       ) : null}
@@ -215,12 +268,16 @@ export default function AddTripItemPage() {
       <form
         onSubmit={submit}
         style={{
+          width: "100%",
+          maxWidth: "100%",
+          boxSizing: "border-box",
           display: "grid",
-          gap: 12,
+          gap: 14,
           padding: 14,
           borderRadius: 14,
           border: "1px solid var(--border)",
           background: "var(--card)",
+          overflow: "hidden",
         }}
       >
         <label style={labelStyle}>
@@ -240,7 +297,7 @@ export default function AddTripItemPage() {
         </label>
 
         {type === "golf_round" ? (
-          <div style={{ display: "grid", gap: 8 }}>
+          <div style={{ display: "grid", gap: 8, minWidth: 0 }}>
             <label style={labelStyle}>
               Search golf course
               <input
@@ -264,6 +321,8 @@ export default function AddTripItemPage() {
                   color: "var(--text)",
                   fontSize: 13,
                   fontWeight: 800,
+                  boxSizing: "border-box",
+                  maxWidth: "100%",
                 }}
               >
                 Selected: {selectedCourse.name}
@@ -285,6 +344,8 @@ export default function AddTripItemPage() {
                   borderRadius: 12,
                   padding: 6,
                   background: "var(--bg)",
+                  boxSizing: "border-box",
+                  maxWidth: "100%",
                 }}
               >
                 {courseResults.map((course) => (
@@ -304,9 +365,14 @@ export default function AddTripItemPage() {
                       color: "var(--text)",
                       padding: "10px 12px",
                       cursor: "pointer",
+                      minWidth: 0,
+                      maxWidth: "100%",
+                      boxSizing: "border-box",
                     }}
                   >
-                    <div style={{ fontWeight: 900 }}>{course.name}</div>
+                    <div style={{ fontWeight: 900, overflowWrap: "anywhere" }}>
+                      {course.name}
+                    </div>
                     <div style={{ color: "var(--sub)", fontSize: 12 }}>
                       {[course.region, course.country].filter(Boolean).join(", ")}
                     </div>
@@ -327,16 +393,42 @@ export default function AddTripItemPage() {
           />
         </label>
 
-        <label style={labelStyle}>
-          Date
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            required
-            style={fieldStyle}
-          />
-        </label>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 10,
+            width: "100%",
+            maxWidth: "100%",
+            boxSizing: "border-box",
+          }}
+        >
+          <label style={{ ...labelStyle, flex: "1 1 180px", minWidth: 0 }}>
+            Date
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+              style={fieldStyle}
+            />
+          </label>
+
+          <label style={{ ...labelStyle, flex: "1 1 180px", minWidth: 0 }}>
+            End date
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              style={fieldStyle}
+            />
+            {dateRangeTypes.has(type) ? (
+              <span style={{ color: "var(--sub)", fontSize: 12 }}>
+                Optional for multi-day stays or rentals
+              </span>
+            ) : null}
+          </label>
+        </div>
 
         <label style={labelStyle}>
           Start time
@@ -399,13 +491,22 @@ export default function AddTripItemPage() {
           />
         </label>
 
-        <div style={{ display: "flex", gap: 10 }}>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 10,
+            width: "100%",
+            maxWidth: "100%",
+            boxSizing: "border-box",
+          }}
+        >
           <button
             type="button"
             onClick={() => nav(`/trips/${tripId}`)}
             disabled={saving}
             style={{
-              flex: 1,
+              flex: "1 1 140px",
               height: 42,
               borderRadius: 999,
               border: "1px solid var(--border)",
@@ -422,7 +523,7 @@ export default function AddTripItemPage() {
             type="submit"
             disabled={saving}
             style={{
-              flex: 1,
+              flex: "1 1 140px",
               height: 42,
               borderRadius: 999,
               border: "1px solid var(--border)",
