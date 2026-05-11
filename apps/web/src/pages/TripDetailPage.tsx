@@ -66,7 +66,9 @@ type TripRole = "OWNER" | "ADMIN" | "MEMBER";
 
 type TripMember = {
   id: string;
-  userId: string;
+  userId?: string | null;
+  displayName?: string | null;
+  isGuest?: boolean;
   role: TripRole;
   user?: {
     id: string;
@@ -559,7 +561,7 @@ function tripErrorMessageForResponse(status: number, fallback: string) {
 
 function memberErrorMessageForResponse(status: number, fallback: string) {
   if (status === 403) return "Only trip admins can manage members.";
-  if (status === 409) return "This user is already a trip member.";
+  if (status === 409) return "This member is already on the trip.";
   return fallback;
 }
 
@@ -568,7 +570,12 @@ function displayUserName(user?: UserSearchResult | null) {
 }
 
 function memberDisplayName(member?: TripMember | null) {
-  return displayUserName(member?.user);
+  return (
+    member?.displayName ||
+    member?.user?.name ||
+    member?.user?.handle ||
+    "Fairwayd member"
+  );
 }
 
 function effectiveParticipants(item: TripItem, members: TripMember[]) {
@@ -1329,14 +1336,20 @@ function TripCalendarView({
   );
 }
 
-function MemberAvatar({ user }: { user?: UserSearchResult | null }) {
-  const label = displayUserName(user);
+function MemberAvatar({
+  user,
+  label,
+}: {
+  user?: UserSearchResult | null;
+  label?: string;
+}) {
+  const displayLabel = label || displayUserName(user);
 
   if (user?.avatarUrl) {
     return (
       <img
         src={fileUrl(user.avatarUrl)}
-        alt={label}
+        alt={displayLabel}
         style={{
           width: memberAvatarSize,
           height: memberAvatarSize,
@@ -1377,7 +1390,7 @@ function MemberAvatar({ user }: { user?: UserSearchResult | null }) {
         flexShrink: 0,
       }}
     >
-      {label.slice(0, 1).toUpperCase()}
+      {displayLabel.slice(0, 1).toUpperCase()}
     </div>
   );
 }
@@ -1403,6 +1416,7 @@ export default function TripDetailPage() {
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
   const [movingItemId, setMovingItemId] = useState<string | null>(null);
   const [memberQuery, setMemberQuery] = useState("");
+  const [guestName, setGuestName] = useState("");
   const [memberResults, setMemberResults] = useState<UserSearchResult[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(
     null,
@@ -1481,7 +1495,11 @@ export default function TripDetailPage() {
         }
 
         const data = await res.json();
-        const existingIds = new Set(trip?.members?.map((m) => m.userId) ?? []);
+        const existingIds = new Set(
+          (trip?.members ?? [])
+            .map((member) => member.userId)
+            .filter((id): id is string => Boolean(id)),
+        );
         const items = (Array.isArray(data) ? data : [])
           .filter((item: UserSearchResult) => !existingIds.has(item.id))
           .slice(0, 8);
@@ -1698,6 +1716,48 @@ export default function TripDetailPage() {
       await loadTrip();
     } catch (e: any) {
       setErr(e?.message ?? "Failed to add member");
+    } finally {
+      setAddingMember(false);
+    }
+  }
+
+  async function addGuestMember() {
+    if (!tripId || !token || !guestName.trim()) return;
+
+    try {
+      setAddingMember(true);
+      setErr(null);
+
+      const res = await fetch(
+        `${API_BASE}/trips/${encodeURIComponent(tripId)}/members`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            displayName: guestName.trim(),
+            role: newMemberRole,
+          }),
+        },
+      );
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(
+          memberErrorMessageForResponse(
+            res.status,
+            `HTTP ${res.status} ${res.statusText} ${text}`.trim(),
+          ),
+        );
+      }
+
+      setGuestName("");
+      setNewMemberRole("MEMBER");
+      await loadTrip();
+    } catch (e: any) {
+      setErr(e?.message ?? "Failed to add guest member");
     } finally {
       setAddingMember(false);
     }
@@ -2913,25 +2973,81 @@ export default function TripDetailPage() {
               </div>
             ) : null}
 
-            <button
-              type="button"
-              onClick={addMember}
-              disabled={!selectedUser || addingMember}
+            <div
               style={{
-                width: "fit-content",
-                height: 32,
-                padding: "0 12px",
-                borderRadius: 999,
-                border: "1px solid var(--border)",
-                background: "var(--text)",
-                color: "var(--bg)",
-                cursor: !selectedUser || addingMember ? "default" : "pointer",
-                fontWeight: 900,
-                fontSize: 12,
+                ...safeSectionStyle,
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 8,
               }}
             >
-              {addingMember ? "Adding..." : "Add Member"}
-            </button>
+              <button
+                type="button"
+                onClick={addMember}
+                disabled={!selectedUser || addingMember}
+                style={{
+                  width: "fit-content",
+                  height: 32,
+                  padding: "0 12px",
+                  borderRadius: 999,
+                  border: "1px solid var(--border)",
+                  background: "var(--text)",
+                  color: "var(--bg)",
+                  cursor: !selectedUser || addingMember ? "default" : "pointer",
+                  fontWeight: 900,
+                  fontSize: 12,
+                }}
+              >
+                {addingMember ? "Adding..." : "Add Member"}
+              </button>
+            </div>
+
+            <div
+              style={{
+                ...safeSectionStyle,
+                display: "grid",
+                gap: 6,
+                paddingTop: 4,
+              }}
+            >
+              <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 900 }}>
+                Add guest manually
+              </div>
+              <div
+                style={{
+                  ...safeSectionStyle,
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 8,
+                }}
+              >
+                <input
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  placeholder="Guest name"
+                  style={{ ...editFieldStyle, flex: "1 1 180px", minWidth: 0 }}
+                />
+                <button
+                  type="button"
+                  onClick={addGuestMember}
+                  disabled={!guestName.trim() || addingMember}
+                  style={{
+                    height: 32,
+                    padding: "0 12px",
+                    borderRadius: 999,
+                    border: "1px solid var(--border)",
+                    background: "transparent",
+                    color: "var(--text)",
+                    cursor:
+                      !guestName.trim() || addingMember ? "default" : "pointer",
+                    fontWeight: 900,
+                    fontSize: 12,
+                  }}
+                >
+                  {addingMember ? "Adding..." : "Add Guest"}
+                </button>
+              </div>
+            </div>
           </div>
         ) : null}
 
@@ -2953,7 +3069,10 @@ export default function TripDetailPage() {
                   border: "1px solid var(--border)",
                 }}
               >
-                <MemberAvatar user={memberUser} />
+                <MemberAvatar
+                  user={memberUser}
+                  label={memberDisplayName(member)}
+                />
                 <div
                   style={{
                     minWidth: 0,
@@ -2968,13 +3087,32 @@ export default function TripDetailPage() {
                       overflowWrap: "anywhere",
                     }}
                   >
-                    {displayUserName(memberUser)}
+                    {memberDisplayName(member)}
                   </div>
-                  {memberUser?.handle ? (
-                    <div style={{ color: "var(--sub)", fontSize: 12 }}>
-                      @{memberUser.handle}
-                    </div>
-                  ) : null}
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 6,
+                      alignItems: "center",
+                      color: "var(--sub)",
+                      fontSize: 12,
+                    }}
+                  >
+                    {memberUser?.handle ? <span>@{memberUser.handle}</span> : null}
+                    {member.isGuest ? (
+                      <span
+                        style={{
+                          border: "1px solid var(--border)",
+                          borderRadius: 999,
+                          padding: "2px 6px",
+                          fontWeight: 900,
+                        }}
+                      >
+                        Guest
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
 
                 {canEditTrip ? (

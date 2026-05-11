@@ -343,14 +343,16 @@ model Trip {
 model TripMember {
   id                 String                @id @default(cuid())
   tripId             String
-  userId             String
+  userId             String?
+  displayName        String?
+  isGuest            Boolean               @default(false)
   role               TripRole              @default(MEMBER)
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
   itemParticipations TripItemParticipant[]
   paidItems          TripItem[]            @relation("TripItemPayer")
   trip               Trip                  @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  user               User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user               User?                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([tripId, userId])
   @@index([userId])

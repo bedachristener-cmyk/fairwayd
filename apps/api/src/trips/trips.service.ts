@@ -59,24 +59,22 @@ const tripUserSelect = {
   avatarUrl: true,
 } satisfies Prisma.UserSelect;
 
+const tripMemberInclude = {
+  user: {
+    select: tripUserSelect,
+  },
+} satisfies Prisma.TripMemberInclude;
+
 const tripItemInclude = {
   course: true,
   paidByMember: {
-    include: {
-      user: {
-        select: tripUserSelect,
-      },
-    },
+    include: tripMemberInclude,
   },
   participants: {
     orderBy: { createdAt: 'asc' },
     include: {
       tripMember: {
-        include: {
-          user: {
-            select: tripUserSelect,
-          },
-        },
+        include: tripMemberInclude,
       },
     },
   },
@@ -102,16 +100,7 @@ export class TripsService {
       },
       include: {
         members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                handle: true,
-                name: true,
-                avatarUrl: true,
-              },
-            },
-          },
+          include: tripMemberInclude,
         },
       },
     });
@@ -128,16 +117,7 @@ export class TripsService {
       },
       include: {
         members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                handle: true,
-                name: true,
-                avatarUrl: true,
-              },
-            },
-          },
+          include: tripMemberInclude,
         },
         _count: {
           select: {
@@ -164,16 +144,7 @@ export class TripsService {
       include: {
         members: {
           orderBy: { createdAt: 'asc' },
-          include: {
-            user: {
-              select: {
-                id: true,
-                handle: true,
-                name: true,
-                avatarUrl: true,
-              },
-            },
-          },
+          include: tripMemberInclude,
         },
         items: {
           orderBy: [
@@ -225,16 +196,7 @@ export class TripsService {
       include: {
         members: {
           orderBy: { createdAt: 'asc' },
-          include: {
-            user: {
-              select: {
-                id: true,
-                handle: true,
-                name: true,
-                avatarUrl: true,
-              },
-            },
-          },
+          include: tripMemberInclude,
         },
         items: {
           orderBy: [
@@ -273,39 +235,62 @@ export class TripsService {
     return this.prisma.tripMember.findMany({
       where: { tripId },
       orderBy: { createdAt: 'asc' },
-      include: {
-        user: {
-          select: {
-            id: true,
-            handle: true,
-            name: true,
-            avatarUrl: true,
-          },
-        },
-      },
+      include: tripMemberInclude,
     });
   }
 
   async addMember(tripId: string, userId: string, dto: AddTripMemberDto) {
     await this.assertCanModifyTrip(tripId, userId);
+    const requestedUserId = dto.userId?.trim();
+    const displayName = dto.displayName?.trim();
+
+    if (!requestedUserId && !displayName) {
+      throw new BadRequestException('Trip member requires userId or displayName');
+    }
+
+    if (requestedUserId && displayName) {
+      throw new BadRequestException('Provide either userId or displayName');
+    }
+
+    if (displayName) {
+      const existingGuest = await this.prisma.tripMember.findFirst({
+        where: {
+          tripId,
+          isGuest: true,
+          displayName: {
+            equals: displayName,
+            mode: 'insensitive',
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (existingGuest) {
+        throw new ConflictException('Guest is already a trip member');
+      }
+
+      return this.prisma.tripMember.create({
+        data: {
+          tripId,
+          displayName,
+          isGuest: true,
+          role: cleanTripRole(dto.role),
+        },
+        include: tripMemberInclude,
+      });
+    }
 
     try {
       return await this.prisma.tripMember.create({
         data: {
           tripId,
-          userId: dto.userId,
+          userId: requestedUserId,
+          isGuest: false,
           role: cleanTripRole(dto.role),
         },
-        include: {
-          user: {
-            select: {
-              id: true,
-              handle: true,
-              name: true,
-              avatarUrl: true,
-            },
-          },
-        },
+        include: tripMemberInclude,
       });
     } catch (error) {
       if (
@@ -343,16 +328,7 @@ export class TripsService {
     return this.prisma.tripMember.update({
       where: { id: memberId },
       data: { role },
-      include: {
-        user: {
-          select: {
-            id: true,
-            handle: true,
-            name: true,
-            avatarUrl: true,
-          },
-        },
-      },
+      include: tripMemberInclude,
     });
   }
 
@@ -701,7 +677,11 @@ export class TripsService {
     });
 
     const foundMemberIds = new Set(members.map((member) => member.id));
-    const foundUserIds = new Set(members.map((member) => member.userId));
+    const foundUserIds = new Set(
+      members
+        .map((member) => member.userId)
+        .filter((id): id is string => Boolean(id)),
+    );
 
     if (
       participantMemberIds.some((id) => !foundMemberIds.has(id)) ||

@@ -45,6 +45,8 @@ type CourseSearchResult = {
 
 type TripMember = {
   id: string;
+  displayName?: string | null;
+  isGuest?: boolean;
   user?: {
     name?: string | null;
     handle?: string | null;
@@ -101,7 +103,12 @@ function amountValue(value: string) {
 }
 
 function memberDisplayName(member: TripMember) {
-  return member.user?.name || member.user?.handle || "Fairwayd user";
+  return (
+    member.displayName ||
+    member.user?.name ||
+    member.user?.handle ||
+    "Fairwayd member"
+  );
 }
 
 export default function AddTripItemPage() {
