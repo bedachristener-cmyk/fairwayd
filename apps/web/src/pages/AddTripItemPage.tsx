@@ -21,6 +21,21 @@ const typeOptions: { value: TripItemType; label: string }[] = [
   { value: "note", label: "Note" },
 ];
 
+const currencyOptions = [
+  "THB",
+  "CHF",
+  "EUR",
+  "USD",
+  "JPY",
+  "GBP",
+  "AUD",
+  "SGD",
+  "MYR",
+  "IDR",
+  "PHP",
+  "ZAR",
+];
+
 type CourseSearchResult = {
   id: string;
   name: string;
@@ -99,6 +114,7 @@ export default function AddTripItemPage() {
   const [date, setDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   const [provider, setProvider] = useState("");
   const [notes, setNotes] = useState("");
   const [greenFee, setGreenFee] = useState("");
@@ -109,7 +125,7 @@ export default function AddTripItemPage() {
   const [includeCartFeeInSplit, setIncludeCartFeeInSplit] = useState(true);
   const [directPrice, setDirectPrice] = useState("");
   const [providerPrice, setProviderPrice] = useState("");
-  const [currency, setCurrency] = useState("");
+  const [currency, setCurrency] = useState("CHF");
   const [courseQuery, setCourseQuery] = useState("");
   const [courseResults, setCourseResults] = useState<CourseSearchResult[]>([]);
   const [selectedCourse, setSelectedCourse] =
@@ -120,6 +136,7 @@ export default function AddTripItemPage() {
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const isGolfRound = type === "golf_round";
+  const isHotel = type === "hotel";
   const derivedGolfTitle = selectedCourse?.name || "Golf round";
   const organizerTotal =
     (includeGreenFeeInSplit ? amountValue(greenFee) : 0) +
@@ -233,7 +250,8 @@ export default function AddTripItemPage() {
         title: isGolfRound ? derivedGolfTitle : title.trim(),
         date,
         endDate: isGolfRound ? undefined : optionalText(endDate),
-        startTime: optionalText(startTime),
+        startTime: isHotel ? undefined : optionalText(startTime),
+        endTime: isHotel ? undefined : optionalText(endTime),
         provider: optionalText(provider),
         notes: optionalText(notes),
         greenFee: type === "golf_round" ? optionalNumber(greenFee) : undefined,
@@ -246,7 +264,8 @@ export default function AddTripItemPage() {
         includeCartFeeInSplit:
           type === "golf_round" ? includeCartFeeInSplit : undefined,
         directPrice: optionalNumber(directPrice),
-        providerPrice: optionalNumber(providerPrice),
+        providerPrice:
+          isGolfRound || isHotel ? undefined : optionalNumber(providerPrice),
         currency: optionalText(currency),
         courseId: type === "golf_round" ? selectedCourse?.id : undefined,
         participantMemberIds,
@@ -481,7 +500,7 @@ export default function AddTripItemPage() {
           </div>
         ) : (
           <label style={labelStyle}>
-            Title
+            {isHotel ? "Hotel name" : "Title"}
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -502,7 +521,7 @@ export default function AddTripItemPage() {
           }}
         >
           <label style={{ ...labelStyle, flex: "1 1 180px", minWidth: 0 }}>
-            Date
+            {isHotel ? "Check-in date" : "Date"}
             <input
               type="date"
               value={date}
@@ -523,31 +542,57 @@ export default function AddTripItemPage() {
               />
               {dateRangeTypes.has(type) ? (
                 <span style={{ color: "var(--sub)", fontSize: 12 }}>
-                  Optional for multi-day stays or rentals
+                  {isHotel
+                    ? "Optional for multi-day stays"
+                    : "Optional for multi-day stays or rentals"}
                 </span>
               ) : null}
             </label>
           ) : null}
         </div>
 
-        <label style={labelStyle}>
-          Start time
-          <input
-            type="time"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-            style={fieldStyle}
-          />
-        </label>
+        {!isHotel ? (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 10,
+              width: "100%",
+              maxWidth: "100%",
+              boxSizing: "border-box",
+            }}
+          >
+            <label style={{ ...labelStyle, flex: "1 1 180px", minWidth: 0 }}>
+              Start time
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                style={fieldStyle}
+              />
+            </label>
+            <label style={{ ...labelStyle, flex: "1 1 180px", minWidth: 0 }}>
+              End time
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                style={fieldStyle}
+              />
+            </label>
+          </div>
+        ) : null}
 
         <label style={labelStyle}>
-          {isGolfRound ? "Booked via / booked by" : "Provider"}
+          {isGolfRound || isHotel ? "Booked via / booked by" : "Provider"}
           <input
             value={provider}
             onChange={(e) => setProvider(e.target.value)}
             placeholder={
               isGolfRound
                 ? "Direct at golf course, Golfasian, Hotel concierge, Beda"
+                : isHotel
+                  ? "Direct at hotel, Booking.com, Hotels.com, Agoda, Ebookers, Beda"
                 : undefined
             }
             style={fieldStyle}
@@ -654,7 +699,7 @@ export default function AddTripItemPage() {
         {!isGolfRound ? (
           <>
             <label style={labelStyle}>
-              Direct price
+              {isHotel ? "Amount per day" : "Direct price"}
               <input
                 type="number"
                 inputMode="decimal"
@@ -662,29 +707,41 @@ export default function AddTripItemPage() {
                 onChange={(e) => setDirectPrice(e.target.value)}
                 style={fieldStyle}
               />
+              {isHotel ? (
+                <span style={{ color: "var(--sub)", fontSize: 12 }}>
+                  Use notes for breakfast included, room details or price comparisons.
+                </span>
+              ) : null}
             </label>
 
-            <label style={labelStyle}>
-              Provider price
-              <input
-                type="number"
-                inputMode="decimal"
-                value={providerPrice}
-                onChange={(e) => setProviderPrice(e.target.value)}
-                style={fieldStyle}
-              />
-            </label>
+            {!isHotel ? (
+              <label style={labelStyle}>
+                Provider price
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={providerPrice}
+                  onChange={(e) => setProviderPrice(e.target.value)}
+                  style={fieldStyle}
+                />
+              </label>
+            ) : null}
           </>
         ) : null}
 
         <label style={labelStyle}>
           Currency
-          <input
+          <select
             value={currency}
             onChange={(e) => setCurrency(e.target.value)}
-            placeholder="CHF"
             style={fieldStyle}
-          />
+          >
+            {currencyOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
         </label>
 
         {(trip?.members ?? []).length > 0 ? (
@@ -746,6 +803,11 @@ export default function AddTripItemPage() {
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
+            placeholder={
+              isHotel
+                ? "Breakfast included/excluded, direct vs provider comparison, room type, cancellation details"
+                : undefined
+            }
             rows={4}
             style={{ ...fieldStyle, resize: "vertical" }}
           />

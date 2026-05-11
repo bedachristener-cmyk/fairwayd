@@ -99,6 +99,7 @@ type EditDraft = {
   date: string;
   endDate: string;
   startTime: string;
+  endTime: string;
   provider: string;
   notes: string;
   greenFee: string;
@@ -190,6 +191,21 @@ const itemTypeOptions = [
 ];
 
 const memberRoleOptions: TripRole[] = ["MEMBER", "ADMIN", "OWNER"];
+
+const currencyOptions = [
+  "THB",
+  "CHF",
+  "EUR",
+  "USD",
+  "JPY",
+  "GBP",
+  "AUD",
+  "SGD",
+  "MYR",
+  "IDR",
+  "PHP",
+  "ZAR",
+];
 
 const editFieldStyle: React.CSSProperties = {
   width: "100%",
@@ -1475,6 +1491,7 @@ export default function TripDetailPage() {
       date: dateInputValue(item),
       endDate: endDateInputValue(item),
       startTime: item.startTime || "",
+      endTime: item.endTime || "",
       provider: item.provider || "",
       notes: item.notes || "",
       greenFee: numberInputValue(item.greenFee ?? item.directPrice),
@@ -1485,7 +1502,7 @@ export default function TripDetailPage() {
       includeCartFeeInSplit: item.includeCartFeeInSplit !== false,
       directPrice: numberInputValue(item.directPrice),
       providerPrice: numberInputValue(item.providerPrice),
-      currency: item.currency || "",
+      currency: item.currency || "CHF",
       participantMemberIds,
     });
   }
@@ -1766,7 +1783,8 @@ export default function TripDetailPage() {
             title: isGolfEdit ? derivedGolfTitle : editDraft.title.trim(),
             date: editDraft.date,
             endDate: isGolfEdit ? undefined : optionalText(editDraft.endDate),
-            startTime: optionalText(editDraft.startTime),
+            startTime: editDraft.type === "hotel" ? "" : optionalText(editDraft.startTime),
+            endTime: editDraft.type === "hotel" ? "" : optionalText(editDraft.endTime),
             provider: optionalText(editDraft.provider),
             notes: optionalText(editDraft.notes),
             greenFee: optionalNumber(editDraft.greenFee),
@@ -1776,7 +1794,10 @@ export default function TripDetailPage() {
             includeCaddyFeeInSplit: editDraft.includeCaddyFeeInSplit,
             includeCartFeeInSplit: editDraft.includeCartFeeInSplit,
             directPrice: optionalNumber(editDraft.directPrice),
-            providerPrice: optionalNumber(editDraft.providerPrice),
+            providerPrice:
+              isGolfEdit || editDraft.type === "hotel"
+                ? undefined
+                : optionalNumber(editDraft.providerPrice),
             currency: optionalText(editDraft.currency),
             participantMemberIds: editDraft.participantMemberIds,
           }),
@@ -3156,6 +3177,7 @@ export default function TripDetailPage() {
                 const editIsGolf =
                   editDraft?.type === "golf_round" ||
                   editDraft?.type === "course";
+                const editIsHotel = editDraft?.type === "hotel";
                 const editOrganizerTotal = editDraft
                   ? (editDraft.includeGreenFeeInSplit
                       ? amountValue(editDraft.greenFee)
@@ -3436,17 +3458,28 @@ export default function TripDetailPage() {
                               </span>
                             </div>
                           ) : (
-                            <input
-                              value={editDraft.title}
-                              onChange={(e) =>
-                                setEditDraft({
-                                  ...editDraft,
-                                  title: e.target.value,
-                                })
-                              }
-                              placeholder="Title"
-                              style={editFieldStyle}
-                            />
+                            <label
+                              style={{
+                                display: "grid",
+                                gap: 6,
+                                color: "var(--text)",
+                                fontSize: 12,
+                                fontWeight: 900,
+                              }}
+                            >
+                              {editIsHotel ? "Hotel name" : "Title"}
+                              <input
+                                value={editDraft.title}
+                                onChange={(e) =>
+                                  setEditDraft({
+                                    ...editDraft,
+                                    title: e.target.value,
+                                  })
+                                }
+                                placeholder={editIsHotel ? "Hotel name" : "Title"}
+                                style={editFieldStyle}
+                              />
+                            </label>
                           )}
 
                           <div
@@ -3457,58 +3490,143 @@ export default function TripDetailPage() {
                               gap: 8,
                             }}
                           >
-                            <input
-                              type="date"
-                              value={editDraft.date}
-                              onChange={(e) =>
-                                setEditDraft({
-                                  ...editDraft,
-                                  date: e.target.value,
-                                })
-                              }
-                              style={editFieldStyle}
-                            />
-                            {!editIsGolf ? (
+                            <label
+                              style={{
+                                display: "grid",
+                                gap: 6,
+                                color: "var(--text)",
+                                fontSize: 12,
+                                fontWeight: 900,
+                              }}
+                            >
+                              {editIsHotel ? "Check-in date" : "Date"}
                               <input
                                 type="date"
-                                value={editDraft.endDate}
+                                value={editDraft.date}
                                 onChange={(e) =>
                                   setEditDraft({
                                     ...editDraft,
-                                    endDate: e.target.value,
+                                    date: e.target.value,
                                   })
                                 }
                                 style={editFieldStyle}
                               />
+                            </label>
+                            {!editIsGolf ? (
+                              <label
+                                style={{
+                                  display: "grid",
+                                  gap: 6,
+                                  color: "var(--text)",
+                                  fontSize: 12,
+                                  fontWeight: 900,
+                                }}
+                              >
+                                End date
+                                <input
+                                  type="date"
+                                  value={editDraft.endDate}
+                                  onChange={(e) =>
+                                    setEditDraft({
+                                      ...editDraft,
+                                      endDate: e.target.value,
+                                    })
+                                  }
+                                  style={editFieldStyle}
+                                />
+                                {editIsHotel ? (
+                                  <span
+                                    style={{
+                                      color: "var(--sub)",
+                                      fontSize: 12,
+                                      fontWeight: 800,
+                                    }}
+                                  >
+                                    Optional for multi-day stays
+                                  </span>
+                                ) : null}
+                              </label>
                             ) : null}
+                            {!editIsHotel ? (
+                              <>
+                                <label
+                                  style={{
+                                    display: "grid",
+                                    gap: 6,
+                                    color: "var(--text)",
+                                    fontSize: 12,
+                                    fontWeight: 900,
+                                  }}
+                                >
+                                  Start time
+                                  <input
+                                    type="time"
+                                    value={editDraft.startTime}
+                                    onChange={(e) =>
+                                      setEditDraft({
+                                        ...editDraft,
+                                        startTime: e.target.value,
+                                      })
+                                    }
+                                    style={editFieldStyle}
+                                  />
+                                </label>
+                                <label
+                                  style={{
+                                    display: "grid",
+                                    gap: 6,
+                                    color: "var(--text)",
+                                    fontSize: 12,
+                                    fontWeight: 900,
+                                  }}
+                                >
+                                  End time
+                                  <input
+                                    type="time"
+                                    value={editDraft.endTime}
+                                    onChange={(e) =>
+                                      setEditDraft({
+                                        ...editDraft,
+                                        endTime: e.target.value,
+                                      })
+                                    }
+                                    style={editFieldStyle}
+                                  />
+                                </label>
+                              </>
+                            ) : null}
+                          </div>
+
+                          <label
+                            style={{
+                              display: "grid",
+                              gap: 6,
+                              color: "var(--text)",
+                              fontSize: 12,
+                              fontWeight: 900,
+                            }}
+                          >
+                            {editIsGolf || editIsHotel
+                              ? "Booked via / booked by"
+                              : "Provider"}
                             <input
-                              type="time"
-                              value={editDraft.startTime}
+                              value={editDraft.provider}
                               onChange={(e) =>
                                 setEditDraft({
                                   ...editDraft,
-                                  startTime: e.target.value,
+                                  provider: e.target.value,
                                 })
+                              }
+                              placeholder={
+                                editIsGolf
+                                  ? "Direct at golf course, Golfasian, Hotel concierge, Beda"
+                                  : editIsHotel
+                                    ? "Direct at hotel, Booking.com, Hotels.com, Agoda, Ebookers, Beda"
+                                  : "Provider"
                               }
                               style={editFieldStyle}
                             />
-                          </div>
-
-                          <input
-                            value={editDraft.provider}
-                            onChange={(e) =>
-                              setEditDraft({
-                                ...editDraft,
-                                provider: e.target.value,
-                              })
-                            }
-                            placeholder={
-                              editIsGolf
-                                ? "Booked via / booked by: Direct at golf course, Golfasian, Hotel concierge, Beda"
-                                : "Provider"
-                            }
-                            style={editFieldStyle}
-                          />
+                          </label>
 
                           {editIsGolf ? (
                             <div
@@ -3616,46 +3734,88 @@ export default function TripDetailPage() {
                                 gap: 8,
                               }}
                             >
-                              <input
-                                type="number"
-                                inputMode="decimal"
-                                value={editDraft.directPrice}
-                                onChange={(e) =>
-                                  setEditDraft({
-                                    ...editDraft,
-                                    directPrice: e.target.value,
-                                  })
-                                }
-                                placeholder="Direct price"
-                                style={editFieldStyle}
-                              />
-                              <input
-                                type="number"
-                                inputMode="decimal"
-                                value={editDraft.providerPrice}
-                                onChange={(e) =>
-                                  setEditDraft({
-                                    ...editDraft,
-                                    providerPrice: e.target.value,
-                                  })
-                                }
-                                placeholder="Provider price"
-                                style={editFieldStyle}
-                              />
+                              <label
+                                style={{
+                                  display: "grid",
+                                  gap: 6,
+                                  color: "var(--text)",
+                                  fontSize: 12,
+                                  fontWeight: 900,
+                                }}
+                              >
+                                {editIsHotel ? "Amount per day" : "Direct price"}
+                                <input
+                                  type="number"
+                                  inputMode="decimal"
+                                  value={editDraft.directPrice}
+                                  onChange={(e) =>
+                                    setEditDraft({
+                                      ...editDraft,
+                                      directPrice: e.target.value,
+                                    })
+                                  }
+                                  placeholder={
+                                    editIsHotel ? "Amount per day" : "Direct price"
+                                  }
+                                  style={editFieldStyle}
+                                />
+                                {editIsHotel ? (
+                                  <span
+                                    style={{
+                                      color: "var(--sub)",
+                                      fontSize: 12,
+                                      fontWeight: 800,
+                                    }}
+                                  >
+                                    Use notes for breakfast included, room details or price comparisons.
+                                  </span>
+                                ) : null}
+                              </label>
+                              {!editIsHotel ? (
+                                <input
+                                  type="number"
+                                  inputMode="decimal"
+                                  value={editDraft.providerPrice}
+                                  onChange={(e) =>
+                                    setEditDraft({
+                                      ...editDraft,
+                                      providerPrice: e.target.value,
+                                    })
+                                  }
+                                  placeholder="Provider price"
+                                  style={editFieldStyle}
+                                />
+                              ) : null}
                             </div>
                           ) : null}
 
-                          <input
-                            value={editDraft.currency}
-                            onChange={(e) =>
-                              setEditDraft({
-                                ...editDraft,
-                                currency: e.target.value,
-                              })
-                            }
-                            placeholder="Currency"
-                            style={editFieldStyle}
-                          />
+                          <label
+                            style={{
+                              display: "grid",
+                              gap: 6,
+                              color: "var(--text)",
+                              fontSize: 12,
+                              fontWeight: 900,
+                            }}
+                          >
+                            Currency
+                            <select
+                              value={editDraft.currency || "CHF"}
+                              onChange={(e) =>
+                                setEditDraft({
+                                  ...editDraft,
+                                  currency: e.target.value,
+                                })
+                              }
+                              style={editFieldStyle}
+                            >
+                              {currencyOptions.map((option) => (
+                                <option key={option} value={option}>
+                                  {option}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
 
                           <textarea
                             value={editDraft.notes}
@@ -3665,7 +3825,11 @@ export default function TripDetailPage() {
                                 notes: e.target.value,
                               })
                             }
-                            placeholder="Notes"
+                            placeholder={
+                              editIsHotel
+                                ? "Breakfast included/excluded, direct vs provider comparison, room type, cancellation details"
+                                : "Notes"
+                            }
                             rows={4}
                             style={{ ...editFieldStyle, resize: "vertical" }}
                           />
