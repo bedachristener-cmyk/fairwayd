@@ -36,6 +36,8 @@ type TripItem = {
   currency?: string | null;
   locationName?: string | null;
   address?: string | null;
+  paidByMemberId?: string | null;
+  paidByMember?: TripMember | null;
   lat?: number | string | null;
   lon?: number | string | null;
   latitude?: number | string | null;
@@ -111,6 +113,7 @@ type EditDraft = {
   directPrice: string;
   providerPrice: string;
   currency: string;
+  paidByMemberId: string;
   participantMemberIds: string[];
 };
 
@@ -588,6 +591,11 @@ function participantSummary(item: TripItem, members: TripMember[]) {
   const names = participants.map(memberDisplayName);
   if (names.length <= 2) return names.join(", ");
   return `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
+}
+
+function payerSummary(item: TripItem) {
+  if (!item.paidByMember) return "";
+  return memberDisplayName(item.paidByMember);
 }
 
 function toFiniteNumber(value: unknown) {
@@ -1138,6 +1146,7 @@ function TripCalendarView({
                 const time = formatTimeRange(item);
                 const prices = pricingParts(item);
                 const participants = participantSummary(item, members);
+                const payer = payerSummary(item);
                 const title =
                   (isGolf && courseName) ||
                   item.title ||
@@ -1244,6 +1253,18 @@ function TripCalendarView({
                         }}
                       >
                         Participants: {participants}
+                      </div>
+                    ) : null}
+
+                    {payer ? (
+                      <div
+                        style={{
+                          color: "var(--sub)",
+                          fontSize: 12,
+                          fontWeight: 850,
+                        }}
+                      >
+                        Paid by {payer}
                       </div>
                     ) : null}
 
@@ -1503,6 +1524,7 @@ export default function TripDetailPage() {
       directPrice: numberInputValue(item.directPrice),
       providerPrice: numberInputValue(item.providerPrice),
       currency: item.currency || "CHF",
+      paidByMemberId: item.paidByMemberId || item.paidByMember?.id || "",
       participantMemberIds,
     });
   }
@@ -1799,6 +1821,7 @@ export default function TripDetailPage() {
                 ? undefined
                 : optionalNumber(editDraft.providerPrice),
             currency: optionalText(editDraft.currency),
+            paidByMemberId: optionalText(editDraft.paidByMemberId),
             participantMemberIds: editDraft.participantMemberIds,
           }),
         },
@@ -3166,6 +3189,7 @@ export default function TripDetailPage() {
                   item,
                   trip?.members ?? [],
                 );
+                const payerText = payerSummary(item);
                 const courseId = item.course?.id ?? item.courseId;
                 const courseName = item.course?.name;
                 const itemType = String(item.type ?? "").toLowerCase();
@@ -3817,6 +3841,37 @@ export default function TripDetailPage() {
                             </select>
                           </label>
 
+                          {(trip?.members ?? []).length > 0 ? (
+                            <label
+                              style={{
+                                display: "grid",
+                                gap: 6,
+                                color: "var(--text)",
+                                fontSize: 12,
+                                fontWeight: 900,
+                              }}
+                            >
+                              Paid by
+                              <select
+                                value={editDraft.paidByMemberId}
+                                onChange={(e) =>
+                                  setEditDraft({
+                                    ...editDraft,
+                                    paidByMemberId: e.target.value,
+                                  })
+                                }
+                                style={editFieldStyle}
+                              >
+                                <option value="">Not specified</option>
+                                {(trip?.members ?? []).map((member) => (
+                                  <option key={member.id} value={member.id}>
+                                    {memberDisplayName(member)}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          ) : null}
+
                           <textarea
                             value={editDraft.notes}
                             onChange={(e) =>
@@ -3970,6 +4025,18 @@ export default function TripDetailPage() {
                                 }}
                               >
                                 Participants: {participantText}
+                              </div>
+                            ) : null}
+
+                            {payerText ? (
+                              <div
+                                style={{
+                                  color: "var(--sub)",
+                                  fontSize: 12,
+                                  fontWeight: 800,
+                                }}
+                              >
+                                Paid by {payerText}
                               </div>
                             ) : null}
                           </div>

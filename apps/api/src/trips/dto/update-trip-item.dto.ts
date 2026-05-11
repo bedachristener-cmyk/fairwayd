@@ -106,6 +106,10 @@ export class UpdateTripItemDto {
   address?: string;
 
   @IsOptional()
+  @IsString()
+  paidByMemberId?: string;
+
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   participantMemberIds?: string[];

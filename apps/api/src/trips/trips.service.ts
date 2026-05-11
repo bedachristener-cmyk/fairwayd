@@ -61,6 +61,13 @@ const tripUserSelect = {
 
 const tripItemInclude = {
   course: true,
+  paidByMember: {
+    include: {
+      user: {
+        select: tripUserSelect,
+      },
+    },
+  },
   participants: {
     orderBy: { createdAt: 'asc' },
     include: {
@@ -367,6 +374,10 @@ export class TripsService {
       tripId,
       dto,
     );
+    const paidByMemberId = await this.resolveOptionalTripMemberId(
+      tripId,
+      dto.paidByMemberId,
+    );
 
     return this.prisma.tripItem.create({
       data: {
@@ -393,6 +404,7 @@ export class TripsService {
         currency: dto.currency?.trim() || null,
         locationName: dto.locationName?.trim() || null,
         address: dto.address?.trim() || null,
+        paidByMemberId,
         participants:
           participantMemberIds === undefined
             ? undefined
@@ -418,6 +430,10 @@ export class TripsService {
       tripId,
       dto,
     );
+    const paidByMemberId =
+      dto.paidByMemberId === undefined
+        ? undefined
+        : await this.resolveOptionalTripMemberId(tripId, dto.paidByMemberId);
 
     return this.prisma.tripItem.update({
       where: {
@@ -462,6 +478,7 @@ export class TripsService {
             : dto.locationName.trim() || null,
         address:
           dto.address === undefined ? undefined : dto.address.trim() || null,
+        paidByMemberId,
         participants:
           participantMemberIds === undefined
             ? undefined
@@ -694,6 +711,30 @@ export class TripsService {
     }
 
     return [...new Set(members.map((member) => member.id))];
+  }
+
+  private async resolveOptionalTripMemberId(
+    tripId: string,
+    memberId?: string,
+  ) {
+    const id = memberId?.trim();
+    if (!id) return null;
+
+    const member = await this.prisma.tripMember.findFirst({
+      where: {
+        id,
+        tripId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!member) {
+      throw new BadRequestException('Paid by must be a trip member');
+    }
+
+    return member.id;
   }
 
   private async findTripItemOrThrow(tripId: string, itemId: string) {

@@ -132,6 +132,7 @@ export default function AddTripItemPage() {
     useState<CourseSearchResult | null>(null);
   const [trip, setTrip] = useState<Trip | null>(null);
   const [participantMemberIds, setParticipantMemberIds] = useState<string[]>([]);
+  const [paidByMemberId, setPaidByMemberId] = useState("");
   const [courseLoading, setCourseLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -268,6 +269,7 @@ export default function AddTripItemPage() {
           isGolfRound || isHotel ? undefined : optionalNumber(providerPrice),
         currency: optionalText(currency),
         courseId: type === "golf_round" ? selectedCourse?.id : undefined,
+        paidByMemberId: optionalText(paidByMemberId),
         participantMemberIds,
       };
 
@@ -743,6 +745,24 @@ export default function AddTripItemPage() {
             ))}
           </select>
         </label>
+
+        {(trip?.members ?? []).length > 0 ? (
+          <label style={labelStyle}>
+            Paid by
+            <select
+              value={paidByMemberId}
+              onChange={(e) => setPaidByMemberId(e.target.value)}
+              style={fieldStyle}
+            >
+              <option value="">Not specified</option>
+              {(trip?.members ?? []).map((member) => (
+                <option key={member.id} value={member.id}>
+                  {memberDisplayName(member)}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
 
         {(trip?.members ?? []).length > 0 ? (
           <div
