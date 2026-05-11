@@ -523,6 +523,11 @@ function optionalNumber(value: string) {
   return Number.isFinite(n) ? n : undefined;
 }
 
+function amountValue(value: string) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
 function errorMessageForResponse(status: number, fallback: string) {
   if (status === 403) return "Only trip admins can edit this item.";
   return fallback;
@@ -1733,7 +1738,13 @@ export default function TripDetailPage() {
   async function saveEdit(itemId: string) {
     if (!tripId || !token || !editDraft) return;
 
-    if (!editDraft.type || !editDraft.title.trim() || !editDraft.date) {
+    const isGolfEdit =
+      editDraft.type === "golf_round" || editDraft.type === "course";
+    const currentItem = trip?.items?.find((item) => item.id === itemId);
+    const derivedGolfTitle =
+      currentItem?.course?.name || editDraft.title.trim() || "Golf round";
+
+    if (!editDraft.type || (!isGolfEdit && !editDraft.title.trim()) || !editDraft.date) {
       setErr("Type, title, and date are required.");
       return;
     }
@@ -1752,9 +1763,9 @@ export default function TripDetailPage() {
           },
           body: JSON.stringify({
             type: editDraft.type,
-            title: editDraft.title.trim(),
+            title: isGolfEdit ? derivedGolfTitle : editDraft.title.trim(),
             date: editDraft.date,
-            endDate: optionalText(editDraft.endDate),
+            endDate: isGolfEdit ? undefined : optionalText(editDraft.endDate),
             startTime: optionalText(editDraft.startTime),
             provider: optionalText(editDraft.provider),
             notes: optionalText(editDraft.notes),
@@ -3142,6 +3153,20 @@ export default function TripDetailPage() {
                   itemType === "golf_round" || itemType === "course";
                 const canOpenCourse = isGolf && !!courseId;
                 const isEditing = editingItemId === item.id && !!editDraft;
+                const editIsGolf =
+                  editDraft?.type === "golf_round" ||
+                  editDraft?.type === "course";
+                const editOrganizerTotal = editDraft
+                  ? (editDraft.includeGreenFeeInSplit
+                      ? amountValue(editDraft.greenFee)
+                      : 0) +
+                    (editDraft.includeCaddyFeeInSplit
+                      ? amountValue(editDraft.caddyFee)
+                      : 0) +
+                    (editDraft.includeCartFeeInSplit
+                      ? amountValue(editDraft.cartFee)
+                      : 0)
+                  : 0;
                 const isMoving = movingItemId === item.id;
                 const canMoveUp =
                   canEditTrip && itemIndex > 0 && !isMoving;
@@ -3388,17 +3413,41 @@ export default function TripDetailPage() {
                             ))}
                           </select>
 
-                          <input
-                            value={editDraft.title}
-                            onChange={(e) =>
-                              setEditDraft({
-                                ...editDraft,
-                                title: e.target.value,
-                              })
-                            }
-                            placeholder="Title"
-                            style={editFieldStyle}
-                          />
+                          {editIsGolf ? (
+                            <div
+                              style={{
+                                padding: "9px 10px",
+                                borderRadius: 10,
+                                border: "1px solid var(--border)",
+                                background: "var(--bg)",
+                                color: "var(--sub)",
+                                fontSize: 12,
+                                fontWeight: 850,
+                              }}
+                            >
+                              Title will be saved as{" "}
+                              <span
+                                style={{
+                                  color: "var(--text)",
+                                  fontWeight: 950,
+                                }}
+                              >
+                                {courseName || editDraft.title || "Golf round"}
+                              </span>
+                            </div>
+                          ) : (
+                            <input
+                              value={editDraft.title}
+                              onChange={(e) =>
+                                setEditDraft({
+                                  ...editDraft,
+                                  title: e.target.value,
+                                })
+                              }
+                              placeholder="Title"
+                              style={editFieldStyle}
+                            />
+                          )}
 
                           <div
                             style={{
@@ -3419,17 +3468,19 @@ export default function TripDetailPage() {
                               }
                               style={editFieldStyle}
                             />
-                            <input
-                              type="date"
-                              value={editDraft.endDate}
-                              onChange={(e) =>
-                                setEditDraft({
-                                  ...editDraft,
-                                  endDate: e.target.value,
-                                })
-                              }
-                              style={editFieldStyle}
-                            />
+                            {!editIsGolf ? (
+                              <input
+                                type="date"
+                                value={editDraft.endDate}
+                                onChange={(e) =>
+                                  setEditDraft({
+                                    ...editDraft,
+                                    endDate: e.target.value,
+                                  })
+                                }
+                                style={editFieldStyle}
+                              />
+                            ) : null}
                             <input
                               type="time"
                               value={editDraft.startTime}
@@ -3451,12 +3502,15 @@ export default function TripDetailPage() {
                                 provider: e.target.value,
                               })
                             }
-                            placeholder="Provider"
+                            placeholder={
+                              editIsGolf
+                                ? "Booked via / booked by: Direct at golf course, Golfasian, Hotel concierge, Beda"
+                                : "Provider"
+                            }
                             style={editFieldStyle}
                           />
 
-                          {editDraft.type === "golf_round" ||
-                          editDraft.type === "course" ? (
+                          {editIsGolf ? (
                             <div
                               style={{
                                 display: "grid",
@@ -3533,53 +3587,63 @@ export default function TripDetailPage() {
                                         })
                                       }
                                     />
-                                    Include in budget split
+                                    Include in group total
                                   </label>
                                 </div>
                               ))}
+                              <div
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  gap: 10,
+                                  color: "var(--text)",
+                                  fontSize: 12,
+                                  fontWeight: 950,
+                                }}
+                              >
+                                <span>Organizer total</span>
+                                <span>{editOrganizerTotal.toLocaleString()}</span>
+                              </div>
                             </div>
                           ) : null}
 
-                          <div
-                            style={{
-                              display: "grid",
-                              gridTemplateColumns:
-                                "minmax(0, 1fr) minmax(0, 1fr)",
-                              gap: 8,
-                            }}
-                          >
-                            <input
-                              type="number"
-                              inputMode="decimal"
-                              value={editDraft.directPrice}
-                              onChange={(e) =>
-                                setEditDraft({
-                                  ...editDraft,
-                                  directPrice: e.target.value,
-                                })
-                              }
-                              placeholder={
-                                editDraft.type === "golf_round" ||
-                                editDraft.type === "course"
-                                  ? "Other direct price"
-                                  : "Direct price"
-                              }
-                              style={editFieldStyle}
-                            />
-                            <input
-                              type="number"
-                              inputMode="decimal"
-                              value={editDraft.providerPrice}
-                              onChange={(e) =>
-                                setEditDraft({
-                                  ...editDraft,
-                                  providerPrice: e.target.value,
-                                })
-                              }
-                              placeholder="Provider price"
-                              style={editFieldStyle}
-                            />
-                          </div>
+                          {!editIsGolf ? (
+                            <div
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns:
+                                  "minmax(0, 1fr) minmax(0, 1fr)",
+                                gap: 8,
+                              }}
+                            >
+                              <input
+                                type="number"
+                                inputMode="decimal"
+                                value={editDraft.directPrice}
+                                onChange={(e) =>
+                                  setEditDraft({
+                                    ...editDraft,
+                                    directPrice: e.target.value,
+                                  })
+                                }
+                                placeholder="Direct price"
+                                style={editFieldStyle}
+                              />
+                              <input
+                                type="number"
+                                inputMode="decimal"
+                                value={editDraft.providerPrice}
+                                onChange={(e) =>
+                                  setEditDraft({
+                                    ...editDraft,
+                                    providerPrice: e.target.value,
+                                  })
+                                }
+                                placeholder="Provider price"
+                                style={editFieldStyle}
+                              />
+                            </div>
+                          ) : null}
 
                           <input
                             value={editDraft.currency}

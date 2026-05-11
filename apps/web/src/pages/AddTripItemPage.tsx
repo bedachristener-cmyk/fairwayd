@@ -80,6 +80,11 @@ function optionalNumber(value: string) {
   return Number.isFinite(n) ? n : undefined;
 }
 
+function amountValue(value: string) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
 function memberDisplayName(member: TripMember) {
   return member.user?.name || member.user?.handle || "Fairwayd user";
 }
@@ -114,6 +119,12 @@ export default function AddTripItemPage() {
   const [courseLoading, setCourseLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const isGolfRound = type === "golf_round";
+  const derivedGolfTitle = selectedCourse?.name || "Golf round";
+  const organizerTotal =
+    (includeGreenFeeInSplit ? amountValue(greenFee) : 0) +
+    (includeCaddyFeeInSplit ? amountValue(caddyFee) : 0) +
+    (includeCartFeeInSplit ? amountValue(cartFee) : 0);
 
   useEffect(() => {
     let cancelled = false;
@@ -208,7 +219,7 @@ export default function AddTripItemPage() {
 
     if (!tripId || !token) return;
 
-    if (!type || !title.trim() || !date) {
+    if (!type || (!isGolfRound && !title.trim()) || !date) {
       setErr("Type, title, and date are required.");
       return;
     }
@@ -219,9 +230,9 @@ export default function AddTripItemPage() {
 
       const payload = {
         type,
-        title: title.trim(),
+        title: isGolfRound ? derivedGolfTitle : title.trim(),
         date,
-        endDate: optionalText(endDate),
+        endDate: isGolfRound ? undefined : optionalText(endDate),
         startTime: optionalText(startTime),
         provider: optionalText(provider),
         notes: optionalText(notes),
@@ -364,7 +375,7 @@ export default function AddTripItemPage() {
           </select>
         </label>
 
-        {type === "golf_round" ? (
+        {isGolfRound ? (
           <div style={{ display: "grid", gap: 8, minWidth: 0 }}>
             <label style={labelStyle}>
               Search golf course
@@ -451,15 +462,34 @@ export default function AddTripItemPage() {
           </div>
         ) : null}
 
-        <label style={labelStyle}>
-          Title
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-            style={fieldStyle}
-          />
-        </label>
+        {isGolfRound ? (
+          <div
+            style={{
+              padding: "10px 12px",
+              borderRadius: 12,
+              border: "1px solid var(--border)",
+              background: "var(--bg)",
+              color: "var(--sub)",
+              fontSize: 13,
+              fontWeight: 800,
+            }}
+          >
+            Title will be saved as{" "}
+            <span style={{ color: "var(--text)", fontWeight: 950 }}>
+              {derivedGolfTitle}
+            </span>
+          </div>
+        ) : (
+          <label style={labelStyle}>
+            Title
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              style={fieldStyle}
+            />
+          </label>
+        )}
 
         <div
           style={{
@@ -482,20 +512,22 @@ export default function AddTripItemPage() {
             />
           </label>
 
-          <label style={{ ...labelStyle, flex: "1 1 180px", minWidth: 0 }}>
-            End date
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              style={fieldStyle}
-            />
-            {dateRangeTypes.has(type) ? (
-              <span style={{ color: "var(--sub)", fontSize: 12 }}>
-                Optional for multi-day stays or rentals
-              </span>
-            ) : null}
-          </label>
+          {!isGolfRound ? (
+            <label style={{ ...labelStyle, flex: "1 1 180px", minWidth: 0 }}>
+              End date
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                style={fieldStyle}
+              />
+              {dateRangeTypes.has(type) ? (
+                <span style={{ color: "var(--sub)", fontSize: 12 }}>
+                  Optional for multi-day stays or rentals
+                </span>
+              ) : null}
+            </label>
+          ) : null}
         </div>
 
         <label style={labelStyle}>
@@ -509,15 +541,20 @@ export default function AddTripItemPage() {
         </label>
 
         <label style={labelStyle}>
-          Provider
+          {isGolfRound ? "Booked via / booked by" : "Provider"}
           <input
             value={provider}
             onChange={(e) => setProvider(e.target.value)}
+            placeholder={
+              isGolfRound
+                ? "Direct at golf course, Golfasian, Hotel concierge, Beda"
+                : undefined
+            }
             style={fieldStyle}
           />
         </label>
 
-        {type === "golf_round" ? (
+        {isGolfRound ? (
           <div
             style={{
               display: "grid",
@@ -593,34 +630,52 @@ export default function AddTripItemPage() {
                     checked={cost.checked}
                     onChange={(e) => cost.onCheckedChange(e.target.checked)}
                   />
-                  Include in budget split
+                  Include in group total
                 </label>
               </div>
             ))}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 10,
+                paddingTop: 2,
+                color: "var(--text)",
+                fontSize: 13,
+                fontWeight: 950,
+              }}
+            >
+              <span>Organizer total</span>
+              <span>{organizerTotal.toLocaleString()}</span>
+            </div>
           </div>
         ) : null}
 
-        <label style={labelStyle}>
-          {type === "golf_round" ? "Other direct price" : "Direct price"}
-          <input
-            type="number"
-            inputMode="decimal"
-            value={directPrice}
-            onChange={(e) => setDirectPrice(e.target.value)}
-            style={fieldStyle}
-          />
-        </label>
+        {!isGolfRound ? (
+          <>
+            <label style={labelStyle}>
+              Direct price
+              <input
+                type="number"
+                inputMode="decimal"
+                value={directPrice}
+                onChange={(e) => setDirectPrice(e.target.value)}
+                style={fieldStyle}
+              />
+            </label>
 
-        <label style={labelStyle}>
-          Provider price
-          <input
-            type="number"
-            inputMode="decimal"
-            value={providerPrice}
-            onChange={(e) => setProviderPrice(e.target.value)}
-            style={fieldStyle}
-          />
-        </label>
+            <label style={labelStyle}>
+              Provider price
+              <input
+                type="number"
+                inputMode="decimal"
+                value={providerPrice}
+                onChange={(e) => setProviderPrice(e.target.value)}
+                style={fieldStyle}
+              />
+            </label>
+          </>
+        ) : null}
 
         <label style={labelStyle}>
           Currency
