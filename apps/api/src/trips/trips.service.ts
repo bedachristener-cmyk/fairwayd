@@ -52,6 +52,29 @@ function cleanTripRole(role?: TripRole) {
   return role;
 }
 
+const tripUserSelect = {
+  id: true,
+  handle: true,
+  name: true,
+  avatarUrl: true,
+} satisfies Prisma.UserSelect;
+
+const tripItemInclude = {
+  course: true,
+  participants: {
+    orderBy: { createdAt: 'asc' },
+    include: {
+      tripMember: {
+        include: {
+          user: {
+            select: tripUserSelect,
+          },
+        },
+      },
+    },
+  },
+} satisfies Prisma.TripItemInclude;
+
 @Injectable()
 export class TripsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -158,9 +181,7 @@ export class TripsService {
             },
             { createdAt: 'asc' },
           ],
-          include: {
-            course: true,
-          },
+          include: tripItemInclude,
         },
       },
     });
@@ -221,9 +242,7 @@ export class TripsService {
             },
             { createdAt: 'asc' },
           ],
-          include: {
-            course: true,
-          },
+          include: tripItemInclude,
         },
       },
     });
@@ -344,6 +363,10 @@ export class TripsService {
 
   async createItem(tripId: string, userId: string, dto: CreateTripItemDto) {
     await this.assertCanModifyTrip(tripId, userId);
+    const participantMemberIds = await this.resolveParticipantMemberIds(
+      tripId,
+      dto,
+    );
 
     return this.prisma.tripItem.create({
       data: {
@@ -366,10 +389,16 @@ export class TripsService {
         currency: dto.currency?.trim() || null,
         locationName: dto.locationName?.trim() || null,
         address: dto.address?.trim() || null,
+        participants:
+          participantMemberIds === undefined
+            ? undefined
+            : {
+                create: participantMemberIds.map((tripMemberId) => ({
+                  tripMemberId,
+                })),
+              },
       },
-      include: {
-        course: true,
-      },
+      include: tripItemInclude,
     });
   }
 
@@ -381,6 +410,10 @@ export class TripsService {
   ) {
     await this.assertCanModifyTrip(tripId, userId);
     await this.findTripItemOrThrow(tripId, itemId);
+    const participantMemberIds = await this.resolveParticipantMemberIds(
+      tripId,
+      dto,
+    );
 
     return this.prisma.tripItem.update({
       where: {
@@ -421,10 +454,17 @@ export class TripsService {
             : dto.locationName.trim() || null,
         address:
           dto.address === undefined ? undefined : dto.address.trim() || null,
+        participants:
+          participantMemberIds === undefined
+            ? undefined
+            : {
+                deleteMany: {},
+                create: participantMemberIds.map((tripMemberId) => ({
+                  tripMemberId,
+                })),
+              },
       },
-      include: {
-        course: true,
-      },
+      include: tripItemInclude,
     });
   }
 
@@ -508,9 +548,7 @@ export class TripsService {
         { createdAt: 'asc' },
         { id: 'asc' },
       ],
-      include: {
-        course: true,
-      },
+      include: tripItemInclude,
     });
   }
 
@@ -594,6 +632,60 @@ export class TripsService {
         throw new BadRequestException('Trip must have at least one OWNER');
       }
     }
+  }
+
+  private async resolveParticipantMemberIds(
+    tripId: string,
+    dto: {
+      participantMemberIds?: string[];
+      participantUserIds?: string[];
+    },
+  ) {
+    const hasMemberIds = dto.participantMemberIds !== undefined;
+    const hasUserIds = dto.participantUserIds !== undefined;
+    if (!hasMemberIds && !hasUserIds) return undefined;
+
+    const participantMemberIds = [
+      ...new Set((dto.participantMemberIds ?? []).map((id) => id.trim()).filter(Boolean)),
+    ];
+    const participantUserIds = [
+      ...new Set((dto.participantUserIds ?? []).map((id) => id.trim()).filter(Boolean)),
+    ];
+
+    if (participantMemberIds.length === 0 && participantUserIds.length === 0) {
+      return [];
+    }
+
+    const where: Prisma.TripMemberWhereInput[] = [];
+    if (participantMemberIds.length > 0) {
+      where.push({ id: { in: participantMemberIds } });
+    }
+    if (participantUserIds.length > 0) {
+      where.push({ userId: { in: participantUserIds } });
+    }
+
+    const members = await this.prisma.tripMember.findMany({
+      where: {
+        tripId,
+        OR: where,
+      },
+      select: {
+        id: true,
+        userId: true,
+      },
+    });
+
+    const foundMemberIds = new Set(members.map((member) => member.id));
+    const foundUserIds = new Set(members.map((member) => member.userId));
+
+    if (
+      participantMemberIds.some((id) => !foundMemberIds.has(id)) ||
+      participantUserIds.some((id) => !foundUserIds.has(id))
+    ) {
+      throw new BadRequestException('Participants must be trip members');
+    }
+
+    return [...new Set(members.map((member) => member.id))];
   }
 
   private async findTripItemOrThrow(tripId: string, itemId: string) {

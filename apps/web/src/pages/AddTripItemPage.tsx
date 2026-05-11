@@ -28,6 +28,18 @@ type CourseSearchResult = {
   region?: string | null;
 };
 
+type TripMember = {
+  id: string;
+  user?: {
+    name?: string | null;
+    handle?: string | null;
+  } | null;
+};
+
+type Trip = {
+  members?: TripMember[];
+};
+
 const fieldStyle: CSSProperties = {
   width: "100%",
   maxWidth: "100%",
@@ -68,6 +80,10 @@ function optionalNumber(value: string) {
   return Number.isFinite(n) ? n : undefined;
 }
 
+function memberDisplayName(member: TripMember) {
+  return member.user?.name || member.user?.handle || "Fairwayd user";
+}
+
 export default function AddTripItemPage() {
   const { tripId } = useParams();
   const nav = useNavigate();
@@ -87,9 +103,45 @@ export default function AddTripItemPage() {
   const [courseResults, setCourseResults] = useState<CourseSearchResult[]>([]);
   const [selectedCourse, setSelectedCourse] =
     useState<CourseSearchResult | null>(null);
+  const [trip, setTrip] = useState<Trip | null>(null);
+  const [participantMemberIds, setParticipantMemberIds] = useState<string[]>([]);
   const [courseLoading, setCourseLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTrip() {
+      if (!tripId || !token) return;
+
+      try {
+        const res = await fetch(
+          `${API_BASE}/trips/${encodeURIComponent(tripId)}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+        if (cancelled) return;
+
+        const members = Array.isArray(data?.members) ? data.members : [];
+        setTrip({ members });
+        setParticipantMemberIds(members.map((member: TripMember) => member.id));
+      } catch {
+        if (!cancelled) setTrip(null);
+      }
+    }
+
+    loadTrip();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, tripId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -171,6 +223,7 @@ export default function AddTripItemPage() {
         providerPrice: optionalNumber(providerPrice),
         currency: optionalText(currency),
         courseId: type === "golf_round" ? selectedCourse?.id : undefined,
+        participantMemberIds,
       };
 
       const res = await fetch(
@@ -480,6 +533,60 @@ export default function AddTripItemPage() {
             style={fieldStyle}
           />
         </label>
+
+        {(trip?.members ?? []).length > 0 ? (
+          <div
+            style={{
+              display: "grid",
+              gap: 8,
+              padding: 10,
+              borderRadius: 12,
+              border: "1px solid var(--border)",
+              background: "var(--bg)",
+            }}
+          >
+            <div
+              style={{
+                color: "var(--text)",
+                fontSize: 13,
+                fontWeight: 900,
+              }}
+            >
+              Participants
+            </div>
+            <div style={{ display: "grid", gap: 6 }}>
+              {(trip?.members ?? []).map((member) => {
+                const checked = participantMemberIds.includes(member.id);
+                return (
+                  <label
+                    key={member.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      color: "var(--text)",
+                      fontSize: 13,
+                      fontWeight: 800,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        setParticipantMemberIds((current) =>
+                          e.target.checked
+                            ? [...current, member.id]
+                            : current.filter((id) => id !== member.id),
+                        );
+                      }}
+                    />
+                    <span>{memberDisplayName(member)}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
 
         <label style={labelStyle}>
           Notes

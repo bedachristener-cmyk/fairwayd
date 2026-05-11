@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsDateString,
   IsEnum,
   IsNumber,
@@ -79,4 +80,14 @@ export class CreateTripItemDto {
   @IsOptional()
   @IsString()
   address?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  participantMemberIds?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  participantUserIds?: string[];
 }

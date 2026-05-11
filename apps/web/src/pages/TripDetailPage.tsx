@@ -37,6 +37,7 @@ type TripItem = {
   latitude?: number | string | null;
   longitude?: number | string | null;
   courseId?: string | null;
+  participants?: TripItemParticipant[];
   course?: {
     id: string;
     name?: string | null;
@@ -69,6 +70,12 @@ type TripMember = {
   } | null;
 };
 
+type TripItemParticipant = {
+  id: string;
+  tripMemberId: string;
+  tripMember?: TripMember | null;
+};
+
 type UserSearchResult = {
   id: string;
   handle?: string | null;
@@ -93,6 +100,7 @@ type EditDraft = {
   directPrice: string;
   providerPrice: string;
   currency: string;
+  participantMemberIds: string[];
 };
 
 type TripView = "timeline" | "calendar" | "map";
@@ -485,6 +493,32 @@ function displayUserName(user?: UserSearchResult | null) {
   return user?.name || user?.handle || "Fairwayd user";
 }
 
+function memberDisplayName(member?: TripMember | null) {
+  return displayUserName(member?.user);
+}
+
+function effectiveParticipants(item: TripItem, members: TripMember[]) {
+  if (item.participants && item.participants.length > 0) {
+    return item.participants
+      .map((participant) => participant.tripMember)
+      .filter((member): member is TripMember => !!member);
+  }
+
+  return members;
+}
+
+function participantSummary(item: TripItem, members: TripMember[]) {
+  const participants = effectiveParticipants(item, members);
+  if (participants.length === 0) return "";
+  if (participants.length === members.length && members.length > 0) {
+    return `All members (${participants.length})`;
+  }
+
+  const names = participants.map(memberDisplayName);
+  if (names.length <= 2) return names.join(", ");
+  return `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
+}
+
 function toFiniteNumber(value: unknown) {
   const n = typeof value === "number" ? value : Number(value);
   return Number.isFinite(n) ? n : null;
@@ -823,6 +857,7 @@ function TripMapView({
 
 function TripCalendarView({
   days,
+  members,
   selectedDay,
   onSelectDay,
   canEditTrip,
@@ -830,6 +865,7 @@ function TripCalendarView({
   onOpenCourse,
 }: {
   days: CalendarDay[];
+  members: TripMember[];
   selectedDay: string;
   onSelectDay: (key: string) => void;
   canEditTrip: boolean;
@@ -1030,6 +1066,7 @@ function TripCalendarView({
                 const courseName = item.course?.name?.trim();
                 const time = formatTimeRange(item);
                 const prices = pricingParts(item);
+                const participants = participantSummary(item, members);
                 const title =
                   (isGolf && courseName) ||
                   item.title ||
@@ -1124,6 +1161,18 @@ function TripCalendarView({
                         {item.bookingRef ? (
                           <span>Booking {item.bookingRef}</span>
                         ) : null}
+                      </div>
+                    ) : null}
+
+                    {participants ? (
+                      <div
+                        style={{
+                          color: "var(--sub)",
+                          fontSize: 12,
+                          fontWeight: 850,
+                        }}
+                      >
+                        Participants: {participants}
                       </div>
                     ) : null}
 
@@ -1361,6 +1410,10 @@ export default function TripDetailPage() {
   function startEdit(item: TripItem) {
     setErr(null);
     setEditingItemId(item.id);
+    const participantMemberIds =
+      item.participants && item.participants.length > 0
+        ? item.participants.map((participant) => participant.tripMemberId)
+        : (trip?.members ?? []).map((member) => member.id);
     setEditDraft({
       type: item.type || "note",
       title: item.title || "",
@@ -1372,6 +1425,7 @@ export default function TripDetailPage() {
       directPrice: numberInputValue(item.directPrice),
       providerPrice: numberInputValue(item.providerPrice),
       currency: item.currency || "",
+      participantMemberIds,
     });
   }
 
@@ -1651,6 +1705,7 @@ export default function TripDetailPage() {
             directPrice: optionalNumber(editDraft.directPrice),
             providerPrice: optionalNumber(editDraft.providerPrice),
             currency: optionalText(editDraft.currency),
+            participantMemberIds: editDraft.participantMemberIds,
           }),
         },
       );
@@ -2998,6 +3053,10 @@ export default function TripDetailPage() {
                 const time = formatTimeRange(item);
                 const dateRange = formatDateRange(item);
                 const details = timelineDetails(item);
+                const participantText = participantSummary(
+                  item,
+                  trip?.members ?? [],
+                );
                 const courseId = item.course?.id ?? item.courseId;
                 const courseName = item.course?.name;
                 const itemType = String(item.type ?? "").toLowerCase();
@@ -3168,6 +3227,70 @@ export default function TripDetailPage() {
                               }}
                             >
                               Course stays linked: {courseName}
+                            </div>
+                          ) : null}
+
+                          {(trip?.members ?? []).length > 0 ? (
+                            <div
+                              style={{
+                                display: "grid",
+                                gap: 8,
+                                padding: 10,
+                                borderRadius: 12,
+                                border: "1px solid var(--border)",
+                                background: "var(--bg)",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  color: "var(--text)",
+                                  fontSize: 12,
+                                  fontWeight: 950,
+                                }}
+                              >
+                                Participants
+                              </div>
+                              <div style={{ display: "grid", gap: 6 }}>
+                                {(trip?.members ?? []).map((member) => {
+                                  const checked =
+                                    editDraft.participantMemberIds.includes(
+                                      member.id,
+                                    );
+                                  return (
+                                    <label
+                                      key={member.id}
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 8,
+                                        color: "var(--text)",
+                                        fontSize: 12,
+                                        fontWeight: 850,
+                                      }}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={(e) => {
+                                          setEditDraft({
+                                            ...editDraft,
+                                            participantMemberIds: e.target
+                                              .checked
+                                              ? [
+                                                  ...editDraft.participantMemberIds,
+                                                  member.id,
+                                                ]
+                                              : editDraft.participantMemberIds.filter(
+                                                  (id) => id !== member.id,
+                                                ),
+                                          });
+                                        }}
+                                      />
+                                      <span>{memberDisplayName(member)}</span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
                             </div>
                           ) : null}
 
@@ -3442,6 +3565,18 @@ export default function TripDetailPage() {
                                 ))}
                               </div>
                             ) : null}
+
+                            {participantText ? (
+                              <div
+                                style={{
+                                  color: "var(--sub)",
+                                  fontSize: 12,
+                                  fontWeight: 800,
+                                }}
+                              >
+                                Participants: {participantText}
+                              </div>
+                            ) : null}
                           </div>
 
                           {item.notes ? (
@@ -3588,6 +3723,7 @@ export default function TripDetailPage() {
       ) : activeView === "calendar" ? (
         <TripCalendarView
           days={calendarDays}
+          members={trip?.members ?? []}
           selectedDay={selectedCalendarDay}
           onSelectDay={setSelectedCalendarDay}
           canEditTrip={canEditTrip}
