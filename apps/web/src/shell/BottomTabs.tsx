@@ -16,7 +16,7 @@ export default function BottomTabs() {
           flex: 1,
           border: 0,
           background: "transparent",
-          padding: "10px 6px",
+          padding: "10px 4px",
           fontWeight: active ? 900 : 700,
           opacity: active ? 1 : 0.75,
           cursor: "pointer",
@@ -24,12 +24,12 @@ export default function BottomTabs() {
           display: "grid",
           placeItems: "center",
           gap: 4,
+          minWidth: 0,
         }}
       >
         <div style={{ fontSize: 18, lineHeight: "18px" }}>{props.icon}</div>
         <div style={{ fontSize: 11 }}>{props.label}</div>
 
-        {/* active underline */}
         <div
           style={{
             marginTop: 6,
@@ -58,10 +58,11 @@ export default function BottomTabs() {
         zIndex: 2000,
       }}
     >
-      <Tab to="/feed" label={t("feed")} icon="📰" />
-      <Tab to="/map" label={t("map")} icon="🗺️" />
-      <Tab to="/destinations" label={t("explore")} icon="🌍" />
-      <Tab to="/profile" label={t("me")} icon="👤" />
+      <Tab to="/feed" label={t("feed")} icon="F" />
+      <Tab to="/map" label={t("map")} icon="M" />
+      <Tab to="/destinations" label={t("explore")} icon="D" />
+      <Tab to="/trips" label="Trips" icon="T" />
+      <Tab to="/profile" label={t("me")} icon="Me" />
     </div>
   );
 }

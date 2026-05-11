@@ -115,6 +115,9 @@ type EditDraft = {
   directPrice: string;
   providerPrice: string;
   currency: string;
+  locationName: string;
+  address: string;
+  bookingRef: string;
   paidByMemberId: string;
   participantMemberIds: string[];
 };
@@ -191,6 +194,7 @@ const itemTypeOptions = [
   { value: "hotel", label: "Hotel" },
   { value: "transfer", label: "Transfer" },
   { value: "car_rental", label: "Car rental" },
+  { value: "flight", label: "Flight" },
   { value: "free_day", label: "Free day" },
   { value: "note", label: "Note" },
 ];
@@ -423,11 +427,24 @@ function isGolfItem(item: TripItem) {
   return value === "golf_round" || value === "course";
 }
 
+function isFlightItem(item: TripItem) {
+  const value = String(item.type ?? "").toLowerCase();
+  return value === "flight" || value === "flights";
+}
+
+function flightTitle(flightNumber: string) {
+  const value = flightNumber.trim();
+  if (!value) return "Flight";
+  return value.toLowerCase().startsWith("flight ") ? value : `Flight ${value}`;
+}
+
 function finiteAmount(value?: number | null) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
 function pricingParts(item: TripItem) {
+  if (isFlightItem(item)) return [];
+
   if (isGolfItem(item)) {
     const green = finiteAmount(item.greenFee ?? item.directPrice);
     const caddy = finiteAmount(item.caddyFee);
@@ -507,17 +524,27 @@ function formatDateRange(item: TripItem) {
 
 function timelineDetails(item: TripItem) {
   const details: TimelineDetail[] = [];
+  const isFlight = isFlightItem(item);
 
   if (item.provider?.trim()) {
-    details.push({ label: "Provider", value: item.provider.trim() });
+    details.push({
+      label: isFlight ? "Airline" : "Provider",
+      value: item.provider.trim(),
+    });
   }
 
   if (item.locationName?.trim()) {
-    details.push({ label: "Location", value: item.locationName.trim() });
+    details.push({
+      label: isFlight ? "From" : "Location",
+      value: item.locationName.trim(),
+    });
   }
 
   if (item.address?.trim()) {
-    details.push({ label: "Address", value: item.address.trim() });
+    details.push({
+      label: isFlight ? "To" : "Address",
+      value: item.address.trim(),
+    });
   }
 
   if (item.bookingRef?.trim()) {
@@ -1148,6 +1175,7 @@ function TripCalendarView({
                 const itemType = String(item.type ?? "").toLowerCase();
                 const isGolf =
                   itemType === "golf_round" || itemType === "course";
+                const isFlight = isFlightItem(item);
                 const courseId = item.course?.id ?? item.courseId;
                 const courseName = item.course?.name?.trim();
                 const time = formatTimeRange(item);
@@ -1222,12 +1250,12 @@ function TripCalendarView({
                       <div style={{ display: "grid", gap: 3 }}>
                         {item.locationName ? (
                           <div style={{ color: "var(--sub)", fontSize: 12 }}>
-                            {item.locationName}
+                            {isFlight ? `From ${item.locationName}` : item.locationName}
                           </div>
                         ) : null}
                         {item.address ? (
                           <div style={{ color: "var(--sub)", fontSize: 12 }}>
-                            {item.address}
+                            {isFlight ? `To ${item.address}` : item.address}
                           </div>
                         ) : null}
                       </div>
@@ -1542,6 +1570,9 @@ export default function TripDetailPage() {
       directPrice: numberInputValue(item.directPrice),
       providerPrice: numberInputValue(item.providerPrice),
       currency: item.currency || "CHF",
+      locationName: item.locationName || "",
+      address: item.address || "",
+      bookingRef: item.bookingRef || "",
       paidByMemberId: item.paidByMemberId || item.paidByMember?.id || "",
       participantMemberIds,
     });
@@ -1839,11 +1870,16 @@ export default function TripDetailPage() {
 
     const isGolfEdit =
       editDraft.type === "golf_round" || editDraft.type === "course";
+    const isFlightEdit = editDraft.type === "flight";
     const currentItem = trip?.items?.find((item) => item.id === itemId);
     const derivedGolfTitle =
       currentItem?.course?.name || editDraft.title.trim() || "Golf round";
 
-    if (!editDraft.type || (!isGolfEdit && !editDraft.title.trim()) || !editDraft.date) {
+    if (
+      !editDraft.type ||
+      (!isGolfEdit && !isFlightEdit && !editDraft.title.trim()) ||
+      !editDraft.date
+    ) {
       setErr("Type, title, and date are required.");
       return;
     }
@@ -1862,26 +1898,33 @@ export default function TripDetailPage() {
           },
           body: JSON.stringify({
             type: editDraft.type,
-            title: isGolfEdit ? derivedGolfTitle : editDraft.title.trim(),
+            title: isGolfEdit
+              ? derivedGolfTitle
+              : isFlightEdit
+                ? flightTitle(editDraft.title)
+                : editDraft.title.trim(),
             date: editDraft.date,
             endDate: isGolfEdit ? undefined : optionalText(editDraft.endDate),
             startTime: editDraft.type === "hotel" ? "" : optionalText(editDraft.startTime),
             endTime: editDraft.type === "hotel" ? "" : optionalText(editDraft.endTime),
             provider: optionalText(editDraft.provider),
+            bookingRef: isFlightEdit ? optionalText(editDraft.bookingRef) : undefined,
             notes: optionalText(editDraft.notes),
-            greenFee: optionalNumber(editDraft.greenFee),
-            caddyFee: optionalNumber(editDraft.caddyFee),
-            cartFee: optionalNumber(editDraft.cartFee),
+            greenFee: isFlightEdit ? undefined : optionalNumber(editDraft.greenFee),
+            caddyFee: isFlightEdit ? undefined : optionalNumber(editDraft.caddyFee),
+            cartFee: isFlightEdit ? undefined : optionalNumber(editDraft.cartFee),
             includeGreenFeeInSplit: editDraft.includeGreenFeeInSplit,
             includeCaddyFeeInSplit: editDraft.includeCaddyFeeInSplit,
             includeCartFeeInSplit: editDraft.includeCartFeeInSplit,
-            directPrice: optionalNumber(editDraft.directPrice),
+            directPrice: isFlightEdit ? undefined : optionalNumber(editDraft.directPrice),
             providerPrice:
-              isGolfEdit || editDraft.type === "hotel"
+              isGolfEdit || editDraft.type === "hotel" || isFlightEdit
                 ? undefined
                 : optionalNumber(editDraft.providerPrice),
-            currency: optionalText(editDraft.currency),
-            paidByMemberId: optionalText(editDraft.paidByMemberId),
+            currency: isFlightEdit ? undefined : optionalText(editDraft.currency),
+            locationName: isFlightEdit ? optionalText(editDraft.locationName) : undefined,
+            address: isFlightEdit ? optionalText(editDraft.address) : undefined,
+            paidByMemberId: isFlightEdit ? undefined : optionalText(editDraft.paidByMemberId),
             participantMemberIds: editDraft.participantMemberIds,
           }),
         },
@@ -2165,6 +2208,8 @@ export default function TripDetailPage() {
     let cartTotal = 0;
 
     for (const item of trip?.items ?? []) {
+      if (isFlightItem(item)) continue;
+
       const golf = isGolfItem(item);
       const green =
         golf && item.includeGreenFeeInSplit !== false
@@ -3340,6 +3385,7 @@ export default function TripDetailPage() {
                   editDraft?.type === "golf_round" ||
                   editDraft?.type === "course";
                 const editIsHotel = editDraft?.type === "hotel";
+                const editIsFlight = editDraft?.type === "flight";
                 const editOrganizerTotal = editDraft
                   ? (editDraft.includeGreenFeeInSplit
                       ? amountValue(editDraft.greenFee)
@@ -3619,6 +3665,53 @@ export default function TripDetailPage() {
                                 {courseName || editDraft.title || "Golf round"}
                               </span>
                             </div>
+                          ) : editIsFlight ? (
+                            <div style={{ display: "grid", gap: 10 }}>
+                              <label
+                                style={{
+                                  display: "grid",
+                                  gap: 6,
+                                  color: "var(--text)",
+                                  fontSize: 12,
+                                  fontWeight: 900,
+                                }}
+                              >
+                                Flight number
+                                <input
+                                  value={editDraft.title.replace(/^Flight\s+/i, "")}
+                                  onChange={(e) =>
+                                    setEditDraft({
+                                      ...editDraft,
+                                      title: e.target.value,
+                                    })
+                                  }
+                                  placeholder="TG971"
+                                  style={editFieldStyle}
+                                />
+                              </label>
+                              <label
+                                style={{
+                                  display: "grid",
+                                  gap: 6,
+                                  color: "var(--text)",
+                                  fontSize: 12,
+                                  fontWeight: 900,
+                                }}
+                              >
+                                Airline
+                                <input
+                                  value={editDraft.provider}
+                                  onChange={(e) =>
+                                    setEditDraft({
+                                      ...editDraft,
+                                      provider: e.target.value,
+                                    })
+                                  }
+                                  placeholder="Thai Airways"
+                                  style={editFieldStyle}
+                                />
+                              </label>
+                            </div>
                           ) : (
                             <label
                               style={{
@@ -3661,7 +3754,11 @@ export default function TripDetailPage() {
                                 fontWeight: 900,
                               }}
                             >
-                              {editIsHotel ? "Check-in date" : "Date"}
+                              {editIsFlight
+                                ? "Departure date"
+                                : editIsHotel
+                                  ? "Check-in date"
+                                  : "Date"}
                               <input
                                 type="date"
                                 value={editDraft.date}
@@ -3684,7 +3781,7 @@ export default function TripDetailPage() {
                                   fontWeight: 900,
                                 }}
                               >
-                                End date
+                                {editIsFlight ? "Arrival date" : "End date"}
                                 <input
                                   type="date"
                                   value={editDraft.endDate}
@@ -3696,7 +3793,7 @@ export default function TripDetailPage() {
                                   }
                                   style={editFieldStyle}
                                 />
-                                {editIsHotel ? (
+                                {editIsFlight || editIsHotel ? (
                                   <span
                                     style={{
                                       color: "var(--sub)",
@@ -3704,7 +3801,9 @@ export default function TripDetailPage() {
                                       fontWeight: 800,
                                     }}
                                   >
-                                    Optional for multi-day stays
+                                    {editIsFlight
+                                      ? "Optional for overnight or connecting flights"
+                                      : "Optional for multi-day stays"}
                                   </span>
                                 ) : null}
                               </label>
@@ -3720,7 +3819,7 @@ export default function TripDetailPage() {
                                     fontWeight: 900,
                                   }}
                                 >
-                                  Start time
+                                  {editIsFlight ? "Departure time" : "Start time"}
                                   <input
                                     type="time"
                                     value={editDraft.startTime}
@@ -3742,7 +3841,7 @@ export default function TripDetailPage() {
                                     fontWeight: 900,
                                   }}
                                 >
-                                  End time
+                                  {editIsFlight ? "Arrival time" : "End time"}
                                   <input
                                     type="time"
                                     value={editDraft.endTime}
@@ -3759,6 +3858,7 @@ export default function TripDetailPage() {
                             ) : null}
                           </div>
 
+                          {!editIsFlight ? (
                           <label
                             style={{
                               display: "grid",
@@ -3789,6 +3889,52 @@ export default function TripDetailPage() {
                               style={editFieldStyle}
                             />
                           </label>
+                          ) : null}
+
+                          {editIsFlight ? (
+                            <div
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns:
+                                  "repeat(auto-fit, minmax(140px, 1fr))",
+                                gap: 8,
+                              }}
+                            >
+                              <input
+                                value={editDraft.locationName}
+                                onChange={(e) =>
+                                  setEditDraft({
+                                    ...editDraft,
+                                    locationName: e.target.value,
+                                  })
+                                }
+                                placeholder="From airport"
+                                style={editFieldStyle}
+                              />
+                              <input
+                                value={editDraft.address}
+                                onChange={(e) =>
+                                  setEditDraft({
+                                    ...editDraft,
+                                    address: e.target.value,
+                                  })
+                                }
+                                placeholder="To airport"
+                                style={editFieldStyle}
+                              />
+                              <input
+                                value={editDraft.bookingRef}
+                                onChange={(e) =>
+                                  setEditDraft({
+                                    ...editDraft,
+                                    bookingRef: e.target.value,
+                                  })
+                                }
+                                placeholder="Booking reference"
+                                style={editFieldStyle}
+                              />
+                            </div>
+                          ) : null}
 
                           {editIsGolf ? (
                             <div
@@ -3887,7 +4033,7 @@ export default function TripDetailPage() {
                             </div>
                           ) : null}
 
-                          {!editIsGolf ? (
+                          {!editIsGolf && !editIsFlight ? (
                             <div
                               style={{
                                 display: "grid",
@@ -3951,6 +4097,7 @@ export default function TripDetailPage() {
                             </div>
                           ) : null}
 
+                          {!editIsFlight ? (
                           <label
                             style={{
                               display: "grid",
@@ -3978,8 +4125,9 @@ export default function TripDetailPage() {
                               ))}
                             </select>
                           </label>
+                          ) : null}
 
-                          {(trip?.members ?? []).length > 0 ? (
+                          {(trip?.members ?? []).length > 0 && !editIsFlight ? (
                             <label
                               style={{
                                 display: "grid",

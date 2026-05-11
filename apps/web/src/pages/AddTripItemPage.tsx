@@ -9,6 +9,7 @@ type TripItemType =
   | "hotel"
   | "transfer"
   | "car_rental"
+  | "flight"
   | "free_day"
   | "note";
 
@@ -17,6 +18,7 @@ const typeOptions: { value: TripItemType; label: string }[] = [
   { value: "hotel", label: "Hotel" },
   { value: "transfer", label: "Transfer" },
   { value: "car_rental", label: "Car rental" },
+  { value: "flight", label: "Flight" },
   { value: "free_day", label: "Free day" },
   { value: "note", label: "Note" },
 ];
@@ -81,6 +83,7 @@ const dateRangeTypes = new Set<TripItemType>([
   "hotel",
   "car_rental",
   "transfer",
+  "flight",
   "free_day",
 ]);
 
@@ -100,6 +103,12 @@ function optionalNumber(value: string) {
 function amountValue(value: string) {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
+}
+
+function flightTitle(flightNumber: string) {
+  const value = flightNumber.trim();
+  if (!value) return "Flight";
+  return value.toLowerCase().startsWith("flight ") ? value : `Flight ${value}`;
 }
 
 function memberDisplayName(member: TripMember) {
@@ -122,6 +131,10 @@ export default function AddTripItemPage() {
   const [endDate, setEndDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [flightNumber, setFlightNumber] = useState("");
+  const [fromAirport, setFromAirport] = useState("");
+  const [toAirport, setToAirport] = useState("");
+  const [bookingRef, setBookingRef] = useState("");
   const [provider, setProvider] = useState("");
   const [notes, setNotes] = useState("");
   const [greenFee, setGreenFee] = useState("");
@@ -145,6 +158,7 @@ export default function AddTripItemPage() {
   const [err, setErr] = useState<string | null>(null);
   const isGolfRound = type === "golf_round";
   const isHotel = type === "hotel";
+  const isFlight = type === "flight";
   const derivedGolfTitle = selectedCourse?.name || "Golf round";
   const organizerTotal =
     (includeGreenFeeInSplit ? amountValue(greenFee) : 0) +
@@ -244,7 +258,7 @@ export default function AddTripItemPage() {
 
     if (!tripId || !token) return;
 
-    if (!type || (!isGolfRound && !title.trim()) || !date) {
+    if (!type || (!isGolfRound && !isFlight && !title.trim()) || !date) {
       setErr("Type, title, and date are required.");
       return;
     }
@@ -255,12 +269,17 @@ export default function AddTripItemPage() {
 
       const payload = {
         type,
-        title: isGolfRound ? derivedGolfTitle : title.trim(),
+        title: isGolfRound
+          ? derivedGolfTitle
+          : isFlight
+            ? flightTitle(flightNumber)
+            : title.trim(),
         date,
         endDate: isGolfRound ? undefined : optionalText(endDate),
         startTime: isHotel ? undefined : optionalText(startTime),
         endTime: isHotel ? undefined : optionalText(endTime),
         provider: optionalText(provider),
+        bookingRef: isFlight ? optionalText(bookingRef) : undefined,
         notes: optionalText(notes),
         greenFee: type === "golf_round" ? optionalNumber(greenFee) : undefined,
         caddyFee: type === "golf_round" ? optionalNumber(caddyFee) : undefined,
@@ -271,12 +290,16 @@ export default function AddTripItemPage() {
           type === "golf_round" ? includeCaddyFeeInSplit : undefined,
         includeCartFeeInSplit:
           type === "golf_round" ? includeCartFeeInSplit : undefined,
-        directPrice: optionalNumber(directPrice),
+        directPrice: isFlight ? undefined : optionalNumber(directPrice),
         providerPrice:
-          isGolfRound || isHotel ? undefined : optionalNumber(providerPrice),
-        currency: optionalText(currency),
+          isGolfRound || isHotel || isFlight
+            ? undefined
+            : optionalNumber(providerPrice),
+        currency: isFlight ? undefined : optionalText(currency),
+        locationName: isFlight ? optionalText(fromAirport) : undefined,
+        address: isFlight ? optionalText(toAirport) : undefined,
         courseId: type === "golf_round" ? selectedCourse?.id : undefined,
-        paidByMemberId: optionalText(paidByMemberId),
+        paidByMemberId: isFlight ? undefined : optionalText(paidByMemberId),
         participantMemberIds,
       };
 
@@ -507,6 +530,56 @@ export default function AddTripItemPage() {
               {derivedGolfTitle}
             </span>
           </div>
+        ) : isFlight ? (
+          <div style={{ display: "grid", gap: 10, minWidth: 0 }}>
+            <label style={labelStyle}>
+              Flight number
+              <input
+                value={flightNumber}
+                onChange={(e) => setFlightNumber(e.target.value)}
+                placeholder="TG971"
+                style={fieldStyle}
+              />
+            </label>
+            <label style={labelStyle}>
+              Airline
+              <input
+                value={provider}
+                onChange={(e) => setProvider(e.target.value)}
+                placeholder="Thai Airways"
+                style={fieldStyle}
+              />
+            </label>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 10,
+                width: "100%",
+                maxWidth: "100%",
+                boxSizing: "border-box",
+              }}
+            >
+              <label style={{ ...labelStyle, flex: "1 1 180px", minWidth: 0 }}>
+                From airport
+                <input
+                  value={fromAirport}
+                  onChange={(e) => setFromAirport(e.target.value)}
+                  placeholder="ZRH"
+                  style={fieldStyle}
+                />
+              </label>
+              <label style={{ ...labelStyle, flex: "1 1 180px", minWidth: 0 }}>
+                To airport
+                <input
+                  value={toAirport}
+                  onChange={(e) => setToAirport(e.target.value)}
+                  placeholder="BKK"
+                  style={fieldStyle}
+                />
+              </label>
+            </div>
+          </div>
         ) : (
           <label style={labelStyle}>
             {isHotel ? "Hotel name" : "Title"}
@@ -530,7 +603,7 @@ export default function AddTripItemPage() {
           }}
         >
           <label style={{ ...labelStyle, flex: "1 1 180px", minWidth: 0 }}>
-            {isHotel ? "Check-in date" : "Date"}
+            {isFlight ? "Departure date" : isHotel ? "Check-in date" : "Date"}
             <input
               type="date"
               value={date}
@@ -542,7 +615,7 @@ export default function AddTripItemPage() {
 
           {!isGolfRound ? (
             <label style={{ ...labelStyle, flex: "1 1 180px", minWidth: 0 }}>
-              End date
+              {isFlight ? "Arrival date" : "End date"}
               <input
                 type="date"
                 value={endDate}
@@ -551,7 +624,9 @@ export default function AddTripItemPage() {
               />
               {dateRangeTypes.has(type) ? (
                 <span style={{ color: "var(--sub)", fontSize: 12 }}>
-                  {isHotel
+                  {isFlight
+                    ? "Optional for overnight or connecting flights"
+                    : isHotel
                     ? "Optional for multi-day stays"
                     : "Optional for multi-day stays or rentals"}
                 </span>
@@ -572,7 +647,7 @@ export default function AddTripItemPage() {
             }}
           >
             <label style={{ ...labelStyle, flex: "1 1 180px", minWidth: 0 }}>
-              Start time
+                                  {isFlight ? "Departure time" : "Start time"}
               <input
                 type="time"
                 value={startTime}
@@ -581,7 +656,7 @@ export default function AddTripItemPage() {
               />
             </label>
             <label style={{ ...labelStyle, flex: "1 1 180px", minWidth: 0 }}>
-              End time
+                                  {isFlight ? "Arrival time" : "End time"}
               <input
                 type="time"
                 value={endTime}
@@ -592,6 +667,7 @@ export default function AddTripItemPage() {
           </div>
         ) : null}
 
+        {!isFlight ? (
         <label style={labelStyle}>
           {isGolfRound || isHotel ? "Booked via / booked by" : "Provider"}
           <input
@@ -607,6 +683,19 @@ export default function AddTripItemPage() {
             style={fieldStyle}
           />
         </label>
+        ) : null}
+
+        {isFlight ? (
+          <label style={labelStyle}>
+            Booking reference
+            <input
+              value={bookingRef}
+              onChange={(e) => setBookingRef(e.target.value)}
+              placeholder="Booking reference"
+              style={fieldStyle}
+            />
+          </label>
+        ) : null}
 
         {isGolfRound ? (
           <div
@@ -705,7 +794,7 @@ export default function AddTripItemPage() {
           </div>
         ) : null}
 
-        {!isGolfRound ? (
+        {!isGolfRound && !isFlight ? (
           <>
             <label style={labelStyle}>
               {isHotel ? "Amount per day" : "Direct price"}
@@ -738,6 +827,7 @@ export default function AddTripItemPage() {
           </>
         ) : null}
 
+        {!isFlight ? (
         <label style={labelStyle}>
           Currency
           <select
@@ -752,8 +842,9 @@ export default function AddTripItemPage() {
             ))}
           </select>
         </label>
+        ) : null}
 
-        {(trip?.members ?? []).length > 0 ? (
+        {(trip?.members ?? []).length > 0 && !isFlight ? (
           <label style={labelStyle}>
             Paid by
             <select

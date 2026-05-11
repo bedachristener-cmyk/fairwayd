@@ -89,6 +89,23 @@ export default function Sidebar() {
         </button>
 
         <button
+          onClick={() => goProtected("/trips")}
+          style={{
+            ...btnStyle(loc.pathname.startsWith("/trips")),
+            opacity: isAuthenticated ? 1 : 0.5,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translateX(6px)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "translateX(0)";
+          }}
+          type="button"
+        >
+          Trips
+        </button>
+
+        <button
           onClick={() => goProtected("/profile")}
           style={{
             ...btnStyle(loc.pathname.startsWith("/profile")),

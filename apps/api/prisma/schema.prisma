@@ -482,6 +482,7 @@ enum TripItemType {
   hotel
   transfer
   car_rental
+  flight
   free_day
   note
 }
