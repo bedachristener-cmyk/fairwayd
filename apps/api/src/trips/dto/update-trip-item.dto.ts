@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   IsArray,
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsNumber,
@@ -51,6 +52,26 @@ export class UpdateTripItemDto {
   @IsOptional()
   @IsString()
   bookingRef?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  greenFee?: number;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  includeGreenFeeInSplit?: boolean;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  includeCaddyFeeInSplit?: boolean;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  includeCartFeeInSplit?: boolean;
 
   @IsOptional()
   @Type(() => Number)

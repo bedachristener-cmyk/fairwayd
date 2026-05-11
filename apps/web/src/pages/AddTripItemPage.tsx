@@ -96,6 +96,12 @@ export default function AddTripItemPage() {
   const [startTime, setStartTime] = useState("");
   const [provider, setProvider] = useState("");
   const [notes, setNotes] = useState("");
+  const [greenFee, setGreenFee] = useState("");
+  const [caddyFee, setCaddyFee] = useState("");
+  const [cartFee, setCartFee] = useState("");
+  const [includeGreenFeeInSplit, setIncludeGreenFeeInSplit] = useState(true);
+  const [includeCaddyFeeInSplit, setIncludeCaddyFeeInSplit] = useState(true);
+  const [includeCartFeeInSplit, setIncludeCartFeeInSplit] = useState(true);
   const [directPrice, setDirectPrice] = useState("");
   const [providerPrice, setProviderPrice] = useState("");
   const [currency, setCurrency] = useState("");
@@ -219,6 +225,15 @@ export default function AddTripItemPage() {
         startTime: optionalText(startTime),
         provider: optionalText(provider),
         notes: optionalText(notes),
+        greenFee: type === "golf_round" ? optionalNumber(greenFee) : undefined,
+        caddyFee: type === "golf_round" ? optionalNumber(caddyFee) : undefined,
+        cartFee: type === "golf_round" ? optionalNumber(cartFee) : undefined,
+        includeGreenFeeInSplit:
+          type === "golf_round" ? includeGreenFeeInSplit : undefined,
+        includeCaddyFeeInSplit:
+          type === "golf_round" ? includeCaddyFeeInSplit : undefined,
+        includeCartFeeInSplit:
+          type === "golf_round" ? includeCartFeeInSplit : undefined,
         directPrice: optionalNumber(directPrice),
         providerPrice: optionalNumber(providerPrice),
         currency: optionalText(currency),
@@ -502,8 +517,91 @@ export default function AddTripItemPage() {
           />
         </label>
 
+        {type === "golf_round" ? (
+          <div
+            style={{
+              display: "grid",
+              gap: 10,
+              padding: 10,
+              borderRadius: 12,
+              border: "1px solid var(--border)",
+              background: "var(--bg)",
+            }}
+          >
+            <div
+              style={{
+                color: "var(--text)",
+                fontSize: 13,
+                fontWeight: 900,
+              }}
+            >
+              Golf costs
+            </div>
+            {[
+              {
+                label: "Greenfee",
+                value: greenFee,
+                onAmountChange: setGreenFee,
+                checked: includeGreenFeeInSplit,
+                onCheckedChange: setIncludeGreenFeeInSplit,
+              },
+              {
+                label: "Caddyfee",
+                value: caddyFee,
+                onAmountChange: setCaddyFee,
+                checked: includeCaddyFeeInSplit,
+                onCheckedChange: setIncludeCaddyFeeInSplit,
+              },
+              {
+                label: "Cartfee",
+                value: cartFee,
+                onAmountChange: setCartFee,
+                checked: includeCartFeeInSplit,
+                onCheckedChange: setIncludeCartFeeInSplit,
+              },
+            ].map((cost) => (
+              <div
+                key={cost.label}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "minmax(0, 1fr)",
+                  gap: 6,
+                }}
+              >
+                <label style={labelStyle}>
+                  {cost.label}
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={cost.value}
+                    onChange={(e) => cost.onAmountChange(e.target.value)}
+                    style={fieldStyle}
+                  />
+                </label>
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    color: "var(--sub)",
+                    fontSize: 12,
+                    fontWeight: 850,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={cost.checked}
+                    onChange={(e) => cost.onCheckedChange(e.target.checked)}
+                  />
+                  Include in budget split
+                </label>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
         <label style={labelStyle}>
-          Direct price
+          {type === "golf_round" ? "Other direct price" : "Direct price"}
           <input
             type="number"
             inputMode="decimal"

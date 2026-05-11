@@ -25,6 +25,10 @@ type TripItem = {
   endTime?: string | null;
   provider?: string | null;
   bookingRef?: string | null;
+  greenFee?: number | null;
+  includeGreenFeeInSplit?: boolean | null;
+  includeCaddyFeeInSplit?: boolean | null;
+  includeCartFeeInSplit?: boolean | null;
   directPrice?: number | null;
   caddyFee?: number | null;
   cartFee?: number | null;
@@ -97,6 +101,12 @@ type EditDraft = {
   startTime: string;
   provider: string;
   notes: string;
+  greenFee: string;
+  caddyFee: string;
+  cartFee: string;
+  includeGreenFeeInSplit: boolean;
+  includeCaddyFeeInSplit: boolean;
+  includeCartFeeInSplit: boolean;
   directPrice: string;
   providerPrice: string;
   currency: string;
@@ -134,6 +144,7 @@ type BudgetSummary = {
   currency: string;
   total: number;
   perPerson: number;
+  greenTotal: number;
   directTotal: number;
   providerTotal: number;
   caddyTotal: number;
@@ -386,7 +397,46 @@ function budgetAmount(value: number, summary: BudgetSummary) {
   return formatMoney(value, summary.currency);
 }
 
+function isGolfItem(item: TripItem) {
+  const value = String(item.type ?? "").toLowerCase();
+  return value === "golf_round" || value === "course";
+}
+
+function finiteAmount(value?: number | null) {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
 function pricingParts(item: TripItem) {
+  if (isGolfItem(item)) {
+    const green = finiteAmount(item.greenFee ?? item.directPrice);
+    const caddy = finiteAmount(item.caddyFee);
+    const cart = finiteAmount(item.cartFee);
+
+    return [
+      green
+        ? `Greenfee ${formatMoney(green, item.currency)}${
+            item.includeGreenFeeInSplit === false ? " excluded" : ""
+          }`
+        : "",
+      item.providerPrice
+        ? `Provider ${formatMoney(item.providerPrice, item.currency)}`
+        : "",
+      caddy
+        ? `Caddy ${formatMoney(caddy, item.currency)}${
+            item.includeCaddyFeeInSplit === false ? " excluded" : ""
+          }`
+        : "",
+      cart
+        ? `Cart ${formatMoney(cart, item.currency)}${
+            item.includeCartFeeInSplit === false ? " excluded" : ""
+          }`
+        : "",
+      item.greenFee && item.directPrice
+        ? `Other direct ${formatMoney(item.directPrice, item.currency)}`
+        : "",
+    ].filter(Boolean);
+  }
+
   return [
     item.directPrice
       ? `Direct ${formatMoney(item.directPrice, item.currency)}`
@@ -1422,6 +1472,12 @@ export default function TripDetailPage() {
       startTime: item.startTime || "",
       provider: item.provider || "",
       notes: item.notes || "",
+      greenFee: numberInputValue(item.greenFee ?? item.directPrice),
+      caddyFee: numberInputValue(item.caddyFee),
+      cartFee: numberInputValue(item.cartFee),
+      includeGreenFeeInSplit: item.includeGreenFeeInSplit !== false,
+      includeCaddyFeeInSplit: item.includeCaddyFeeInSplit !== false,
+      includeCartFeeInSplit: item.includeCartFeeInSplit !== false,
       directPrice: numberInputValue(item.directPrice),
       providerPrice: numberInputValue(item.providerPrice),
       currency: item.currency || "",
@@ -1702,6 +1758,12 @@ export default function TripDetailPage() {
             startTime: optionalText(editDraft.startTime),
             provider: optionalText(editDraft.provider),
             notes: optionalText(editDraft.notes),
+            greenFee: optionalNumber(editDraft.greenFee),
+            caddyFee: optionalNumber(editDraft.caddyFee),
+            cartFee: optionalNumber(editDraft.cartFee),
+            includeGreenFeeInSplit: editDraft.includeGreenFeeInSplit,
+            includeCaddyFeeInSplit: editDraft.includeCaddyFeeInSplit,
+            includeCartFeeInSplit: editDraft.includeCartFeeInSplit,
             directPrice: optionalNumber(editDraft.directPrice),
             providerPrice: optionalNumber(editDraft.providerPrice),
             currency: optionalText(editDraft.currency),
@@ -1981,25 +2043,38 @@ export default function TripDetailPage() {
       Other: 0,
     };
     const currencies = new Set<string>();
+    let greenTotal = 0;
     let directTotal = 0;
     let providerTotal = 0;
     let caddyTotal = 0;
     let cartTotal = 0;
 
     for (const item of trip?.items ?? []) {
-      const direct = typeof item.directPrice === "number" && Number.isFinite(item.directPrice) ? item.directPrice : 0;
+      const golf = isGolfItem(item);
+      const green =
+        golf && item.includeGreenFeeInSplit !== false
+          ? finiteAmount(item.greenFee ?? item.directPrice)
+          : 0;
+      const direct = golf ? (item.greenFee ? finiteAmount(item.directPrice) : 0) : finiteAmount(item.directPrice);
       const provider =
         typeof item.providerPrice === "number" && Number.isFinite(item.providerPrice)
           ? item.providerPrice
           : 0;
-      const caddy = typeof item.caddyFee === "number" && Number.isFinite(item.caddyFee) ? item.caddyFee : 0;
-      const cart = typeof item.cartFee === "number" && Number.isFinite(item.cartFee) ? item.cartFee : 0;
-      const itemTotal = direct + provider + caddy + cart;
+      const caddy =
+        !golf || item.includeCaddyFeeInSplit !== false
+          ? finiteAmount(item.caddyFee)
+          : 0;
+      const cart =
+        !golf || item.includeCartFeeInSplit !== false
+          ? finiteAmount(item.cartFee)
+          : 0;
+      const itemTotal = green + direct + provider + caddy + cart;
 
       if (itemTotal > 0) {
         currencies.add(item.currency?.trim() || "CHF");
       }
 
+      greenTotal += green;
       directTotal += direct;
       providerTotal += provider;
       caddyTotal += caddy;
@@ -2007,7 +2082,7 @@ export default function TripDetailPage() {
       categories[budgetCategory(item.type)] += itemTotal;
     }
 
-    const total = directTotal + providerTotal + caddyTotal + cartTotal;
+    const total = greenTotal + directTotal + providerTotal + caddyTotal + cartTotal;
     const people = trip?.members?.length ?? 0;
     const currency = Array.from(currencies)[0] || "CHF";
 
@@ -2016,6 +2091,7 @@ export default function TripDetailPage() {
       currency,
       total,
       perPerson: people > 0 ? total / people : total,
+      greenTotal,
       directTotal,
       providerTotal,
       caddyTotal,
@@ -2034,6 +2110,7 @@ export default function TripDetailPage() {
     { label: "Estimated per person", value: budgetSummary.perPerson },
   ];
   const budgetFieldTotals = [
+    { label: "Greenfee", value: budgetSummary.greenTotal },
     { label: "Direct", value: budgetSummary.directTotal },
     { label: "Provider", value: budgetSummary.providerTotal },
     { label: "Caddy", value: budgetSummary.caddyTotal },
@@ -3378,6 +3455,91 @@ export default function TripDetailPage() {
                             style={editFieldStyle}
                           />
 
+                          {editDraft.type === "golf_round" ||
+                          editDraft.type === "course" ? (
+                            <div
+                              style={{
+                                display: "grid",
+                                gap: 10,
+                                padding: 10,
+                                borderRadius: 12,
+                                border: "1px solid var(--border)",
+                                background: "var(--bg)",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  color: "var(--text)",
+                                  fontSize: 12,
+                                  fontWeight: 950,
+                                }}
+                              >
+                                Golf costs
+                              </div>
+                              {[
+                                {
+                                  label: "Greenfee",
+                                  value: editDraft.greenFee,
+                                  amountKey: "greenFee",
+                                  checked: editDraft.includeGreenFeeInSplit,
+                                  includeKey: "includeGreenFeeInSplit",
+                                },
+                                {
+                                  label: "Caddyfee",
+                                  value: editDraft.caddyFee,
+                                  amountKey: "caddyFee",
+                                  checked: editDraft.includeCaddyFeeInSplit,
+                                  includeKey: "includeCaddyFeeInSplit",
+                                },
+                                {
+                                  label: "Cartfee",
+                                  value: editDraft.cartFee,
+                                  amountKey: "cartFee",
+                                  checked: editDraft.includeCartFeeInSplit,
+                                  includeKey: "includeCartFeeInSplit",
+                                },
+                              ].map((cost) => (
+                                <div key={cost.label} style={{ display: "grid", gap: 6 }}>
+                                  <input
+                                    type="number"
+                                    inputMode="decimal"
+                                    value={cost.value}
+                                    onChange={(e) =>
+                                      setEditDraft({
+                                        ...editDraft,
+                                        [cost.amountKey]: e.target.value,
+                                      })
+                                    }
+                                    placeholder={cost.label}
+                                    style={editFieldStyle}
+                                  />
+                                  <label
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 8,
+                                      color: "var(--sub)",
+                                      fontSize: 12,
+                                      fontWeight: 850,
+                                    }}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={cost.checked}
+                                      onChange={(e) =>
+                                        setEditDraft({
+                                          ...editDraft,
+                                          [cost.includeKey]: e.target.checked,
+                                        })
+                                      }
+                                    />
+                                    Include in budget split
+                                  </label>
+                                </div>
+                              ))}
+                            </div>
+                          ) : null}
+
                           <div
                             style={{
                               display: "grid",
@@ -3396,7 +3558,12 @@ export default function TripDetailPage() {
                                   directPrice: e.target.value,
                                 })
                               }
-                              placeholder="Direct price"
+                              placeholder={
+                                editDraft.type === "golf_round" ||
+                                editDraft.type === "course"
+                                  ? "Other direct price"
+                                  : "Direct price"
+                              }
                               style={editFieldStyle}
                             />
                             <input

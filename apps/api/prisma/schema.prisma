@@ -356,32 +356,36 @@ model TripMember {
 }
 
 model TripItem {
-  id            String                @id @default(cuid())
-  tripId        String
-  courseId      String?
-  type          TripItemType          @default(COURSE)
-  title         String?
-  notes         String?
-  startsAt      DateTime?
-  sortOrder     Int                   @default(0)
-  createdAt     DateTime              @default(now())
-  updatedAt     DateTime              @updatedAt
-  address       String?
-  bookingRef    String?
-  caddyFee      Float?
-  cartFee       Float?
-  currency      String?
-  date          DateTime?
-  directPrice   Float?
-  endDate       DateTime?
-  endTime       String?
-  locationName  String?
-  provider      String?
-  providerPrice Float?
-  startTime     String?
-  course        Course?               @relation(fields: [courseId], references: [id])
-  participants  TripItemParticipant[]
-  trip          Trip                  @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  id                     String                @id @default(cuid())
+  tripId                 String
+  courseId               String?
+  type                   TripItemType          @default(COURSE)
+  title                  String?
+  notes                  String?
+  startsAt               DateTime?
+  sortOrder              Int                   @default(0)
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  address                String?
+  bookingRef             String?
+  caddyFee               Float?
+  cartFee                Float?
+  currency               String?
+  date                   DateTime?
+  directPrice            Float?
+  endDate                DateTime?
+  endTime                String?
+  greenFee               Float?
+  includeCaddyFeeInSplit Boolean               @default(true)
+  includeCartFeeInSplit  Boolean               @default(true)
+  includeGreenFeeInSplit Boolean               @default(true)
+  locationName           String?
+  provider               String?
+  providerPrice          Float?
+  startTime              String?
+  course                 Course?               @relation(fields: [courseId], references: [id])
+  participants           TripItemParticipant[]
+  trip                   Trip                  @relation(fields: [tripId], references: [id], onDelete: Cascade)
 
   @@index([tripId])
   @@index([courseId])

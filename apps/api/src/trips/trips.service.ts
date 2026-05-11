@@ -382,6 +382,10 @@ export class TripsService {
         courseId: dto.courseId?.trim() || null,
         provider: dto.provider?.trim() || null,
         bookingRef: dto.bookingRef?.trim() || null,
+        greenFee: dto.greenFee ?? null,
+        includeGreenFeeInSplit: dto.includeGreenFeeInSplit ?? true,
+        includeCaddyFeeInSplit: dto.includeCaddyFeeInSplit ?? true,
+        includeCartFeeInSplit: dto.includeCartFeeInSplit ?? true,
         directPrice: dto.directPrice ?? null,
         caddyFee: dto.caddyFee ?? null,
         cartFee: dto.cartFee ?? null,
@@ -442,6 +446,10 @@ export class TripsService {
           dto.bookingRef === undefined
             ? undefined
             : dto.bookingRef.trim() || null,
+        greenFee: dto.greenFee,
+        includeGreenFeeInSplit: dto.includeGreenFeeInSplit,
+        includeCaddyFeeInSplit: dto.includeCaddyFeeInSplit,
+        includeCartFeeInSplit: dto.includeCartFeeInSplit,
         directPrice: dto.directPrice,
         caddyFee: dto.caddyFee,
         cartFee: dto.cartFee,
