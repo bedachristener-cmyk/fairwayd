@@ -1438,6 +1438,8 @@ export default function TripDetailPage() {
   const [tripDraft, setTripDraft] = useState<TripEditDraft | null>(null);
   const [savingTrip, setSavingTrip] = useState(false);
   const [deletingTrip, setDeletingTrip] = useState(false);
+  const [deleteTripConfirmOpen, setDeleteTripConfirmOpen] = useState(false);
+  const [deleteTripTitleInput, setDeleteTripTitleInput] = useState("");
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
   const [savingItemId, setSavingItemId] = useState<string | null>(null);
@@ -1590,6 +1592,21 @@ export default function TripDetailPage() {
     });
   }
 
+  function openDeleteTripConfirm() {
+    if (!trip) return;
+
+    setErr(null);
+    setDeleteTripTitleInput("");
+    setDeleteTripConfirmOpen(true);
+  }
+
+  function closeDeleteTripConfirm() {
+    if (deletingTrip) return;
+
+    setDeleteTripConfirmOpen(false);
+    setDeleteTripTitleInput("");
+  }
+
   async function saveTripEdit() {
     if (!tripId || !token || !tripDraft) return;
 
@@ -1636,8 +1653,8 @@ export default function TripDetailPage() {
   }
 
   async function deleteTrip() {
-    if (!tripId || !token) return;
-    if (!window.confirm("Delete this trip?")) return;
+    if (!tripId || !token || !trip) return;
+    if (deleteTripTitleInput !== trip.title) return;
 
     try {
       setDeletingTrip(true);
@@ -1660,6 +1677,8 @@ export default function TripDetailPage() {
         );
       }
 
+      setDeleteTripConfirmOpen(false);
+      setDeleteTripTitleInput("");
       nav("/trips");
     } catch (e: any) {
       setErr(e?.message ?? "Failed to delete trip");
@@ -2552,7 +2571,7 @@ export default function TripDetailPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={deleteTrip}
+                  onClick={openDeleteTripConfirm}
                   disabled={!trip || deletingTrip}
                   style={{
                     height: 32,
@@ -4486,6 +4505,156 @@ export default function TripDetailPage() {
           onOpenCourse={(courseId) => nav(`/courses/${courseId}`)}
         />
       )}
+
+      {deleteTripConfirmOpen && trip ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-trip-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 5000,
+            background: "rgba(0,0,0,0.58)",
+            display: "grid",
+            placeItems: "center",
+            padding: "18px 14px calc(18px + env(safe-area-inset-bottom, 0px))",
+            boxSizing: "border-box",
+          }}
+          onClick={closeDeleteTripConfirm}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 480,
+              maxHeight: "100%",
+              overflowY: "auto",
+              boxSizing: "border-box",
+              display: "grid",
+              gap: 14,
+              padding: 16,
+              borderRadius: 18,
+              border: "1px solid var(--border)",
+              background: "var(--card)",
+              color: "var(--text)",
+              boxShadow: "0 18px 60px rgba(0,0,0,0.38)",
+            }}
+          >
+            <div style={{ display: "grid", gap: 5 }}>
+              <div
+                id="delete-trip-title"
+                style={{
+                  fontSize: 18,
+                  lineHeight: 1.2,
+                  fontWeight: 950,
+                  overflowWrap: "anywhere",
+                }}
+              >
+                Delete {trip.title}
+              </div>
+              <div style={{ color: "var(--sub)", fontSize: 13, lineHeight: 1.45 }}>
+                This permanently deletes the trip and everything connected to it.
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gap: 8,
+                padding: 12,
+                borderRadius: 14,
+                border: "1px solid var(--border)",
+                background: "var(--bg)",
+                color: "var(--text)",
+                fontSize: 13,
+              }}
+            >
+              <div style={{ fontWeight: 950 }}>Deleting removes:</div>
+              <ul
+                style={{
+                  margin: 0,
+                  paddingLeft: 18,
+                  color: "var(--sub)",
+                  lineHeight: 1.5,
+                }}
+              >
+                <li>timeline items</li>
+                <li>members</li>
+                <li>calendar and map data</li>
+                <li>budget data</li>
+              </ul>
+            </div>
+
+            <label
+              style={{
+                display: "grid",
+                gap: 7,
+                color: "var(--text)",
+                fontSize: 13,
+                fontWeight: 900,
+              }}
+            >
+              Type the exact trip title to confirm
+              <input
+                value={deleteTripTitleInput}
+                onChange={(event) => setDeleteTripTitleInput(event.target.value)}
+                placeholder={trip.title}
+                autoFocus
+                style={editFieldStyle}
+              />
+            </label>
+
+            <div style={wrappingActionRowStyle}>
+              <button
+                type="button"
+                onClick={closeDeleteTripConfirm}
+                disabled={deletingTrip}
+                style={{
+                  height: 36,
+                  padding: "0 13px",
+                  borderRadius: 999,
+                  border: "1px solid var(--border)",
+                  background: "transparent",
+                  color: "var(--text)",
+                  cursor: deletingTrip ? "default" : "pointer",
+                  fontWeight: 900,
+                  fontSize: 13,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={deleteTrip}
+                disabled={deletingTrip || deleteTripTitleInput !== trip.title}
+                style={{
+                  height: 36,
+                  padding: "0 13px",
+                  borderRadius: 999,
+                  border: "1px solid var(--danger)",
+                  background:
+                    deletingTrip || deleteTripTitleInput !== trip.title
+                      ? "transparent"
+                      : "var(--danger-soft)",
+                  color:
+                    deletingTrip || deleteTripTitleInput !== trip.title
+                      ? "var(--sub)"
+                      : "var(--danger)",
+                  cursor:
+                    deletingTrip || deleteTripTitleInput !== trip.title
+                      ? "default"
+                      : "pointer",
+                  fontWeight: 950,
+                  fontSize: 13,
+                }}
+              >
+                {deletingTrip ? "Deleting..." : "Delete trip permanently"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
