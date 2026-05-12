@@ -123,7 +123,7 @@ type EditDraft = {
   participantMemberIds: string[];
 };
 
-type TripView = "timeline" | "calendar" | "map" | "budget";
+type TripView = "overview" | "timeline" | "calendar" | "map" | "budget";
 
 type TripMapMarker = {
   id: string;
@@ -1150,7 +1150,8 @@ function TripCalendarView({
                 minWidth: 0,
                 textAlign: "left",
                 padding: "12px 13px",
-                borderRadius: 26,
+                borderRadius: 30,
+                overflow: "hidden",
                 border: active
                   ? "1px solid var(--text)"
                   : "1px solid transparent",
@@ -1199,7 +1200,8 @@ function TripCalendarView({
           display: "grid",
           gap: 12,
           padding: 14,
-          borderRadius: 28,
+          borderRadius: 30,
+          overflow: "hidden",
           background: "var(--card)",
           border: "1px solid var(--border)",
           boxShadow: "0 12px 34px rgba(0,0,0,0.14)",
@@ -1251,7 +1253,8 @@ function TripCalendarView({
                       display: "grid",
                       gap: 7,
                       padding: 12,
-                      borderRadius: 24,
+                      borderRadius: 28,
+                      overflow: "hidden",
                       border: "1px solid transparent",
                       background: "var(--bg)",
                       boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
@@ -1488,7 +1491,7 @@ export default function TripDetailPage() {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<TripView>("timeline");
+  const [activeView, setActiveView] = useState<TripView>("overview");
   const [selectedCalendarDay, setSelectedCalendarDay] = useState("");
   const [uploadingCover, setUploadingCover] = useState(false);
   const [editingTrip, setEditingTrip] = useState(false);
@@ -2384,6 +2387,8 @@ export default function TripDetailPage() {
         gap: 16,
       }}
     >
+      {activeView === "overview" ? (
+      <>
       <section
         style={{
           ...safeSectionStyle,
@@ -2696,49 +2701,102 @@ export default function TripDetailPage() {
 
       <div
         style={{
-          display: "inline-flex",
+          display: "grid",
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
           width: "100%",
           maxWidth: "100%",
-          padding: 4,
-          borderRadius: 999,
-          background: "var(--card)",
-          border: "1px solid var(--border)",
+          gap: 10,
           boxSizing: "border-box",
-          overflowX: "auto",
         }}
       >
         {(["timeline", "calendar", "map", "budget"] as TripView[]).map((view) => {
-          const active = activeView === view;
+          const label =
+            view === "timeline"
+              ? "Timeline"
+              : view === "calendar"
+                ? "Calendar"
+                : view === "map"
+                  ? "Map"
+                  : "Budget";
           return (
             <button
               key={view}
               type="button"
               onClick={() => setActiveView(view)}
               style={{
-                flex: "1 0 auto",
-                height: 34,
-                padding: "0 13px",
-                borderRadius: 999,
-                border: "1px solid transparent",
-                background: active ? "var(--text)" : "transparent",
-                color: active ? "var(--bg)" : "var(--sub)",
+                minHeight: 78,
+                padding: 14,
+                borderRadius: 24,
+                border: "1px solid var(--border)",
+                background: "var(--card)",
+                color: "var(--text)",
                 cursor: "pointer",
                 fontWeight: 950,
-                fontSize: 12,
-                whiteSpace: "nowrap",
+                fontSize: 15,
+                display: "grid",
+                alignContent: "center",
+                justifyItems: "start",
+                gap: 4,
+                boxShadow: "0 10px 26px rgba(0,0,0,0.14)",
               }}
             >
-              {view === "timeline"
-                ? "Timeline"
-                : view === "calendar"
-                  ? "Calendar"
-                  : view === "map"
-                    ? "Map"
-                    : "Budget"}
+              <span>{label}</span>
+              <span
+                style={{
+                  color: "var(--sub)",
+                  fontSize: 11,
+                  fontWeight: 850,
+                }}
+              >
+                Open view
+              </span>
             </button>
           );
         })}
       </div>
+      </>
+      ) : (
+        <section
+          style={{
+            display: "grid",
+            gap: 8,
+            padding: "2px 0 4px",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setActiveView("overview")}
+            style={{
+              width: "fit-content",
+              height: 32,
+              padding: "0 12px",
+              borderRadius: 999,
+              border: "1px solid var(--border)",
+              background: "var(--card)",
+              color: "var(--sub)",
+              cursor: "pointer",
+              fontWeight: 900,
+              fontSize: 12,
+            }}
+          >
+            Back to trip
+          </button>
+          <div style={{ display: "grid", gap: 2 }}>
+            <div style={{ color: "var(--text)", fontSize: 22, fontWeight: 950 }}>
+              {activeView === "timeline"
+                ? "Timeline"
+                : activeView === "calendar"
+                  ? "Calendar"
+                  : activeView === "map"
+                    ? "Map"
+                    : "Budget"}
+            </div>
+            <div style={{ color: "var(--sub)", fontSize: 13 }}>
+              {trip?.title ?? "Trip"}
+            </div>
+          </div>
+        </section>
+      )}
 
       {activeView === "timeline" ? (
       <>
@@ -4678,12 +4736,12 @@ export default function TripDetailPage() {
             ))}
           </div>
         </section>
-      ) : (
+      ) : activeView === "map" ? (
         <TripMapView
           markers={mapMarkers}
           onOpenCourse={(courseId) => nav(`/courses/${courseId}`)}
         />
-      )}
+      ) : null}
 
       {deleteTripConfirmOpen && trip ? createPortal(
         <div
