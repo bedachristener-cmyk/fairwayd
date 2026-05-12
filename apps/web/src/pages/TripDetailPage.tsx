@@ -261,7 +261,7 @@ function tripViewLabel(view: TripView) {
 }
 
 function tripViewSubtitle(view: TripView) {
-  if (view === "timeline") return "Itinerary and members";
+  if (view === "timeline") return "Itinerary";
   if (view === "calendar") return "Day-by-day plan";
   if (view === "map") return "Stops and route";
   if (view === "budget") return "Shared cost view";
@@ -851,15 +851,7 @@ function TripMapView({
 
   if (markers.length === 0) {
     return (
-      <section style={{ display: "grid", gap: 12 }}>
-        <div style={{ display: "grid", gap: 2 }}>
-          <div style={{ fontSize: 16, fontWeight: 950, color: "var(--text)" }}>
-            Trip Map
-          </div>
-          <div style={{ fontSize: 13, color: "var(--sub)" }}>
-            Timeline items with valid coordinates
-          </div>
-        </div>
+      <section style={{ display: "grid", gap: 0 }}>
         <div
           style={{
             padding: 14,
@@ -884,22 +876,12 @@ function TripMapView({
   }
 
   return (
-    <section style={{ display: "grid", gap: 12 }}>
-      <div style={{ display: "grid", gap: 2 }}>
-        <div style={{ fontSize: 16, fontWeight: 950, color: "var(--text)" }}>
-          Trip Map
-        </div>
-        <div style={{ fontSize: 13, color: "var(--sub)" }}>
-          Timeline stops with valid coordinates
-        </div>
-      </div>
-
+    <section style={{ display: "grid", gap: 0 }}>
       <div
         data-trip-swipe-ignore="true"
         style={{
-          height: "calc(100dvh - 250px)",
+          height: "calc(100dvh - 184px)",
           minHeight: 420,
-          maxHeight: "72vh",
           borderRadius: 24,
           overflow: "hidden",
           border: "1px solid var(--border)",
@@ -1094,15 +1076,7 @@ function TripCalendarView({
 
   if (days.length === 0) {
     return (
-      <section style={{ display: "grid", gap: 12 }}>
-        <div style={{ display: "grid", gap: 2 }}>
-          <div style={{ fontSize: 16, fontWeight: 950, color: "var(--text)" }}>
-            Trip Calendar
-          </div>
-          <div style={{ fontSize: 13, color: "var(--sub)" }}>
-            Day-by-day overview from dated timeline items
-          </div>
-        </div>
+      <section style={{ display: "grid", gap: 0 }}>
         <div
           style={{
             display: "grid",
@@ -1147,25 +1121,16 @@ function TripCalendarView({
   }
 
   return (
-    <section style={{ display: "grid", gap: 14 }}>
-      <div style={{ display: "grid", gap: 2 }}>
-        <div style={{ fontSize: 16, fontWeight: 950, color: "var(--text)" }}>
-          Trip Calendar
-        </div>
-        <div style={{ fontSize: 13, color: "var(--sub)" }}>
-          Day-by-day overview for golf, stays, transfers, flights, and notes
-        </div>
-      </div>
-
+    <section style={{ display: "grid", gap: 10 }}>
       <div
         data-trip-swipe-ignore="true"
         style={{
           display: "grid",
           gridAutoFlow: "column",
-          gridAutoColumns: "minmax(118px, 148px)",
-          gap: 10,
+          gridAutoColumns: "minmax(96px, 122px)",
+          gap: 8,
           overflowX: "auto",
-          padding: "2px 2px 6px",
+          padding: "0 2px 4px",
           maxWidth: "100%",
           boxSizing: "border-box",
         }}
@@ -1184,8 +1149,9 @@ function TripCalendarView({
               style={{
                 minWidth: 0,
                 textAlign: "left",
-                padding: "12px 13px",
-                borderRadius: 30,
+                minHeight: 76,
+                padding: "9px 10px",
+                borderRadius: 34,
                 overflow: "hidden",
                 border: active
                   ? "1px solid var(--text)"
@@ -1194,19 +1160,20 @@ function TripCalendarView({
                 color: active ? "var(--bg)" : "var(--text)",
                 cursor: "pointer",
                 display: "grid",
-                gap: 7,
+                alignContent: "center",
+                gap: 5,
                 boxShadow: active
-                  ? "0 12px 30px rgba(0,0,0,0.22)"
-                  : "0 6px 18px rgba(0,0,0,0.08)",
+                  ? "0 10px 24px rgba(0,0,0,0.2)"
+                  : "0 5px 14px rgba(0,0,0,0.08)",
               }}
             >
               <div style={{ fontSize: 11, fontWeight: 950, opacity: 0.78 }}>
                 {day.weekday}
               </div>
-              <div style={{ fontSize: 13, fontWeight: 950, lineHeight: 1.25 }}>
+              <div style={{ fontSize: 12, fontWeight: 950, lineHeight: 1.2 }}>
                 {day.label}
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                 {indicators.map(([label, count]) => (
                   <span
                     key={label}
@@ -1215,8 +1182,8 @@ function TripCalendarView({
                       border: active
                         ? "1px solid var(--bg)"
                         : "1px solid var(--border)",
-                      padding: "2px 6px",
-                      fontSize: 10,
+                      padding: "1px 5px",
+                      fontSize: 9,
                       fontWeight: 950,
                       opacity: active ? 0.9 : 1,
                     }}
@@ -2824,16 +2791,17 @@ export default function TripDetailPage() {
       </>
       ) : null}
 
-      {activeView !== "overview" ? (
       <div
         onTouchStart={handleSubviewTouchStart}
         onTouchEnd={handleSubviewTouchEnd}
         style={{
           display: "grid",
-          gap: 12,
-          minHeight: "calc(100dvh - 150px)",
+          gap: activeView === "overview" ? 16 : 12,
+          minHeight:
+            activeView === "overview" ? undefined : "calc(100dvh - 150px)",
         }}
       >
+        {activeView !== "overview" ? (
         <section
           style={{
             display: "flex",
@@ -2887,6 +2855,7 @@ export default function TripDetailPage() {
             Back to trip
           </button>
         </section>
+        ) : null}
 
         {activeView === "timeline" ? (
       <>
@@ -3007,6 +2976,11 @@ export default function TripDetailPage() {
         ) : null}
       </section>
 
+      </>
+      ) : null}
+
+      {activeView === "overview" ? (
+      <>
       <section
         style={{
           ...safeSectionStyle,
@@ -3488,16 +3462,7 @@ export default function TripDetailPage() {
       ) : null}
 
       {activeView === "timeline" ? (
-      <section style={{ display: "grid", gap: 12 }}>
-        <div style={{ display: "grid", gap: 2 }}>
-          <div style={{ fontSize: 16, fontWeight: 950, color: "var(--text)" }}>
-            Trip Timeline
-          </div>
-          <div style={{ fontSize: 13, color: "var(--sub)" }}>
-            Rounds, stays, transfers, and notes for this trip
-          </div>
-        </div>
-
+      <section style={{ display: "grid", gap: 10 }}>
         {!loading && !err && trip && groupedItems.length === 0 ? (
           <div
             style={{
@@ -4833,7 +4798,6 @@ export default function TripDetailPage() {
         />
       ) : null}
       </div>
-      ) : null}
 
       {deleteTripConfirmOpen && trip ? createPortal(
         <div
