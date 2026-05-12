@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useParams } from "react-router-dom";
 import L from "leaflet";
 import {
@@ -2393,13 +2394,13 @@ export default function TripDetailPage() {
           boxShadow: "0 18px 46px rgba(0,0,0,0.28)",
         }}
       >
-        <div style={{ position: "relative", minHeight: 238 }}>
+        <div style={{ position: "relative", minHeight: 164 }}>
           <div
             style={{
               width: "100%",
               maxWidth: "100%",
               boxSizing: "border-box",
-              height: 258,
+              height: 184,
               overflow: "hidden",
               background:
                 "linear-gradient(135deg, var(--green), var(--muted))",
@@ -2459,7 +2460,7 @@ export default function TripDetailPage() {
             gap: 12,
             flexWrap: "wrap",
             padding: 16,
-            marginTop: -116,
+            marginTop: -84,
             position: "relative",
             zIndex: 1,
           }}
@@ -2701,6 +2702,55 @@ export default function TripDetailPage() {
           ) : null}
         </div>
       </section>
+
+      <div
+        style={{
+          display: "inline-flex",
+          width: "100%",
+          maxWidth: "100%",
+          padding: 4,
+          borderRadius: 999,
+          background: "var(--card)",
+          border: "1px solid var(--border)",
+          boxSizing: "border-box",
+          overflowX: "auto",
+        }}
+      >
+        {(["timeline", "calendar", "map", "budget"] as TripView[]).map((view) => {
+          const active = activeView === view;
+          return (
+            <button
+              key={view}
+              type="button"
+              onClick={() => setActiveView(view)}
+              style={{
+                flex: "1 0 auto",
+                height: 34,
+                padding: "0 13px",
+                borderRadius: 999,
+                border: "1px solid transparent",
+                background: active ? "var(--text)" : "transparent",
+                color: active ? "var(--bg)" : "var(--sub)",
+                cursor: "pointer",
+                fontWeight: 950,
+                fontSize: 12,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {view === "timeline"
+                ? "Timeline"
+                : view === "calendar"
+                  ? "Calendar"
+                  : view === "map"
+                    ? "Map"
+                    : "Budget"}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeView === "timeline" ? (
+      <>
 
       <section
         style={{
@@ -3295,47 +3345,8 @@ export default function TripDetailPage() {
         </div>
       ) : null}
 
-      <div
-        style={{
-          display: "inline-flex",
-          width: "fit-content",
-          maxWidth: "100%",
-          padding: 4,
-          borderRadius: 999,
-          background: "var(--card)",
-          border: "1px solid var(--border)",
-        }}
-      >
-        {(["timeline", "calendar", "map", "budget"] as TripView[]).map((view) => {
-          const active = activeView === view;
-          return (
-            <button
-              key={view}
-              type="button"
-              onClick={() => setActiveView(view)}
-              style={{
-                height: 32,
-                padding: "0 14px",
-                borderRadius: 999,
-                border: "1px solid transparent",
-                background: active ? "var(--text)" : "transparent",
-                color: active ? "var(--bg)" : "var(--sub)",
-                cursor: "pointer",
-                fontWeight: 950,
-                fontSize: 12,
-              }}
-            >
-              {view === "timeline"
-                ? "Timeline"
-                : view === "calendar"
-                  ? "Calendar"
-                  : view === "map"
-                    ? "Map"
-                    : "Budget"}
-            </button>
-          );
-        })}
-      </div>
+      </>
+      ) : null}
 
       {activeView === "timeline" ? (
       <section style={{ display: "grid", gap: 12 }}>
@@ -4683,7 +4694,7 @@ export default function TripDetailPage() {
         />
       )}
 
-      {deleteTripConfirmOpen && trip ? (
+      {deleteTripConfirmOpen && trip ? createPortal(
         <div
           role="dialog"
           aria-modal="true"
@@ -4782,7 +4793,6 @@ export default function TripDetailPage() {
                 value={deleteTripTitleInput}
                 onChange={(event) => setDeleteTripTitleInput(event.target.value)}
                 placeholder={trip.title}
-                autoFocus
                 style={editFieldStyle}
               />
             </label>
@@ -4836,6 +4846,8 @@ export default function TripDetailPage() {
             </div>
           </div>
         </div>
+        ,
+        document.body,
       ) : null}
     </div>
   );
