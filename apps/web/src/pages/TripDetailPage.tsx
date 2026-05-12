@@ -268,6 +268,16 @@ function tripViewSubtitle(view: TripView) {
   return "";
 }
 
+function shouldIgnoreTripSwipe(target: EventTarget | null) {
+  if (!(target instanceof Element)) return false;
+
+  return Boolean(
+    target.closest(
+      'input, textarea, select, button, a, [data-trip-swipe-ignore="true"], .leaflet-container',
+    ),
+  );
+}
+
 function itemIcon(type?: string | null) {
   const value = String(type ?? "").toLowerCase();
 
@@ -885,6 +895,7 @@ function TripMapView({
       </div>
 
       <div
+        data-trip-swipe-ignore="true"
         style={{
           height: "calc(100dvh - 250px)",
           minHeight: 420,
@@ -1147,6 +1158,7 @@ function TripCalendarView({
       </div>
 
       <div
+        data-trip-swipe-ignore="true"
         style={{
           display: "grid",
           gridAutoFlow: "column",
@@ -1554,7 +1566,15 @@ export default function TripDetailPage() {
   }
 
   function handleSubviewTouchStart(event: React.TouchEvent<HTMLElement>) {
-    if (activeView === "overview") return;
+    if (
+      activeView === "overview" ||
+      event.touches.length !== 1 ||
+      shouldIgnoreTripSwipe(event.target)
+    ) {
+      swipeStartRef.current = null;
+      return;
+    }
+
     const touch = event.touches[0];
     swipeStartRef.current = { x: touch.clientX, y: touch.clientY };
   }
@@ -2802,21 +2822,56 @@ export default function TripDetailPage() {
         })}
       </div>
       </>
-      ) : (
+      ) : null}
+
+      {activeView !== "overview" ? (
+      <div
+        onTouchStart={handleSubviewTouchStart}
+        onTouchEnd={handleSubviewTouchEnd}
+        style={{
+          display: "grid",
+          gap: 12,
+          minHeight: "calc(100dvh - 150px)",
+        }}
+      >
         <section
-          onTouchStart={handleSubviewTouchStart}
-          onTouchEnd={handleSubviewTouchEnd}
           style={{
-            display: "grid",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
             gap: 10,
-            padding: "2px 0 4px",
+            padding: "0 0 2px",
           }}
         >
+          <div style={{ minWidth: 0, display: "grid", gap: 1 }}>
+            <div
+              style={{
+                color: "var(--text)",
+                fontSize: 19,
+                lineHeight: 1.1,
+                fontWeight: 950,
+              }}
+            >
+              {tripViewLabel(activeView)}
+            </div>
+            <div
+              style={{
+                color: "var(--sub)",
+                fontSize: 12,
+                lineHeight: 1.2,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {trip?.title ?? "Trip"}
+            </div>
+          </div>
           <button
             type="button"
             onClick={() => setActiveView("overview")}
             style={{
-              width: "fit-content",
+              flex: "0 0 auto",
               height: 32,
               padding: "0 12px",
               borderRadius: 999,
@@ -2826,61 +2881,14 @@ export default function TripDetailPage() {
               cursor: "pointer",
               fontWeight: 900,
               fontSize: 12,
+              whiteSpace: "nowrap",
             }}
           >
             Back to trip
           </button>
-          <div style={{ display: "grid", gap: 2 }}>
-            <div style={{ color: "var(--text)", fontSize: 22, fontWeight: 950 }}>
-              {tripViewLabel(activeView)}
-            </div>
-            <div style={{ color: "var(--sub)", fontSize: 13 }}>
-              {trip?.title ?? "Trip"}
-            </div>
-          </div>
-          <div
-            style={{
-              display: "inline-flex",
-              width: "100%",
-              maxWidth: "100%",
-              padding: 4,
-              borderRadius: 999,
-              background: "var(--card)",
-              border: "1px solid var(--border)",
-              boxSizing: "border-box",
-              overflowX: "auto",
-            }}
-          >
-            {subviewOrder.map((view) => {
-              const active = activeView === view;
-              return (
-                <button
-                  key={view}
-                  type="button"
-                  onClick={() => setActiveView(view)}
-                  style={{
-                    flex: "1 0 auto",
-                    height: 30,
-                    padding: "0 10px",
-                    borderRadius: 999,
-                    border: "1px solid transparent",
-                    background: active ? "var(--text)" : "transparent",
-                    color: active ? "var(--bg)" : "var(--sub)",
-                    cursor: "pointer",
-                    fontWeight: 950,
-                    fontSize: 11,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {tripViewLabel(view)}
-                </button>
-              );
-            })}
-          </div>
         </section>
-      )}
 
-      {activeView === "timeline" ? (
+        {activeView === "timeline" ? (
       <>
 
       <section
@@ -4823,6 +4831,8 @@ export default function TripDetailPage() {
           markers={mapMarkers}
           onOpenCourse={(courseId) => nav(`/courses/${courseId}`)}
         />
+      ) : null}
+      </div>
       ) : null}
 
       {deleteTripConfirmOpen && trip ? createPortal(
