@@ -863,10 +863,10 @@ function TripMapView({
 
       <div
         style={{
-          height: 380,
-          minHeight: 320,
-          maxHeight: "62vh",
-          borderRadius: 14,
+          height: "calc(100dvh - 250px)",
+          minHeight: 420,
+          maxHeight: "72vh",
+          borderRadius: 24,
           overflow: "hidden",
           border: "1px solid var(--border)",
           background: "var(--card)",
@@ -1113,7 +1113,7 @@ function TripCalendarView({
   }
 
   return (
-    <section style={{ display: "grid", gap: 12 }}>
+    <section style={{ display: "grid", gap: 14 }}>
       <div style={{ display: "grid", gap: 2 }}>
         <div style={{ fontSize: 16, fontWeight: 950, color: "var(--text)" }}>
           Trip Calendar
@@ -1127,7 +1127,7 @@ function TripCalendarView({
         style={{
           display: "grid",
           gridAutoFlow: "column",
-          gridAutoColumns: "minmax(116px, 140px)",
+          gridAutoColumns: "minmax(118px, 148px)",
           gap: 10,
           overflowX: "auto",
           padding: "2px 2px 6px",
@@ -1149,17 +1149,19 @@ function TripCalendarView({
               style={{
                 minWidth: 0,
                 textAlign: "left",
-                padding: 12,
-                borderRadius: 18,
+                padding: "12px 13px",
+                borderRadius: 26,
                 border: active
                   ? "1px solid var(--text)"
-                  : "1px solid var(--border)",
+                  : "1px solid transparent",
                 background: active ? "var(--text)" : "var(--card)",
                 color: active ? "var(--bg)" : "var(--text)",
                 cursor: "pointer",
                 display: "grid",
                 gap: 7,
-                boxShadow: active ? "0 10px 28px rgba(0,0,0,0.18)" : "none",
+                boxShadow: active
+                  ? "0 12px 30px rgba(0,0,0,0.22)"
+                  : "0 6px 18px rgba(0,0,0,0.08)",
               }}
             >
               <div style={{ fontSize: 11, fontWeight: 950, opacity: 0.78 }}>
@@ -1197,7 +1199,7 @@ function TripCalendarView({
           display: "grid",
           gap: 12,
           padding: 14,
-          borderRadius: 22,
+          borderRadius: 28,
           background: "var(--card)",
           border: "1px solid var(--border)",
           boxShadow: "0 12px 34px rgba(0,0,0,0.14)",
@@ -1249,9 +1251,10 @@ function TripCalendarView({
                       display: "grid",
                       gap: 7,
                       padding: 12,
-                      borderRadius: 18,
-                      border: "1px solid var(--border)",
+                      borderRadius: 24,
+                      border: "1px solid transparent",
                       background: "var(--bg)",
+                      boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
                     }}
                   >
                     <div
@@ -2388,19 +2391,19 @@ export default function TripDetailPage() {
           display: "grid",
           gap: 0,
           padding: 0,
-          borderRadius: 26,
+          borderRadius: 22,
           background: "var(--card)",
           border: "1px solid var(--border)",
           boxShadow: "0 18px 46px rgba(0,0,0,0.28)",
         }}
       >
-        <div style={{ position: "relative", minHeight: 164 }}>
+        <div style={{ position: "relative", minHeight: 118 }}>
           <div
             style={{
               width: "100%",
               maxWidth: "100%",
               boxSizing: "border-box",
-              height: 184,
+              height: 138,
               overflow: "hidden",
               background:
                 "linear-gradient(135deg, var(--green), var(--muted))",
@@ -2433,10 +2436,10 @@ export default function TripDetailPage() {
             onClick={() => nav("/trips")}
             style={{
               position: "absolute",
-              top: 12,
-              left: 12,
-              height: 34,
-              padding: "0 12px",
+              top: 10,
+              left: 10,
+              height: 30,
+              padding: "0 10px",
               borderRadius: 999,
               border: "1px solid var(--border)",
               background: "rgba(0,0,0,0.38)",
@@ -2457,10 +2460,10 @@ export default function TripDetailPage() {
             display: "flex",
             alignItems: "flex-start",
             justifyContent: "space-between",
-            gap: 12,
+            gap: 10,
             flexWrap: "wrap",
-            padding: 16,
-            marginTop: -84,
+            padding: 12,
+            marginTop: -54,
             position: "relative",
             zIndex: 1,
           }}
@@ -2471,7 +2474,7 @@ export default function TripDetailPage() {
               width: "100%",
               maxWidth: "100%",
               display: "grid",
-              gap: 6,
+              gap: 4,
               flex: "1 1 240px",
             }}
           >
@@ -2554,7 +2557,7 @@ export default function TripDetailPage() {
               <>
                 <div
                   style={{
-                    fontSize: 22,
+                    fontSize: 19,
                     lineHeight: 1.15,
                     fontWeight: 950,
                     color: "var(--text)",
@@ -2565,26 +2568,14 @@ export default function TripDetailPage() {
                 </div>
 
                 {trip?.destination ? (
-                  <div style={{ fontSize: 14, color: "var(--sub)" }}>
+                  <div style={{ fontSize: 13, color: "var(--sub)" }}>
                     {trip.destination}
                   </div>
                 ) : null}
 
                 {tripRange ? (
-                  <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 900 }}>
+                  <div style={{ fontSize: 12, color: "var(--text)", fontWeight: 900 }}>
                     {tripRange}
-                  </div>
-                ) : null}
-
-                {trip?.description ? (
-                  <div
-                    style={{
-                      fontSize: 13,
-                      color: "var(--text)",
-                      lineHeight: 1.45,
-                    }}
-                  >
-                    {trip.description}
                   </div>
                 ) : null}
 
@@ -2594,7 +2585,7 @@ export default function TripDetailPage() {
                     flexWrap: "wrap",
                     gap: 8,
                     color: "var(--sub)",
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: 900,
                   }}
                 >
@@ -2606,7 +2597,7 @@ export default function TripDetailPage() {
           </div>
 
           {canEditTrip ? (
-            <div style={wrappingActionRowStyle}>
+            <div style={{ ...wrappingActionRowStyle, opacity: 0.82 }}>
               {!editingTrip ? (
               <>
                 <input
@@ -2621,8 +2612,8 @@ export default function TripDetailPage() {
                   onClick={() => coverInputRef.current?.click()}
                   disabled={!trip || deletingTrip || uploadingCover}
                   style={{
-                    height: 32,
-                    padding: "0 10px",
+                    height: 28,
+                    padding: "0 9px",
                     borderRadius: 999,
                     border: "1px solid var(--border)",
                     background: "transparent",
@@ -2632,7 +2623,7 @@ export default function TripDetailPage() {
                         ? "default"
                         : "pointer",
                     fontWeight: 900,
-                    fontSize: 12,
+                    fontSize: 11,
                     whiteSpace: "nowrap",
                   }}
                 >
@@ -2643,15 +2634,15 @@ export default function TripDetailPage() {
                   onClick={startTripEdit}
                   disabled={!trip || deletingTrip}
                   style={{
-                    height: 32,
-                    padding: "0 10px",
+                    height: 28,
+                    padding: "0 9px",
                     borderRadius: 999,
                     border: "1px solid var(--border)",
                     background: "transparent",
                     color: "var(--sub)",
                     cursor: !trip || deletingTrip ? "default" : "pointer",
                     fontWeight: 900,
-                    fontSize: 12,
+                    fontSize: 11,
                     whiteSpace: "nowrap",
                   }}
                 >
@@ -2662,15 +2653,15 @@ export default function TripDetailPage() {
                   onClick={openDeleteTripConfirm}
                   disabled={!trip || deletingTrip}
                   style={{
-                    height: 32,
-                    padding: "0 10px",
+                    height: 28,
+                    padding: "0 9px",
                     borderRadius: 999,
                     border: "1px solid var(--border)",
                     background: "transparent",
                     color: "var(--sub)",
                     cursor: !trip || deletingTrip ? "default" : "pointer",
                     fontWeight: 900,
-                    fontSize: 12,
+                    fontSize: 11,
                     whiteSpace: "nowrap",
                   }}
                 >
@@ -2685,8 +2676,8 @@ export default function TripDetailPage() {
               }}
               disabled={editingTrip || deletingTrip}
               style={{
-                height: 38,
-                padding: "0 14px",
+                height: 32,
+                padding: "0 12px",
                 borderRadius: 999,
                 border: "1px solid var(--border)",
                 background: "var(--text)",
