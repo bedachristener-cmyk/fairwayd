@@ -122,7 +122,7 @@ type EditDraft = {
   participantMemberIds: string[];
 };
 
-type TripView = "timeline" | "calendar" | "map";
+type TripView = "timeline" | "calendar" | "map" | "budget";
 
 type TripMapMarker = {
   id: string;
@@ -520,6 +520,57 @@ function formatDateRange(item: TripItem) {
 
   if (!endKey || startKey === endKey) return "";
   return `${start} - ${end}`;
+}
+
+function tripDateRange(items?: TripItem[]) {
+  const times =
+    items
+      ?.flatMap((item) => [itemDateValue(item), item.endDate])
+      .map((value) => (value ? new Date(value).getTime() : Number.NaN))
+      .filter((value) => Number.isFinite(value)) ?? [];
+
+  if (times.length === 0) return "";
+
+  const start = formatItemDate(new Date(Math.min(...times)).toISOString());
+  const end = formatItemDate(new Date(Math.max(...times)).toISOString());
+
+  if (!start || !end) return "";
+  return start === end ? start : `${start} - ${end}`;
+}
+
+function previewLine(item: TripItem) {
+  const type = String(item.type ?? "").toLowerCase();
+  const time = formatTimeRange(item);
+  const dateRange = formatDateRange(item);
+  const courseName = item.course?.name?.trim();
+
+  if (type === "flight" || type === "flights") {
+    return [
+      item.provider,
+      item.locationName && item.address
+        ? `${item.locationName} to ${item.address}`
+        : item.locationName || item.address,
+      time,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  }
+
+  if (type === "golf_round" || type === "course") {
+    return [courseName, time ? `Tee ${time}` : ""].filter(Boolean).join(" · ");
+  }
+
+  if (type === "hotel") {
+    return [item.locationName, dateRange || formatItemDate(itemDateValue(item))]
+      .filter(Boolean)
+      .join(" · ");
+  }
+
+  if (type === "transfer" || type === "car_rental") {
+    return [time, item.locationName || item.address].filter(Boolean).join(" · ");
+  }
+
+  return [time, item.locationName].filter(Boolean).join(" · ");
 }
 
 function timelineDetails(item: TripItem) {
@@ -1075,10 +1126,10 @@ function TripCalendarView({
         style={{
           display: "grid",
           gridAutoFlow: "column",
-          gridAutoColumns: "minmax(132px, 1fr)",
-          gap: 8,
+          gridAutoColumns: "minmax(116px, 140px)",
+          gap: 10,
           overflowX: "auto",
-          paddingBottom: 2,
+          padding: "2px 2px 6px",
           maxWidth: "100%",
           boxSizing: "border-box",
         }}
@@ -1097,8 +1148,8 @@ function TripCalendarView({
               style={{
                 minWidth: 0,
                 textAlign: "left",
-                padding: 10,
-                borderRadius: 14,
+                padding: 12,
+                borderRadius: 18,
                 border: active
                   ? "1px solid var(--text)"
                   : "1px solid var(--border)",
@@ -1107,6 +1158,7 @@ function TripCalendarView({
                 cursor: "pointer",
                 display: "grid",
                 gap: 7,
+                boxShadow: active ? "0 10px 28px rgba(0,0,0,0.18)" : "none",
               }}
             >
               <div style={{ fontSize: 11, fontWeight: 950, opacity: 0.78 }}>
@@ -1144,9 +1196,10 @@ function TripCalendarView({
           display: "grid",
           gap: 12,
           padding: 14,
-          borderRadius: 14,
+          borderRadius: 22,
           background: "var(--card)",
           border: "1px solid var(--border)",
+          boxShadow: "0 12px 34px rgba(0,0,0,0.14)",
         }}
       >
         <div style={{ display: "grid", gap: 2 }}>
@@ -1194,8 +1247,8 @@ function TripCalendarView({
                     style={{
                       display: "grid",
                       gap: 7,
-                      padding: 10,
-                      borderRadius: 12,
+                      padding: 12,
+                      borderRadius: 18,
                       border: "1px solid var(--border)",
                       background: "var(--bg)",
                     }}
@@ -2281,6 +2334,17 @@ export default function TripDetailPage() {
 
   const memberCount = trip?.members?.length ?? 0;
   const itemCount = trip?.items?.length ?? 0;
+  const tripRange = tripDateRange(trip?.items);
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayItems = (trip?.items ?? []).filter((item) => dateKey(item) === todayKey);
+  const futureItems = (trip?.items ?? [])
+    .filter((item) => {
+      const key = dateKey(item);
+      return key !== "unscheduled" && key >= todayKey;
+    })
+    .slice(0, 3);
+  const focusItems = todayItems.length > 0 ? todayItems.slice(0, 3) : futureItems;
+  const focusTitle = todayItems.length > 0 ? "Today" : "Next up";
   const budgetCards = [
     { label: "Total budget", value: budgetSummary.total },
     { label: "Golf cost", value: budgetSummary.categories.Golf },
@@ -2321,58 +2385,70 @@ export default function TripDetailPage() {
           ...safeSectionStyle,
           overflow: "hidden",
           display: "grid",
-          gap: 14,
-          padding: 14,
-          borderRadius: 14,
+          gap: 0,
+          padding: 0,
+          borderRadius: 26,
           background: "var(--card)",
           border: "1px solid var(--border)",
+          boxShadow: "0 18px 46px rgba(0,0,0,0.28)",
         }}
       >
-        <button
-          type="button"
-          onClick={() => nav("/trips")}
-          style={{
-            width: "fit-content",
-            height: 32,
-            padding: "0 12px",
-            borderRadius: 999,
-            border: "1px solid var(--border)",
-            background: "transparent",
-            color: "var(--sub)",
-            cursor: "pointer",
-            fontWeight: 900,
-            fontSize: 12,
-          }}
-        >
-          Back to Trips
-        </button>
-
-        {trip?.coverImageUrl ? (
+        <div style={{ position: "relative", minHeight: 238 }}>
           <div
             style={{
               width: "100%",
               maxWidth: "100%",
               boxSizing: "border-box",
-              aspectRatio: "16 / 9",
-              maxHeight: 340,
-              borderRadius: 14,
+              height: 258,
               overflow: "hidden",
-              border: "1px solid var(--border)",
-              background: "var(--bg)",
+              background:
+                "linear-gradient(135deg, var(--green), var(--muted))",
             }}
           >
-            <img
-              src={fileUrl(trip.coverImageUrl)}
-              alt={trip.title ? `${trip.title} cover` : "Trip cover"}
+            {trip?.coverImageUrl ? (
+              <img
+                src={fileUrl(trip.coverImageUrl)}
+                alt={trip.title ? `${trip.title} cover` : "Trip cover"}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  display: "block",
+                  objectFit: "cover",
+                }}
+              />
+            ) : null}
+            <div
+              aria-hidden="true"
               style={{
-                width: "100%",
-                height: "100%",
-                display: "block",
-                objectFit: "cover",
+                position: "absolute",
+                inset: 0,
+                background:
+                  "linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.78))",
               }}
             />
           </div>
-        ) : null}
+          <button
+            type="button"
+            onClick={() => nav("/trips")}
+            style={{
+              position: "absolute",
+              top: 12,
+              left: 12,
+              height: 34,
+              padding: "0 12px",
+              borderRadius: 999,
+              border: "1px solid var(--border)",
+              background: "rgba(0,0,0,0.38)",
+              color: "var(--text)",
+              cursor: "pointer",
+              fontWeight: 900,
+              fontSize: 12,
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            Back to Trips
+          </button>
+        </div>
 
         <div
           style={{
@@ -2382,6 +2458,10 @@ export default function TripDetailPage() {
             justifyContent: "space-between",
             gap: 12,
             flexWrap: "wrap",
+            padding: 16,
+            marginTop: -116,
+            position: "relative",
+            zIndex: 1,
           }}
         >
           <div
@@ -2477,6 +2557,7 @@ export default function TripDetailPage() {
                     lineHeight: 1.15,
                     fontWeight: 950,
                     color: "var(--text)",
+                    textShadow: "0 2px 18px rgba(0,0,0,0.35)",
                   }}
                 >
                   {trip?.title ?? "Trip"}
@@ -2485,6 +2566,12 @@ export default function TripDetailPage() {
                 {trip?.destination ? (
                   <div style={{ fontSize: 14, color: "var(--sub)" }}>
                     {trip.destination}
+                  </div>
+                ) : null}
+
+                {tripRange ? (
+                  <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 900 }}>
+                    {tripRange}
                   </div>
                 ) : null}
 
@@ -2619,173 +2706,116 @@ export default function TripDetailPage() {
         style={{
           ...safeSectionStyle,
           display: "grid",
-          gap: 10,
-          padding: 12,
-          borderRadius: 14,
+          gap: 12,
+          padding: 14,
+          borderRadius: 22,
           background: "var(--card)",
           border: "1px solid var(--border)",
+          boxShadow: "0 12px 34px rgba(0,0,0,0.16)",
           overflow: "hidden",
         }}
       >
-        <div
-          style={{
-            ...safeSectionStyle,
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            gap: 10,
-            flexWrap: "wrap",
-          }}
-        >
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
           <div style={{ minWidth: 0, display: "grid", gap: 2 }}>
-            <div style={{ fontSize: 15, fontWeight: 950, color: "var(--text)" }}>
-              Budget Summary
+            <div style={{ color: "var(--text)", fontSize: 16, fontWeight: 950 }}>
+              {focusTitle}
             </div>
-            <div style={{ fontSize: 12, color: "var(--sub)" }}>
-              Estimated costs from timeline item pricing
+            <div style={{ color: "var(--sub)", fontSize: 12 }}>
+              {focusItems.length > 0
+                ? "Your upcoming itinerary highlights"
+                : "Add dated items to build your daily plan"}
             </div>
           </div>
-          {budgetSummary.mixedCurrencies ? (
-            <div
+          {canEditTrip && focusItems.length === 0 ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (tripId) nav(`/trips/${tripId}/add-item`);
+              }}
               style={{
+                height: 32,
+                padding: "0 11px",
                 borderRadius: 999,
                 border: "1px solid var(--border)",
-                color: "var(--sub)",
-                fontSize: 11,
+                background: "var(--text)",
+                color: "var(--bg)",
+                cursor: "pointer",
                 fontWeight: 900,
-                padding: "5px 8px",
+                fontSize: 12,
                 whiteSpace: "nowrap",
               }}
             >
-              Mixed currencies
-            </div>
+              + Add Item
+            </button>
           ) : null}
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(118px, 1fr))",
-            gap: 8,
-            width: "100%",
-            maxWidth: "100%",
-            boxSizing: "border-box",
-          }}
-        >
-          {budgetCards.map((card) => (
-            <div
-              key={card.label}
-              style={{
-                minWidth: 0,
-                padding: "10px 10px",
-                borderRadius: 12,
-                border: "1px solid var(--border)",
-                background: "var(--bg)",
-                display: "grid",
-                gap: 4,
-              }}
-            >
-              <div
-                style={{
-                  color: "var(--text)",
-                  fontSize: budgetSummary.mixedCurrencies && card.value > 0 ? 13 : 18,
-                  lineHeight: 1.15,
-                  fontWeight: 950,
-                  overflowWrap: "anywhere",
-                }}
-              >
-                {budgetAmount(card.value, budgetSummary)}
-              </div>
-              <div
-                style={{
-                  color: "var(--sub)",
-                  fontSize: 11,
-                  fontWeight: 900,
-                  overflowWrap: "anywhere",
-                }}
-              >
-                {card.label}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div
-          style={{
-            ...safeSectionStyle,
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: 8,
-          }}
-        >
+        {focusItems.length > 0 ? (
           <div
             style={{
-              minWidth: 0,
               display: "grid",
-              gap: 7,
-              padding: 10,
-              borderRadius: 12,
-              border: "1px solid var(--border)",
-              background: "var(--bg)",
+              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+              gap: 10,
             }}
           >
-            <div style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
-              Cost Sources
-            </div>
-            {budgetFieldTotals.map((row) => (
-              <div
-                key={row.label}
+            {focusItems.map((item) => (
+              <article
+                key={`focus-${item.id}`}
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 10,
-                  color: "var(--sub)",
-                  fontSize: 12,
-                  fontWeight: 850,
+                  display: "grid",
+                  gap: 7,
+                  padding: 12,
+                  borderRadius: 18,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg)",
+                  minWidth: 0,
                 }}
               >
-                <span>{row.label}</span>
-                <span style={{ color: "var(--text)", textAlign: "right" }}>
-                  {budgetAmount(row.value, budgetSummary)}
-                </span>
-              </div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    color: "var(--sub)",
+                    fontSize: 11,
+                    fontWeight: 950,
+                  }}
+                >
+                  <span>{itemIcon(item.type)}</span>
+                  <span>{itemTypeLabel(item.type)}</span>
+                  <span>{formatDateLabel(dateKey(item))}</span>
+                </div>
+                <div
+                  style={{
+                    color: "var(--text)",
+                    fontSize: 15,
+                    lineHeight: 1.25,
+                    fontWeight: 950,
+                    overflowWrap: "anywhere",
+                  }}
+                >
+                  {(isGolfItem(item) && item.course?.name) ||
+                    item.title ||
+                    item.locationName ||
+                    itemTypeLabel(item.type)}
+                </div>
+                {previewLine(item) ? (
+                  <div
+                    style={{
+                      color: "var(--sub)",
+                      fontSize: 12,
+                      lineHeight: 1.35,
+                      fontWeight: 850,
+                      overflowWrap: "anywhere",
+                    }}
+                  >
+                    {previewLine(item)}
+                  </div>
+                ) : null}
+              </article>
             ))}
           </div>
-
-          <div
-            style={{
-              minWidth: 0,
-              display: "grid",
-              gap: 7,
-              padding: 10,
-              borderRadius: 12,
-              border: "1px solid var(--border)",
-              background: "var(--bg)",
-            }}
-          >
-            <div style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
-              Category Breakdown
-            </div>
-            {budgetCategoryTotals.map((row) => (
-              <div
-                key={row.label}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 10,
-                  color: "var(--sub)",
-                  fontSize: 12,
-                  fontWeight: 850,
-                }}
-              >
-                <span>{row.label}</span>
-                <span style={{ color: "var(--text)", textAlign: "right" }}>
-                  {budgetAmount(row.value, budgetSummary)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+        ) : null}
       </section>
 
       <section
@@ -3276,7 +3306,7 @@ export default function TripDetailPage() {
           border: "1px solid var(--border)",
         }}
       >
-        {(["timeline", "calendar", "map"] as TripView[]).map((view) => {
+        {(["timeline", "calendar", "map", "budget"] as TripView[]).map((view) => {
           const active = activeView === view;
           return (
             <button
@@ -3299,7 +3329,9 @@ export default function TripDetailPage() {
                 ? "Timeline"
                 : view === "calendar"
                   ? "Calendar"
-                  : "Map"}
+                  : view === "map"
+                    ? "Map"
+                    : "Budget"}
             </button>
           );
         })}
@@ -4499,6 +4531,151 @@ export default function TripDetailPage() {
           }}
           onOpenCourse={(courseId) => nav(`/courses/${courseId}`)}
         />
+      ) : activeView === "budget" ? (
+        <section
+          style={{
+            ...safeSectionStyle,
+            display: "grid",
+            gap: 12,
+            padding: 14,
+            borderRadius: 22,
+            background: "var(--card)",
+            border: "1px solid var(--border)",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              ...safeSectionStyle,
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              gap: 10,
+              flexWrap: "wrap",
+            }}
+          >
+            <div style={{ minWidth: 0, display: "grid", gap: 2 }}>
+              <div style={{ fontSize: 16, fontWeight: 950, color: "var(--text)" }}>
+                Budget Summary
+              </div>
+              <div style={{ fontSize: 12, color: "var(--sub)" }}>
+                Secondary planning view for shared trip costs
+              </div>
+            </div>
+            {budgetSummary.mixedCurrencies ? (
+              <div
+                style={{
+                  borderRadius: 999,
+                  border: "1px solid var(--border)",
+                  color: "var(--sub)",
+                  fontSize: 11,
+                  fontWeight: 900,
+                  padding: "5px 8px",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Mixed currencies
+              </div>
+            ) : null}
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(118px, 1fr))",
+              gap: 8,
+              width: "100%",
+              maxWidth: "100%",
+              boxSizing: "border-box",
+            }}
+          >
+            {budgetCards.map((card) => (
+              <div
+                key={card.label}
+                style={{
+                  minWidth: 0,
+                  padding: "12px 10px",
+                  borderRadius: 16,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg)",
+                  display: "grid",
+                  gap: 4,
+                }}
+              >
+                <div
+                  style={{
+                    color: "var(--text)",
+                    fontSize: budgetSummary.mixedCurrencies && card.value > 0 ? 13 : 18,
+                    lineHeight: 1.15,
+                    fontWeight: 950,
+                    overflowWrap: "anywhere",
+                  }}
+                >
+                  {budgetAmount(card.value, budgetSummary)}
+                </div>
+                <div
+                  style={{
+                    color: "var(--sub)",
+                    fontSize: 11,
+                    fontWeight: 900,
+                    overflowWrap: "anywhere",
+                  }}
+                >
+                  {card.label}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div
+            style={{
+              ...safeSectionStyle,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+              gap: 8,
+            }}
+          >
+            {[
+              ["Cost Sources", budgetFieldTotals],
+              ["Category Breakdown", budgetCategoryTotals],
+            ].map(([title, rows]) => (
+              <div
+                key={String(title)}
+                style={{
+                  minWidth: 0,
+                  display: "grid",
+                  gap: 7,
+                  padding: 12,
+                  borderRadius: 16,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg)",
+                }}
+              >
+                <div style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
+                  {String(title)}
+                </div>
+                {(rows as { label: string; value: number }[]).map((row) => (
+                  <div
+                    key={row.label}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 10,
+                      color: "var(--sub)",
+                      fontSize: 12,
+                      fontWeight: 850,
+                    }}
+                  >
+                    <span>{row.label}</span>
+                    <span style={{ color: "var(--text)", textAlign: "right" }}>
+                      {budgetAmount(row.value, budgetSummary)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </section>
       ) : (
         <TripMapView
           markers={mapMarkers}
@@ -4513,13 +4690,18 @@ export default function TripDetailPage() {
           aria-labelledby="delete-trip-title"
           style={{
             position: "fixed",
-            inset: 0,
-            zIndex: 5000,
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100dvh",
+            zIndex: 2147483000,
             background: "rgba(0,0,0,0.58)",
             display: "grid",
             placeItems: "center",
-            padding: "18px 14px calc(18px + env(safe-area-inset-bottom, 0px))",
+            padding:
+              "max(18px, env(safe-area-inset-top, 0px)) 14px max(18px, env(safe-area-inset-bottom, 0px))",
             boxSizing: "border-box",
+            overflow: "hidden",
           }}
           onClick={closeDeleteTripConfirm}
         >
@@ -4528,7 +4710,7 @@ export default function TripDetailPage() {
             style={{
               width: "100%",
               maxWidth: 480,
-              maxHeight: "100%",
+              maxHeight: "calc(100dvh - 36px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))",
               overflowY: "auto",
               boxSizing: "border-box",
               display: "grid",
