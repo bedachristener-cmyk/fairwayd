@@ -245,6 +245,29 @@ const wrappingActionRowStyle: React.CSSProperties = {
   minWidth: 0,
 };
 
+const subviewOrder: Exclude<TripView, "overview">[] = [
+  "timeline",
+  "calendar",
+  "map",
+  "budget",
+];
+
+function tripViewLabel(view: TripView) {
+  if (view === "timeline") return "Timeline";
+  if (view === "calendar") return "Calendar";
+  if (view === "map") return "Map";
+  if (view === "budget") return "Budget";
+  return "Trip";
+}
+
+function tripViewSubtitle(view: TripView) {
+  if (view === "timeline") return "Itinerary and members";
+  if (view === "calendar") return "Day-by-day plan";
+  if (view === "map") return "Stops and route";
+  if (view === "budget") return "Shared cost view";
+  return "";
+}
+
 function itemIcon(type?: string | null) {
   const value = String(type ?? "").toLowerCase();
 
@@ -1488,6 +1511,7 @@ export default function TripDetailPage() {
   const nav = useNavigate();
   const { token, user } = useAuth();
   const coverInputRef = useRef<HTMLInputElement | null>(null);
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -1518,6 +1542,35 @@ export default function TripDetailPage() {
   const myMembership = trip?.members?.find((member) => member.userId === user?.id);
   const canEditTrip =
     myMembership?.role === "OWNER" || myMembership?.role === "ADMIN";
+
+  function moveSubview(direction: 1 | -1) {
+    if (activeView === "overview") return;
+
+    const currentIndex = subviewOrder.indexOf(activeView);
+    if (currentIndex < 0) return;
+
+    const next = subviewOrder[currentIndex + direction];
+    if (next) setActiveView(next);
+  }
+
+  function handleSubviewTouchStart(event: React.TouchEvent<HTMLElement>) {
+    if (activeView === "overview") return;
+    const touch = event.touches[0];
+    swipeStartRef.current = { x: touch.clientX, y: touch.clientY };
+  }
+
+  function handleSubviewTouchEnd(event: React.TouchEvent<HTMLElement>) {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (!start || activeView === "overview") return;
+
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx)) return;
+
+    moveSubview(dx < 0 ? 1 : -1);
+  }
 
   async function loadTrip() {
     if (!token || !tripId) return;
@@ -2396,7 +2449,7 @@ export default function TripDetailPage() {
           display: "grid",
           gap: 0,
           padding: 0,
-          borderRadius: 22,
+          borderRadius: 28,
           background: "var(--card)",
           border: "1px solid var(--border)",
           boxShadow: "0 18px 46px rgba(0,0,0,0.28)",
@@ -2710,24 +2763,17 @@ export default function TripDetailPage() {
         }}
       >
         {(["timeline", "calendar", "map", "budget"] as TripView[]).map((view) => {
-          const label =
-            view === "timeline"
-              ? "Timeline"
-              : view === "calendar"
-                ? "Calendar"
-                : view === "map"
-                  ? "Map"
-                  : "Budget";
+          const label = tripViewLabel(view);
           return (
             <button
               key={view}
               type="button"
               onClick={() => setActiveView(view)}
               style={{
-                minHeight: 78,
-                padding: 14,
-                borderRadius: 24,
-                border: "1px solid var(--border)",
+                minHeight: 86,
+                padding: 16,
+                borderRadius: 30,
+                border: "1px solid rgba(255,255,255,0.08)",
                 background: "var(--card)",
                 color: "var(--text)",
                 cursor: "pointer",
@@ -2736,8 +2782,9 @@ export default function TripDetailPage() {
                 display: "grid",
                 alignContent: "center",
                 justifyItems: "start",
-                gap: 4,
-                boxShadow: "0 10px 26px rgba(0,0,0,0.14)",
+                gap: 5,
+                boxShadow: "0 14px 34px rgba(0,0,0,0.18)",
+                overflow: "hidden",
               }}
             >
               <span>{label}</span>
@@ -2748,7 +2795,7 @@ export default function TripDetailPage() {
                   fontWeight: 850,
                 }}
               >
-                Open view
+                {tripViewSubtitle(view)}
               </span>
             </button>
           );
@@ -2757,9 +2804,11 @@ export default function TripDetailPage() {
       </>
       ) : (
         <section
+          onTouchStart={handleSubviewTouchStart}
+          onTouchEnd={handleSubviewTouchEnd}
           style={{
             display: "grid",
-            gap: 8,
+            gap: 10,
             padding: "2px 0 4px",
           }}
         >
@@ -2783,17 +2832,50 @@ export default function TripDetailPage() {
           </button>
           <div style={{ display: "grid", gap: 2 }}>
             <div style={{ color: "var(--text)", fontSize: 22, fontWeight: 950 }}>
-              {activeView === "timeline"
-                ? "Timeline"
-                : activeView === "calendar"
-                  ? "Calendar"
-                  : activeView === "map"
-                    ? "Map"
-                    : "Budget"}
+              {tripViewLabel(activeView)}
             </div>
             <div style={{ color: "var(--sub)", fontSize: 13 }}>
               {trip?.title ?? "Trip"}
             </div>
+          </div>
+          <div
+            style={{
+              display: "inline-flex",
+              width: "100%",
+              maxWidth: "100%",
+              padding: 4,
+              borderRadius: 999,
+              background: "var(--card)",
+              border: "1px solid var(--border)",
+              boxSizing: "border-box",
+              overflowX: "auto",
+            }}
+          >
+            {subviewOrder.map((view) => {
+              const active = activeView === view;
+              return (
+                <button
+                  key={view}
+                  type="button"
+                  onClick={() => setActiveView(view)}
+                  style={{
+                    flex: "1 0 auto",
+                    height: 30,
+                    padding: "0 10px",
+                    borderRadius: 999,
+                    border: "1px solid transparent",
+                    background: active ? "var(--text)" : "transparent",
+                    color: active ? "var(--bg)" : "var(--sub)",
+                    cursor: "pointer",
+                    fontWeight: 950,
+                    fontSize: 11,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {tripViewLabel(view)}
+                </button>
+              );
+            })}
           </div>
         </section>
       )}
@@ -2864,8 +2946,8 @@ export default function TripDetailPage() {
                   display: "grid",
                   gap: 7,
                   padding: 12,
-                  borderRadius: 18,
-                  border: "1px solid var(--border)",
+                  borderRadius: 28,
+                  border: "1px solid rgba(255,255,255,0.08)",
                   background: "var(--bg)",
                   minWidth: 0,
                 }}
@@ -2923,7 +3005,7 @@ export default function TripDetailPage() {
           display: "grid",
           gap: 10,
           padding: 12,
-          borderRadius: 14,
+          borderRadius: 26,
           background: "var(--card)",
           border: "1px solid var(--border)",
           overflow: "hidden",
@@ -2954,7 +3036,7 @@ export default function TripDetailPage() {
               style={{
                 minWidth: 0,
                 padding: "10px 10px",
-                borderRadius: 12,
+                borderRadius: 22,
                 border: "1px solid var(--border)",
                 background: "var(--bg)",
                 display: "grid",
@@ -2993,7 +3075,7 @@ export default function TripDetailPage() {
           display: "grid",
           gap: 12,
           padding: 14,
-          borderRadius: 14,
+          borderRadius: 26,
           background: "var(--card)",
           border: "1px solid var(--border)",
         }}
@@ -3074,7 +3156,7 @@ export default function TripDetailPage() {
                   flexWrap: "wrap",
                   gap: 8,
                   padding: "8px 10px",
-                  borderRadius: 12,
+                  borderRadius: 22,
                   background: "var(--bg)",
                   border: "1px solid var(--border)",
                   fontSize: 13,
@@ -3118,7 +3200,7 @@ export default function TripDetailPage() {
                   display: "grid",
                   gap: 6,
                   padding: 6,
-                  borderRadius: 12,
+                  borderRadius: 22,
                   background: "var(--bg)",
                   border: "1px solid var(--border)",
                   boxSizing: "border-box",
@@ -3139,7 +3221,7 @@ export default function TripDetailPage() {
                       alignItems: "center",
                       gap: 8,
                       padding: "7px 8px",
-                      borderRadius: 10,
+                      borderRadius: 20,
                       border: "1px solid var(--border)",
                       background: "var(--card)",
                       color: "var(--text)",
@@ -3257,7 +3339,7 @@ export default function TripDetailPage() {
                   flexWrap: "wrap",
                   gap: 8,
                   padding: "7px 8px",
-                  borderRadius: 12,
+                  borderRadius: 22,
                   background: "var(--bg)",
                   border: "1px solid var(--border)",
                 }}
