@@ -162,6 +162,15 @@ type BudgetSummary = {
   categories: Record<BudgetCategory, number>;
 };
 
+type TripInvite = {
+  id: string;
+  token: string;
+  tripId: string;
+  createdAt?: string;
+  expiresAt?: string | null;
+  revokedAt?: string | null;
+};
+
 type TimelineDetail = {
   label: string;
   value: string;
@@ -1617,6 +1626,11 @@ export default function TripDetailPage() {
   const [newMemberRole, setNewMemberRole] = useState<TripRole>("MEMBER");
   const [memberBusyId, setMemberBusyId] = useState<string | null>(null);
   const [addingMember, setAddingMember] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [invite, setInvite] = useState<TripInvite | null>(null);
+  const [inviteBusy, setInviteBusy] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
+  const [inviteErr, setInviteErr] = useState<string | null>(null);
 
   const myMembership = trip?.members?.find((member) => member.userId === user?.id);
   const canEditTrip =
@@ -1805,6 +1819,82 @@ export default function TripDetailPage() {
 
     setDeleteTripConfirmOpen(false);
     setDeleteTripTitleInput("");
+  }
+
+  async function openInviteSheet() {
+    if (!tripId || !token || !canEditTrip) return;
+
+    setInviteOpen(true);
+    setInviteCopied(false);
+    setInviteErr(null);
+
+    try {
+      setInviteBusy(true);
+      const res = await fetch(
+        `${API_BASE}/trips/${encodeURIComponent(tripId)}/invite`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`HTTP ${res.status} ${res.statusText} ${text}`.trim());
+      }
+
+      setInvite(await res.json());
+    } catch (e: any) {
+      setInviteErr(e?.message ?? "Failed to load invite link");
+    } finally {
+      setInviteBusy(false);
+    }
+  }
+
+  async function regenerateInvite() {
+    if (!tripId || !token || !canEditTrip) return;
+
+    try {
+      setInviteBusy(true);
+      setInviteCopied(false);
+      setInviteErr(null);
+      const res = await fetch(
+        `${API_BASE}/trips/${encodeURIComponent(tripId)}/invite/regenerate`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`HTTP ${res.status} ${res.statusText} ${text}`.trim());
+      }
+
+      setInvite(await res.json());
+    } catch (e: any) {
+      setInviteErr(e?.message ?? "Failed to regenerate invite link");
+    } finally {
+      setInviteBusy(false);
+    }
+  }
+
+  async function copyInviteLink() {
+    if (!invite) return;
+
+    const link = `${window.location.origin}/trips/invite/${invite.token}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setInviteCopied(true);
+    } catch {
+      setInviteErr("Could not copy automatically. Select and copy the link.");
+    }
   }
 
   async function saveTripEdit() {
@@ -2795,6 +2885,28 @@ export default function TripDetailPage() {
                   }}
                 >
                   Edit Trip
+                </button>
+                <button
+                  type="button"
+                  onClick={openInviteSheet}
+                  disabled={!trip || deletingTrip || inviteBusy}
+                  style={{
+                    height: 28,
+                    padding: "0 9px",
+                    borderRadius: 999,
+                    border: "1px solid var(--border)",
+                    background: "transparent",
+                    color: "var(--sub)",
+                    cursor:
+                      !trip || deletingTrip || inviteBusy
+                        ? "default"
+                        : "pointer",
+                    fontWeight: 900,
+                    fontSize: 11,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Share / Invite
                 </button>
                 <button
                   type="button"
@@ -4900,6 +5012,144 @@ export default function TripDetailPage() {
         />
       ) : null}
       </div>
+
+      {inviteOpen && trip ? createPortal(
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="trip-invite-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 2147483000,
+            background: "rgba(0,0,0,0.58)",
+            display: "grid",
+            alignItems: "end",
+            padding: "16px 12px max(16px, env(safe-area-inset-bottom, 0px))",
+            boxSizing: "border-box",
+          }}
+          onClick={() => {
+            if (!inviteBusy) setInviteOpen(false);
+          }}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 520,
+              margin: "0 auto",
+              display: "grid",
+              gap: 12,
+              padding: 16,
+              borderRadius: 20,
+              border: "1px solid var(--border)",
+              background: "var(--card)",
+              color: "var(--text)",
+              boxShadow: "0 18px 60px rgba(0,0,0,0.38)",
+              boxSizing: "border-box",
+            }}
+          >
+            <div style={{ display: "grid", gap: 4 }}>
+              <div id="trip-invite-title" style={{ fontSize: 18, fontWeight: 950 }}>
+                Share {trip.title}
+              </div>
+              <div style={{ color: "var(--sub)", fontSize: 13, lineHeight: 1.4 }}>
+                Anyone with this link can join as a read-only trip member.
+              </div>
+            </div>
+
+            {inviteErr ? (
+              <div
+                style={{
+                  padding: 10,
+                  borderRadius: 12,
+                  background: "var(--danger-soft)",
+                  color: "var(--danger)",
+                  fontSize: 13,
+                  fontWeight: 800,
+                }}
+              >
+                {inviteErr}
+              </div>
+            ) : null}
+
+            <input
+              readOnly
+              value={
+                invite
+                  ? `${window.location.origin}/trips/invite/${invite.token}`
+                  : inviteBusy
+                    ? "Creating invite link..."
+                    : ""
+              }
+              onFocus={(event) => event.currentTarget.select()}
+              style={{
+                ...editFieldStyle,
+                background: "var(--bg)",
+                fontSize: 12,
+              }}
+            />
+
+            <div style={{ ...wrappingActionRowStyle, gap: 8 }}>
+              <button
+                type="button"
+                onClick={copyInviteLink}
+                disabled={!invite || inviteBusy}
+                style={{
+                  height: 34,
+                  padding: "0 12px",
+                  borderRadius: 999,
+                  border: "1px solid var(--border)",
+                  background: "var(--text)",
+                  color: "var(--bg)",
+                  cursor: !invite || inviteBusy ? "default" : "pointer",
+                  fontWeight: 900,
+                  fontSize: 12,
+                }}
+              >
+                {inviteCopied ? "Copied" : "Copy link"}
+              </button>
+              <button
+                type="button"
+                onClick={regenerateInvite}
+                disabled={inviteBusy}
+                style={{
+                  height: 34,
+                  padding: "0 12px",
+                  borderRadius: 999,
+                  border: "1px solid var(--border)",
+                  background: "transparent",
+                  color: "var(--sub)",
+                  cursor: inviteBusy ? "default" : "pointer",
+                  fontWeight: 900,
+                  fontSize: 12,
+                }}
+              >
+                {inviteBusy ? "Working..." : "Regenerate"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setInviteOpen(false)}
+                disabled={inviteBusy}
+                style={{
+                  height: 34,
+                  padding: "0 12px",
+                  borderRadius: 999,
+                  border: "1px solid var(--border)",
+                  background: "transparent",
+                  color: "var(--sub)",
+                  cursor: inviteBusy ? "default" : "pointer",
+                  fontWeight: 900,
+                  fontSize: 12,
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      ) : null}
 
       {deleteTripConfirmOpen && trip ? createPortal(
         <div

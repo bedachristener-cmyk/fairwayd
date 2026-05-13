@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma, TripRole } from '@prisma/client';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { AddTripMemberDto } from './dto/add-trip-member.dto';
 import { CreateTripItemDto } from './dto/create-trip-item.dto';
@@ -79,6 +80,10 @@ const tripItemInclude = {
     },
   },
 } satisfies Prisma.TripItemInclude;
+
+function inviteToken() {
+  return randomBytes(32).toString('base64url');
+}
 
 @Injectable()
 export class TripsService {
@@ -169,6 +174,105 @@ export class TripsService {
     }
 
     return trip;
+  }
+
+  async getOrCreateInvite(tripId: string, userId: string) {
+    await this.assertCanModifyTrip(tripId, userId);
+
+    const existing = await this.prisma.tripInvite.findFirst({
+      where: {
+        tripId,
+        revokedAt: null,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (existing) return existing;
+
+    return this.prisma.tripInvite.create({
+      data: {
+        tripId,
+        token: inviteToken(),
+        createdByUserId: userId,
+      },
+    });
+  }
+
+  async regenerateInvite(tripId: string, userId: string) {
+    await this.assertCanModifyTrip(tripId, userId);
+
+    await this.prisma.tripInvite.updateMany({
+      where: {
+        tripId,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
+
+    return this.prisma.tripInvite.create({
+      data: {
+        tripId,
+        token: inviteToken(),
+        createdByUserId: userId,
+      },
+    });
+  }
+
+  async findInvitePreview(token: string) {
+    const invite = await this.findActiveInviteOrThrow(token);
+
+    return {
+      token: invite.token,
+      trip: {
+        id: invite.trip.id,
+        title: invite.trip.title,
+        destination: invite.trip.destination,
+        coverImageUrl: invite.trip.coverImageUrl,
+        memberCount: invite.trip._count.members,
+        itemCount: invite.trip._count.items,
+      },
+    };
+  }
+
+  async joinInvite(token: string, userId: string) {
+    const invite = await this.findActiveInviteOrThrow(token);
+
+    const existing = await this.prisma.tripMember.findUnique({
+      where: {
+        tripId_userId: {
+          tripId: invite.tripId,
+          userId,
+        },
+      },
+      include: tripMemberInclude,
+    });
+
+    if (existing) {
+      return {
+        tripId: invite.tripId,
+        member: existing,
+        alreadyMember: true,
+      };
+    }
+
+    const member = await this.prisma.tripMember.create({
+      data: {
+        tripId: invite.tripId,
+        userId,
+        isGuest: false,
+        role: TripRole.MEMBER,
+      },
+      include: tripMemberInclude,
+    });
+
+    return {
+      tripId: invite.tripId,
+      member,
+      alreadyMember: false,
+    };
   }
 
   async update(tripId: string, userId: string, dto: UpdateTripDto) {
@@ -578,6 +682,37 @@ export class TripsService {
     }
 
     return membership;
+  }
+
+  private async findActiveInviteOrThrow(token: string) {
+    const cleanToken = token.trim();
+    if (!cleanToken) throw new NotFoundException('Invite not found');
+
+    const invite = await this.prisma.tripInvite.findUnique({
+      where: { token: cleanToken },
+      include: {
+        trip: {
+          include: {
+            _count: {
+              select: {
+                items: true,
+                members: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (
+      !invite ||
+      invite.revokedAt ||
+      (invite.expiresAt && invite.expiresAt <= new Date())
+    ) {
+      throw new NotFoundException('Invite not found');
+    }
+
+    return invite;
   }
 
   private async assertIsTripMember(tripId: string, userId: string) {

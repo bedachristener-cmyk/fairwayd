@@ -16,6 +16,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { extname } from 'path';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Public } from '../auth/public.decorator';
 import { uploadToR2 } from '../storage/r2.service';
 import { AddTripMemberDto } from './dto/add-trip-member.dto';
 import { CreateTripItemDto } from './dto/create-trip-item.dto';
@@ -47,6 +48,27 @@ export class TripsController {
   @Get()
   findMine(@Req() req: any) {
     return this.tripsService.findMine(req.user.id);
+  }
+
+  @Public()
+  @Get('invite/:token')
+  findInvitePreview(@Param('token') token: string) {
+    return this.tripsService.findInvitePreview(token);
+  }
+
+  @Post('invite/:token/join')
+  joinInvite(@Param('token') token: string, @Req() req: any) {
+    return this.tripsService.joinInvite(token, req.user.id);
+  }
+
+  @Post(':id/invite')
+  getOrCreateInvite(@Param('id') id: string, @Req() req: any) {
+    return this.tripsService.getOrCreateInvite(id, req.user.id);
+  }
+
+  @Post(':id/invite/regenerate')
+  regenerateInvite(@Param('id') id: string, @Req() req: any) {
+    return this.tripsService.regenerateInvite(id, req.user.id);
   }
 
   @Get(':id')

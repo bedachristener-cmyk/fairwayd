@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
 
+const POST_LOGIN_NEXT_KEY = "fairwayd_post_login_next";
+
 export default function EmailLoginCallbackPage() {
   const [params] = useSearchParams();
   const nav = useNavigate();
@@ -37,7 +39,9 @@ export default function EmailLoginCallbackPage() {
 
         if (cancelled) return;
         login(jwt, true);
-        nav("/feed", { replace: true });
+        const next = localStorage.getItem(POST_LOGIN_NEXT_KEY);
+        if (next) localStorage.removeItem(POST_LOGIN_NEXT_KEY);
+        nav(next && next.startsWith("/") ? next : "/feed", { replace: true });
       } catch {
         if (!cancelled) {
           setStatus("This login link is invalid or expired.");

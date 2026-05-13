@@ -42,6 +42,7 @@ model User {
   posts                          Post[]
   reviews                        Review[]
   createdTrips                   Trip[]              @relation("TripCreator")
+  createdTripInvites             TripInvite[]
   tripMemberships                TripMember[]
 }
 
@@ -333,11 +334,28 @@ model Trip {
   destination   String?
   coverImageUrl String?
   createdBy     User           @relation("TripCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  invites       TripInvite[]
   items         TripItem[]
   members       TripMember[]
 
   @@index([createdById])
   @@index([visibility])
+}
+
+model TripInvite {
+  id              String    @id @default(cuid())
+  tripId          String
+  token           String    @unique
+  createdByUserId String
+  createdAt       DateTime  @default(now())
+  revokedAt       DateTime?
+  expiresAt       DateTime?
+  createdBy       User      @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+  trip            Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@index([createdByUserId])
+  @@index([revokedAt])
 }
 
 model TripMember {

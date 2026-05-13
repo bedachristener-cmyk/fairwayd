@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import LoginPanel from "../components/LoginPanel";
 import DevLogin from "../components/DevLogin";
@@ -7,6 +7,7 @@ import logo from "../assets/logo.png";
 
 export default function LandingPage() {
   const nav = useNavigate();
+  const loc = useLocation();
   const { isAuthenticated, user, logout } = useAuth();
   const loginPanelRef = useRef<HTMLDivElement | null>(null);
   const aboutRef = useRef<HTMLDivElement | null>(null);
@@ -17,9 +18,10 @@ export default function LandingPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      nav("/feed", { replace: true });
+      const next = new URLSearchParams(loc.search).get("next");
+      nav(next && next.startsWith("/") ? next : "/feed", { replace: true });
     }
-  }, [isAuthenticated, nav]);
+  }, [isAuthenticated, loc.search, nav]);
 
   return (
     <div

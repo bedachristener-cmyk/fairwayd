@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import GoogleLoginButton from "../auth/oauth/GoogleLoginButton";
 import { API_BASE } from "../api/base";
 
+const POST_LOGIN_NEXT_KEY = "fairwayd_post_login_next";
+
 export default function LoginPanel() {
   const nav = useNavigate();
+  const loc = useLocation();
   const { login } = useAuth();
 
   const [msg, setMsg] = useState<string | null>(null);
@@ -31,7 +34,8 @@ export default function LoginPanel() {
   const onLoggedIn = (token: string) => {
     setMsg(null);
     login(token, rememberMe);
-    nav("/feed");
+    const next = new URLSearchParams(loc.search).get("next");
+    nav(next && next.startsWith("/") ? next : "/feed");
   };
 
   const requestEmailLogin = async () => {
@@ -42,6 +46,10 @@ export default function LoginPanel() {
       setEmailBusy(true);
       setMsg(null);
       setEmailSuccess(false);
+      const next = new URLSearchParams(loc.search).get("next");
+      if (next && next.startsWith("/")) {
+        localStorage.setItem(POST_LOGIN_NEXT_KEY, next);
+      }
 
       const res = await fetch(`${API_BASE}/auth/email/request`, {
         method: "POST",

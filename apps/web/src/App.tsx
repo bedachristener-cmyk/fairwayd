@@ -43,6 +43,7 @@ import CourseSubmissionHistoryAdminPage from "./pages/CourseSubmissionHistoryAdm
 import AddTripItemPage from "./pages/AddTripItemPage";
 import CreateTripPage from "./pages/CreateTripPage";
 import TripDetailPage from "./pages/TripDetailPage";
+import TripInvitePage from "./pages/TripInvitePage";
 import TripsPage from "./pages/TripsPage";
 
 /**
@@ -169,6 +170,7 @@ export default function App() {
 
               {/* Trips must stay before dynamic app routes */}
               <Route path="/trips">
+                <Route path="invite/:token" element={<TripInvitePage />} />
                 <Route
                   index
                   element={
