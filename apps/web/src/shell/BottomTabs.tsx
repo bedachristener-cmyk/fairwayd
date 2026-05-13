@@ -16,6 +16,7 @@ export default function BottomTabs() {
     return (
       <button
         type="button"
+        className={active ? "fw-bottom-tab fw-bottom-tab-active" : "fw-bottom-tab"}
         onClick={() => nav(props.to)}
         style={{
           flex: "1 1 0",
@@ -23,10 +24,10 @@ export default function BottomTabs() {
           border: 0,
           background: "transparent",
           padding: "9px 4px 7px",
-          fontWeight: active ? 900 : 750,
+          fontWeight: active ? 850 : 650,
           opacity: active ? 1 : 0.78,
           cursor: "pointer",
-          color: active ? "var(--text)" : "var(--sub)",
+          color: active ? "var(--bottom-tab-active, #fff)" : "var(--bottom-tab-inactive, var(--sub))",
           display: "grid",
           justifyItems: "center",
           alignContent: "center",
@@ -60,9 +61,10 @@ export default function BottomTabs() {
           style={{
             marginTop: 4,
             height: 3,
-            width: 22,
+            width: active ? 28 : 22,
             borderRadius: 999,
-            background: active ? "var(--green)" : "transparent",
+            background: active ? "var(--bottom-tab-indicator, var(--green))" : "transparent",
+            boxShadow: active ? "0 0 0 1px rgba(255,255,255,0.16)" : "none",
           }}
         />
       </button>
@@ -71,12 +73,13 @@ export default function BottomTabs() {
 
   return (
     <div
+      className="fw-bottom-tabs"
       style={{
         position: "fixed",
         left: 0,
         right: 0,
         bottom: 0,
-        background: "rgba(10,14,11,0.92)",
+        background: "var(--bottom-tabs-bg, rgba(10,14,11,0.92))",
         backdropFilter: "blur(10px)",
         borderTop: "1px solid var(--border)",
         display: "flex",

@@ -11,6 +11,10 @@ html[data-theme="dark"] {
   --green: #27c46b;
   --danger: #fca5a5;
   --danger-soft: rgba(252, 165, 165, 0.12);
+  --bottom-tabs-bg: rgba(10, 14, 11, 0.92);
+  --bottom-tab-active: #ffffff;
+  --bottom-tab-inactive: rgba(243, 244, 246, 0.68);
+  --bottom-tab-indicator: var(--green);
 }
 
 /* LIGHT */
@@ -24,6 +28,10 @@ html[data-theme="light"] {
   --green: #16a34a;
   --danger: #dc2626;
   --danger-soft: rgba(220, 38, 38, 0.08);
+  --bottom-tabs-bg: rgba(255, 255, 255, 0.94);
+  --bottom-tab-active: #111827;
+  --bottom-tab-inactive: #6b7280;
+  --bottom-tab-indicator: #111827;
 }
 
 /* FORREST */
@@ -37,6 +45,10 @@ html[data-theme="forest"] {
   --green: #34d300;
   --danger: #fda4af;
   --danger-soft: rgba(253, 164, 175, 0.12);
+  --bottom-tabs-bg: rgba(15, 26, 20, 0.94);
+  --bottom-tab-active: #ffffff;
+  --bottom-tab-inactive: rgba(230, 244, 234, 0.68);
+  --bottom-tab-indicator: var(--green);
 }
 
 html[data-theme="ocean"] {
@@ -49,6 +61,10 @@ html[data-theme="ocean"] {
   --green: #38bdf8;
   --danger: #fda4af;
   --danger-soft: rgba(253, 164, 175, 0.12);
+  --bottom-tabs-bg: rgba(11, 18, 32, 0.94);
+  --bottom-tab-active: #ffffff;
+  --bottom-tab-inactive: rgba(230, 240, 255, 0.68);
+  --bottom-tab-indicator: var(--green);
 }
 
 html[data-theme="warm"] {
@@ -61,6 +77,10 @@ html[data-theme="warm"] {
   --green: #d97706;
   --danger: #b91c1c;
   --danger-soft: rgba(185, 28, 28, 0.08);
+  --bottom-tabs-bg: rgba(255, 255, 255, 0.94);
+  --bottom-tab-active: #3b2f2f;
+  --bottom-tab-inactive: #8b6f6f;
+  --bottom-tab-indicator: #3b2f2f;
 }
 
 html[data-theme="contrast"] {
@@ -73,6 +93,10 @@ html[data-theme="contrast"] {
   --green: #00ff88;
   --danger: #ff8a8a;
   --danger-soft: rgba(255, 138, 138, 0.14);
+  --bottom-tabs-bg: rgba(0, 0, 0, 0.96);
+  --bottom-tab-active: #ffffff;
+  --bottom-tab-inactive: #d1d5db;
+  --bottom-tab-indicator: var(--green);
 }
 
 /* fallback if attribute missing */
@@ -86,6 +110,10 @@ html[data-theme="contrast"] {
   --green: #27c46b;
   --danger: #fca5a5;
   --danger-soft: rgba(252, 165, 165, 0.12);
+  --bottom-tabs-bg: rgba(10, 14, 11, 0.92);
+  --bottom-tab-active: #ffffff;
+  --bottom-tab-inactive: rgba(233, 238, 242, 0.68);
+  --bottom-tab-indicator: var(--green);
 }
 
 /* ================= BASE ================= */
@@ -325,7 +353,7 @@ button {
   }
 
   .fw-shell-main .fw-trip-calendar-day-surface {
-    border-radius: 9999px !important;
+    border-radius: 12px !important;
     overflow: hidden !important;
     background: var(--fw-trip-calendar-day-bg, transparent) !important;
     color: var(--fw-trip-calendar-day-color, inherit) !important;

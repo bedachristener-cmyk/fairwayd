@@ -1152,10 +1152,10 @@ function TripCalendarView({
         data-trip-swipe-ignore="true"
         style={{
           display: "flex",
-          gap: 7,
+          gap: 6,
           overflowX: "auto",
           overflowY: "visible",
-          padding: "0 0 4px",
+          padding: "0 0 3px",
           maxWidth: "100%",
           boxSizing: "border-box",
           alignItems: "stretch",
@@ -1176,9 +1176,9 @@ function TripCalendarView({
               style={{
                 appearance: "none",
                 WebkitAppearance: "none",
-                flex: "0 0 72px",
-                width: 72,
-                height: 82,
+                flex: "0 0 68px",
+                width: 68,
+                height: 76,
                 textAlign: "center",
                 padding: 0,
                 borderRadius: 0,
@@ -1196,28 +1196,28 @@ function TripCalendarView({
                 style={{
                   width: "100%",
                   height: "100%",
-                  padding: 8,
-                  borderRadius: 9999,
+                  padding: "7px 6px",
+                  borderRadius: 12,
                   overflow: "hidden",
                   "--fw-trip-calendar-day-bg": active
                     ? "#fff"
-                    : "rgba(255,255,255,0.035)",
+                    : "rgba(127,127,127,0.1)",
                   "--fw-trip-calendar-day-color": active
-                    ? "var(--bg)"
+                    ? "#111827"
                     : "var(--text)",
-                  background: active ? "#fff" : "rgba(255,255,255,0.035)",
+                  background: active ? "#fff" : "rgba(127,127,127,0.1)",
                   backgroundClip: "padding-box",
-                  color: active ? "var(--bg)" : "var(--text)",
+                  color: active ? "#111827" : "var(--text)",
                   WebkitMaskImage: "-webkit-radial-gradient(white, black)",
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: 4,
+                  gap: 3,
                   boxSizing: "border-box",
                   boxShadow: active
-                    ? "0 8px 18px rgba(0,0,0,0.16)"
-                    : "none",
+                    ? "0 6px 14px rgba(0,0,0,0.16), inset 0 0 0 1px rgba(17,24,39,0.12)"
+                    : "inset 0 0 0 1px rgba(127,127,127,0.08)",
                 } as React.CSSProperties}
               >
                 <div
