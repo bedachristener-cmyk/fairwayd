@@ -293,50 +293,48 @@ export default function TripsPage() {
                   boxSizing: "border-box",
                 }}
               >
-                <div
-                  aria-hidden="true"
-                  style={{
-                    height: 104,
-                    minHeight: 104,
-                    borderRadius: 14,
-                    overflow: "hidden",
-                    background: coverUrl
-                      ? "var(--card)"
-                      : "linear-gradient(135deg, var(--green), var(--muted))",
-                    border: "1px solid var(--border)",
-                    position: "relative",
-                  }}
-                >
-                  {coverUrl ? (
-                    <img
-                      src={coverUrl}
-                      alt=""
-                      style={{
-                        position: "absolute",
-                        inset: 0,
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                        display: "block",
-                      }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        position: "absolute",
-                        inset: 0,
-                        display: "grid",
-                        alignContent: "end",
-                        padding: 10,
-                        color: "var(--bg)",
-                        fontSize: 24,
-                        fontWeight: 850,
-                      }}
-                    >
-                      {flag || "Trip"}
-                    </div>
-                  )}
-                </div>
+                {coverUrl ? (
+                  <img
+                    aria-hidden="true"
+                    src={coverUrl}
+                    alt=""
+                    style={{
+                      width: 88,
+                      height: 104,
+                      minWidth: 88,
+                      borderRadius: 14,
+                      overflow: "hidden",
+                      border: "1px solid var(--border)",
+                      objectFit: "cover",
+                      objectPosition: "center center",
+                      display: "block",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                ) : (
+                  <div
+                    aria-hidden="true"
+                    style={{
+                      width: 88,
+                      height: 104,
+                      minWidth: 88,
+                      borderRadius: 14,
+                      overflow: "hidden",
+                      background:
+                        "linear-gradient(135deg, var(--green), var(--muted))",
+                      border: "1px solid var(--border)",
+                      display: "grid",
+                      alignContent: "end",
+                      padding: 10,
+                      color: "var(--bg)",
+                      fontSize: 24,
+                      fontWeight: 850,
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    {flag || "Trip"}
+                  </div>
+                )}
 
                 <div
                   style={{

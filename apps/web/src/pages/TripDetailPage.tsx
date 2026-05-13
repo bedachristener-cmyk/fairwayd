@@ -397,6 +397,31 @@ function formatWeekdayLabel(key: string) {
   }).format(date);
 }
 
+function calendarDateParts(key: string) {
+  if (key === "unscheduled") {
+    return { dayMonth: "No date", year: "" };
+  }
+
+  const date = new Date(`${key}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) {
+    return { dayMonth: "No date", year: "" };
+  }
+
+  const parts = new Intl.DateTimeFormat(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).formatToParts(date);
+  const day = parts.find((part) => part.type === "day")?.value ?? "";
+  const month = parts.find((part) => part.type === "month")?.value ?? "";
+  const year = parts.find((part) => part.type === "year")?.value ?? "";
+
+  return {
+    dayMonth: [day, month].filter(Boolean).join(" "),
+    year,
+  };
+}
+
 function formatItemDate(value?: string | null) {
   if (!value) return "";
 
@@ -1126,18 +1151,19 @@ function TripCalendarView({
       <div
         data-trip-swipe-ignore="true"
         style={{
-          display: "grid",
-          gridAutoFlow: "column",
-          gridAutoColumns: "minmax(58px, 76px)",
-          gap: 5,
+          display: "flex",
+          gap: 7,
           overflowX: "auto",
-          padding: "0 0 2px",
+          overflowY: "visible",
+          padding: "0 0 4px",
           maxWidth: "100%",
           boxSizing: "border-box",
+          alignItems: "stretch",
         }}
       >
         {days.map((day) => {
           const active = day.key === selected.key;
+          const dateParts = calendarDateParts(day.key);
           const indicators = Object.entries(day.indicators).filter(
             ([, count]) => count > 0,
           ) as [CalendarIndicator, number][];
@@ -1148,61 +1174,94 @@ function TripCalendarView({
               type="button"
               onClick={() => onSelectDay(day.key)}
               style={{
-                minWidth: 0,
+                appearance: "none",
+                WebkitAppearance: "none",
+                flex: "0 0 72px",
+                width: 72,
+                minHeight: 78,
                 textAlign: "center",
-                minHeight: 46,
-                padding: "6px 8px",
-                borderRadius: active ? 22 : 999,
+                padding: 8,
+                borderRadius: 20,
                 overflow: "hidden",
-                border: active
-                  ? "1px solid rgba(255,255,255,0.86)"
-                  : "1px solid transparent",
-                background: active ? "var(--text)" : "transparent",
+                border: "1px solid transparent",
+                background: active ? "#fff" : "rgba(255,255,255,0.035)",
+                backgroundClip: "padding-box",
                 color: active ? "var(--bg)" : "var(--text)",
                 cursor: "pointer",
-                display: "grid",
-                alignContent: "center",
-                justifyItems: "center",
-                gap: 3,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 4,
+                boxSizing: "border-box",
                 boxShadow: active
-                  ? "0 6px 16px rgba(0,0,0,0.16)"
+                  ? "0 8px 18px rgba(0,0,0,0.16)"
                   : "none",
               }}
             >
-              <div style={{ fontSize: 10, fontWeight: 700, opacity: 0.72 }}>
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 500,
+                  lineHeight: 1.1,
+                  opacity: active ? 0.72 : 0.68,
+                }}
+              >
                 {day.weekday}
               </div>
-              <div style={{ fontSize: 12, fontWeight: 800, lineHeight: 1.1 }}>
-                {day.label}
+              <div style={{ display: "grid", gap: 1, justifyItems: "center" }}>
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    lineHeight: 1.15,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {dateParts.dayMonth}
+                </div>
+                {dateParts.year ? (
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 500,
+                      lineHeight: 1.1,
+                      opacity: active ? 0.76 : 0.6,
+                    }}
+                  >
+                    {dateParts.year}
+                  </div>
+                ) : null}
               </div>
-              {day.key === calendarTodayKey || active ? (
-                <div style={{ fontSize: 8, fontWeight: 700, lineHeight: 1 }}>
-                  {active ? "Selected" : "Today"}
+              {day.key === calendarTodayKey ? (
+                <div style={{ fontSize: 8, fontWeight: 500, lineHeight: 1 }}>
+                  Today
                 </div>
               ) : null}
               <div
                 style={{
                   display: "flex",
-                  flexWrap: "wrap",
                   justifyContent: "center",
+                  alignItems: "center",
                   gap: 2,
-                  minHeight: indicators.length > 0 ? 7 : 0,
+                  height: 8,
+                  maxWidth: "100%",
                 }}
               >
-                {indicators.map(([label, count]) => (
+                {indicators.slice(0, 3).map(([label, count]) => (
                   <span
                     key={label}
                     title={`${label} ${count}`}
                     style={{
                       width: count > 1 ? "auto" : 5,
-                      height: 5,
+                      height: count > 1 ? 8 : 5,
                       minWidth: 5,
                       borderRadius: 999,
                       border: "1px solid currentColor",
                       padding: count > 1 ? "0 3px" : 0,
                       fontSize: 7,
                       lineHeight: count > 1 ? "8px" : "5px",
-                      fontWeight: 700,
+                      fontWeight: 500,
                       opacity: active ? 0.82 : 0.58,
                       boxSizing: "border-box",
                     }}
