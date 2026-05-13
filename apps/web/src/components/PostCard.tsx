@@ -542,8 +542,22 @@ export default function PostCard({
   };
 
   const handleShareClick = async () => {
+    const shareUrl = `${window.location.origin}/feed?postId=${encodeURIComponent(post.id)}&comment=1`;
+
     try {
-      const shareUrl = `${window.location.origin}/feed?postId=${encodeURIComponent(post.id)}&comment=1`;
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: "Fairwayd post",
+            text: "Check out this golf post on Fairwayd",
+            url: shareUrl,
+          });
+          return;
+        } catch {
+          // Fall back to the existing copy-link behavior when native sharing is unavailable or dismissed.
+        }
+      }
+
       await copyText(shareUrl);
       setShareCopied(true);
     } catch (err) {
