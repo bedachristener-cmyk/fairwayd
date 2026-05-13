@@ -880,9 +880,9 @@ function TripMapView({
       <div
         data-trip-swipe-ignore="true"
         style={{
-          height: "calc(100dvh - 184px)",
-          minHeight: 420,
-          borderRadius: 24,
+          height: "calc(100dvh - 112px)",
+          minHeight: 520,
+          borderRadius: 18,
           overflow: "hidden",
           border: "1px solid var(--border)",
           background: "var(--card)",
@@ -1054,6 +1054,7 @@ function TripCalendarView({
   onOpenCourse: (courseId: string) => void;
 }) {
   const selected = days.find((day) => day.key === selectedDay) ?? days[0];
+  const calendarTodayKey = new Date().toISOString().slice(0, 10);
   const sections = useMemo(() => {
     const grouped = new Map<CalendarSection, TripItem[]>();
     const order: CalendarSection[] = [
@@ -1121,16 +1122,16 @@ function TripCalendarView({
   }
 
   return (
-    <section style={{ display: "grid", gap: 10 }}>
+    <section style={{ display: "grid", gap: 6 }}>
       <div
         data-trip-swipe-ignore="true"
         style={{
           display: "grid",
           gridAutoFlow: "column",
-          gridAutoColumns: "minmax(96px, 122px)",
-          gap: 8,
+          gridAutoColumns: "minmax(58px, 76px)",
+          gap: 5,
           overflowX: "auto",
-          padding: "0 2px 4px",
+          padding: "0 0 2px",
           maxWidth: "100%",
           boxSizing: "border-box",
         }}
@@ -1148,47 +1149,65 @@ function TripCalendarView({
               onClick={() => onSelectDay(day.key)}
               style={{
                 minWidth: 0,
-                textAlign: "left",
-                minHeight: 76,
-                padding: "9px 10px",
-                borderRadius: 34,
+                textAlign: "center",
+                minHeight: 46,
+                padding: "6px 8px",
+                borderRadius: active ? 22 : 999,
                 overflow: "hidden",
                 border: active
-                  ? "1px solid var(--text)"
+                  ? "1px solid rgba(255,255,255,0.86)"
                   : "1px solid transparent",
-                background: active ? "var(--text)" : "var(--card)",
+                background: active ? "var(--text)" : "transparent",
                 color: active ? "var(--bg)" : "var(--text)",
                 cursor: "pointer",
                 display: "grid",
                 alignContent: "center",
-                gap: 5,
+                justifyItems: "center",
+                gap: 3,
                 boxShadow: active
-                  ? "0 10px 24px rgba(0,0,0,0.2)"
-                  : "0 5px 14px rgba(0,0,0,0.08)",
+                  ? "0 6px 16px rgba(0,0,0,0.16)"
+                  : "none",
               }}
             >
-              <div style={{ fontSize: 11, fontWeight: 950, opacity: 0.78 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, opacity: 0.72 }}>
                 {day.weekday}
               </div>
-              <div style={{ fontSize: 12, fontWeight: 950, lineHeight: 1.2 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, lineHeight: 1.1 }}>
                 {day.label}
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+              {day.key === calendarTodayKey || active ? (
+                <div style={{ fontSize: 8, fontWeight: 700, lineHeight: 1 }}>
+                  {active ? "Selected" : "Today"}
+                </div>
+              ) : null}
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  justifyContent: "center",
+                  gap: 2,
+                  minHeight: indicators.length > 0 ? 7 : 0,
+                }}
+              >
                 {indicators.map(([label, count]) => (
                   <span
                     key={label}
+                    title={`${label} ${count}`}
                     style={{
+                      width: count > 1 ? "auto" : 5,
+                      height: 5,
+                      minWidth: 5,
                       borderRadius: 999,
-                      border: active
-                        ? "1px solid var(--bg)"
-                        : "1px solid var(--border)",
-                      padding: "1px 5px",
-                      fontSize: 9,
-                      fontWeight: 950,
-                      opacity: active ? 0.9 : 1,
+                      border: "1px solid currentColor",
+                      padding: count > 1 ? "0 3px" : 0,
+                      fontSize: 7,
+                      lineHeight: count > 1 ? "8px" : "5px",
+                      fontWeight: 700,
+                      opacity: active ? 0.82 : 0.58,
+                      boxSizing: "border-box",
                     }}
                   >
-                    {label} {count}
+                    {count > 1 ? count : ""}
                   </span>
                 ))}
               </div>
@@ -1200,20 +1219,20 @@ function TripCalendarView({
       <div
         style={{
           display: "grid",
-          gap: 12,
-          padding: 14,
-          borderRadius: 30,
+          gap: 10,
+          padding: 12,
+          borderRadius: 18,
           overflow: "hidden",
           background: "var(--card)",
           border: "1px solid var(--border)",
-          boxShadow: "0 12px 34px rgba(0,0,0,0.14)",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
         }}
       >
         <div style={{ display: "grid", gap: 2 }}>
-          <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 950 }}>
+          <div style={{ color: "var(--sub)", fontSize: 11, fontWeight: 700 }}>
             {selected.weekday}
           </div>
-          <div style={{ color: "var(--text)", fontSize: 18, fontWeight: 950 }}>
+          <div style={{ color: "var(--text)", fontSize: 16, fontWeight: 850 }}>
             {selected.label}
           </div>
         </div>
@@ -1224,7 +1243,7 @@ function TripCalendarView({
               style={{
                 color: "var(--text)",
                 fontSize: 13,
-                fontWeight: 950,
+                fontWeight: 800,
                 paddingTop: 4,
               }}
             >
@@ -1274,7 +1293,7 @@ function TripCalendarView({
                         <div
                           style={{
                             color: "var(--text)",
-                            fontWeight: 950,
+                            fontWeight: 850,
                             overflowWrap: "anywhere",
                             lineHeight: 1.25,
                           }}
@@ -1286,7 +1305,7 @@ function TripCalendarView({
                             style={{
                               color: "var(--sub)",
                               fontSize: 12,
-                              fontWeight: 850,
+                              fontWeight: 600,
                               overflowWrap: "anywhere",
                             }}
                           >
@@ -1299,7 +1318,7 @@ function TripCalendarView({
                           style={{
                             color: "var(--text)",
                             fontSize: 12,
-                            fontWeight: 950,
+                            fontWeight: 750,
                             whiteSpace: "nowrap",
                           }}
                         >
@@ -2422,9 +2441,12 @@ export default function TripDetailPage() {
         margin: "0 auto",
         boxSizing: "border-box",
         overflowX: "hidden",
-        padding: "16px 16px calc(96px + env(safe-area-inset-bottom, 0px))",
+        padding:
+          activeView === "overview"
+            ? "16px 16px calc(96px + env(safe-area-inset-bottom, 0px))"
+            : "4px 12px calc(24px + env(safe-area-inset-bottom, 0px))",
         display: "grid",
-        gap: 16,
+        gap: activeView === "overview" ? 16 : 8,
       }}
     >
       {activeView === "overview" ? (
@@ -2796,9 +2818,7 @@ export default function TripDetailPage() {
         onTouchEnd={handleSubviewTouchEnd}
         style={{
           display: "grid",
-          gap: activeView === "overview" ? 16 : 12,
-          minHeight:
-            activeView === "overview" ? undefined : "calc(100dvh - 150px)",
+          gap: activeView === "overview" ? 16 : 6,
         }}
       >
         {activeView !== "overview" ? (
@@ -2808,14 +2828,15 @@ export default function TripDetailPage() {
             alignItems: "center",
             justifyContent: "space-between",
             gap: 10,
-            padding: "0 0 2px",
+            padding: 0,
+            minHeight: 34,
           }}
         >
           <div style={{ minWidth: 0, display: "grid", gap: 1 }}>
             <div
               style={{
                 color: "var(--text)",
-                fontSize: 19,
+                fontSize: 17,
                 lineHeight: 1.1,
                 fontWeight: 950,
               }}
@@ -2825,7 +2846,7 @@ export default function TripDetailPage() {
             <div
               style={{
                 color: "var(--sub)",
-                fontSize: 12,
+                fontSize: 11,
                 lineHeight: 1.2,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -2840,15 +2861,15 @@ export default function TripDetailPage() {
             onClick={() => setActiveView("overview")}
             style={{
               flex: "0 0 auto",
-              height: 32,
-              padding: "0 12px",
+              height: 28,
+              padding: "0 10px",
               borderRadius: 999,
               border: "1px solid var(--border)",
               background: "var(--card)",
               color: "var(--sub)",
               cursor: "pointer",
               fontWeight: 900,
-              fontSize: 12,
+              fontSize: 11,
               whiteSpace: "nowrap",
             }}
           >

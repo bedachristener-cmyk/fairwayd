@@ -185,7 +185,7 @@ export default function TripsPage() {
         }}
       >
         <div style={{ minWidth: 0, flex: "1 1 220px", display: "grid", gap: 3 }}>
-          <div style={{ fontSize: 22, lineHeight: 1.12, fontWeight: 950 }}>
+          <div style={{ fontSize: 22, lineHeight: 1.12, fontWeight: 850 }}>
             {headerText}
           </div>
           <div style={{ fontSize: 13, color: "var(--sub)" }}>
@@ -206,7 +206,7 @@ export default function TripsPage() {
             background: "var(--text)",
             color: "var(--bg)",
             cursor: "pointer",
-            fontWeight: 950,
+            fontWeight: 850,
             whiteSpace: "nowrap",
             boxSizing: "border-box",
           }}
@@ -246,7 +246,7 @@ export default function TripsPage() {
             gap: 6,
           }}
         >
-          <div style={{ fontSize: 16, fontWeight: 950 }}>No trips yet</div>
+          <div style={{ fontSize: 16, fontWeight: 850 }}>No trips yet</div>
           <div style={{ color: "var(--sub)", fontSize: 13 }}>
             Start with a destination and add tee times, hotels and flights as
             the plan takes shape.
@@ -296,11 +296,13 @@ export default function TripsPage() {
                 <div
                   aria-hidden="true"
                   style={{
+                    height: 104,
                     minHeight: 104,
                     borderRadius: 14,
                     overflow: "hidden",
-                    background:
-                      "linear-gradient(135deg, var(--green), var(--muted))",
+                    background: coverUrl
+                      ? "var(--card)"
+                      : "linear-gradient(135deg, var(--green), var(--muted))",
                     border: "1px solid var(--border)",
                     position: "relative",
                   }}
@@ -310,6 +312,8 @@ export default function TripsPage() {
                       src={coverUrl}
                       alt=""
                       style={{
+                        position: "absolute",
+                        inset: 0,
                         width: "100%",
                         height: "100%",
                         objectFit: "cover",
@@ -326,7 +330,7 @@ export default function TripsPage() {
                         padding: 10,
                         color: "var(--bg)",
                         fontSize: 24,
-                        fontWeight: 950,
+                        fontWeight: 850,
                       }}
                     >
                       {flag || "Trip"}
@@ -347,7 +351,7 @@ export default function TripsPage() {
                       style={{
                         fontSize: 17,
                         lineHeight: 1.2,
-                        fontWeight: 950,
+                        fontWeight: 850,
                         color: "var(--text)",
                         overflowWrap: "anywhere",
                       }}
@@ -362,7 +366,7 @@ export default function TripsPage() {
                         gap: 7,
                         color: "var(--sub)",
                         fontSize: 12,
-                        fontWeight: 850,
+                        fontWeight: 500,
                       }}
                     >
                       {trip.destination ? (
@@ -380,7 +384,7 @@ export default function TripsPage() {
                       gap: 7,
                       color: "var(--sub)",
                       fontSize: 12,
-                      fontWeight: 900,
+                      fontWeight: 600,
                     }}
                   >
                     <span>{memberCount} members</span>
@@ -426,7 +430,7 @@ function StatPill({ label, value }: { label: string; value: number }) {
         color: "var(--text)",
         padding: "4px 7px",
         fontSize: 11,
-        fontWeight: 950,
+        fontWeight: 700,
       }}
     >
       {label} {value}
