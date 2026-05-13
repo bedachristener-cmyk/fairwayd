@@ -1897,6 +1897,29 @@ export default function TripDetailPage() {
     }
   }
 
+  async function shareInvite() {
+    if (!invite) return;
+
+    const inviteUrl = `${window.location.origin}/trips/invite/${invite.token}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Fairwayd trip invite",
+          text: "Join my golf trip on Fairwayd",
+          url: inviteUrl,
+        });
+      } catch (e: any) {
+        if (e?.name !== "AbortError") {
+          setInviteErr("Could not open share options. Copy the link instead.");
+        }
+      }
+      return;
+    }
+
+    await copyInviteLink();
+  }
+
   async function saveTripEdit() {
     if (!tripId || !token || !tripDraft) return;
 
@@ -5091,6 +5114,25 @@ export default function TripDetailPage() {
             />
 
             <div style={{ ...wrappingActionRowStyle, gap: 8 }}>
+              <button
+                type="button"
+                onClick={shareInvite}
+                disabled={!invite || inviteBusy}
+                style={{
+                  height: 38,
+                  padding: "0 14px",
+                  borderRadius: 999,
+                  border: "1px solid var(--text)",
+                  background: "var(--text)",
+                  color: "var(--bg)",
+                  cursor: !invite || inviteBusy ? "default" : "pointer",
+                  fontWeight: 950,
+                  fontSize: 13,
+                  flex: "1 1 150px",
+                }}
+              >
+                Share invite
+              </button>
               <button
                 type="button"
                 onClick={copyInviteLink}
