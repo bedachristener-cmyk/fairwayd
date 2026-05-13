@@ -324,6 +324,37 @@ button {
     flex-shrink: 0 !important;
   }
 
+  .fw-shell-main .fw-trip-calendar-day-surface {
+    border-radius: 9999px !important;
+    overflow: hidden !important;
+    background: var(--fw-trip-calendar-day-bg, transparent) !important;
+    color: var(--fw-trip-calendar-day-color, inherit) !important;
+    -webkit-mask-image: -webkit-radial-gradient(white, black) !important;
+    mask-image: radial-gradient(white, black) !important;
+  }
+
+  .fw-shell-main .fw-trip-cover-thumb {
+    width: 88px !important;
+    height: 104px !important;
+    min-width: 88px !important;
+    border-radius: 14px !important;
+    overflow: hidden !important;
+    background: transparent !important;
+    position: relative !important;
+  }
+
+  .fw-shell-main img.fw-trip-cover-thumb-img {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    object-fit: cover !important;
+    object-position: center 45% !important;
+    border-radius: 0 !important;
+    display: block !important;
+  }
+
   body {
     padding-bottom: 72px;
   }

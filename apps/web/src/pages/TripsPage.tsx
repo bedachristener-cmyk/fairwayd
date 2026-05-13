@@ -294,10 +294,9 @@ export default function TripsPage() {
                 }}
               >
                 {coverUrl ? (
-                  <img
+                  <div
                     aria-hidden="true"
-                    src={coverUrl}
-                    alt=""
+                    className="fw-trip-cover-thumb"
                     style={{
                       width: 88,
                       height: 104,
@@ -305,12 +304,26 @@ export default function TripsPage() {
                       borderRadius: 14,
                       overflow: "hidden",
                       border: "1px solid var(--border)",
-                      objectFit: "cover",
-                      objectPosition: "center center",
-                      display: "block",
+                      background: "transparent",
+                      position: "relative",
                       boxSizing: "border-box",
                     }}
-                  />
+                  >
+                    <img
+                      className="fw-trip-cover-thumb-img"
+                      src={coverUrl}
+                      alt=""
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        objectPosition: "center 45%",
+                        display: "block",
+                      }}
+                    />
+                  </div>
                 ) : (
                   <div
                     aria-hidden="true"

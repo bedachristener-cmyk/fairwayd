@@ -1178,97 +1178,119 @@ function TripCalendarView({
                 WebkitAppearance: "none",
                 flex: "0 0 72px",
                 width: 72,
-                minHeight: 78,
+                height: 82,
                 textAlign: "center",
-                padding: 8,
-                borderRadius: 20,
-                overflow: "hidden",
+                padding: 0,
+                borderRadius: 0,
+                overflow: "visible",
                 border: "1px solid transparent",
-                background: active ? "#fff" : "rgba(255,255,255,0.035)",
-                backgroundClip: "padding-box",
-                color: active ? "var(--bg)" : "var(--text)",
+                background: "transparent",
+                color: "inherit",
                 cursor: "pointer",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 4,
+                display: "block",
                 boxSizing: "border-box",
-                boxShadow: active
-                  ? "0 8px 18px rgba(0,0,0,0.16)"
-                  : "none",
               }}
             >
               <div
+                className="fw-trip-calendar-day-surface"
                 style={{
-                  fontSize: 11,
-                  fontWeight: 500,
-                  lineHeight: 1.1,
-                  opacity: active ? 0.72 : 0.68,
-                }}
+                  width: "100%",
+                  height: "100%",
+                  padding: 8,
+                  borderRadius: 9999,
+                  overflow: "hidden",
+                  "--fw-trip-calendar-day-bg": active
+                    ? "#fff"
+                    : "rgba(255,255,255,0.035)",
+                  "--fw-trip-calendar-day-color": active
+                    ? "var(--bg)"
+                    : "var(--text)",
+                  background: active ? "#fff" : "rgba(255,255,255,0.035)",
+                  backgroundClip: "padding-box",
+                  color: active ? "var(--bg)" : "var(--text)",
+                  WebkitMaskImage: "-webkit-radial-gradient(white, black)",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 4,
+                  boxSizing: "border-box",
+                  boxShadow: active
+                    ? "0 8px 18px rgba(0,0,0,0.16)"
+                    : "none",
+                } as React.CSSProperties}
               >
-                {day.weekday}
-              </div>
-              <div style={{ display: "grid", gap: 1, justifyItems: "center" }}>
                 <div
                   style={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    lineHeight: 1.15,
-                    whiteSpace: "nowrap",
+                    fontSize: 11,
+                    fontWeight: 500,
+                    lineHeight: 1.1,
+                    opacity: active ? 0.72 : 0.68,
                   }}
                 >
-                  {dateParts.dayMonth}
+                  {day.weekday}
                 </div>
-                {dateParts.year ? (
+                <div style={{ display: "grid", gap: 1, justifyItems: "center" }}>
                   <div
                     style={{
-                      fontSize: 10,
-                      fontWeight: 500,
-                      lineHeight: 1.1,
-                      opacity: active ? 0.76 : 0.6,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      lineHeight: 1.15,
+                      whiteSpace: "nowrap",
                     }}
                   >
-                    {dateParts.year}
+                    {dateParts.dayMonth}
+                  </div>
+                  {dateParts.year ? (
+                    <div
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 500,
+                        lineHeight: 1.1,
+                        opacity: active ? 0.76 : 0.6,
+                      }}
+                    >
+                      {dateParts.year}
+                    </div>
+                  ) : null}
+                </div>
+                {day.key === calendarTodayKey ? (
+                  <div style={{ fontSize: 8, fontWeight: 500, lineHeight: 1 }}>
+                    Today
                   </div>
                 ) : null}
-              </div>
-              {day.key === calendarTodayKey ? (
-                <div style={{ fontSize: 8, fontWeight: 500, lineHeight: 1 }}>
-                  Today
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    gap: 2,
+                    height: 8,
+                    maxWidth: "100%",
+                  }}
+                >
+                  {indicators.slice(0, 3).map(([label, count]) => (
+                    <span
+                      key={label}
+                      title={`${label} ${count}`}
+                      style={{
+                        width: count > 1 ? "auto" : 5,
+                        height: count > 1 ? 8 : 5,
+                        minWidth: 5,
+                        borderRadius: 999,
+                        border: "1px solid currentColor",
+                        padding: count > 1 ? "0 3px" : 0,
+                        fontSize: 7,
+                        lineHeight: count > 1 ? "8px" : "5px",
+                        fontWeight: 500,
+                        opacity: active ? 0.82 : 0.58,
+                        boxSizing: "border-box",
+                      }}
+                    >
+                      {count > 1 ? count : ""}
+                    </span>
+                  ))}
                 </div>
-              ) : null}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  gap: 2,
-                  height: 8,
-                  maxWidth: "100%",
-                }}
-              >
-                {indicators.slice(0, 3).map(([label, count]) => (
-                  <span
-                    key={label}
-                    title={`${label} ${count}`}
-                    style={{
-                      width: count > 1 ? "auto" : 5,
-                      height: count > 1 ? 8 : 5,
-                      minWidth: 5,
-                      borderRadius: 999,
-                      border: "1px solid currentColor",
-                      padding: count > 1 ? "0 3px" : 0,
-                      fontSize: 7,
-                      lineHeight: count > 1 ? "8px" : "5px",
-                      fontWeight: 500,
-                      opacity: active ? 0.82 : 0.58,
-                      boxSizing: "border-box",
-                    }}
-                  >
-                    {count > 1 ? count : ""}
-                  </span>
-                ))}
               </div>
             </button>
           );
