@@ -123,7 +123,13 @@ type EditDraft = {
   participantMemberIds: string[];
 };
 
-type TripView = "overview" | "timeline" | "calendar" | "map" | "budget";
+type TripView =
+  | "overview"
+  | "timeline"
+  | "calendar"
+  | "documents"
+  | "map"
+  | "budget";
 
 type TripMapMarker = {
   id: string;
@@ -171,6 +177,73 @@ type TripInvite = {
   revokedAt?: string | null;
 };
 
+type TripDocumentCategory =
+  | "FLIGHT"
+  | "HOTEL"
+  | "GOLF"
+  | "TRANSFER"
+  | "VISA"
+  | "GENERAL";
+
+type TripDocumentVisibility = "SHARED" | "PRIVATE";
+
+type TripDocument = {
+  id: string;
+  tripId: string;
+  title: string;
+  note?: string | null;
+  category: TripDocumentCategory;
+  visibility: TripDocumentVisibility;
+  fileUrl: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedByUserId: string;
+  createdAt: string;
+  updatedAt: string;
+  uploadedBy?: {
+    id: string;
+    handle?: string | null;
+    name?: string | null;
+    avatarUrl?: string | null;
+  } | null;
+};
+
+type TripDocumentDraft = {
+  title: string;
+  note: string;
+  category: TripDocumentCategory;
+  visibility: TripDocumentVisibility;
+  file: File | null;
+};
+
+type TripActivityType =
+  | "DOCUMENT_UPLOADED"
+  | "DOCUMENT_DELETED"
+  | "ITEM_CREATED"
+  | "ITEM_UPDATED"
+  | "ITEM_DELETED"
+  | "MEMBER_ADDED"
+  | "INVITE_CREATED"
+  | "TRIP_UPDATED";
+
+type TripActivity = {
+  id: string;
+  tripId: string;
+  actorUserId?: string | null;
+  actorName?: string | null;
+  type: TripActivityType;
+  message: string;
+  metadata?: unknown;
+  createdAt: string;
+  actorUser?: {
+    id: string;
+    handle?: string | null;
+    name?: string | null;
+    avatarUrl?: string | null;
+  } | null;
+};
+
 type TimelineDetail = {
   label: string;
   value: string;
@@ -210,6 +283,24 @@ const itemTypeOptions = [
 ];
 
 const memberRoleOptions: TripRole[] = ["MEMBER", "ADMIN", "OWNER"];
+
+const tripDocumentCategories: TripDocumentCategory[] = [
+  "FLIGHT",
+  "HOTEL",
+  "GOLF",
+  "TRANSFER",
+  "VISA",
+  "GENERAL",
+];
+
+const tripDocumentCategoryLabels: Record<TripDocumentCategory, string> = {
+  FLIGHT: "Flight",
+  HOTEL: "Hotel",
+  GOLF: "Golf",
+  TRANSFER: "Transfer",
+  VISA: "Visa",
+  GENERAL: "General",
+};
 
 const currencyOptions = [
   "THB",
@@ -257,6 +348,7 @@ const wrappingActionRowStyle: React.CSSProperties = {
 const subviewOrder: Exclude<TripView, "overview">[] = [
   "timeline",
   "calendar",
+  "documents",
   "map",
   "budget",
 ];
@@ -264,6 +356,7 @@ const subviewOrder: Exclude<TripView, "overview">[] = [
 function tripViewLabel(view: TripView) {
   if (view === "timeline") return "Timeline";
   if (view === "calendar") return "Calendar";
+  if (view === "documents") return "Documents";
   if (view === "map") return "Map";
   if (view === "budget") return "Budget";
   return "Trip";
@@ -272,6 +365,7 @@ function tripViewLabel(view: TripView) {
 function tripViewSubtitle(view: TripView) {
   if (view === "timeline") return "Itinerary";
   if (view === "calendar") return "Day-by-day plan";
+  if (view === "documents") return "Notes and files";
   if (view === "map") return "Stops and route";
   if (view === "budget") return "Shared cost view";
   return "";
@@ -442,6 +536,63 @@ function formatItemDate(value?: string | null) {
     month: "short",
     year: "numeric",
   }).format(date);
+}
+
+function formatDocumentDate(value?: string | null) {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return new Intl.DateTimeFormat(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatFileSize(bytes?: number | null) {
+  if (!bytes || bytes <= 0) return "";
+
+  if (bytes < 1024 * 1024) {
+    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  }
+
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatActivityDate(value?: string | null) {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const diffMs = Date.now() - date.getTime();
+  const diffMinutes = Math.round(diffMs / 60000);
+  if (diffMinutes < 1) return "Just now";
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+
+  return new Intl.DateTimeFormat(undefined, {
+    day: "numeric",
+    month: "short",
+  }).format(date);
+}
+
+function activityIcon(type: TripActivityType) {
+  if (type === "DOCUMENT_UPLOADED" || type === "DOCUMENT_DELETED") return "📄";
+  if (
+    type === "ITEM_CREATED" ||
+    type === "ITEM_UPDATED" ||
+    type === "ITEM_DELETED"
+  ) {
+    return "🧾";
+  }
+  if (type === "MEMBER_ADDED") return "👤";
+  if (type === "INVITE_CREATED") return "🔗";
+  return "✏️";
 }
 
 function formatTime(item: TripItem) {
@@ -1599,6 +1750,7 @@ export default function TripDetailPage() {
   const nav = useNavigate();
   const { token, user } = useAuth();
   const coverInputRef = useRef<HTMLInputElement | null>(null);
+  const documentInputRef = useRef<HTMLInputElement | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(false);
@@ -1631,10 +1783,31 @@ export default function TripDetailPage() {
   const [inviteBusy, setInviteBusy] = useState(false);
   const [inviteCopied, setInviteCopied] = useState(false);
   const [inviteErr, setInviteErr] = useState<string | null>(null);
+  const [documents, setDocuments] = useState<TripDocument[]>([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [documentsErr, setDocumentsErr] = useState<string | null>(null);
+  const [documentCategoryFilter, setDocumentCategoryFilter] = useState<
+    TripDocumentCategory | "ALL"
+  >("ALL");
+  const [documentDraft, setDocumentDraft] = useState<TripDocumentDraft>({
+    title: "",
+    note: "",
+    category: "GENERAL",
+    visibility: "SHARED",
+    file: null,
+  });
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(
+    null,
+  );
+  const [activity, setActivity] = useState<TripActivity[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityErr, setActivityErr] = useState<string | null>(null);
 
   const myMembership = trip?.members?.find((member) => member.userId === user?.id);
   const canEditTrip =
     myMembership?.role === "OWNER" || myMembership?.role === "ADMIN";
+  const canUploadTripDocuments = Boolean(myMembership);
 
   function moveSubview(direction: 1 | -1) {
     if (activeView === "overview") return;
@@ -1709,6 +1882,78 @@ export default function TripDetailPage() {
     loadTrip();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, tripId]);
+
+  async function loadDocuments() {
+    if (!token || !tripId) return;
+
+    try {
+      setDocumentsLoading(true);
+      setDocumentsErr(null);
+
+      const res = await fetch(
+        `${API_BASE}/trips/${encodeURIComponent(tripId)}/documents`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`HTTP ${res.status} ${res.statusText} ${text}`.trim());
+      }
+
+      const data = await res.json();
+      setDocuments(Array.isArray(data) ? data : []);
+    } catch (e: any) {
+      setDocumentsErr(e?.message ?? "Failed to load trip documents");
+    } finally {
+      setDocumentsLoading(false);
+    }
+  }
+
+  async function loadActivity() {
+    if (!token || !tripId) return;
+
+    try {
+      setActivityLoading(true);
+      setActivityErr(null);
+
+      const res = await fetch(
+        `${API_BASE}/trips/${encodeURIComponent(tripId)}/activity`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`HTTP ${res.status} ${res.statusText} ${text}`.trim());
+      }
+
+      const data = await res.json();
+      setActivity(Array.isArray(data) ? data : []);
+    } catch (e: any) {
+      setActivityErr(e?.message ?? "Failed to load trip activity");
+    } finally {
+      setActivityLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadActivity();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, tripId]);
+
+  useEffect(() => {
+    if (activeView !== "documents") return;
+
+    loadDocuments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeView, token, tripId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1847,6 +2092,7 @@ export default function TripDetailPage() {
       }
 
       setInvite(await res.json());
+      await loadActivity();
     } catch (e: any) {
       setInviteErr(e?.message ?? "Failed to load invite link");
     } finally {
@@ -1878,6 +2124,7 @@ export default function TripDetailPage() {
       }
 
       setInvite(await res.json());
+      await loadActivity();
     } catch (e: any) {
       setInviteErr(e?.message ?? "Failed to regenerate invite link");
     } finally {
@@ -1958,6 +2205,7 @@ export default function TripDetailPage() {
       setEditingTrip(false);
       setTripDraft(null);
       await loadTrip();
+      await loadActivity();
     } catch (e: any) {
       setErr(e?.message ?? "Failed to save trip");
     } finally {
@@ -2032,11 +2280,114 @@ export default function TripDetailPage() {
       }
 
       await loadTrip();
+      await loadActivity();
     } catch (e: any) {
       setErr(e?.message ?? "Failed to upload trip cover");
     } finally {
       setUploadingCover(false);
       if (coverInputRef.current) coverInputRef.current.value = "";
+    }
+  }
+
+  async function uploadDocument() {
+    if (!tripId || !token || !canUploadTripDocuments || uploadingDocument) return;
+
+    const title = documentDraft.title.trim();
+    if (!title) {
+      setDocumentsErr("Document title is required.");
+      return;
+    }
+
+    if (!documentDraft.file) {
+      setDocumentsErr("Choose a PDF or image to upload.");
+      return;
+    }
+
+    try {
+      setUploadingDocument(true);
+      setDocumentsErr(null);
+
+      const form = new FormData();
+      form.append("title", title);
+      form.append("category", documentDraft.category);
+      form.append("visibility", documentDraft.visibility);
+      form.append("note", documentDraft.note.trim());
+      form.append("file", documentDraft.file);
+
+      const res = await fetch(
+        `${API_BASE}/trips/${encodeURIComponent(tripId)}/documents`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: form,
+        },
+      );
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(
+          tripErrorMessageForResponse(
+            res.status,
+            `HTTP ${res.status} ${res.statusText} ${text}`.trim(),
+          ),
+        );
+      }
+
+      const created = await res.json();
+      setDocuments((current) => [created, ...current]);
+      setDocumentDraft({
+        title: "",
+        note: "",
+        category: "GENERAL",
+        visibility: "SHARED",
+        file: null,
+      });
+      if (documentInputRef.current) documentInputRef.current.value = "";
+      await loadActivity();
+    } catch (e: any) {
+      setDocumentsErr(e?.message ?? "Failed to upload document");
+    } finally {
+      setUploadingDocument(false);
+    }
+  }
+
+  async function deleteDocument(documentId: string) {
+    if (!tripId || !token || deletingDocumentId) return;
+
+    try {
+      setDeletingDocumentId(documentId);
+      setDocumentsErr(null);
+
+      const res = await fetch(
+        `${API_BASE}/trips/${encodeURIComponent(tripId)}/documents/${encodeURIComponent(documentId)}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(
+          tripErrorMessageForResponse(
+            res.status,
+            `HTTP ${res.status} ${res.statusText} ${text}`.trim(),
+          ),
+        );
+      }
+
+      setDocuments((current) =>
+        current.filter((document) => document.id !== documentId),
+      );
+      await loadActivity();
+    } catch (e: any) {
+      setDocumentsErr(e?.message ?? "Failed to delete document");
+    } finally {
+      setDeletingDocumentId(null);
     }
   }
 
@@ -2077,6 +2428,7 @@ export default function TripDetailPage() {
       setMemberResults([]);
       setNewMemberRole("MEMBER");
       await loadTrip();
+      await loadActivity();
     } catch (e: any) {
       setErr(e?.message ?? "Failed to add member");
     } finally {
@@ -2119,6 +2471,7 @@ export default function TripDetailPage() {
       setGuestName("");
       setNewMemberRole("MEMBER");
       await loadTrip();
+      await loadActivity();
     } catch (e: any) {
       setErr(e?.message ?? "Failed to add guest member");
     } finally {
@@ -2275,6 +2628,7 @@ export default function TripDetailPage() {
       setEditingItemId(null);
       setEditDraft(null);
       await loadTrip();
+      await loadActivity();
     } catch (e: any) {
       setErr(e?.message ?? "Failed to save trip item");
     } finally {
@@ -2316,6 +2670,7 @@ export default function TripDetailPage() {
       }
 
       await loadTrip();
+      await loadActivity();
     } catch (e: any) {
       setErr(e?.message ?? "Failed to delete trip item");
     } finally {
@@ -2627,6 +2982,14 @@ export default function TripDetailPage() {
     { label: "Other", value: budgetSummary.categories.Other },
   ];
 
+  const filteredDocuments = useMemo(() => {
+    if (documentCategoryFilter === "ALL") return documents;
+
+    return documents.filter(
+      (document) => document.category === documentCategoryFilter,
+    );
+  }, [documentCategoryFilter, documents]);
+
   return (
     <div
       style={{
@@ -2638,7 +3001,7 @@ export default function TripDetailPage() {
         padding:
           activeView === "overview"
             ? "16px 16px calc(96px + env(safe-area-inset-bottom, 0px))"
-            : "4px 12px calc(24px + env(safe-area-inset-bottom, 0px))",
+            : "4px 12px calc(112px + env(safe-area-inset-bottom, 0px))",
         display: "grid",
         gap: activeView === "overview" ? 16 : 8,
       }}
@@ -2987,7 +3350,7 @@ export default function TripDetailPage() {
           boxSizing: "border-box",
         }}
       >
-        {(["timeline", "calendar", "map", "budget"] as TripView[]).map((view) => {
+        {(["timeline", "calendar", "documents", "map", "budget"] as TripView[]).map((view) => {
           const label = tripViewLabel(view);
           return (
             <button
@@ -3026,6 +3389,143 @@ export default function TripDetailPage() {
           );
         })}
       </div>
+
+      <section
+        style={{
+          ...safeSectionStyle,
+          display: "grid",
+          gap: 10,
+          padding: 14,
+          borderRadius: 22,
+          background: "var(--card)",
+          border: "1px solid var(--border)",
+          boxShadow: "0 12px 34px rgba(0,0,0,0.16)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 10,
+          }}
+        >
+          <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
+            <div style={{ color: "var(--text)", fontSize: 16, fontWeight: 950 }}>
+              Recent activity
+            </div>
+            <div style={{ color: "var(--sub)", fontSize: 12 }}>
+              {activityLoading
+                ? "Loading updates..."
+                : "Latest shared trip updates"}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={loadActivity}
+            disabled={activityLoading}
+            style={{
+              height: 28,
+              padding: "0 10px",
+              borderRadius: 999,
+              border: "1px solid var(--border)",
+              background: "transparent",
+              color: "var(--sub)",
+              cursor: activityLoading ? "default" : "pointer",
+              fontWeight: 900,
+              fontSize: 11,
+              whiteSpace: "nowrap",
+            }}
+          >
+            Refresh
+          </button>
+        </div>
+
+        {activityErr ? (
+          <div
+            style={{
+              padding: 10,
+              borderRadius: 12,
+              background: "var(--danger-soft)",
+              color: "var(--danger)",
+              fontSize: 13,
+              fontWeight: 800,
+            }}
+          >
+            {activityErr}
+          </div>
+        ) : null}
+
+        {activity.length === 0 && !activityLoading ? (
+          <div
+            style={{
+              padding: 14,
+              borderRadius: 16,
+              border: "1px dashed var(--border)",
+              color: "var(--sub)",
+              fontSize: 13,
+              lineHeight: 1.4,
+            }}
+          >
+            No activity yet. Updates will appear here as your trip comes
+            together.
+          </div>
+        ) : (
+          <div style={{ display: "grid", gap: 8 }}>
+            {activity.slice(0, 6).map((entry) => (
+              <div
+                key={entry.id}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "32px minmax(0, 1fr)",
+                  gap: 10,
+                  alignItems: "start",
+                  padding: "9px 0",
+                  borderTop: "1px solid var(--border)",
+                }}
+              >
+                <div
+                  aria-hidden="true"
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 12,
+                    border: "1px solid var(--border)",
+                    background: "var(--bg)",
+                    display: "grid",
+                    placeItems: "center",
+                    fontSize: 15,
+                  }}
+                >
+                  {activityIcon(entry.type)}
+                </div>
+                <div style={{ display: "grid", gap: 3, minWidth: 0 }}>
+                  <div
+                    style={{
+                      color: "var(--text)",
+                      fontSize: 13,
+                      lineHeight: 1.35,
+                      fontWeight: 850,
+                      overflowWrap: "anywhere",
+                    }}
+                  >
+                    {entry.message}
+                  </div>
+                  <div
+                    style={{
+                      color: "var(--sub)",
+                      fontSize: 11,
+                      fontWeight: 800,
+                    }}
+                  >
+                    {formatActivityDate(entry.createdAt)}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
       </>
       ) : null}
 
@@ -4883,6 +5383,459 @@ export default function TripDetailPage() {
           }}
           onOpenCourse={(courseId) => nav(`/courses/${courseId}`)}
         />
+      ) : activeView === "documents" ? (
+        <section
+          style={{
+            ...safeSectionStyle,
+            display: "grid",
+            gap: 12,
+          }}
+        >
+          {canUploadTripDocuments ? (
+            <div
+              style={{
+                ...safeSectionStyle,
+                display: "grid",
+                gap: 10,
+                padding: 14,
+                borderRadius: 22,
+                background: "var(--card)",
+                border: "1px solid var(--border)",
+                boxShadow: "0 12px 34px rgba(0,0,0,0.16)",
+              }}
+            >
+              <div style={{ display: "grid", gap: 2 }}>
+                <div
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 950,
+                    color: "var(--text)",
+                  }}
+                >
+                  Add document
+                </div>
+                <div style={{ fontSize: 12, color: "var(--sub)" }}>
+                  Shared notes, confirmations and travel files for this trip
+                </div>
+              </div>
+
+              <input
+                value={documentDraft.title}
+                onChange={(event) =>
+                  setDocumentDraft((current) => ({
+                    ...current,
+                    title: event.target.value,
+                  }))
+                }
+                placeholder="Title"
+                style={editFieldStyle}
+              />
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr",
+                  gap: 8,
+                }}
+              >
+                <select
+                  value={documentDraft.category}
+                  onChange={(event) =>
+                    setDocumentDraft((current) => ({
+                      ...current,
+                      category: event.target.value as TripDocumentCategory,
+                    }))
+                  }
+                  style={editFieldStyle}
+                >
+                  {tripDocumentCategories.map((category) => (
+                    <option key={category} value={category}>
+                      {tripDocumentCategoryLabels[category]}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  ref={documentInputRef}
+                  type="file"
+                  accept="application/pdf,image/jpeg,image/png,image/webp"
+                  onChange={(event) =>
+                    setDocumentDraft((current) => ({
+                      ...current,
+                      file: event.target.files?.[0] ?? null,
+                    }))
+                  }
+                  style={{
+                    ...editFieldStyle,
+                    fontSize: 12,
+                  }}
+                />
+              </div>
+
+              <textarea
+                value={documentDraft.note}
+                onChange={(event) =>
+                  setDocumentDraft((current) => ({
+                    ...current,
+                    note: event.target.value,
+                  }))
+                }
+                placeholder="Optional note"
+                rows={3}
+                style={{ ...editFieldStyle, resize: "vertical" }}
+              />
+
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 9,
+                  color: "var(--text)",
+                  fontSize: 13,
+                  fontWeight: 850,
+                  lineHeight: 1.35,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={documentDraft.visibility === "PRIVATE"}
+                  onChange={(event) =>
+                    setDocumentDraft((current) => ({
+                      ...current,
+                      visibility: event.target.checked ? "PRIVATE" : "SHARED",
+                    }))
+                  }
+                  style={{ width: 16, height: 16, flex: "0 0 auto" }}
+                />
+                <span>Private document – only visible to me</span>
+              </label>
+
+              <button
+                type="button"
+                onClick={uploadDocument}
+                disabled={uploadingDocument}
+                style={{
+                  height: 38,
+                  padding: "0 14px",
+                  borderRadius: 999,
+                  border: "1px solid var(--text)",
+                  background: "var(--text)",
+                  color: "var(--bg)",
+                  cursor: uploadingDocument ? "default" : "pointer",
+                  fontWeight: 950,
+                  fontSize: 13,
+                }}
+              >
+                {uploadingDocument ? "Uploading..." : "Upload document"}
+              </button>
+            </div>
+          ) : null}
+
+          <div
+            style={{
+              ...safeSectionStyle,
+              display: "grid",
+              gap: 10,
+              padding: 14,
+              borderRadius: 22,
+              background: "var(--card)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                gap: 10,
+              }}
+            >
+              <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 950,
+                    color: "var(--text)",
+                  }}
+                >
+                  Trip documents
+                </div>
+                <div style={{ fontSize: 12, color: "var(--sub)" }}>
+                  {documentsLoading
+                    ? "Loading documents..."
+                    : `${documents.length} shared ${documents.length === 1 ? "file" : "files"}`}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={loadDocuments}
+                disabled={documentsLoading}
+                style={{
+                  height: 28,
+                  padding: "0 10px",
+                  borderRadius: 999,
+                  border: "1px solid var(--border)",
+                  background: "transparent",
+                  color: "var(--sub)",
+                  cursor: documentsLoading ? "default" : "pointer",
+                  fontWeight: 900,
+                  fontSize: 11,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Refresh
+              </button>
+            </div>
+
+            {documentsErr ? (
+              <div
+                style={{
+                  padding: 10,
+                  borderRadius: 12,
+                  background: "var(--danger-soft)",
+                  color: "var(--danger)",
+                  fontSize: 13,
+                  fontWeight: 800,
+                }}
+              >
+                {documentsErr}
+              </div>
+            ) : null}
+
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                overflowX: "auto",
+                paddingBottom: 2,
+              }}
+              data-trip-swipe-ignore="true"
+            >
+              {(["ALL", ...tripDocumentCategories] as const).map((category) => {
+                const active = documentCategoryFilter === category;
+                const label =
+                  category === "ALL"
+                    ? "All"
+                    : tripDocumentCategoryLabels[category];
+
+                return (
+                  <button
+                    key={category}
+                    type="button"
+                    onClick={() => setDocumentCategoryFilter(category)}
+                    style={{
+                      flex: "0 0 auto",
+                      height: 30,
+                      padding: "0 11px",
+                      borderRadius: 999,
+                      border: "1px solid var(--border)",
+                      background: active ? "var(--text)" : "var(--bg)",
+                      color: active ? "var(--bg)" : "var(--sub)",
+                      cursor: "pointer",
+                      fontWeight: 900,
+                      fontSize: 12,
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {documentsLoading && documents.length === 0 ? (
+              <div style={{ color: "var(--sub)", fontSize: 13 }}>
+                Loading documents...
+              </div>
+            ) : filteredDocuments.length === 0 ? (
+              <div
+                style={{
+                  padding: 16,
+                  borderRadius: 16,
+                  border: "1px dashed var(--border)",
+                  color: "var(--sub)",
+                  fontSize: 13,
+                  lineHeight: 1.4,
+                }}
+              >
+                No documents yet. Add confirmations, booking PDFs, passports or
+                helpful trip notes here.
+              </div>
+            ) : (
+              <div style={{ display: "grid", gap: 10 }}>
+                {filteredDocuments.map((document) => {
+                  const uploader =
+                    document.uploadedBy?.name ||
+                    document.uploadedBy?.handle ||
+                    "Trip member";
+                  const size = formatFileSize(document.sizeBytes);
+                  const date = formatDocumentDate(document.createdAt);
+                  const isPrivateDocument = document.visibility === "PRIVATE";
+                  const isDocumentUploader =
+                    document.uploadedByUserId === user?.id;
+                  const canDeleteDocument = isPrivateDocument
+                    ? isDocumentUploader
+                    : canEditTrip || isDocumentUploader;
+
+                  return (
+                    <article
+                      key={document.id}
+                      style={{
+                        display: "grid",
+                        gap: 10,
+                        padding: 12,
+                        borderRadius: 18,
+                        border: "1px solid var(--border)",
+                        background: "var(--bg)",
+                        minWidth: 0,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          justifyContent: "space-between",
+                          gap: 10,
+                        }}
+                      >
+                        <div style={{ display: "grid", gap: 5, minWidth: 0 }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              flexWrap: "wrap",
+                              gap: 6,
+                              alignItems: "center",
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: "fit-content",
+                                borderRadius: 999,
+                                border: "1px solid var(--border)",
+                                padding: "4px 8px",
+                                color: "var(--sub)",
+                                fontSize: 11,
+                                fontWeight: 950,
+                              }}
+                            >
+                              {tripDocumentCategoryLabels[document.category]}
+                            </span>
+                            {isPrivateDocument ? (
+                              <span
+                                style={{
+                                  width: "fit-content",
+                                  borderRadius: 999,
+                                  border: "1px solid var(--border)",
+                                  padding: "4px 8px",
+                                  color: "var(--text)",
+                                  background: "var(--card)",
+                                  fontSize: 11,
+                                  fontWeight: 950,
+                                }}
+                              >
+                                Private
+                              </span>
+                            ) : null}
+                          </div>
+                          <div
+                            style={{
+                              color: "var(--text)",
+                              fontSize: 15,
+                              lineHeight: 1.2,
+                              fontWeight: 950,
+                              overflowWrap: "anywhere",
+                            }}
+                          >
+                            {document.title}
+                          </div>
+                        </div>
+                      </div>
+
+                      {document.note ? (
+                        <div
+                          style={{
+                            color: "var(--text)",
+                            fontSize: 13,
+                            lineHeight: 1.45,
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {document.note}
+                        </div>
+                      ) : null}
+
+                      <div
+                        style={{
+                          display: "grid",
+                          gap: 3,
+                          color: "var(--sub)",
+                          fontSize: 12,
+                          fontWeight: 850,
+                        }}
+                      >
+                        <span style={{ overflowWrap: "anywhere" }}>
+                          {document.fileName}
+                          {size ? ` · ${size}` : ""}
+                        </span>
+                        <span>
+                          Uploaded by {uploader}
+                          {date ? ` · ${date}` : ""}
+                        </span>
+                      </div>
+
+                      <div style={{ ...wrappingActionRowStyle, gap: 8 }}>
+                        <a
+                          href={fileUrl(document.fileUrl)}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            height: 32,
+                            padding: "0 11px",
+                            borderRadius: 999,
+                            border: "1px solid var(--border)",
+                            background: "var(--text)",
+                            color: "var(--bg)",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            textDecoration: "none",
+                            fontWeight: 900,
+                            fontSize: 12,
+                          }}
+                        >
+                          Open file
+                        </a>
+                        {canDeleteDocument ? (
+                          <button
+                            type="button"
+                            onClick={() => deleteDocument(document.id)}
+                            disabled={deletingDocumentId === document.id}
+                            style={{
+                              height: 32,
+                              padding: "0 11px",
+                              borderRadius: 999,
+                              border: "1px solid var(--border)",
+                              background: "transparent",
+                              color: "var(--sub)",
+                              cursor:
+                                deletingDocumentId === document.id
+                                  ? "default"
+                                  : "pointer",
+                              fontWeight: 900,
+                              fontSize: 12,
+                            }}
+                          >
+                            {deletingDocumentId === document.id
+                              ? "Deleting..."
+                              : "Delete"}
+                          </button>
+                        ) : null}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
       ) : activeView === "budget" ? (
         <section
           style={{

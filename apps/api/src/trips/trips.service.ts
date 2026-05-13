@@ -5,7 +5,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, TripRole } from '@prisma/client';
+import {
+  Prisma,
+  TripActivityType,
+  TripDocumentCategory,
+  TripDocumentVisibility,
+  TripRole,
+} from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { AddTripMemberDto } from './dto/add-trip-member.dto';
@@ -53,6 +59,36 @@ function cleanTripRole(role?: TripRole) {
   return role;
 }
 
+function cleanTripDocumentCategory(category?: string) {
+  const value = (category || 'GENERAL').trim().toUpperCase();
+
+  if (
+    value !== TripDocumentCategory.FLIGHT &&
+    value !== TripDocumentCategory.HOTEL &&
+    value !== TripDocumentCategory.GOLF &&
+    value !== TripDocumentCategory.TRANSFER &&
+    value !== TripDocumentCategory.VISA &&
+    value !== TripDocumentCategory.GENERAL
+  ) {
+    throw new BadRequestException('Unsupported trip document category');
+  }
+
+  return value;
+}
+
+function cleanTripDocumentVisibility(visibility?: string) {
+  const value = (visibility || 'SHARED').trim().toUpperCase();
+
+  if (
+    value !== TripDocumentVisibility.SHARED &&
+    value !== TripDocumentVisibility.PRIVATE
+  ) {
+    throw new BadRequestException('Unsupported trip document visibility');
+  }
+
+  return value;
+}
+
 const tripUserSelect = {
   id: true,
   handle: true,
@@ -80,6 +116,18 @@ const tripItemInclude = {
     },
   },
 } satisfies Prisma.TripItemInclude;
+
+const tripDocumentInclude = {
+  uploadedBy: {
+    select: tripUserSelect,
+  },
+} satisfies Prisma.TripDocumentInclude;
+
+const tripActivityInclude = {
+  actorUser: {
+    select: tripUserSelect,
+  },
+} satisfies Prisma.TripActivityInclude;
 
 function inviteToken() {
   return randomBytes(32).toString('base64url');
@@ -190,13 +238,22 @@ export class TripsService {
 
     if (existing) return existing;
 
-    return this.prisma.tripInvite.create({
+    const invite = await this.prisma.tripInvite.create({
       data: {
         tripId,
         token: inviteToken(),
         createdByUserId: userId,
       },
     });
+
+    void this.createTripActivity(
+      tripId,
+      userId,
+      TripActivityType.INVITE_CREATED,
+      (name) => `${name} created an invite link`,
+    );
+
+    return invite;
   }
 
   async regenerateInvite(tripId: string, userId: string) {
@@ -212,13 +269,22 @@ export class TripsService {
       },
     });
 
-    return this.prisma.tripInvite.create({
+    const invite = await this.prisma.tripInvite.create({
       data: {
         tripId,
         token: inviteToken(),
         createdByUserId: userId,
       },
     });
+
+    void this.createTripActivity(
+      tripId,
+      userId,
+      TripActivityType.INVITE_CREATED,
+      (name) => `${name} created an invite link`,
+    );
+
+    return invite;
   }
 
   async findInvitePreview(token: string) {
@@ -268,6 +334,14 @@ export class TripsService {
       include: tripMemberInclude,
     });
 
+    void this.createTripActivity(
+      invite.tripId,
+      userId,
+      TripActivityType.MEMBER_ADDED,
+      (name) => `${name} added member: ${this.tripMemberDisplayName(member)}`,
+      { memberId: member.id, joinedViaInvite: true },
+    );
+
     return {
       tripId: invite.tripId,
       member,
@@ -278,7 +352,7 @@ export class TripsService {
   async update(tripId: string, userId: string, dto: UpdateTripDto) {
     await this.assertCanModifyTrip(tripId, userId);
 
-    return this.prisma.trip.update({
+    const trip = await this.prisma.trip.update({
       where: {
         id: tripId,
       },
@@ -319,6 +393,15 @@ export class TripsService {
         },
       },
     });
+
+    void this.createTripActivity(
+      tripId,
+      userId,
+      TripActivityType.TRIP_UPDATED,
+      (name) => `${name} updated trip details`,
+    );
+
+    return trip;
   }
 
   async delete(tripId: string, userId: string) {
@@ -341,6 +424,133 @@ export class TripsService {
       orderBy: { createdAt: 'asc' },
       include: tripMemberInclude,
     });
+  }
+
+  async findDocuments(tripId: string, userId: string) {
+    await this.assertIsTripMember(tripId, userId);
+
+    return this.prisma.tripDocument.findMany({
+      where: {
+        tripId,
+        OR: [
+          { visibility: TripDocumentVisibility.SHARED },
+          { uploadedByUserId: userId },
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+      include: tripDocumentInclude,
+    });
+  }
+
+  async findActivity(tripId: string, userId: string) {
+    await this.assertIsTripMember(tripId, userId);
+
+    return this.prisma.tripActivity.findMany({
+      where: { tripId },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+      include: tripActivityInclude,
+    });
+  }
+
+  async assertCanManageDocuments(tripId: string, userId: string) {
+    await this.assertIsTripMember(tripId, userId);
+  }
+
+  async createDocument(
+    tripId: string,
+    userId: string,
+    data: {
+      title?: string;
+      note?: string;
+      category?: string;
+      fileUrl: string;
+      fileName: string;
+      mimeType: string;
+      sizeBytes: number;
+      visibility?: string;
+    },
+  ) {
+    await this.assertIsTripMember(tripId, userId);
+
+    const title = data.title?.trim();
+    if (!title) throw new BadRequestException('Document title is required');
+    const visibility = cleanTripDocumentVisibility(data.visibility);
+
+    const document = await this.prisma.tripDocument.create({
+      data: {
+        tripId,
+        title,
+        note: data.note?.trim() || null,
+        category: cleanTripDocumentCategory(data.category),
+        visibility,
+        fileUrl: data.fileUrl,
+        fileName: data.fileName,
+        mimeType: data.mimeType,
+        sizeBytes: data.sizeBytes,
+        uploadedByUserId: userId,
+      },
+      include: tripDocumentInclude,
+    });
+
+    if (document.visibility === TripDocumentVisibility.SHARED) {
+      void this.createTripActivity(
+        tripId,
+        userId,
+        TripActivityType.DOCUMENT_UPLOADED,
+        (name) => `${name} uploaded document: ${title}`,
+        { documentId: document.id, category: document.category },
+      );
+    }
+
+    return document;
+  }
+
+  async deleteDocument(tripId: string, documentId: string, userId: string) {
+    const membership = await this.assertIsTripMember(tripId, userId);
+
+    const document = await this.prisma.tripDocument.findFirst({
+      where: {
+        id: documentId,
+        tripId,
+      },
+      select: {
+        id: true,
+        title: true,
+        uploadedByUserId: true,
+        visibility: true,
+      },
+    });
+
+    if (!document) {
+      throw new NotFoundException('Trip document not found');
+    }
+
+    const isUploader = document.uploadedByUserId === userId;
+    const canDeleteAnyShared =
+      document.visibility === TripDocumentVisibility.SHARED &&
+      (membership.role === TripRole.OWNER || membership.role === TripRole.ADMIN);
+    if (!isUploader && !canDeleteAnyShared) {
+      throw new ForbiddenException('Insufficient trip document permissions');
+    }
+
+    await this.prisma.tripDocument.delete({
+      where: {
+        id: documentId,
+      },
+    });
+
+    if (document.visibility === TripDocumentVisibility.SHARED) {
+      void this.createTripActivity(
+        tripId,
+        userId,
+        TripActivityType.DOCUMENT_DELETED,
+        (name) => `${name} deleted document: ${document.title}`,
+        { documentId },
+      );
+    }
+
+    return { ok: true };
   }
 
   async addMember(tripId: string, userId: string, dto: AddTripMemberDto) {
@@ -375,7 +585,7 @@ export class TripsService {
         throw new ConflictException('Guest is already a trip member');
       }
 
-      return this.prisma.tripMember.create({
+      const member = await this.prisma.tripMember.create({
         data: {
           tripId,
           displayName,
@@ -384,10 +594,20 @@ export class TripsService {
         },
         include: tripMemberInclude,
       });
+
+      void this.createTripActivity(
+        tripId,
+        userId,
+        TripActivityType.MEMBER_ADDED,
+        (name) => `${name} added member: ${this.tripMemberDisplayName(member)}`,
+        { memberId: member.id, isGuest: true },
+      );
+
+      return member;
     }
 
     try {
-      return await this.prisma.tripMember.create({
+      const member = await this.prisma.tripMember.create({
         data: {
           tripId,
           userId: requestedUserId,
@@ -396,6 +616,16 @@ export class TripsService {
         },
         include: tripMemberInclude,
       });
+
+      void this.createTripActivity(
+        tripId,
+        userId,
+        TripActivityType.MEMBER_ADDED,
+        (name) => `${name} added member: ${this.tripMemberDisplayName(member)}`,
+        { memberId: member.id, userId: requestedUserId },
+      );
+
+      return member;
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -459,7 +689,7 @@ export class TripsService {
       dto.paidByMemberId,
     );
 
-    return this.prisma.tripItem.create({
+    const item = await this.prisma.tripItem.create({
       data: {
         tripId,
         type: dto.type,
@@ -496,6 +726,16 @@ export class TripsService {
       },
       include: tripItemInclude,
     });
+
+    void this.createTripActivity(
+      tripId,
+      userId,
+      TripActivityType.ITEM_CREATED,
+      (name) => `${name} added item: ${item.title || 'Untitled item'}`,
+      { itemId: item.id, type: item.type },
+    );
+
+    return item;
   }
 
   async updateItem(
@@ -505,7 +745,7 @@ export class TripsService {
     dto: UpdateTripItemDto,
   ) {
     await this.assertCanModifyTrip(tripId, userId);
-    await this.findTripItemOrThrow(tripId, itemId);
+    const existingItem = await this.findTripItemOrThrow(tripId, itemId);
     const participantMemberIds = await this.resolveParticipantMemberIds(
       tripId,
       dto,
@@ -515,7 +755,7 @@ export class TripsService {
         ? undefined
         : await this.resolveOptionalTripMemberId(tripId, dto.paidByMemberId);
 
-    return this.prisma.tripItem.update({
+    const item = await this.prisma.tripItem.update({
       where: {
         id: itemId,
       },
@@ -571,17 +811,36 @@ export class TripsService {
       },
       include: tripItemInclude,
     });
+
+    void this.createTripActivity(
+      tripId,
+      userId,
+      TripActivityType.ITEM_UPDATED,
+      (name) =>
+        `${name} updated item: ${item.title || existingItem.title || 'Untitled item'}`,
+      { itemId: item.id, type: item.type },
+    );
+
+    return item;
   }
 
   async deleteItem(tripId: string, itemId: string, userId: string) {
     await this.assertCanModifyTrip(tripId, userId);
-    await this.findTripItemOrThrow(tripId, itemId);
+    const item = await this.findTripItemOrThrow(tripId, itemId);
 
     await this.prisma.tripItem.delete({
       where: {
         id: itemId,
       },
     });
+
+    void this.createTripActivity(
+      tripId,
+      userId,
+      TripActivityType.ITEM_DELETED,
+      (name) => `${name} deleted item: ${item.title || 'Untitled item'}`,
+      { itemId, type: item.type },
+    );
 
     return { ok: true };
   }
@@ -657,6 +916,63 @@ export class TripsService {
     });
   }
 
+  private async createTripActivity(
+    tripId: string,
+    actorUserId: string | null | undefined,
+    type: TripActivityType,
+    messageForName: (actorName: string) => string,
+    metadata?: Prisma.InputJsonValue,
+  ) {
+    try {
+      const actorName = await this.resolveActivityActorName(actorUserId);
+
+      await this.prisma.tripActivity.create({
+        data: {
+          tripId,
+          actorUserId: actorUserId || null,
+          actorName,
+          type,
+          message: messageForName(actorName),
+          metadata: metadata ?? undefined,
+        },
+      });
+    } catch (error) {
+      console.error('Failed to create trip activity', error);
+    }
+  }
+
+  private async resolveActivityActorName(userId?: string | null) {
+    if (!userId) return 'Someone';
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        handle: true,
+        name: true,
+        email: true,
+      },
+    });
+
+    return user?.name || user?.handle || user?.email || 'Someone';
+  }
+
+  private tripMemberDisplayName(member: {
+    displayName?: string | null;
+    user?: {
+      name?: string | null;
+      handle?: string | null;
+    } | null;
+    userId?: string | null;
+  }) {
+    return (
+      member.displayName ||
+      member.user?.name ||
+      member.user?.handle ||
+      member.userId ||
+      'member'
+    );
+  }
+
   private async assertCanModifyTrip(tripId: string, userId: string) {
     const membership = await this.prisma.tripMember.findUnique({
       where: {
@@ -725,6 +1041,7 @@ export class TripsService {
       },
       select: {
         id: true,
+        role: true,
       },
     });
 

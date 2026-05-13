@@ -41,8 +41,10 @@ model User {
   likes                          Like[]
   posts                          Post[]
   reviews                        Review[]
+  tripActivities                 TripActivity[]
   createdTrips                   Trip[]              @relation("TripCreator")
   createdTripInvites             TripInvite[]
+  uploadedTripDocuments          TripDocument[]
   tripMemberships                TripMember[]
 }
 
@@ -333,7 +335,9 @@ model Trip {
   title         String
   destination   String?
   coverImageUrl String?
+  activities    TripActivity[]
   createdBy     User           @relation("TripCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  documents     TripDocument[]
   invites       TripInvite[]
   items         TripItem[]
   members       TripMember[]
@@ -356,6 +360,46 @@ model TripInvite {
   @@index([tripId])
   @@index([createdByUserId])
   @@index([revokedAt])
+}
+
+model TripDocument {
+  id               String                 @id @default(cuid())
+  tripId           String
+  title            String
+  note             String?
+  category         TripDocumentCategory   @default(GENERAL)
+  visibility       TripDocumentVisibility @default(SHARED)
+  fileUrl          String
+  fileName         String
+  mimeType         String
+  sizeBytes        Int
+  uploadedByUserId String
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  trip             Trip                   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  uploadedBy       User                   @relation(fields: [uploadedByUserId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@index([uploadedByUserId])
+  @@index([category])
+  @@index([visibility])
+}
+
+model TripActivity {
+  id          String           @id @default(cuid())
+  tripId      String
+  actorUserId String?
+  actorName   String?
+  type        TripActivityType
+  message     String
+  metadata    Json?
+  createdAt   DateTime         @default(now())
+  actorUser   User?            @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  trip        Trip             @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId, createdAt])
+  @@index([actorUserId])
+  @@index([type])
 }
 
 model TripMember {
@@ -491,6 +535,31 @@ enum TripRole {
   VIEWER
   ADMIN
   MEMBER
+}
+
+enum TripDocumentCategory {
+  FLIGHT
+  HOTEL
+  GOLF
+  TRANSFER
+  VISA
+  GENERAL
+}
+
+enum TripDocumentVisibility {
+  SHARED
+  PRIVATE
+}
+
+enum TripActivityType {
+  DOCUMENT_UPLOADED
+  DOCUMENT_DELETED
+  ITEM_CREATED
+  ITEM_UPDATED
+  ITEM_DELETED
+  MEMBER_ADDED
+  INVITE_CREATED
+  TRIP_UPDATED
 }
 
 enum TripItemType {

@@ -35,6 +35,26 @@ function safeImageExt(original: string) {
   return '';
 }
 
+function safeDocumentExt(original: string, mimeType?: string) {
+  const ext = extname(original || '').toLowerCase();
+  if (
+    ext === '.pdf' ||
+    ext === '.jpg' ||
+    ext === '.jpeg' ||
+    ext === '.png' ||
+    ext === '.webp'
+  ) {
+    return ext;
+  }
+
+  if (mimeType === 'application/pdf') return '.pdf';
+  if (mimeType === 'image/jpeg') return '.jpg';
+  if (mimeType === 'image/png') return '.png';
+  if (mimeType === 'image/webp') return '.webp';
+
+  return '';
+}
+
 @Controller('trips')
 @UseGuards(JwtAuthGuard)
 export class TripsController {
@@ -69,6 +89,80 @@ export class TripsController {
   @Post(':id/invite/regenerate')
   regenerateInvite(@Param('id') id: string, @Req() req: any) {
     return this.tripsService.regenerateInvite(id, req.user.id);
+  }
+
+  @Get(':tripId/documents')
+  findDocuments(@Param('tripId') tripId: string, @Req() req: any) {
+    return this.tripsService.findDocuments(tripId, req.user.id);
+  }
+
+  @Post(':tripId/documents')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 10 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        const ext = safeDocumentExt(file.originalname, file.mimetype);
+        if (!ext) {
+          cb(
+            new BadRequestException('Only PDF and image uploads are allowed') as any,
+            false,
+          );
+          return;
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  async createDocument(
+    @Param('tripId') tripId: string,
+    @Req() req: any,
+    @Body()
+    body: {
+      title?: string;
+      note?: string;
+      category?: string;
+      visibility?: string;
+    },
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException("Missing file field 'file'");
+    await this.tripsService.assertCanManageDocuments(tripId, req.user.id);
+
+    const ext = safeDocumentExt(file.originalname, file.mimetype) || '.bin';
+    const key = `trips/${tripId}/documents/${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2)}${ext}`;
+    const fileUrl = await uploadToR2(
+      key,
+      file.buffer,
+      file.mimetype || 'application/octet-stream',
+    );
+
+    return this.tripsService.createDocument(tripId, req.user.id, {
+      title: body.title,
+      note: body.note,
+      category: body.category,
+      visibility: body.visibility,
+      fileUrl,
+      fileName: file.originalname || `document${ext}`,
+      mimeType: file.mimetype || 'application/octet-stream',
+      sizeBytes: file.size,
+    });
+  }
+
+  @Delete(':tripId/documents/:documentId')
+  deleteDocument(
+    @Param('tripId') tripId: string,
+    @Param('documentId') documentId: string,
+    @Req() req: any,
+  ) {
+    return this.tripsService.deleteDocument(tripId, documentId, req.user.id);
+  }
+
+  @Get(':tripId/activity')
+  findActivity(@Param('tripId') tripId: string, @Req() req: any) {
+    return this.tripsService.findActivity(tripId, req.user.id);
   }
 
   @Get(':id')
