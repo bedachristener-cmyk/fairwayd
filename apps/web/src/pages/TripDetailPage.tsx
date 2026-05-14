@@ -3,6 +3,16 @@ import { createPortal } from "react-dom";
 import { useNavigate, useParams } from "react-router-dom";
 import L from "leaflet";
 import {
+  CalendarDays,
+  CheckSquare,
+  ChevronRight,
+  FileText,
+  MapPinned,
+  Route,
+  WalletCards,
+  type LucideIcon,
+} from "lucide-react";
+import {
   MapContainer,
   Marker,
   Polyline,
@@ -387,6 +397,57 @@ const overviewAnchorStyle: React.CSSProperties = {
   scrollMarginTop: 18,
 };
 
+const sectionCardStyle: React.CSSProperties = {
+  ...safeSectionStyle,
+  display: "grid",
+  gap: 10,
+  padding: 14,
+  borderRadius: 20,
+  background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
+  border: "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
+  boxShadow: "0 10px 24px rgba(0,0,0,0.12)",
+};
+
+const sectionInnerCardStyle: React.CSSProperties = {
+  borderRadius: 16,
+  border: "1px solid color-mix(in srgb, var(--border) 76%, transparent)",
+  background: "color-mix(in srgb, var(--card) 88%, var(--bg))",
+};
+
+const sectionMutedCardStyle: React.CSSProperties = {
+  borderRadius: 16,
+  border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+  background: "color-mix(in srgb, var(--card) 92%, var(--bg))",
+};
+
+const sectionTitleTextStyle: React.CSSProperties = {
+  color: "var(--text)",
+  fontSize: 15,
+  lineHeight: 1.18,
+  fontWeight: 950,
+};
+
+const sectionSubtitleTextStyle: React.CSSProperties = {
+  color: "var(--sub)",
+  fontSize: 12,
+  lineHeight: 1.35,
+  fontWeight: 750,
+};
+
+const compactLabelTextStyle: React.CSSProperties = {
+  color: "var(--text)",
+  fontSize: 13,
+  lineHeight: 1.28,
+  fontWeight: 900,
+};
+
+const compactMetaTextStyle: React.CSSProperties = {
+  color: "var(--sub)",
+  fontSize: 11,
+  lineHeight: 1.25,
+  fontWeight: 800,
+};
+
 const subviewOrder: Exclude<TripView, "overview">[] = [
   "timeline",
   "calendar",
@@ -590,6 +651,89 @@ function tripViewSubtitle(view: TripView) {
   if (view === "map") return "Stops and route";
   if (view === "budget") return "Shared cost view";
   return "";
+}
+
+type OverviewNavigationRowProps = {
+  icon: LucideIcon;
+  title: string;
+  subtitle: string;
+  onClick: () => void;
+};
+
+function OverviewNavigationRow({
+  icon: Icon,
+  title,
+  subtitle,
+  onClick,
+}: OverviewNavigationRowProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        width: "100%",
+        minHeight: 66,
+        padding: "12px 12px 12px 14px",
+        borderRadius: 18,
+        border: "1px solid var(--border)",
+        background: "var(--card)",
+        color: "var(--text)",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        boxShadow: "0 10px 28px rgba(0,0,0,0.14)",
+        textAlign: "left",
+      }}
+    >
+      <div
+        aria-hidden="true"
+        style={{
+          width: 38,
+          height: 38,
+          borderRadius: 14,
+          background: "var(--bg)",
+          border: "1px solid var(--border)",
+          color: "var(--text)",
+          display: "grid",
+          placeItems: "center",
+          flex: "0 0 auto",
+        }}
+      >
+        <Icon size={18} strokeWidth={2.2} />
+      </div>
+      <div style={{ minWidth: 0, flex: "1 1 auto", display: "grid", gap: 2 }}>
+        <div
+          style={{
+            minWidth: 0,
+            color: "var(--text)",
+            fontSize: 14,
+            fontWeight: 950,
+            lineHeight: 1.2,
+          }}
+        >
+          {title}
+        </div>
+        <div
+          style={{
+            minWidth: 0,
+            color: "var(--sub)",
+            fontSize: 12,
+            fontWeight: 700,
+            lineHeight: 1.3,
+          }}
+        >
+          {subtitle}
+        </div>
+      </div>
+      <ChevronRight
+        aria-hidden="true"
+        size={16}
+        strokeWidth={2.5}
+        style={{ color: "var(--sub)", flex: "0 0 auto" }}
+      />
+    </button>
+  );
 }
 
 function shouldIgnoreTripSwipe(target: EventTarget | null) {
@@ -4091,37 +4235,20 @@ export default function TripDetailPage() {
       <section
         ref={teeTimesSectionRef}
         id="upcoming-tee-times"
-        style={{
-          ...overviewAnchorStyle,
-          ...safeSectionStyle,
-          display: "grid",
-          gap: 10,
-          padding: 12,
-          borderRadius: 18,
-          background: "var(--card)",
-          border: "1px solid var(--border)",
-          boxShadow: "0 10px 28px rgba(0,0,0,0.14)",
-        }}
+        style={{ ...overviewAnchorStyle, ...sectionCardStyle }}
       >
         <div style={{ display: "grid", gap: 2 }}>
-          <div style={{ color: "var(--text)", fontSize: 15, fontWeight: 950 }}>
+          <div style={sectionTitleTextStyle}>
             Upcoming tee times
           </div>
-          <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+          <div style={sectionSubtitleTextStyle}>
             Next golf rounds on this trip
           </div>
         </div>
 
         {upcomingTeeTimes.length === 0 ? (
           <div
-            style={{
-              padding: 12,
-              borderRadius: 14,
-              border: "1px dashed var(--border)",
-              color: "var(--sub)",
-              fontSize: 13,
-              lineHeight: 1.4,
-            }}
+            style={{ padding: 12, color: "var(--sub)", fontSize: 13, lineHeight: 1.4, ...sectionMutedCardStyle }}
           >
             No upcoming tee times yet.
           </div>
@@ -4146,9 +4273,7 @@ export default function TripDetailPage() {
                     display: "grid",
                     gap: 7,
                     padding: 10,
-                    borderRadius: 14,
-                    border: "1px solid var(--border)",
-                    background: "var(--bg)",
+                    ...sectionInnerCardStyle,
                     minWidth: 0,
                   }}
                 >
@@ -4162,24 +4287,12 @@ export default function TripDetailPage() {
                   >
                     <div style={{ minWidth: 0, display: "grid", gap: 3 }}>
                       <div
-                        style={{
-                          color: "var(--text)",
-                          fontSize: 14,
-                          lineHeight: 1.25,
-                          fontWeight: 950,
-                          overflowWrap: "anywhere",
-                        }}
+                        style={{ ...compactLabelTextStyle, overflowWrap: "anywhere" }}
                       >
                         {tripItemTitle(item)}
                       </div>
                       {dateTime ? (
-                        <div
-                          style={{
-                            color: "var(--sub)",
-                            fontSize: 12,
-                            fontWeight: 900,
-                          }}
-                        >
+                        <div style={compactMetaTextStyle}>
                           {dateTime}
                         </div>
                       ) : null}
@@ -4189,13 +4302,13 @@ export default function TripDetailPage() {
                         height: 28,
                         padding: "0 9px",
                         borderRadius: 999,
-                        border: "1px solid var(--border)",
-                        background: "var(--card)",
+                        border: "1px solid color-mix(in srgb, var(--border) 76%, transparent)",
+                        background: "color-mix(in srgb, var(--card) 90%, var(--bg))",
                         color: "var(--text)",
                         display: "inline-flex",
                         alignItems: "center",
                         fontSize: 11,
-                        fontWeight: 950,
+                        fontWeight: 900,
                         whiteSpace: "nowrap",
                       }}
                     >
@@ -4231,7 +4344,7 @@ export default function TripDetailPage() {
                     <div
                       style={{
                         display: "grid",
-                        gap: 3,
+                        gap: 2,
                         color: "var(--sub)",
                         fontSize: 12,
                         lineHeight: 1.35,
@@ -4315,17 +4428,7 @@ export default function TripDetailPage() {
 
       <section
         id="travel-essentials"
-        style={{
-          ...overviewAnchorStyle,
-          ...safeSectionStyle,
-          display: "grid",
-          gap: 10,
-          padding: 12,
-          borderRadius: 18,
-          background: "var(--card)",
-          border: "1px solid var(--border)",
-          boxShadow: "0 10px 28px rgba(0,0,0,0.14)",
-        }}
+        style={{ ...overviewAnchorStyle, ...sectionCardStyle }}
       >
         <div
           style={{
@@ -4389,9 +4492,7 @@ export default function TripDetailPage() {
                     display: "grid",
                     gap: 8,
                     padding: 10,
-                    borderRadius: 14,
-                    border: "1px solid var(--border)",
-                    background: "var(--bg)",
+                    ...sectionInnerCardStyle,
                     minWidth: 0,
                   }}
                 >
@@ -4555,60 +4656,63 @@ export default function TripDetailPage() {
 
       <section
         id="travel-tools"
-        style={{
-          ...overviewAnchorStyle,
-          ...safeSectionStyle,
-          display: "grid",
-          gap: 10,
-          padding: 12,
-          borderRadius: 18,
-          background: "var(--card)",
-          border: "1px solid var(--border)",
-          boxShadow: "0 10px 28px rgba(0,0,0,0.14)",
-        }}
+        style={{ ...overviewAnchorStyle, ...sectionCardStyle }}
       >
         <div style={{ display: "grid", gap: 2 }}>
-          <div style={{ color: "var(--text)", fontSize: 15, fontWeight: 950 }}>
+          <div style={sectionTitleTextStyle}>
             Travel tools
           </div>
-          <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+          <div style={sectionSubtitleTextStyle}>
             Jump to the trip tools you will use on the road
           </div>
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(112px, 1fr))",
-            gap: 8,
-          }}
-        >
+        <div style={{ display: "grid", gap: 8 }}>
           {[
-            { label: "Budget", action: () => setActiveView("budget") },
-            { label: "Documents", action: () => setActiveView("documents") },
-            { label: "Map", action: () => setActiveView("map") },
-            { label: "Checklist", action: () => openOverviewSection(checklistSectionRef) },
-            { label: "Tee times", action: () => openOverviewSection(teeTimesSectionRef) },
+            {
+              icon: CalendarDays,
+              title: "Calendar",
+              subtitle: tripViewSubtitle("calendar"),
+              action: () => setActiveView("calendar"),
+            },
+            {
+              icon: Route,
+              title: "Timeline",
+              subtitle: tripViewSubtitle("timeline"),
+              action: () => setActiveView("timeline"),
+            },
+            {
+              icon: MapPinned,
+              title: "Map",
+              subtitle: tripViewSubtitle("map"),
+              action: () => setActiveView("map"),
+            },
+            {
+              icon: WalletCards,
+              title: "Budget",
+              subtitle: tripViewSubtitle("budget"),
+              action: () => setActiveView("budget"),
+            },
+            {
+              icon: FileText,
+              title: "Documents",
+              subtitle: tripViewSubtitle("documents"),
+              action: () => setActiveView("documents"),
+            },
+            {
+              icon: CheckSquare,
+              title: "Checklist",
+              subtitle: "Local travel checklist",
+              action: () => openOverviewSection(checklistSectionRef),
+            },
           ].map((tool) => (
-            <button
-              key={tool.label}
-              type="button"
+            <OverviewNavigationRow
+              key={tool.title}
+              icon={tool.icon}
+              title={tool.title}
+              subtitle={tool.subtitle}
               onClick={tool.action}
-              style={{
-                height: 38,
-                padding: "0 10px",
-                borderRadius: 14,
-                border: "1px solid var(--border)",
-                background: "var(--bg)",
-                color: "var(--text)",
-                cursor: "pointer",
-                fontSize: 12,
-                fontWeight: 950,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {tool.label}
-            </button>
+            />
           ))}
         </div>
       </section>
@@ -4616,17 +4720,7 @@ export default function TripDetailPage() {
       <section
         ref={checklistSectionRef}
         id="before-you-go"
-        style={{
-          ...overviewAnchorStyle,
-          ...safeSectionStyle,
-          display: "grid",
-          gap: 10,
-          padding: 12,
-          borderRadius: 18,
-          background: "var(--card)",
-          border: "1px solid var(--border)",
-          boxShadow: "0 10px 28px rgba(0,0,0,0.14)",
-        }}
+        style={{ ...overviewAnchorStyle, ...sectionCardStyle }}
       >
         <div
           style={{
@@ -4638,10 +4732,10 @@ export default function TripDetailPage() {
           }}
         >
           <div style={{ minWidth: 0, display: "grid", gap: 2 }}>
-            <div style={{ color: "var(--text)", fontSize: 15, fontWeight: 950 }}>
+            <div style={sectionTitleTextStyle}>
               Before you go
             </div>
-            <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+            <div style={sectionSubtitleTextStyle}>
               Local travel checklist
             </div>
           </div>
@@ -4682,14 +4776,12 @@ export default function TripDetailPage() {
                   display: "flex",
                   alignItems: "center",
                   gap: 9,
-                  padding: "9px 10px",
-                  borderRadius: 14,
-                  border: "1px solid var(--border)",
-                  background: "var(--bg)",
+                  padding: "8px 10px",
+                  ...sectionMutedCardStyle,
                   color: checked ? "var(--sub)" : "var(--text)",
                   cursor: "pointer",
                   fontSize: 13,
-                  fontWeight: 900,
+                  fontWeight: 850,
                   lineHeight: 1.25,
                 }}
               >
@@ -4709,6 +4801,8 @@ export default function TripDetailPage() {
                   style={{
                     minWidth: 0,
                     overflowWrap: "anywhere",
+                    fontSize: 13,
+                    fontWeight: 850,
                     textDecoration: checked ? "line-through" : "none",
                   }}
                 >
@@ -4720,67 +4814,8 @@ export default function TripDetailPage() {
         </div>
       </section>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-          width: "100%",
-          maxWidth: "100%",
-          gap: 10,
-          boxSizing: "border-box",
-        }}
-      >
-        {(["timeline", "calendar", "documents", "map", "budget"] as TripView[]).map((view) => {
-          const label = tripViewLabel(view);
-          return (
-            <button
-              key={view}
-              type="button"
-              onClick={() => setActiveView(view)}
-              style={{
-                minHeight: 86,
-                padding: 16,
-                borderRadius: 30,
-                border: "1px solid rgba(255,255,255,0.08)",
-                background: "var(--card)",
-                color: "var(--text)",
-                cursor: "pointer",
-                fontWeight: 950,
-                fontSize: 15,
-                display: "grid",
-                alignContent: "center",
-                justifyItems: "start",
-                gap: 5,
-                boxShadow: "0 14px 34px rgba(0,0,0,0.18)",
-                overflow: "hidden",
-              }}
-            >
-              <span>{label}</span>
-              <span
-                style={{
-                  color: "var(--sub)",
-                  fontSize: 11,
-                  fontWeight: 850,
-                }}
-              >
-                {tripViewSubtitle(view)}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
       <section
-        style={{
-          ...safeSectionStyle,
-          display: "grid",
-          gap: 10,
-          padding: 14,
-          borderRadius: 22,
-          background: "var(--card)",
-          border: "1px solid var(--border)",
-          boxShadow: "0 12px 34px rgba(0,0,0,0.16)",
-        }}
+        style={{ ...sectionCardStyle }}
       >
         <div
           style={{
@@ -4791,10 +4826,10 @@ export default function TripDetailPage() {
           }}
         >
           <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
-            <div style={{ color: "var(--text)", fontSize: 16, fontWeight: 950 }}>
+            <div style={sectionTitleTextStyle}>
               Recent activity
             </div>
-            <div style={{ color: "var(--sub)", fontSize: 12 }}>
+            <div style={sectionSubtitleTextStyle}>
               {activityLoading
                 ? "Loading updates..."
                 : "Latest shared trip updates"}
@@ -4808,7 +4843,7 @@ export default function TripDetailPage() {
               height: 28,
               padding: "0 10px",
               borderRadius: 999,
-              border: "1px solid var(--border)",
+              border: "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
               background: "transparent",
               color: "var(--sub)",
               cursor: activityLoading ? "default" : "pointer",
@@ -4841,7 +4876,8 @@ export default function TripDetailPage() {
             style={{
               padding: 14,
               borderRadius: 16,
-              border: "1px dashed var(--border)",
+              border: "1px dashed color-mix(in srgb, var(--border) 82%, transparent)",
+              background: "color-mix(in srgb, var(--card) 84%, var(--bg))",
               color: "var(--sub)",
               fontSize: 13,
               lineHeight: 1.4,
@@ -4860,8 +4896,8 @@ export default function TripDetailPage() {
                   gridTemplateColumns: "32px minmax(0, 1fr)",
                   gap: 10,
                   alignItems: "start",
-                  padding: "9px 0",
-                  borderTop: "1px solid var(--border)",
+                  padding: 9,
+                  ...sectionMutedCardStyle,
                 }}
               >
                 <div
@@ -4870,8 +4906,8 @@ export default function TripDetailPage() {
                     width: 32,
                     height: 32,
                     borderRadius: 12,
-                    border: "1px solid var(--border)",
-                    background: "var(--bg)",
+                    border: "1px solid color-mix(in srgb, var(--border) 76%, transparent)",
+                    background: "color-mix(in srgb, var(--card) 88%, var(--bg))",
                     display: "grid",
                     placeItems: "center",
                     fontSize: 15,
@@ -4879,27 +4915,11 @@ export default function TripDetailPage() {
                 >
                   {activityIcon(entry.type)}
                 </div>
-                <div style={{ display: "grid", gap: 3, minWidth: 0 }}>
-                  <div
-                    style={{
-                      color: "var(--text)",
-                      fontSize: 13,
-                      lineHeight: 1.35,
-                      fontWeight: 850,
-                      overflowWrap: "anywhere",
-                    }}
-                  >
+                <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
+                  <div style={{ ...compactLabelTextStyle, overflowWrap: "anywhere" }}>
                     {entry.message}
                   </div>
-                  <div
-                    style={{
-                      color: "var(--sub)",
-                      fontSize: 11,
-                      fontWeight: 800,
-                    }}
-                  >
-                    {formatActivityDate(entry.createdAt)}
-                  </div>
+                  <div style={compactMetaTextStyle}>{formatActivityDate(entry.createdAt)}</div>
                 </div>
               </div>
             ))}
@@ -7363,13 +7383,7 @@ export default function TripDetailPage() {
 
           <div
             style={{
-              ...safeSectionStyle,
-              display: "grid",
-              gap: 10,
-              padding: 12,
-              borderRadius: 16,
-              border: "1px solid var(--border)",
-              background: "var(--bg)",
+              ...sectionCardStyle,
             }}
           >
             <div
@@ -7382,10 +7396,10 @@ export default function TripDetailPage() {
               }}
             >
               <div style={{ minWidth: 0, display: "grid", gap: 2 }}>
-                <div style={{ color: "var(--text)", fontSize: 14, fontWeight: 950 }}>
+                <div style={sectionTitleTextStyle}>
                   Settlement
                 </div>
-                <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+                <div style={sectionSubtitleTextStyle}>
                   Frontend estimate from paid-by, participants, and item costs
                 </div>
               </div>
@@ -7446,14 +7460,7 @@ export default function TripDetailPage() {
 
             {settlementSummary.mixedCurrencies ? (
               <div
-                style={{
-                  padding: 10,
-                  borderRadius: 12,
-                  border: "1px solid var(--border)",
-                  color: "var(--sub)",
-                  fontSize: 12,
-                  lineHeight: 1.35,
-                }}
+                style={{ padding: 10, color: "var(--sub)", fontSize: 12, lineHeight: 1.35, ...sectionMutedCardStyle }}
               >
                 Settlement combines multiple currencies. Check source costs before
                 settling balances.
@@ -7462,7 +7469,7 @@ export default function TripDetailPage() {
 
             {settlementSummary.mixedCurrencies ? (
               <div style={{ display: "grid", gap: 8 }}>
-                <div style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
+                <div style={sectionSubtitleTextStyle}>
                   Per-currency balances
                 </div>
                 {settlementSummary.currencySummaries.map((summary) => {
@@ -7473,20 +7480,14 @@ export default function TripDetailPage() {
                   return (
                     <div
                       key={summary.currency}
-                      style={{
-                        display: "grid",
-                        gap: 7,
-                        padding: 10,
-                        borderRadius: 14,
-                        border: "1px solid var(--border)",
-                        background: "var(--card)",
-                      }}
+                      style={{ display: "grid", gap: 7, padding: 10, ...sectionMutedCardStyle }}
                     >
                       <div
                         style={{
                           color: "var(--text)",
                           fontSize: 12,
-                          fontWeight: 950,
+                          lineHeight: 1.25,
+                          fontWeight: 900,
                         }}
                       >
                         {summary.currency}
@@ -7510,8 +7511,9 @@ export default function TripDetailPage() {
                               justifyContent: "space-between",
                               gap: 10,
                               color: "var(--sub)",
-                              fontSize: 12,
-                              fontWeight: 850,
+                              fontSize: 11,
+                              lineHeight: 1.25,
+                              fontWeight: 800,
                             }}
                           >
                             <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>
@@ -7549,30 +7551,20 @@ export default function TripDetailPage() {
               ].map(([label, value]) => (
                 <div
                   key={String(label)}
-                  style={{
-                    minWidth: 0,
-                    padding: "10px 9px",
-                    borderRadius: 14,
-                    border: "1px solid var(--border)",
-                    background: "var(--card)",
-                    display: "grid",
-                    gap: 3,
-                  }}
+                  style={{ minWidth: 0, padding: "10px 9px", display: "grid", gap: 3, ...sectionMutedCardStyle }}
                 >
                   <div
                     style={{
                       color: "var(--text)",
-                      fontSize:
-                        settlementSummary.mixedCurrencies && Number(value) > 0
-                          ? 12
-                          : 16,
+                      fontSize: settlementSummary.mixedCurrencies && Number(value) > 0 ? 12 : 14,
+                      lineHeight: 1.15,
                       fontWeight: 950,
                       overflowWrap: "anywhere",
                     }}
                   >
                     {settlementAmount(Number(value), settlementSummary)}
                   </div>
-                  <div style={{ color: "var(--sub)", fontSize: 11, fontWeight: 900 }}>
+                  <div style={compactMetaTextStyle}>
                     {String(label)}
                   </div>
                 </div>
@@ -7581,14 +7573,7 @@ export default function TripDetailPage() {
 
             {settlementSummary.rows.length === 0 ? (
               <div
-                style={{
-                  padding: 12,
-                  borderRadius: 14,
-                  border: "1px dashed var(--border)",
-                  color: "var(--sub)",
-                  fontSize: 13,
-                  lineHeight: 1.4,
-                }}
+                style={{ padding: 12, color: "var(--sub)", fontSize: 13, lineHeight: 1.4, ...sectionMutedCardStyle }}
               >
                 Add trip members and costs to see settlement balances.
               </div>
@@ -7605,14 +7590,7 @@ export default function TripDetailPage() {
                   return (
                     <div
                       key={row.member.id}
-                      style={{
-                        display: "grid",
-                        gap: 8,
-                        padding: 10,
-                        borderRadius: 14,
-                        border: "1px solid var(--border)",
-                        background: "var(--card)",
-                      }}
+                      style={{ display: "grid", gap: 8, padding: 10, ...sectionMutedCardStyle }}
                     >
                       <div
                         style={{
@@ -7626,7 +7604,8 @@ export default function TripDetailPage() {
                           style={{
                             color: "var(--text)",
                             fontSize: 13,
-                            fontWeight: 950,
+                            lineHeight: 1.2,
+                            fontWeight: 850,
                             overflowWrap: "anywhere",
                             minWidth: 0,
                           }}
@@ -7636,8 +7615,9 @@ export default function TripDetailPage() {
                         <div
                           style={{
                             color: row.balance > 0.005 ? "var(--text)" : "var(--sub)",
-                            fontSize: 12,
-                            fontWeight: 950,
+                            fontSize: 11,
+                            lineHeight: 1.25,
+                            fontWeight: 850,
                             textAlign: "right",
                             whiteSpace: "nowrap",
                           }}
@@ -7661,24 +7641,15 @@ export default function TripDetailPage() {
                           ["Balance", row.balance],
                         ].map(([label, value]) => (
                           <div key={String(label)} style={{ minWidth: 0, display: "grid", gap: 2 }}>
-                            <span
-                              style={{
-                                color: "var(--sub)",
-                                fontSize: 10,
-                                fontWeight: 900,
-                              }}
-                            >
+                            <span style={compactMetaTextStyle}>
                               {String(label)}
                             </span>
                             <span
                               style={{
                                 color: "var(--text)",
-                                fontSize:
-                                  settlementSummary.mixedCurrencies &&
-                                  Math.abs(Number(value)) > 0
-                                    ? 11
-                                    : 12,
-                                fontWeight: 900,
+                                fontSize: settlementSummary.mixedCurrencies && Math.abs(Number(value)) > 0 ? 11 : 12,
+                                lineHeight: 1.25,
+                                fontWeight: 850,
                                 overflowWrap: "anywhere",
                               }}
                             >
@@ -7707,27 +7678,13 @@ export default function TripDetailPage() {
 
                 {settlementSummary.mixedCurrencies ? (
                   <div
-                    style={{
-                      padding: 10,
-                      borderRadius: 14,
-                      border: "1px dashed var(--border)",
-                      color: "var(--sub)",
-                      fontSize: 12,
-                      lineHeight: 1.35,
-                    }}
+                    style={{ padding: 10, color: "var(--sub)", fontSize: 12, lineHeight: 1.35, ...sectionMutedCardStyle }}
                   >
                     Suggested payments are disabled for mixed currencies.
                   </div>
                 ) : settlementSummary.transfers.length === 0 ? (
                   <div
-                    style={{
-                      padding: 10,
-                      borderRadius: 14,
-                      border: "1px dashed var(--border)",
-                      color: "var(--sub)",
-                      fontSize: 12,
-                      lineHeight: 1.35,
-                    }}
+                    style={{ padding: 10, color: "var(--sub)", fontSize: 12, lineHeight: 1.35, ...sectionMutedCardStyle }}
                   >
                     Everyone is settled.
                   </div>
@@ -7736,17 +7693,7 @@ export default function TripDetailPage() {
                     {settlementSummary.transfers.map((transfer, index) => (
                       <div
                         key={`${transfer.from.id}-${transfer.to.id}-${index}`}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: 10,
-                          padding: "9px 10px",
-                          borderRadius: 14,
-                          border: "1px solid var(--border)",
-                          background: "var(--card)",
-                          minWidth: 0,
-                        }}
+                        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "9px 10px", minWidth: 0, ...sectionMutedCardStyle }}
                       >
                         <div
                           style={{

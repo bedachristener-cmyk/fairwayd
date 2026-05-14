@@ -2,13 +2,13 @@
 
 /* DARK (default) */
 html[data-theme="dark"] {
-  --bg: #0f1115;
-  --card: #1a1d24;
-  --muted: #1f252b;
+  --bg: #0d1117;
+  --card: #171d25;
+  --muted: #1c232d;
   --text: #f3f4f6;
-  --sub: #9ca3af;
-  --border: #2a2f3a;
-  --green: #27c46b;
+  --sub: #9fb0c0;
+  --border: #263240;
+  --green: #54d39d;
   --danger: #fca5a5;
   --danger-soft: rgba(252, 165, 165, 0.12);
   --bottom-tabs-bg: rgba(10, 14, 11, 0.92);
@@ -19,13 +19,13 @@ html[data-theme="dark"] {
 
 /* LIGHT */
 html[data-theme="light"] {
-  --bg: #f4f6f8;
-  --card: #ffffff;
-  --muted: #f3f4f6;
+  --bg: #f6f1e8;
+  --card: #fffaf1;
+  --muted: #f3eadf;
   --text: #111827;
-  --sub: #6b7280;
-  --border: #e5e7eb;
-  --green: #16a34a;
+  --sub: #6f655d;
+  --border: #e7dccd;
+  --green: #2f7d5b;
   --danger: #dc2626;
   --danger-soft: rgba(220, 38, 38, 0.08);
   --bottom-tabs-bg: rgba(255, 255, 255, 0.94);
@@ -101,13 +101,13 @@ html[data-theme="contrast"] {
 
 /* fallback if attribute missing */
 :root {
-  --bg: #0e1113;
-  --card: #171b1f;
-  --muted: #1f252b;
-  --border: #2a323a;
+  --bg: #0d1117;
+  --card: #171d25;
+  --muted: #1c232d;
+  --border: #263240;
   --text: #e9eef2;
-  --sub: #8b98a5;
-  --green: #27c46b;
+  --sub: #9fb0c0;
+  --green: #54d39d;
   --danger: #fca5a5;
   --danger-soft: rgba(252, 165, 165, 0.12);
   --bottom-tabs-bg: rgba(10, 14, 11, 0.92);

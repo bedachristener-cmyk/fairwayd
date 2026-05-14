@@ -100,6 +100,74 @@ function destinationFlag(destination?: string | null) {
 
 const tripsCacheKey = "fairwayd.trips";
 
+const pageCardStyle: React.CSSProperties = {
+  borderRadius: 20,
+  border: "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
+  background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
+  boxShadow: "0 10px 24px rgba(0,0,0,0.12)",
+};
+
+const pageMutedCardStyle: React.CSSProperties = {
+  borderRadius: 16,
+  border: "1px solid color-mix(in srgb, var(--border) 76%, transparent)",
+  background: "color-mix(in srgb, var(--card) 88%, var(--bg))",
+};
+
+const pageTitleStyle: React.CSSProperties = {
+  color: "var(--text)",
+  fontSize: 22,
+  lineHeight: 1.12,
+  fontWeight: 900,
+};
+
+const pageSubtitleStyle: React.CSSProperties = {
+  color: "var(--sub)",
+  fontSize: 13,
+  lineHeight: 1.4,
+  fontWeight: 750,
+};
+
+const actionButtonStyle: React.CSSProperties = {
+  height: 38,
+  padding: "0 12px",
+  borderRadius: 999,
+  border: "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
+  background: "transparent",
+  color: "var(--text)",
+  cursor: "pointer",
+  fontWeight: 850,
+  fontSize: 13,
+  whiteSpace: "nowrap",
+  boxSizing: "border-box",
+};
+
+const compactActionButtonStyle: React.CSSProperties = {
+  height: 28,
+  padding: "0 10px",
+  borderRadius: 999,
+  border: "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
+  background: "transparent",
+  color: "var(--text)",
+  cursor: "pointer",
+  fontWeight: 900,
+  fontSize: 11,
+  whiteSpace: "nowrap",
+  boxSizing: "border-box",
+};
+
+const primaryActionButtonStyle: React.CSSProperties = {
+  height: 40,
+  padding: "0 14px",
+  borderRadius: 999,
+  border: "1px solid var(--text)",
+  background: "var(--text)",
+  color: "var(--bg)",
+  cursor: "pointer",
+  fontWeight: 900,
+  whiteSpace: "nowrap",
+  boxSizing: "border-box",
+};
+
 function formatCachedAt(value?: string | null) {
   if (!value) return "Unknown";
 
@@ -341,7 +409,7 @@ export default function TripsPage() {
         boxSizing: "border-box",
         padding: "16px 14px calc(96px + env(safe-area-inset-bottom, 0px))",
         display: "grid",
-        gap: 16,
+        gap: 14,
         overflowX: "hidden",
       }}
     >
@@ -357,11 +425,11 @@ export default function TripsPage() {
           boxSizing: "border-box",
         }}
       >
-        <div style={{ minWidth: 0, flex: "1 1 220px", display: "grid", gap: 3 }}>
-          <div style={{ fontSize: 22, lineHeight: 1.12, fontWeight: 850 }}>
+        <div style={{ minWidth: 0, flex: "1 1 220px", display: "grid", gap: 4 }}>
+          <div style={pageTitleStyle}>
             {headerText}
           </div>
-          <div style={{ fontSize: 13, color: "var(--sub)" }}>
+          <div style={pageSubtitleStyle}>
             Golf travel, tee times, stays, flights and shared planning.
           </div>
         </div>
@@ -380,17 +448,8 @@ export default function TripsPage() {
             onClick={() => loadTrips()}
             disabled={loading}
             style={{
-              height: 38,
-              padding: "0 12px",
-              borderRadius: 999,
-              border: "1px solid var(--border)",
-              background: "transparent",
-              color: "var(--text)",
+              ...actionButtonStyle,
               cursor: loading ? "default" : "pointer",
-              fontWeight: 850,
-              fontSize: 13,
-              whiteSpace: "nowrap",
-              boxSizing: "border-box",
             }}
           >
             {isRefreshingTrips ? "Updating..." : "Refresh"}
@@ -398,19 +457,7 @@ export default function TripsPage() {
           <button
             type="button"
             onClick={() => nav("/trips/new")}
-            style={{
-              minWidth: 132,
-              height: 40,
-              padding: "0 14px",
-              borderRadius: 999,
-              border: "1px solid var(--border)",
-              background: "var(--text)",
-              color: "var(--bg)",
-              cursor: "pointer",
-              fontWeight: 850,
-              whiteSpace: "nowrap",
-              boxSizing: "border-box",
-            }}
+            style={{ ...primaryActionButtonStyle, minWidth: 132 }}
           >
             + New Trip
           </button>
@@ -421,10 +468,8 @@ export default function TripsPage() {
         <div
           role="status"
           style={{
-            padding: "9px 11px",
-            borderRadius: 12,
-            background: "var(--card)",
-            border: "1px solid var(--border)",
+            padding: "10px 11px",
+            ...pageCardStyle,
             color: "var(--sub)",
             fontSize: 12,
             fontWeight: 850,
@@ -447,16 +492,8 @@ export default function TripsPage() {
             onClick={() => loadTrips()}
             disabled={loading}
             style={{
-              height: 28,
-              padding: "0 10px",
-              borderRadius: 999,
-              border: "1px solid var(--border)",
-              background: "transparent",
-              color: "var(--text)",
+              ...compactActionButtonStyle,
               cursor: loading ? "default" : "pointer",
-              fontWeight: 900,
-              fontSize: 11,
-              whiteSpace: "nowrap",
             }}
           >
             {isRefreshingTrips ? "Updating..." : "Refresh"}
@@ -465,24 +502,23 @@ export default function TripsPage() {
       ) : null}
 
       {isRefreshingTrips ? (
-        <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 850 }}>
+        <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 800 }}>
           Updating trips...
         </div>
       ) : null}
 
       {loading && trips.length === 0 ? (
-        <div style={{ color: "var(--sub)", fontSize: 13 }}>Loading...</div>
+        <div style={{ color: "var(--sub)", fontSize: 13, fontWeight: 750 }}>Loading...</div>
       ) : null}
 
       {err ? (
         <div
           style={{
             padding: 12,
-            borderRadius: 14,
-            background: "var(--card)",
-            border: "1px solid var(--border)",
+            ...pageCardStyle,
             color: "var(--text)",
             fontSize: 13,
+            lineHeight: 1.4,
           }}
         >
           {err}
@@ -493,16 +529,16 @@ export default function TripsPage() {
         <div
           style={{
             padding: 18,
-            borderRadius: 16,
-            background: "var(--card)",
-            border: "1px solid var(--border)",
+            ...pageCardStyle,
             color: "var(--text)",
             display: "grid",
-            gap: 6,
+            gap: 5,
           }}
         >
-          <div style={{ fontSize: 16, fontWeight: 850 }}>No trips yet</div>
-          <div style={{ color: "var(--sub)", fontSize: 13 }}>
+          <div style={{ fontSize: 16, lineHeight: 1.2, fontWeight: 900 }}>
+            No trips yet
+          </div>
+          <div style={pageSubtitleStyle}>
             Start with a destination and add tee times, hotels and flights as
             the plan takes shape.
           </div>
@@ -533,15 +569,12 @@ export default function TripsPage() {
                 role="button"
                 tabIndex={0}
                 style={{
-                  padding: 10,
-                  borderRadius: 18,
-                  background: "var(--card)",
-                  border: "1px solid var(--border)",
+                  padding: 11,
+                  ...pageCardStyle,
                   display: "grid",
                   gridTemplateColumns: "88px minmax(0, 1fr)",
-                  gap: 12,
+                  gap: 11,
                   cursor: "pointer",
-                  boxShadow: "0 10px 28px rgba(0,0,0,0.18)",
                   overflow: "hidden",
                   width: "100%",
                   maxWidth: "100%",
@@ -551,17 +584,17 @@ export default function TripsPage() {
                 {coverUrl ? (
                   <div
                     aria-hidden="true"
-                    className="fw-trip-cover-thumb"
-                    style={{
-                      width: 88,
-                      height: 104,
-                      minWidth: 88,
-                      borderRadius: 14,
-                      overflow: "hidden",
-                      border: "1px solid var(--border)",
-                      background: "transparent",
-                      position: "relative",
-                      boxSizing: "border-box",
+                      className="fw-trip-cover-thumb"
+                      style={{
+                        width: 88,
+                        height: 104,
+                        minWidth: 88,
+                        borderRadius: 14,
+                        overflow: "hidden",
+                        border: "1px solid color-mix(in srgb, var(--border) 76%, transparent)",
+                        background: "transparent",
+                        position: "relative",
+                        boxSizing: "border-box",
                     }}
                   >
                     <img
@@ -582,24 +615,24 @@ export default function TripsPage() {
                 ) : (
                   <div
                     aria-hidden="true"
-                    style={{
-                      width: 88,
-                      height: 104,
-                      minWidth: 88,
-                      borderRadius: 14,
-                      overflow: "hidden",
-                      background:
-                        "linear-gradient(135deg, var(--green), var(--muted))",
-                      border: "1px solid var(--border)",
-                      display: "grid",
-                      alignContent: "end",
-                      padding: 10,
-                      color: "var(--bg)",
-                      fontSize: 24,
-                      fontWeight: 850,
-                      boxSizing: "border-box",
-                    }}
-                  >
+                      style={{
+                        width: 88,
+                        height: 104,
+                        minWidth: 88,
+                        borderRadius: 14,
+                        overflow: "hidden",
+                        background:
+                          "linear-gradient(135deg, color-mix(in srgb, var(--green) 70%, var(--bg)), color-mix(in srgb, var(--muted) 88%, var(--bg)))",
+                        border: "1px solid color-mix(in srgb, var(--border) 76%, transparent)",
+                        display: "grid",
+                        alignContent: "end",
+                        padding: 10,
+                        color: "var(--bg)",
+                        fontSize: 24,
+                        fontWeight: 900,
+                        boxSizing: "border-box",
+                      }}
+                    >
                     {flag || "Trip"}
                   </div>
                 )}
@@ -608,17 +641,17 @@ export default function TripsPage() {
                   style={{
                     minWidth: 0,
                     display: "grid",
-                    gap: 8,
+                    gap: 7,
                     alignContent: "space-between",
                   }}
                 >
-                  <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
+                  <div style={{ display: "grid", gap: 3, minWidth: 0 }}>
                     <div
                       style={{
-                        fontSize: 17,
-                        lineHeight: 1.2,
-                        fontWeight: 850,
                         color: "var(--text)",
+                        fontSize: 17,
+                        lineHeight: 1.18,
+                        fontWeight: 900,
                         overflowWrap: "anywhere",
                       }}
                     >
@@ -632,7 +665,7 @@ export default function TripsPage() {
                         gap: 7,
                         color: "var(--sub)",
                         fontSize: 12,
-                        fontWeight: 500,
+                        fontWeight: 700,
                       }}
                     >
                       {trip.destination ? (
@@ -650,7 +683,7 @@ export default function TripsPage() {
                       gap: 7,
                       color: "var(--sub)",
                       fontSize: 12,
-                      fontWeight: 600,
+                      fontWeight: 700,
                     }}
                   >
                     <span>{memberCount} members</span>
@@ -690,13 +723,12 @@ function StatPill({ label, value }: { label: string; value: number }) {
   return (
     <span
       style={{
-        border: "1px solid var(--border)",
+        ...pageMutedCardStyle,
         borderRadius: 999,
-        background: "var(--bg)",
         color: "var(--text)",
         padding: "4px 7px",
         fontSize: 11,
-        fontWeight: 700,
+        fontWeight: 800,
       }}
     >
       {label} {value}
