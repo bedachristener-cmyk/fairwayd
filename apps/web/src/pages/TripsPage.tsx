@@ -98,66 +98,239 @@ function destinationFlag(destination?: string | null) {
   return "";
 }
 
-export default function TripsPage() {
-  const nav = useNavigate();
-  const { token } = useAuth();
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+const tripsCacheKey = "fairwayd.trips";
 
-  useEffect(() => {
-    let cancelled = false;
+function formatCachedAt(value?: string | null) {
+  if (!value) return "Unknown";
 
-    async function loadTrips() {
-      if (!token) return;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown";
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function readCachedTrips(): { trips: Trip[]; cachedAt: string | null } {
+  try {
+    const raw = window.localStorage.getItem(tripsCacheKey);
+    if (!raw) return { trips: [], cachedAt: null };
+
+    const parsed = JSON.parse(raw) as unknown;
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      "data" in parsed &&
+      Array.isArray((parsed as { data?: unknown }).data)
+    ) {
+      const cached = parsed as { data: Trip[]; cachedAt?: unknown };
+
+      return {
+        trips: cached.data,
+        cachedAt: typeof cached.cachedAt === "string" ? cached.cachedAt : null,
+      };
+    }
+
+    return Array.isArray(parsed)
+      ? { trips: parsed as Trip[], cachedAt: null }
+      : { trips: [], cachedAt: null };
+  } catch {
+    return { trips: [], cachedAt: null };
+  }
+}
+
+function writeCachedTrips(trips: Trip[]) {
+  const cachedAt = new Date().toISOString();
+
+  try {
+    window.localStorage.setItem(
+      tripsCacheKey,
+      JSON.stringify({ cachedAt, data: trips }),
+    );
+  } catch {
+    // Cache failures should not block the live trips list.
+  }
+
+  return cachedAt;
+}
+
+function tripDetailCacheKey(tripId: string) {
+  return `fairwayd.trip.${tripId}`;
+}
+
+function writeCachedTripDetail(tripId: string, trip: unknown) {
+  const cachedAt = new Date().toISOString();
+
+  try {
+    window.localStorage.setItem(
+      tripDetailCacheKey(tripId),
+      JSON.stringify({ cachedAt, data: trip }),
+    );
+  } catch {
+    // Detail preload cache failures are non-critical.
+  }
+}
+
+function timeValue(value?: string | null) {
+  if (!value) return null;
+
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) ? time : null;
+}
+
+function nextTripItemTime(trip: Trip, todayTime: number) {
+  const upcomingTimes =
+    trip.items
+      ?.flatMap((item) => [item.date ?? item.startsAt, item.endDate])
+      .map(timeValue)
+      .filter((time): time is number => time != null && time >= todayTime) ??
+    [];
+
+  return upcomingTimes.length > 0 ? Math.min(...upcomingTimes) : null;
+}
+
+function createdTripTime(trip: Trip) {
+  return timeValue(trip.createdAt) ?? 0;
+}
+
+function tripsToPreload(trips: Trip[]) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayTime = today.getTime();
+
+  const withUpcoming = trips
+    .map((trip) => ({ trip, nextTime: nextTripItemTime(trip, todayTime) }))
+    .filter((entry): entry is { trip: Trip; nextTime: number } => entry.nextTime != null)
+    .sort((a, b) => a.nextTime - b.nextTime)
+    .map((entry) => entry.trip);
+
+  const upcomingIds = new Set(withUpcoming.map((trip) => trip.id));
+  const newestRemaining = trips
+    .filter((trip) => !upcomingIds.has(trip.id))
+    .sort((a, b) => createdTripTime(b) - createdTripTime(a));
+
+  return [...withUpcoming, ...newestRemaining].slice(0, 3);
+}
+
+async function preloadTripDetails(
+  trips: Trip[],
+  token: string,
+  isCancelled: () => boolean,
+) {
+  const selectedTrips = tripsToPreload(trips);
+
+  await Promise.all(
+    selectedTrips.map(async (trip) => {
+      if (isCancelled()) return;
 
       try {
-        setLoading(true);
-        setErr(null);
-
-        const res = await fetch(`${API_BASE}/trips`, {
+        const res = await fetch(`${API_BASE}/trips/${encodeURIComponent(trip.id)}`, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         });
 
-        if (!res.ok) {
-          const text = await res.text().catch(() => "");
-          throw new Error(`HTTP ${res.status} ${res.statusText} ${text}`.trim());
-        }
+        if (!res.ok || isCancelled()) return;
 
-        const data = await res.json();
-        const list = Array.isArray(data)
-          ? data
-          : Array.isArray(data?.items)
-            ? data.items
-            : [];
-
-        if (!cancelled) {
-          setTrips(list);
-        }
-      } catch (e: any) {
-        if (!cancelled) {
-          setErr(e?.message ?? "Failed to load trips");
-          setTrips([]);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
+        const detail = await res.json();
+        if (!isCancelled()) writeCachedTripDetail(trip.id, detail);
+      } catch {
+        // Ignore preload failures; the overview should stay responsive offline.
       }
-    }
+    }),
+  );
+}
 
-    loadTrips();
+export default function TripsPage() {
+  const nav = useNavigate();
+  const { token } = useAuth();
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [showingCachedTrips, setShowingCachedTrips] = useState(false);
+  const [cachedTripsAt, setCachedTripsAt] = useState<string | null>(null);
+
+  async function loadTrips(options?: { cancelled?: () => boolean }) {
+    if (!token) return;
+    const isCancelled = options?.cancelled ?? (() => false);
+
+    try {
+      setLoading(true);
+      setErr(null);
+
+      const res = await fetch(`${API_BASE}/trips`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`HTTP ${res.status} ${res.statusText} ${text}`.trim());
+      }
+
+      const data = await res.json();
+      const list = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.items)
+          ? data.items
+          : [];
+
+      if (!isCancelled()) {
+        const cachedAt = writeCachedTrips(list);
+        setTrips(list);
+        setCachedTripsAt(cachedAt);
+        setShowingCachedTrips(false);
+        void preloadTripDetails(list, token, isCancelled);
+      }
+    } catch (e: any) {
+      if (isCancelled()) return;
+
+      const cachedTrips = readCachedTrips();
+      if (cachedTrips.trips.length > 0) {
+        setTrips(cachedTrips.trips);
+        setCachedTripsAt(cachedTrips.cachedAt);
+        setShowingCachedTrips(true);
+        setErr(null);
+        return;
+      }
+
+      if (trips.length > 0) {
+        setShowingCachedTrips(true);
+        setErr(null);
+        return;
+      }
+
+      setErr(e?.message ?? "Failed to load trips");
+      setTrips([]);
+      setCachedTripsAt(null);
+      setShowingCachedTrips(false);
+    } finally {
+      if (!isCancelled()) setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadTrips({ cancelled: () => cancelled });
 
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const headerText = useMemo(() => {
-    if (loading) return "Trips";
+    if (loading && trips.length === 0) return "Trips";
     return trips.length === 1 ? "Trips · 1" : `Trips · ${trips.length}`;
   }, [loading, trips.length]);
+  const isRefreshingTrips = loading && trips.length > 0;
 
   return (
     <div
@@ -193,29 +366,111 @@ export default function TripsPage() {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => nav("/trips/new")}
+        <div
           style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 8,
+            justifyContent: "flex-end",
             flex: "0 1 auto",
-            minWidth: 132,
-            height: 40,
-            padding: "0 14px",
-            borderRadius: 999,
-            border: "1px solid var(--border)",
-            background: "var(--text)",
-            color: "var(--bg)",
-            cursor: "pointer",
-            fontWeight: 850,
-            whiteSpace: "nowrap",
-            boxSizing: "border-box",
           }}
         >
-          + New Trip
-        </button>
+          <button
+            type="button"
+            onClick={() => loadTrips()}
+            disabled={loading}
+            style={{
+              height: 38,
+              padding: "0 12px",
+              borderRadius: 999,
+              border: "1px solid var(--border)",
+              background: "transparent",
+              color: "var(--text)",
+              cursor: loading ? "default" : "pointer",
+              fontWeight: 850,
+              fontSize: 13,
+              whiteSpace: "nowrap",
+              boxSizing: "border-box",
+            }}
+          >
+            {isRefreshingTrips ? "Updating..." : "Refresh"}
+          </button>
+          <button
+            type="button"
+            onClick={() => nav("/trips/new")}
+            style={{
+              minWidth: 132,
+              height: 40,
+              padding: "0 14px",
+              borderRadius: 999,
+              border: "1px solid var(--border)",
+              background: "var(--text)",
+              color: "var(--bg)",
+              cursor: "pointer",
+              fontWeight: 850,
+              whiteSpace: "nowrap",
+              boxSizing: "border-box",
+            }}
+          >
+            + New Trip
+          </button>
+        </div>
       </div>
 
-      {loading ? (
+      {showingCachedTrips ? (
+        <div
+          role="status"
+          style={{
+            padding: "9px 11px",
+            borderRadius: 12,
+            background: "var(--card)",
+            border: "1px solid var(--border)",
+            color: "var(--sub)",
+            fontSize: 12,
+            fontWeight: 850,
+            lineHeight: 1.35,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+            flexWrap: "wrap",
+          }}
+        >
+          <span style={{ minWidth: 0, flex: "1 1 190px", display: "grid", gap: 2 }}>
+            <span style={{ color: "var(--text)", fontWeight: 950 }}>
+              Saved travel data
+            </span>
+            <span>Last updated: {formatCachedAt(cachedTripsAt)}</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => loadTrips()}
+            disabled={loading}
+            style={{
+              height: 28,
+              padding: "0 10px",
+              borderRadius: 999,
+              border: "1px solid var(--border)",
+              background: "transparent",
+              color: "var(--text)",
+              cursor: loading ? "default" : "pointer",
+              fontWeight: 900,
+              fontSize: 11,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {isRefreshingTrips ? "Updating..." : "Refresh"}
+          </button>
+        </div>
+      ) : null}
+
+      {isRefreshingTrips ? (
+        <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 850 }}>
+          Updating trips...
+        </div>
+      ) : null}
+
+      {loading && trips.length === 0 ? (
         <div style={{ color: "var(--sub)", fontSize: 13 }}>Loading...</div>
       ) : null}
 

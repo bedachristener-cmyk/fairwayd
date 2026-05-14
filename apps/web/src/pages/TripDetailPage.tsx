@@ -48,6 +48,7 @@ type TripItem = {
   course?: {
     id: string;
     name?: string | null;
+    website?: string | null;
     lat?: number | string | null;
     lon?: number | string | null;
   } | null;
@@ -168,6 +169,38 @@ type BudgetSummary = {
   categories: Record<BudgetCategory, number>;
 };
 
+type SettlementMember = {
+  member: TripMember;
+  paid: number;
+  share: number;
+  balance: number;
+};
+
+type SettlementTransfer = {
+  from: TripMember;
+  to: TripMember;
+  amount: number;
+};
+
+type SettlementCurrencySummary = {
+  currency: string;
+  rows: SettlementMember[];
+  totalOwes: number;
+  totalGetsBack: number;
+};
+
+type SettlementSummary = {
+  mixedCurrencies: boolean;
+  currency: string;
+  rows: SettlementMember[];
+  currencySummaries: SettlementCurrencySummary[];
+  transfers: SettlementTransfer[];
+  totalPaid: number;
+  totalShare: number;
+  totalOwes: number;
+  totalGetsBack: number;
+};
+
 type TripInvite = {
   id: string;
   token: string;
@@ -261,6 +294,11 @@ type CalendarDay = {
   indicators: Record<CalendarIndicator, number>;
 };
 
+type TravelChecklistItem = {
+  id: string;
+  label: string;
+};
+
 const memberAvatarSize = 28;
 
 const satelliteTileUrl =
@@ -345,6 +383,10 @@ const wrappingActionRowStyle: React.CSSProperties = {
   minWidth: 0,
 };
 
+const overviewAnchorStyle: React.CSSProperties = {
+  scrollMarginTop: 18,
+};
+
 const subviewOrder: Exclude<TripView, "overview">[] = [
   "timeline",
   "calendar",
@@ -352,6 +394,185 @@ const subviewOrder: Exclude<TripView, "overview">[] = [
   "map",
   "budget",
 ];
+
+const defaultTravelChecklistItems: TravelChecklistItem[] = [
+  { id: "passport-id", label: "Passport / ID" },
+  { id: "flight-documents", label: "Flight documents" },
+  { id: "hotel-booking", label: "Hotel booking" },
+  { id: "tee-times-confirmed", label: "Tee times confirmed" },
+  { id: "golf-equipment", label: "Golf equipment" },
+  { id: "travel-insurance", label: "Travel insurance" },
+];
+
+const defaultTeeTimeChecklistItems: TravelChecklistItem[] = [
+  { id: "confirm-tee-time", label: "Confirm tee time" },
+  { id: "booking-proof", label: "Bring voucher / booking proof" },
+  { id: "dress-code", label: "Check dress code" },
+  { id: "transport", label: "Arrange transport" },
+  { id: "golf-equipment", label: "Prepare golf equipment" },
+];
+
+function tripCacheKey(tripId: string) {
+  return `fairwayd.trip.${tripId}`;
+}
+
+function travelChecklistCacheKey(tripId: string) {
+  return `fairwayd.trip.${tripId}.travelChecklist`;
+}
+
+function readTravelChecklist(tripId: string) {
+  try {
+    const raw = window.localStorage.getItem(travelChecklistCacheKey(tripId));
+    if (!raw) return new Set<string>();
+
+    const parsed = JSON.parse(raw) as unknown;
+    if (Array.isArray(parsed)) {
+      return new Set(parsed.filter((id): id is string => typeof id === "string"));
+    }
+
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      "checkedIds" in parsed &&
+      Array.isArray((parsed as { checkedIds?: unknown }).checkedIds)
+    ) {
+      return new Set(
+        (parsed as { checkedIds: unknown[] }).checkedIds.filter(
+          (id): id is string => typeof id === "string",
+        ),
+      );
+    }
+  } catch {
+    return new Set<string>();
+  }
+
+  return new Set<string>();
+}
+
+function writeTravelChecklist(tripId: string, checkedIds: Set<string>) {
+  try {
+    window.localStorage.setItem(
+      travelChecklistCacheKey(tripId),
+      JSON.stringify({ checkedIds: Array.from(checkedIds) }),
+    );
+  } catch {
+    // Checklist persistence is local-only; failures should not block the page.
+  }
+}
+
+function teeTimeChecklistCacheKey(tripId: string) {
+  return `fairwayd.trip.${tripId}.teeTimeChecklist`;
+}
+
+function readTeeTimeChecklist(tripId: string) {
+  try {
+    const raw = window.localStorage.getItem(teeTimeChecklistCacheKey(tripId));
+    if (!raw) return new Map<string, Set<string>>();
+
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return new Map<string, Set<string>>();
+    }
+
+    const next = new Map<string, Set<string>>();
+    for (const [itemId, value] of Object.entries(parsed)) {
+      if (Array.isArray(value)) {
+        next.set(
+          itemId,
+          new Set(value.filter((id): id is string => typeof id === "string")),
+        );
+      }
+    }
+
+    return next;
+  } catch {
+    return new Map<string, Set<string>>();
+  }
+}
+
+function writeTeeTimeChecklist(
+  tripId: string,
+  checkedByItemId: Map<string, Set<string>>,
+) {
+  try {
+    const payload: Record<string, string[]> = {};
+    checkedByItemId.forEach((checkedIds, itemId) => {
+      payload[itemId] = Array.from(checkedIds);
+    });
+
+    window.localStorage.setItem(
+      teeTimeChecklistCacheKey(tripId),
+      JSON.stringify(payload),
+    );
+  } catch {
+    // Tee-time checklist persistence is local-only.
+  }
+}
+
+function formatCachedAt(value?: string | null) {
+  if (!value) return "Unknown";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown";
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function readCachedTrip(tripId: string): { trip: Trip; cachedAt: string | null } | null {
+  try {
+    const raw = window.localStorage.getItem(tripCacheKey(tripId));
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as unknown;
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      "data" in parsed &&
+      (parsed as { data?: unknown }).data &&
+      typeof (parsed as { data?: { id?: unknown } }).data?.id === "string"
+    ) {
+      const cached = parsed as { data: Trip; cachedAt?: unknown };
+
+      return {
+        trip: cached.data,
+        cachedAt: typeof cached.cachedAt === "string" ? cached.cachedAt : null,
+      };
+    }
+
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      "id" in parsed &&
+      typeof (parsed as { id?: unknown }).id === "string"
+    ) {
+      return { trip: parsed as Trip, cachedAt: null };
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function writeCachedTrip(tripId: string, trip: Trip) {
+  const cachedAt = new Date().toISOString();
+
+  try {
+    window.localStorage.setItem(
+      tripCacheKey(tripId),
+      JSON.stringify({ cachedAt, data: trip }),
+    );
+  } catch {
+    // Cache failures should not block the live trip view.
+  }
+
+  return cachedAt;
+}
 
 function tripViewLabel(view: TripView) {
   if (view === "timeline") return "Timeline";
@@ -641,6 +862,101 @@ function budgetAmount(value: number, summary: BudgetSummary) {
   return formatMoney(value, summary.currency);
 }
 
+function settlementAmount(value: number, summary: SettlementSummary) {
+  if (summary.mixedCurrencies) {
+    if (Math.abs(value) < 0.005) return formatMoney(0, summary.currency);
+    return "Mixed currencies";
+  }
+
+  return formatMoney(Math.abs(value), summary.currency);
+}
+
+function settlementCurrencyAmount(value: number, currency: string) {
+  return formatMoney(Math.abs(value), currency);
+}
+
+function formatSettlementBalanceLine(
+  member: TripMember,
+  balance: number,
+  amountText: string,
+) {
+  if (balance > 0.005) {
+    return `${memberDisplayName(member)} gets back ${amountText}`;
+  }
+
+  if (balance < -0.005) {
+    return `${memberDisplayName(member)} owes ${amountText}`;
+  }
+
+  return `${memberDisplayName(member)} is settled`;
+}
+
+function settlementSummaryText(trip: Trip | null, summary: SettlementSummary) {
+  const lines = [
+    `${trip?.title || "Trip"} settlement summary`,
+    "",
+  ];
+
+  if (summary.mixedCurrencies) {
+    lines.push("Mixed currencies: no automatic FX conversion applied.", "");
+    lines.push("Per-currency balances:");
+
+    for (const currencySummary of summary.currencySummaries) {
+      lines.push(currencySummary.currency);
+      const activeRows = currencySummary.rows.filter(
+        (row) => Math.abs(row.balance) > 0.005,
+      );
+
+      if (activeRows.length === 0) {
+        lines.push("- Everyone is settled.");
+      } else {
+        for (const row of activeRows) {
+          lines.push(
+            `- ${formatSettlementBalanceLine(
+              row.member,
+              row.balance,
+              settlementCurrencyAmount(row.balance, currencySummary.currency),
+            )}`,
+          );
+        }
+      }
+    }
+
+    lines.push("", "Suggested payments are disabled for mixed currencies.");
+    return lines.join("\n");
+  }
+
+  lines.push("Member balances:");
+  if (summary.rows.length === 0) {
+    lines.push("- No member balances yet.");
+  } else {
+    for (const row of summary.rows) {
+      lines.push(
+        `- ${formatSettlementBalanceLine(
+          row.member,
+          row.balance,
+          settlementAmount(row.balance, summary),
+        )}`,
+      );
+    }
+  }
+
+  lines.push("", "Suggested payments:");
+  if (summary.transfers.length === 0) {
+    lines.push("- Everyone is settled.");
+  } else {
+    for (const transfer of summary.transfers) {
+      lines.push(
+        `- ${memberDisplayName(transfer.from)} pays ${memberDisplayName(
+          transfer.to,
+        )} ${settlementAmount(transfer.amount, summary)}`,
+      );
+    }
+  }
+
+  return lines.join("\n");
+}
+
 function isGolfItem(item: TripItem) {
   const value = String(item.type ?? "").toLowerCase();
   return value === "golf_round" || value === "course";
@@ -659,6 +975,35 @@ function flightTitle(flightNumber: string) {
 
 function finiteAmount(value?: number | null) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function settlementItemAmount(item: TripItem) {
+  if (isFlightItem(item)) return 0;
+
+  const golf = isGolfItem(item);
+  const green =
+    golf && item.includeGreenFeeInSplit !== false
+      ? finiteAmount(item.greenFee ?? item.directPrice)
+      : 0;
+  const direct = golf
+    ? item.greenFee
+      ? finiteAmount(item.directPrice)
+      : 0
+    : finiteAmount(item.directPrice);
+  const provider =
+    typeof item.providerPrice === "number" && Number.isFinite(item.providerPrice)
+      ? item.providerPrice
+      : 0;
+  const caddy =
+    !golf || item.includeCaddyFeeInSplit !== false
+      ? finiteAmount(item.caddyFee)
+      : 0;
+  const cart =
+    !golf || item.includeCartFeeInSplit !== false
+      ? finiteAmount(item.cartFee)
+      : 0;
+
+  return green + direct + provider + caddy + cart;
 }
 
 function pricingParts(item: TripItem) {
@@ -755,6 +1100,70 @@ function tripDateRange(items?: TripItem[]) {
 
   if (!start || !end) return "";
   return start === end ? start : `${start} - ${end}`;
+}
+
+function tripItemTitle(item: TripItem) {
+  return (
+    (isGolfItem(item) && item.course?.name?.trim()) ||
+    item.title?.trim() ||
+    item.locationName?.trim() ||
+    itemTypeLabel(item.type)
+  );
+}
+
+function tripItemDateTimeLabel(item: TripItem) {
+  const dateRange = formatDateRange(item);
+  const date = dateRange || formatItemDate(itemDateValue(item));
+  const time = formatTimeRange(item);
+
+  return [date, time].filter(Boolean).join(" - ");
+}
+
+function normalizeWebsite(url?: string | null) {
+  if (!url) return null;
+
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
+function mapUrlForItem(item: TripItem) {
+  const lat = toFiniteNumber(item.course?.lat ?? item.lat ?? item.latitude);
+  const lon = toFiniteNumber(item.course?.lon ?? item.lon ?? item.longitude);
+
+  if (
+    lat != null &&
+    lon != null &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lon >= -180 &&
+    lon <= 180
+  ) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lon}`)}`;
+  }
+
+  const query = [item.locationName, item.address].filter(Boolean).join(" ");
+  if (!query.trim()) return null;
+
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
+function documentCategoryForItem(item: TripItem): TripDocumentCategory | null {
+  const type = String(item.type ?? "").toLowerCase();
+
+  if (type === "flight" || type === "flights") return "FLIGHT";
+  if (type === "hotel") return "HOTEL";
+  if (type === "transfer" || type === "car_rental") return "TRANSFER";
+  if (type === "golf_round" || type === "course") return "GOLF";
+  return null;
+}
+
+function relatedDocumentForItem(item: TripItem, documents: TripDocument[]) {
+  const category = documentCategoryForItem(item);
+  if (!category) return null;
+
+  return documents.find((document) => document.category === category) ?? null;
 }
 
 function previewLine(item: TripItem) {
@@ -1751,12 +2160,26 @@ export default function TripDetailPage() {
   const { token, user } = useAuth();
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
+  const teeTimesSectionRef = useRef<HTMLElement | null>(null);
+  const checklistSectionRef = useRef<HTMLElement | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [showingCachedTrip, setShowingCachedTrip] = useState(false);
+  const [cachedTripAt, setCachedTripAt] = useState<string | null>(null);
+  const [refreshTripMessage, setRefreshTripMessage] = useState<string | null>(
+    null,
+  );
   const [activeView, setActiveView] = useState<TripView>("overview");
   const [selectedCalendarDay, setSelectedCalendarDay] = useState("");
+  const [checkedChecklistIds, setCheckedChecklistIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [checkedTeeTimeChecklistIds, setCheckedTeeTimeChecklistIds] = useState<
+    Map<string, Set<string>>
+  >(() => new Map());
+  const [settlementCopied, setSettlementCopied] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [editingTrip, setEditingTrip] = useState(false);
   const [tripDraft, setTripDraft] = useState<TripEditDraft | null>(null);
@@ -1846,12 +2269,61 @@ export default function TripDetailPage() {
     moveSubview(dx < 0 ? 1 : -1);
   }
 
+  function toggleChecklistItem(itemId: string) {
+    if (!tripId) return;
+
+    setCheckedChecklistIds((current) => {
+      const next = new Set(current);
+      if (next.has(itemId)) {
+        next.delete(itemId);
+      } else {
+        next.add(itemId);
+      }
+
+      writeTravelChecklist(tripId, next);
+      return next;
+    });
+  }
+
+  function toggleTeeTimeChecklistItem(itemId: string, checklistItemId: string) {
+    if (!tripId) return;
+
+    setCheckedTeeTimeChecklistIds((current) => {
+      const next = new Map(current);
+      const checkedIds = new Set(next.get(itemId) ?? []);
+
+      if (checkedIds.has(checklistItemId)) {
+        checkedIds.delete(checklistItemId);
+      } else {
+        checkedIds.add(checklistItemId);
+      }
+
+      next.set(itemId, checkedIds);
+      writeTeeTimeChecklist(tripId, next);
+      return next;
+    });
+  }
+
+  function openOverviewSection(ref: React.RefObject<HTMLElement>) {
+    setActiveView("overview");
+    window.setTimeout(() => {
+      const top =
+        (ref.current?.getBoundingClientRect().top ?? 0) +
+        window.scrollY -
+        12;
+      window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+    }, 0);
+  }
+
   async function loadTrip() {
     if (!token || !tripId) return;
+
+    const visibleTrip = trip;
 
     try {
       setLoading(true);
       setErr(null);
+      setRefreshTripMessage(null);
 
       const res = await fetch(
         `${API_BASE}/trips/${encodeURIComponent(tripId)}`,
@@ -1868,9 +2340,36 @@ export default function TripDetailPage() {
         throw new Error(`HTTP ${res.status} ${res.statusText} ${text}`.trim());
       }
 
-      const data = await res.json();
+      const data = (await res.json()) as Trip;
+      const cachedAt = writeCachedTrip(tripId, data);
       setTrip(data);
+      setCachedTripAt(cachedAt);
+      setShowingCachedTrip(false);
+      setRefreshTripMessage(null);
     } catch (e: any) {
+      const cachedTrip = readCachedTrip(tripId);
+      if (cachedTrip) {
+        setTrip(cachedTrip.trip);
+        setCachedTripAt(cachedTrip.cachedAt);
+        setShowingCachedTrip(true);
+        setErr(null);
+        if (visibleTrip) {
+          setRefreshTripMessage("Could not update, showing saved data.");
+        }
+        return;
+      }
+
+      if (visibleTrip) {
+        setTrip(visibleTrip);
+        setCachedTripAt((current) => current);
+        setShowingCachedTrip(true);
+        setErr(null);
+        setRefreshTripMessage("Could not update, showing saved data.");
+        return;
+      }
+
+      setShowingCachedTrip(false);
+      setCachedTripAt(null);
       setErr(e?.message ?? "Failed to load trip");
       setTrip(null);
     } finally {
@@ -1882,6 +2381,13 @@ export default function TripDetailPage() {
     loadTrip();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, tripId]);
+
+  useEffect(() => {
+    setCheckedChecklistIds(tripId ? readTravelChecklist(tripId) : new Set());
+    setCheckedTeeTimeChecklistIds(
+      tripId ? readTeeTimeChecklist(tripId) : new Map(),
+    );
+  }, [tripId]);
 
   async function loadDocuments() {
     if (!token || !tripId) return;
@@ -1949,11 +2455,9 @@ export default function TripDetailPage() {
   }, [token, tripId]);
 
   useEffect(() => {
-    if (activeView !== "documents") return;
-
     loadDocuments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeView, token, tripId]);
+  }, [token, tripId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2165,6 +2669,36 @@ export default function TripDetailPage() {
     }
 
     await copyInviteLink();
+  }
+
+  async function copySettlementSummary() {
+    try {
+      await navigator.clipboard.writeText(
+        settlementSummaryText(trip, settlementSummary),
+      );
+      setSettlementCopied(true);
+      window.setTimeout(() => setSettlementCopied(false), 1800);
+    } catch {
+      setSettlementCopied(false);
+    }
+  }
+
+  async function shareSettlementSummary() {
+    const text = settlementSummaryText(trip, settlementSummary);
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Trip settlement",
+          text,
+        });
+        return;
+      } catch {
+        // Fall back to copying below.
+      }
+    }
+
+    await copySettlementSummary();
   }
 
   async function saveTripEdit() {
@@ -2947,19 +3481,181 @@ export default function TripDetailPage() {
     };
   }, [trip?.items, trip?.members]);
 
+  const settlementSummary = useMemo<SettlementSummary>(() => {
+    const members = trip?.members ?? [];
+    const rowsByMemberId = new Map<string, SettlementMember>();
+    const rowsByCurrency = new Map<string, Map<string, SettlementMember>>();
+    const currencies = new Set<string>();
+
+    for (const member of members) {
+      rowsByMemberId.set(member.id, {
+        member,
+        paid: 0,
+        share: 0,
+        balance: 0,
+      });
+    }
+
+    for (const item of trip?.items ?? []) {
+      const amount = settlementItemAmount(item);
+      if (amount <= 0) continue;
+
+      const currency = item.currency?.trim() || "CHF";
+      currencies.add(currency);
+
+      let currencyRows = rowsByCurrency.get(currency);
+      if (!currencyRows) {
+        currencyRows = new Map<string, SettlementMember>();
+        for (const member of members) {
+          currencyRows.set(member.id, {
+            member,
+            paid: 0,
+            share: 0,
+            balance: 0,
+          });
+        }
+        rowsByCurrency.set(currency, currencyRows);
+      }
+
+      const participants = effectiveParticipants(item, members);
+      if (participants.length > 0) {
+        const share = amount / participants.length;
+        for (const participant of participants) {
+          const row = rowsByMemberId.get(participant.id);
+          if (row) row.share += share;
+
+          const currencyRow = currencyRows.get(participant.id);
+          if (currencyRow) currencyRow.share += share;
+        }
+      }
+
+      const payerId = item.paidByMemberId || item.paidByMember?.id;
+      if (payerId) {
+        const row = rowsByMemberId.get(payerId);
+        if (row) row.paid += amount;
+
+        const currencyRow = currencyRows.get(payerId);
+        if (currencyRow) currencyRow.paid += amount;
+      }
+    }
+
+    const rows = Array.from(rowsByMemberId.values()).map((row) => ({
+      ...row,
+      balance: row.paid - row.share,
+    }));
+    const currencySummaries = Array.from(rowsByCurrency.entries())
+      .map(([currency, rowsForCurrency]) => {
+        const currencyRows = Array.from(rowsForCurrency.values()).map((row) => ({
+          ...row,
+          balance: row.paid - row.share,
+        }));
+
+        return {
+          currency,
+          rows: currencyRows,
+          totalOwes: currencyRows.reduce(
+            (sum, row) => sum + (row.balance < 0 ? Math.abs(row.balance) : 0),
+            0,
+          ),
+          totalGetsBack: currencyRows.reduce(
+            (sum, row) => sum + (row.balance > 0 ? row.balance : 0),
+            0,
+          ),
+        };
+      })
+      .sort((a, b) => a.currency.localeCompare(b.currency));
+    const mixedCurrencies = currencies.size > 1;
+    const debtors = rows
+      .filter((row) => row.balance < -0.005)
+      .map((row) => ({ member: row.member, amount: Math.abs(row.balance) }))
+      .sort((a, b) => b.amount - a.amount);
+    const creditors = rows
+      .filter((row) => row.balance > 0.005)
+      .map((row) => ({ member: row.member, amount: row.balance }))
+      .sort((a, b) => b.amount - a.amount);
+    const transfers: SettlementTransfer[] = [];
+    let debtorIndex = 0;
+    let creditorIndex = 0;
+
+    while (
+      !mixedCurrencies &&
+      debtorIndex < debtors.length &&
+      creditorIndex < creditors.length
+    ) {
+      const debtor = debtors[debtorIndex];
+      const creditor = creditors[creditorIndex];
+      const amount = Math.min(debtor.amount, creditor.amount);
+
+      if (amount > 0.005) {
+        transfers.push({
+          from: debtor.member,
+          to: creditor.member,
+          amount,
+        });
+      }
+
+      debtor.amount -= amount;
+      creditor.amount -= amount;
+
+      if (debtor.amount <= 0.005) debtorIndex += 1;
+      if (creditor.amount <= 0.005) creditorIndex += 1;
+    }
+
+    const currency = Array.from(currencies)[0] || "CHF";
+
+    return {
+      mixedCurrencies,
+      currency,
+      rows,
+      currencySummaries,
+      transfers,
+      totalPaid: rows.reduce((sum, row) => sum + row.paid, 0),
+      totalShare: rows.reduce((sum, row) => sum + row.share, 0),
+      totalOwes: rows.reduce(
+        (sum, row) => sum + (row.balance < 0 ? Math.abs(row.balance) : 0),
+        0,
+      ),
+      totalGetsBack: rows.reduce(
+        (sum, row) => sum + (row.balance > 0 ? row.balance : 0),
+        0,
+      ),
+    };
+  }, [trip?.items, trip?.members]);
+
   const memberCount = trip?.members?.length ?? 0;
   const itemCount = trip?.items?.length ?? 0;
   const tripRange = tripDateRange(trip?.items);
   const todayKey = new Date().toISOString().slice(0, 10);
-  const todayItems = (trip?.items ?? []).filter((item) => dateKey(item) === todayKey);
-  const futureItems = (trip?.items ?? [])
+  const datedItems = [...(trip?.items ?? [])].sort((a, b) => {
+    const dayCompare = dateKey(a).localeCompare(dateKey(b));
+    if (dayCompare !== 0) return dayCompare;
+    return timeSortValue(a).localeCompare(timeSortValue(b));
+  });
+  const todayItems = datedItems.filter((item) => dateKey(item) === todayKey);
+  const futureItems = datedItems
     .filter((item) => {
       const key = dateKey(item);
       return key !== "unscheduled" && key >= todayKey;
     })
     .slice(0, 3);
+  const travelEssentialsItems =
+    todayItems.length > 0 ? todayItems : futureItems.slice(0, 1);
+  const upcomingTeeTimes = datedItems
+    .filter((item) => {
+      const key = dateKey(item);
+      return (
+        isGolfItem(item) &&
+        key !== "unscheduled" &&
+        key >= todayKey
+      );
+    })
+    .slice(0, 3);
   const focusItems = todayItems.length > 0 ? todayItems.slice(0, 3) : futureItems;
   const focusTitle = todayItems.length > 0 ? "Today" : "Next up";
+  const checklistReadyCount = defaultTravelChecklistItems.filter((item) =>
+    checkedChecklistIds.has(item.id),
+  ).length;
+  const checklistTotal = defaultTravelChecklistItems.length;
   const budgetCards = [
     { label: "Total budget", value: budgetSummary.total },
     { label: "Golf cost", value: budgetSummary.categories.Golf },
@@ -2989,6 +3685,7 @@ export default function TripDetailPage() {
       (document) => document.category === documentCategoryFilter,
     );
   }, [documentCategoryFilter, documents]);
+  const isRefreshingTrip = loading && !!trip;
 
   return (
     <div
@@ -3006,6 +3703,57 @@ export default function TripDetailPage() {
         gap: activeView === "overview" ? 16 : 8,
       }}
     >
+      {showingCachedTrip ? (
+        <div
+          role="status"
+          style={{
+            ...safeSectionStyle,
+            padding: "9px 11px",
+            borderRadius: 12,
+            background: "var(--card)",
+            border: "1px solid var(--border)",
+            color: "var(--sub)",
+            fontSize: 12,
+            fontWeight: 850,
+            lineHeight: 1.35,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+            flexWrap: "wrap",
+          }}
+        >
+          <span style={{ minWidth: 0, flex: "1 1 190px", display: "grid", gap: 2 }}>
+            <span style={{ color: "var(--text)", fontWeight: 950 }}>
+              Saved travel data
+            </span>
+            <span>
+              Last updated: {formatCachedAt(cachedTripAt)}
+              {refreshTripMessage ? ` - ${refreshTripMessage}` : ""}
+            </span>
+          </span>
+          <button
+            type="button"
+            onClick={loadTrip}
+            disabled={loading}
+            style={{
+              height: 28,
+              padding: "0 10px",
+              borderRadius: 999,
+              border: "1px solid var(--border)",
+              background: "transparent",
+              color: "var(--text)",
+              cursor: loading ? "default" : "pointer",
+              fontWeight: 900,
+              fontSize: 11,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {isRefreshingTrip ? "Updating..." : "Refresh trip"}
+          </button>
+        </div>
+      ) : null}
+
       {activeView === "overview" ? (
       <>
       <section
@@ -3337,6 +4085,638 @@ export default function TripDetailPage() {
             </button>
             </div>
           ) : null}
+        </div>
+      </section>
+
+      <section
+        ref={teeTimesSectionRef}
+        id="upcoming-tee-times"
+        style={{
+          ...overviewAnchorStyle,
+          ...safeSectionStyle,
+          display: "grid",
+          gap: 10,
+          padding: 12,
+          borderRadius: 18,
+          background: "var(--card)",
+          border: "1px solid var(--border)",
+          boxShadow: "0 10px 28px rgba(0,0,0,0.14)",
+        }}
+      >
+        <div style={{ display: "grid", gap: 2 }}>
+          <div style={{ color: "var(--text)", fontSize: 15, fontWeight: 950 }}>
+            Upcoming tee times
+          </div>
+          <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+            Next golf rounds on this trip
+          </div>
+        </div>
+
+        {upcomingTeeTimes.length === 0 ? (
+          <div
+            style={{
+              padding: 12,
+              borderRadius: 14,
+              border: "1px dashed var(--border)",
+              color: "var(--sub)",
+              fontSize: 13,
+              lineHeight: 1.4,
+            }}
+          >
+            No upcoming tee times yet.
+          </div>
+        ) : (
+          <div style={{ display: "grid", gap: 8 }}>
+            {upcomingTeeTimes.map((item) => {
+              const mapUrl = mapUrlForItem(item);
+              const participants = participantSummary(item, trip?.members ?? []);
+              const dateTime = tripItemDateTimeLabel(item);
+              const location = [item.locationName, item.address]
+                .filter(Boolean)
+                .join(" - ");
+              const teeChecklist = checkedTeeTimeChecklistIds.get(item.id) ?? new Set();
+              const teeReadyCount = defaultTeeTimeChecklistItems.filter((check) =>
+                teeChecklist.has(check.id),
+              ).length;
+
+              return (
+                <article
+                  key={`tee-${item.id}`}
+                  style={{
+                    display: "grid",
+                    gap: 7,
+                    padding: 10,
+                    borderRadius: 14,
+                    border: "1px solid var(--border)",
+                    background: "var(--bg)",
+                    minWidth: 0,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 10,
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <div style={{ minWidth: 0, display: "grid", gap: 3 }}>
+                      <div
+                        style={{
+                          color: "var(--text)",
+                          fontSize: 14,
+                          lineHeight: 1.25,
+                          fontWeight: 950,
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {tripItemTitle(item)}
+                      </div>
+                      {dateTime ? (
+                        <div
+                          style={{
+                            color: "var(--sub)",
+                            fontSize: 12,
+                            fontWeight: 900,
+                          }}
+                        >
+                          {dateTime}
+                        </div>
+                      ) : null}
+                    </div>
+                    <div
+                      style={{
+                        height: 28,
+                        padding: "0 9px",
+                        borderRadius: 999,
+                        border: "1px solid var(--border)",
+                        background: "var(--card)",
+                        color: "var(--text)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        fontSize: 11,
+                        fontWeight: 950,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {teeReadyCount}/{defaultTeeTimeChecklistItems.length} ready
+                    </div>
+                    {mapUrl ? (
+                      <a
+                        href={mapUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          height: 28,
+                          padding: "0 9px",
+                          borderRadius: 999,
+                          border: "1px solid var(--border)",
+                          background: "transparent",
+                          color: "var(--text)",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          textDecoration: "none",
+                          fontWeight: 900,
+                          fontSize: 11,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        Open map
+                      </a>
+                    ) : null}
+                  </div>
+
+                  {participants || location ? (
+                    <div
+                      style={{
+                        display: "grid",
+                        gap: 3,
+                        color: "var(--sub)",
+                        fontSize: 12,
+                        lineHeight: 1.35,
+                      }}
+                    >
+                      {participants ? (
+                        <div style={{ overflowWrap: "anywhere" }}>
+                          {participants}
+                        </div>
+                      ) : null}
+                      {location ? (
+                        <div style={{ overflowWrap: "anywhere" }}>
+                          {location}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                      gap: 6,
+                    }}
+                  >
+                    {defaultTeeTimeChecklistItems.map((check) => {
+                      const checked = teeChecklist.has(check.id);
+
+                      return (
+                        <label
+                          key={`${item.id}-${check.id}`}
+                          style={{
+                            minWidth: 0,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            padding: "8px 9px",
+                            borderRadius: 12,
+                            border: "1px solid var(--border)",
+                            background: "var(--card)",
+                            color: checked ? "var(--sub)" : "var(--text)",
+                            cursor: "pointer",
+                            fontSize: 12,
+                            fontWeight: 900,
+                            lineHeight: 1.25,
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() =>
+                              toggleTeeTimeChecklistItem(item.id, check.id)
+                            }
+                            style={{
+                              width: 15,
+                              height: 15,
+                              margin: 0,
+                              accentColor: "var(--text)",
+                              flex: "0 0 auto",
+                            }}
+                          />
+                          <span
+                            style={{
+                              minWidth: 0,
+                              overflowWrap: "anywhere",
+                              textDecoration: checked ? "line-through" : "none",
+                            }}
+                          >
+                            {check.label}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <section
+        id="travel-essentials"
+        style={{
+          ...overviewAnchorStyle,
+          ...safeSectionStyle,
+          display: "grid",
+          gap: 10,
+          padding: 12,
+          borderRadius: 18,
+          background: "var(--card)",
+          border: "1px solid var(--border)",
+          boxShadow: "0 10px 28px rgba(0,0,0,0.14)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 10,
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ display: "grid", gap: 2, minWidth: 0, flex: "1 1 190px" }}>
+            <div style={{ color: "var(--text)", fontSize: 15, fontWeight: 950 }}>
+              {todayItems.length > 0 ? "Today" : "Next up"}
+            </div>
+            <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+              {isRefreshingTrip
+                ? "Updating trip data..."
+                : refreshTripMessage ??
+                  (travelEssentialsItems.length > 0
+                    ? "Travel essentials for the next scheduled stop"
+                    : "Add dated items to see daily travel essentials")}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={loadTrip}
+            disabled={loading}
+            style={{
+              height: 30,
+              padding: "0 10px",
+              borderRadius: 999,
+              border: "1px solid var(--border)",
+              background: "transparent",
+              color: "var(--text)",
+              cursor: loading ? "default" : "pointer",
+              fontWeight: 900,
+              fontSize: 12,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {isRefreshingTrip ? "Updating..." : "Refresh trip"}
+          </button>
+        </div>
+
+        {travelEssentialsItems.length > 0 ? (
+          <div style={{ display: "grid", gap: 8 }}>
+            {travelEssentialsItems.map((item) => {
+              const typeLabel = itemTypeLabel(item.type);
+              const dateTime = tripItemDateTimeLabel(item);
+              const location = [item.locationName, item.address]
+                .filter(Boolean)
+                .join(" - ");
+              const mapUrl = mapUrlForItem(item);
+              const websiteUrl = normalizeWebsite(item.course?.website);
+              const relatedDocument = relatedDocumentForItem(item, documents);
+
+              return (
+                <article
+                  key={`essentials-${item.id}`}
+                  style={{
+                    display: "grid",
+                    gap: 8,
+                    padding: 10,
+                    borderRadius: 14,
+                    border: "1px solid var(--border)",
+                    background: "var(--bg)",
+                    minWidth: 0,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      justifyContent: "space-between",
+                      gap: 10,
+                    }}
+                  >
+                    <div style={{ minWidth: 0, display: "grid", gap: 3 }}>
+                      <div
+                        style={{
+                          color: "var(--sub)",
+                          fontSize: 11,
+                          fontWeight: 950,
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {typeLabel}
+                      </div>
+                      <div
+                        style={{
+                          color: "var(--text)",
+                          fontSize: 15,
+                          lineHeight: 1.25,
+                          fontWeight: 950,
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {tripItemTitle(item)}
+                      </div>
+                    </div>
+                    <div
+                      aria-hidden="true"
+                      style={{
+                        width: 30,
+                        height: 30,
+                        minWidth: 30,
+                        borderRadius: 12,
+                        border: "1px solid var(--border)",
+                        display: "grid",
+                        placeItems: "center",
+                        background: "var(--card)",
+                        fontSize: 14,
+                      }}
+                    >
+                      {itemIcon(item.type)}
+                    </div>
+                  </div>
+
+                  {dateTime || location ? (
+                    <div style={{ display: "grid", gap: 3 }}>
+                      {dateTime ? (
+                        <div
+                          style={{
+                            color: "var(--text)",
+                            fontSize: 12,
+                            fontWeight: 900,
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {dateTime}
+                        </div>
+                      ) : null}
+                      {location ? (
+                        <div
+                          style={{
+                            color: "var(--sub)",
+                            fontSize: 12,
+                            lineHeight: 1.35,
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {location}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {mapUrl || websiteUrl || relatedDocument ? (
+                    <div style={{ ...wrappingActionRowStyle, gap: 7 }}>
+                      {mapUrl ? (
+                        <a
+                          href={mapUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            height: 30,
+                            padding: "0 10px",
+                            borderRadius: 999,
+                            border: "1px solid var(--border)",
+                            background: "transparent",
+                            color: "var(--text)",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            textDecoration: "none",
+                            fontWeight: 900,
+                            fontSize: 12,
+                          }}
+                        >
+                          Open map
+                        </a>
+                      ) : null}
+                      {websiteUrl ? (
+                        <a
+                          href={websiteUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            height: 30,
+                            padding: "0 10px",
+                            borderRadius: 999,
+                            border: "1px solid var(--border)",
+                            background: "transparent",
+                            color: "var(--text)",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            textDecoration: "none",
+                            fontWeight: 900,
+                            fontSize: 12,
+                          }}
+                        >
+                          Open website
+                        </a>
+                      ) : null}
+                      {relatedDocument ? (
+                        <a
+                          href={fileUrl(relatedDocument.fileUrl)}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            height: 30,
+                            padding: "0 10px",
+                            borderRadius: 999,
+                            border: "1px solid var(--border)",
+                            background: "var(--text)",
+                            color: "var(--bg)",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            textDecoration: "none",
+                            fontWeight: 900,
+                            fontSize: 12,
+                          }}
+                        >
+                          Open related document
+                        </a>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })}
+          </div>
+        ) : null}
+      </section>
+
+      <section
+        id="travel-tools"
+        style={{
+          ...overviewAnchorStyle,
+          ...safeSectionStyle,
+          display: "grid",
+          gap: 10,
+          padding: 12,
+          borderRadius: 18,
+          background: "var(--card)",
+          border: "1px solid var(--border)",
+          boxShadow: "0 10px 28px rgba(0,0,0,0.14)",
+        }}
+      >
+        <div style={{ display: "grid", gap: 2 }}>
+          <div style={{ color: "var(--text)", fontSize: 15, fontWeight: 950 }}>
+            Travel tools
+          </div>
+          <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+            Jump to the trip tools you will use on the road
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(112px, 1fr))",
+            gap: 8,
+          }}
+        >
+          {[
+            { label: "Budget", action: () => setActiveView("budget") },
+            { label: "Documents", action: () => setActiveView("documents") },
+            { label: "Map", action: () => setActiveView("map") },
+            { label: "Checklist", action: () => openOverviewSection(checklistSectionRef) },
+            { label: "Tee times", action: () => openOverviewSection(teeTimesSectionRef) },
+          ].map((tool) => (
+            <button
+              key={tool.label}
+              type="button"
+              onClick={tool.action}
+              style={{
+                height: 38,
+                padding: "0 10px",
+                borderRadius: 14,
+                border: "1px solid var(--border)",
+                background: "var(--bg)",
+                color: "var(--text)",
+                cursor: "pointer",
+                fontSize: 12,
+                fontWeight: 950,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {tool.label}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section
+        ref={checklistSectionRef}
+        id="before-you-go"
+        style={{
+          ...overviewAnchorStyle,
+          ...safeSectionStyle,
+          display: "grid",
+          gap: 10,
+          padding: 12,
+          borderRadius: 18,
+          background: "var(--card)",
+          border: "1px solid var(--border)",
+          boxShadow: "0 10px 28px rgba(0,0,0,0.14)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 10,
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ minWidth: 0, display: "grid", gap: 2 }}>
+            <div style={{ color: "var(--text)", fontSize: 15, fontWeight: 950 }}>
+              Before you go
+            </div>
+            <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+              Local travel checklist
+            </div>
+          </div>
+          <div
+            style={{
+              height: 28,
+              padding: "0 10px",
+              borderRadius: 999,
+              border: "1px solid var(--border)",
+              background: "var(--bg)",
+              color: "var(--text)",
+              display: "inline-flex",
+              alignItems: "center",
+              fontSize: 12,
+              fontWeight: 950,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {checklistReadyCount}/{checklistTotal} ready
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+            gap: 8,
+          }}
+        >
+          {defaultTravelChecklistItems.map((item) => {
+            const checked = checkedChecklistIds.has(item.id);
+
+            return (
+              <label
+                key={item.id}
+                style={{
+                  minWidth: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 9,
+                  padding: "9px 10px",
+                  borderRadius: 14,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg)",
+                  color: checked ? "var(--sub)" : "var(--text)",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: 900,
+                  lineHeight: 1.25,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggleChecklistItem(item.id)}
+                  style={{
+                    width: 17,
+                    height: 17,
+                    margin: 0,
+                    accentColor: "var(--text)",
+                    flex: "0 0 auto",
+                  }}
+                />
+                <span
+                  style={{
+                    minWidth: 0,
+                    overflowWrap: "anywhere",
+                    textDecoration: checked ? "line-through" : "none",
+                  }}
+                >
+                  {item.label}
+                </span>
+              </label>
+            );
+          })}
         </div>
       </section>
 
@@ -4176,7 +5556,7 @@ export default function TripDetailPage() {
         </div>
       </section>
 
-      {loading ? (
+      {loading && !trip ? (
         <div style={{ color: "var(--sub)", fontSize: 13 }}>Loading...</div>
       ) : null}
 
@@ -5979,6 +7359,429 @@ export default function TripDetailPage() {
                 ))}
               </div>
             ))}
+          </div>
+
+          <div
+            style={{
+              ...safeSectionStyle,
+              display: "grid",
+              gap: 10,
+              padding: 12,
+              borderRadius: 16,
+              border: "1px solid var(--border)",
+              background: "var(--bg)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                gap: 10,
+                flexWrap: "wrap",
+              }}
+            >
+              <div style={{ minWidth: 0, display: "grid", gap: 2 }}>
+                <div style={{ color: "var(--text)", fontSize: 14, fontWeight: 950 }}>
+                  Settlement
+                </div>
+                <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+                  Frontend estimate from paid-by, participants, and item costs
+                </div>
+              </div>
+              <div style={{ ...wrappingActionRowStyle, width: "auto", gap: 7 }}>
+                <button
+                  type="button"
+                  onClick={copySettlementSummary}
+                  style={{
+                    height: 30,
+                    padding: "0 10px",
+                    borderRadius: 999,
+                    border: "1px solid var(--border)",
+                    background: "transparent",
+                    color: "var(--text)",
+                    cursor: "pointer",
+                    fontWeight: 900,
+                    fontSize: 12,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {settlementCopied ? "Copied" : "Copy summary"}
+                </button>
+                <button
+                  type="button"
+                  onClick={shareSettlementSummary}
+                  style={{
+                    height: 30,
+                    padding: "0 10px",
+                    borderRadius: 999,
+                    border: "1px solid var(--border)",
+                    background: "transparent",
+                    color: "var(--text)",
+                    cursor: "pointer",
+                    fontWeight: 900,
+                    fontSize: 12,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Share summary
+                </button>
+                {settlementSummary.mixedCurrencies ? (
+                  <div
+                    style={{
+                      borderRadius: 999,
+                      border: "1px solid var(--border)",
+                      color: "var(--sub)",
+                      fontSize: 11,
+                      fontWeight: 900,
+                      padding: "5px 8px",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Mixed currencies
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            {settlementSummary.mixedCurrencies ? (
+              <div
+                style={{
+                  padding: 10,
+                  borderRadius: 12,
+                  border: "1px solid var(--border)",
+                  color: "var(--sub)",
+                  fontSize: 12,
+                  lineHeight: 1.35,
+                }}
+              >
+                Settlement combines multiple currencies. Check source costs before
+                settling balances.
+              </div>
+            ) : null}
+
+            {settlementSummary.mixedCurrencies ? (
+              <div style={{ display: "grid", gap: 8 }}>
+                <div style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
+                  Per-currency balances
+                </div>
+                {settlementSummary.currencySummaries.map((summary) => {
+                  const activeRows = summary.rows.filter(
+                    (row) => Math.abs(row.balance) > 0.005,
+                  );
+
+                  return (
+                    <div
+                      key={summary.currency}
+                      style={{
+                        display: "grid",
+                        gap: 7,
+                        padding: 10,
+                        borderRadius: 14,
+                        border: "1px solid var(--border)",
+                        background: "var(--card)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          color: "var(--text)",
+                          fontSize: 12,
+                          fontWeight: 950,
+                        }}
+                      >
+                        {summary.currency}
+                      </div>
+                      {activeRows.length === 0 ? (
+                        <div
+                          style={{
+                            color: "var(--sub)",
+                            fontSize: 12,
+                            lineHeight: 1.35,
+                          }}
+                        >
+                          Everyone is settled.
+                        </div>
+                      ) : (
+                        activeRows.map((row) => (
+                          <div
+                            key={`${summary.currency}-${row.member.id}`}
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              gap: 10,
+                              color: "var(--sub)",
+                              fontSize: 12,
+                              fontWeight: 850,
+                            }}
+                          >
+                            <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>
+                              {memberDisplayName(row.member)}{" "}
+                              {row.balance > 0 ? "gets back" : "owes"}
+                            </span>
+                            <span
+                              style={{
+                                color: "var(--text)",
+                                textAlign: "right",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {settlementCurrencyAmount(row.balance, summary.currency)}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(118px, 1fr))",
+                gap: 8,
+              }}
+            >
+              {[
+                ["Owes", settlementSummary.totalOwes],
+                ["Gets back", settlementSummary.totalGetsBack],
+              ].map(([label, value]) => (
+                <div
+                  key={String(label)}
+                  style={{
+                    minWidth: 0,
+                    padding: "10px 9px",
+                    borderRadius: 14,
+                    border: "1px solid var(--border)",
+                    background: "var(--card)",
+                    display: "grid",
+                    gap: 3,
+                  }}
+                >
+                  <div
+                    style={{
+                      color: "var(--text)",
+                      fontSize:
+                        settlementSummary.mixedCurrencies && Number(value) > 0
+                          ? 12
+                          : 16,
+                      fontWeight: 950,
+                      overflowWrap: "anywhere",
+                    }}
+                  >
+                    {settlementAmount(Number(value), settlementSummary)}
+                  </div>
+                  <div style={{ color: "var(--sub)", fontSize: 11, fontWeight: 900 }}>
+                    {String(label)}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {settlementSummary.rows.length === 0 ? (
+              <div
+                style={{
+                  padding: 12,
+                  borderRadius: 14,
+                  border: "1px dashed var(--border)",
+                  color: "var(--sub)",
+                  fontSize: 13,
+                  lineHeight: 1.4,
+                }}
+              >
+                Add trip members and costs to see settlement balances.
+              </div>
+            ) : (
+              <div style={{ display: "grid", gap: 8 }}>
+                {settlementSummary.rows.map((row) => {
+                  const balanceLabel =
+                    row.balance > 0.005
+                      ? "Gets back"
+                      : row.balance < -0.005
+                        ? "Owes"
+                        : "Settled";
+
+                  return (
+                    <div
+                      key={row.member.id}
+                      style={{
+                        display: "grid",
+                        gap: 8,
+                        padding: 10,
+                        borderRadius: 14,
+                        border: "1px solid var(--border)",
+                        background: "var(--card)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 10,
+                        }}
+                      >
+                        <div
+                          style={{
+                            color: "var(--text)",
+                            fontSize: 13,
+                            fontWeight: 950,
+                            overflowWrap: "anywhere",
+                            minWidth: 0,
+                          }}
+                        >
+                          {memberDisplayName(row.member)}
+                        </div>
+                        <div
+                          style={{
+                            color: row.balance > 0.005 ? "var(--text)" : "var(--sub)",
+                            fontSize: 12,
+                            fontWeight: 950,
+                            textAlign: "right",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {balanceLabel === "Settled"
+                            ? "Settled"
+                            : `${balanceLabel} ${settlementAmount(row.balance, settlementSummary)}`}
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                          gap: 6,
+                        }}
+                      >
+                        {[
+                          ["Paid", row.paid],
+                          ["Share", row.share],
+                          ["Balance", row.balance],
+                        ].map(([label, value]) => (
+                          <div key={String(label)} style={{ minWidth: 0, display: "grid", gap: 2 }}>
+                            <span
+                              style={{
+                                color: "var(--sub)",
+                                fontSize: 10,
+                                fontWeight: 900,
+                              }}
+                            >
+                              {String(label)}
+                            </span>
+                            <span
+                              style={{
+                                color: "var(--text)",
+                                fontSize:
+                                  settlementSummary.mixedCurrencies &&
+                                  Math.abs(Number(value)) > 0
+                                    ? 11
+                                    : 12,
+                                fontWeight: 900,
+                                overflowWrap: "anywhere",
+                              }}
+                            >
+                              {settlementAmount(Number(value), settlementSummary)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {settlementSummary.rows.length > 0 ? (
+              <div
+                style={{
+                  display: "grid",
+                  gap: 8,
+                  paddingTop: 2,
+                }}
+              >
+                <div style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
+                  Suggested payments
+                </div>
+
+                {settlementSummary.mixedCurrencies ? (
+                  <div
+                    style={{
+                      padding: 10,
+                      borderRadius: 14,
+                      border: "1px dashed var(--border)",
+                      color: "var(--sub)",
+                      fontSize: 12,
+                      lineHeight: 1.35,
+                    }}
+                  >
+                    Suggested payments are disabled for mixed currencies.
+                  </div>
+                ) : settlementSummary.transfers.length === 0 ? (
+                  <div
+                    style={{
+                      padding: 10,
+                      borderRadius: 14,
+                      border: "1px dashed var(--border)",
+                      color: "var(--sub)",
+                      fontSize: 12,
+                      lineHeight: 1.35,
+                    }}
+                  >
+                    Everyone is settled.
+                  </div>
+                ) : (
+                  <div style={{ display: "grid", gap: 7 }}>
+                    {settlementSummary.transfers.map((transfer, index) => (
+                      <div
+                        key={`${transfer.from.id}-${transfer.to.id}-${index}`}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 10,
+                          padding: "9px 10px",
+                          borderRadius: 14,
+                          border: "1px solid var(--border)",
+                          background: "var(--card)",
+                          minWidth: 0,
+                        }}
+                      >
+                        <div
+                          style={{
+                            minWidth: 0,
+                            color: "var(--text)",
+                            fontSize: 13,
+                            fontWeight: 900,
+                            lineHeight: 1.3,
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {memberDisplayName(transfer.from)} pays{" "}
+                          {memberDisplayName(transfer.to)}
+                        </div>
+                        <div
+                          style={{
+                            color: "var(--text)",
+                            fontSize:
+                              settlementSummary.mixedCurrencies &&
+                              transfer.amount > 0
+                                ? 11
+                                : 12,
+                            fontWeight: 950,
+                            textAlign: "right",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {settlementAmount(transfer.amount, settlementSummary)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
           </div>
         </section>
       ) : activeView === "map" ? (
