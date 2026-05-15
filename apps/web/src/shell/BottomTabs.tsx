@@ -83,7 +83,7 @@ export default function BottomTabs() {
         backdropFilter: "blur(10px)",
         borderTop: "1px solid var(--border)",
         display: "flex",
-        paddingBottom: "env(safe-area-inset-bottom)",
+        paddingBottom: "var(--fw-safe-area-bottom)",
         zIndex: 2000,
       }}
     >

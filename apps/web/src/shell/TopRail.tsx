@@ -737,12 +737,14 @@ export default function TopRail() {
   return (
     <>
       <div
+        className="fw-top-rail"
         style={{
-          height: 60,
+          height: "calc(60px + var(--fw-safe-area-top, 0px))",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "0 14px",
+          padding: "var(--fw-safe-area-top, 0px) 14px 0",
+          boxSizing: "border-box",
           borderBottom: "1px solid var(--border)",
           background: "var(--card)",
           boxShadow: "0 6px 18px rgba(0,0,0,0.25)",

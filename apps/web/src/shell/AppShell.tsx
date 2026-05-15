@@ -4,10 +4,13 @@ import Sidebar from "./Sidebar";
 import RightRail from "./RightRail";
 import BottomTabs from "./BottomTabs";
 import TopRail from "./TopRail";
+import InstallAppPrompt from "../pwa/InstallAppPrompt";
+import { useStandaloneMode } from "../pwa/useStandaloneMode";
 
 export default function AppShell() {
   const location = useLocation();
   const isMap = location.pathname === "/map";
+  const isStandalone = useStandaloneMode();
 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 980);
 
@@ -25,6 +28,7 @@ export default function AppShell() {
   return (
     <div className="fw-shell">
       <TopRail />
+      {isMobile && !isStandalone ? <InstallAppPrompt /> : null}
 
       {isMap && isMobile ? (
         <>
