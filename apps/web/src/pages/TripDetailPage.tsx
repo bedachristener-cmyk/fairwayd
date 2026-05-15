@@ -408,6 +408,36 @@ const sectionCardStyle: React.CSSProperties = {
   boxShadow: "0 10px 24px rgba(0,0,0,0.12)",
 };
 
+const golfSectionCardStyle: React.CSSProperties = {
+  background:
+    "linear-gradient(135deg, var(--atmosphere-golf-soft), transparent 72%), color-mix(in srgb, var(--card) 94%, var(--bg))",
+  border: "1px solid color-mix(in srgb, var(--atmosphere-golf) 22%, var(--border))",
+};
+
+const travelSectionCardStyle: React.CSSProperties = {
+  background:
+    "linear-gradient(135deg, var(--atmosphere-travel-soft), transparent 72%), color-mix(in srgb, var(--card) 94%, var(--bg))",
+  border: "1px solid color-mix(in srgb, var(--atmosphere-travel) 22%, var(--border))",
+};
+
+const financeSectionCardStyle: React.CSSProperties = {
+  background:
+    "linear-gradient(135deg, var(--atmosphere-finance-soft), transparent 72%), color-mix(in srgb, var(--card) 94%, var(--bg))",
+  border: "1px solid color-mix(in srgb, var(--atmosphere-finance) 22%, var(--border))",
+};
+
+const documentSectionCardStyle: React.CSSProperties = {
+  background:
+    "linear-gradient(135deg, var(--atmosphere-document-soft), transparent 72%), color-mix(in srgb, var(--card) 94%, var(--bg))",
+  border: "1px solid color-mix(in srgb, var(--atmosphere-document) 22%, var(--border))",
+};
+
+const socialSectionCardStyle: React.CSSProperties = {
+  background:
+    "linear-gradient(135deg, var(--atmosphere-social-soft), transparent 72%), color-mix(in srgb, var(--card) 94%, var(--bg))",
+  border: "1px solid color-mix(in srgb, var(--atmosphere-social) 22%, var(--border))",
+};
+
 const sectionInnerCardStyle: React.CSSProperties = {
   borderRadius: 16,
   border: "1px solid color-mix(in srgb, var(--border) 76%, transparent)",
@@ -536,11 +566,19 @@ function readTeeTimeChecklist(tripId: string) {
     }
 
     const next = new Map<string, Set<string>>();
+    const validChecklistIds = new Set(
+      defaultTeeTimeChecklistItems.map((item) => item.id),
+    );
     for (const [itemId, value] of Object.entries(parsed)) {
       if (Array.isArray(value)) {
         next.set(
           itemId,
-          new Set(value.filter((id): id is string => typeof id === "string")),
+          new Set(
+            value.filter(
+              (id): id is string =>
+                typeof id === "string" && validChecklistIds.has(id),
+            ),
+          ),
         );
       }
     }
@@ -692,9 +730,9 @@ function OverviewNavigationRow({
           width: 38,
           height: 38,
           borderRadius: 14,
-          background: "var(--bg)",
+          background: "var(--accent-soft)",
           border: "1px solid var(--border)",
-          color: "var(--text)",
+          color: "var(--accent-strong)",
           display: "grid",
           placeItems: "center",
           flex: "0 0 auto",
@@ -1293,6 +1331,35 @@ function mapUrlForItem(item: TripItem) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
+function directionsUrlForItem(item: TripItem) {
+  const lat = toFiniteNumber(item.course?.lat ?? item.lat ?? item.latitude);
+  const lon = toFiniteNumber(item.course?.lon ?? item.lon ?? item.longitude);
+
+  if (
+    lat != null &&
+    lon != null &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lon >= -180 &&
+    lon <= 180
+  ) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${lat},${lon}`)}`;
+  }
+
+  const query = [
+    item.locationName,
+    item.address,
+    item.course?.name,
+    item.title,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  if (!query.trim()) return null;
+
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`;
+}
+
 function documentCategoryForItem(item: TripItem): TripDocumentCategory | null {
   const type = String(item.type ?? "").toLowerCase();
 
@@ -1465,8 +1532,8 @@ function markerTypeStyles(typeKey: string) {
 
   if (value === "golf_round" || value === "course") {
     return {
-      background: "var(--text)",
-      color: "var(--bg)",
+                        background: "var(--accent)",
+                        color: "#f8fbf6",
       ring: "var(--card)",
       glyph: "G",
     };
@@ -1913,14 +1980,14 @@ function TripCalendarView({
                   borderRadius: 12,
                   overflow: "hidden",
                   "--fw-trip-calendar-day-bg": active
-                    ? "#fff"
+                    ? "var(--accent)"
                     : "rgba(127,127,127,0.1)",
                   "--fw-trip-calendar-day-color": active
-                    ? "#111827"
+                    ? "#f8fbf6"
                     : "var(--text)",
-                  background: active ? "#fff" : "rgba(127,127,127,0.1)",
+                  background: active ? "var(--accent)" : "rgba(127,127,127,0.1)",
                   backgroundClip: "padding-box",
-                  color: active ? "#111827" : "var(--text)",
+                  color: active ? "#f8fbf6" : "var(--text)",
                   WebkitMaskImage: "-webkit-radial-gradient(white, black)",
                   display: "flex",
                   flexDirection: "column",
@@ -1929,7 +1996,7 @@ function TripCalendarView({
                   gap: 3,
                   boxSizing: "border-box",
                   boxShadow: active
-                    ? "0 6px 14px rgba(0,0,0,0.16), inset 0 0 0 1px rgba(17,24,39,0.12)"
+                    ? "0 6px 14px rgba(0,0,0,0.16), inset 0 0 0 1px color-mix(in srgb, var(--accent-strong) 56%, transparent)"
                     : "inset 0 0 0 1px rgba(127,127,127,0.08)",
                 } as React.CSSProperties}
               >
@@ -2429,25 +2496,6 @@ export default function TripDetailPage() {
     });
   }
 
-  function toggleTeeTimeChecklistItem(itemId: string, checklistItemId: string) {
-    if (!tripId) return;
-
-    setCheckedTeeTimeChecklistIds((current) => {
-      const next = new Map(current);
-      const checkedIds = new Set(next.get(itemId) ?? []);
-
-      if (checkedIds.has(checklistItemId)) {
-        checkedIds.delete(checklistItemId);
-      } else {
-        checkedIds.add(checklistItemId);
-      }
-
-      next.set(itemId, checkedIds);
-      writeTeeTimeChecklist(tripId, next);
-      return next;
-    });
-  }
-
   function openOverviewSection(ref: React.RefObject<HTMLElement>) {
     setActiveView("overview");
     window.setTimeout(() => {
@@ -2532,6 +2580,11 @@ export default function TripDetailPage() {
       tripId ? readTeeTimeChecklist(tripId) : new Map(),
     );
   }, [tripId]);
+
+  useEffect(() => {
+    if (!tripId) return;
+    writeTeeTimeChecklist(tripId, checkedTeeTimeChecklistIds);
+  }, [tripId, checkedTeeTimeChecklistIds]);
 
   async function loadDocuments() {
     if (!token || !tripId) return;
@@ -4235,7 +4288,7 @@ export default function TripDetailPage() {
       <section
         ref={teeTimesSectionRef}
         id="upcoming-tee-times"
-        style={{ ...overviewAnchorStyle, ...sectionCardStyle }}
+        style={{ ...overviewAnchorStyle, ...sectionCardStyle, ...golfSectionCardStyle }}
       >
         <div style={{ display: "grid", gap: 2 }}>
           <div style={sectionTitleTextStyle}>
@@ -4256,22 +4309,19 @@ export default function TripDetailPage() {
           <div style={{ display: "grid", gap: 8 }}>
             {upcomingTeeTimes.map((item) => {
               const mapUrl = mapUrlForItem(item);
+              const directionsUrl = directionsUrlForItem(item);
               const participants = participantSummary(item, trip?.members ?? []);
               const dateTime = tripItemDateTimeLabel(item);
               const location = [item.locationName, item.address]
                 .filter(Boolean)
                 .join(" - ");
-              const teeChecklist = checkedTeeTimeChecklistIds.get(item.id) ?? new Set();
-              const teeReadyCount = defaultTeeTimeChecklistItems.filter((check) =>
-                teeChecklist.has(check.id),
-              ).length;
 
               return (
                 <article
                   key={`tee-${item.id}`}
                   style={{
                     display: "grid",
-                    gap: 7,
+                    gap: 8,
                     padding: 10,
                     ...sectionInnerCardStyle,
                     minWidth: 0,
@@ -4279,10 +4329,8 @@ export default function TripDetailPage() {
                 >
                   <div
                     style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: 10,
-                      alignItems: "flex-start",
+                      display: "grid",
+                      gap: 8,
                     }}
                   >
                     <div style={{ minWidth: 0, display: "grid", gap: 3 }}>
@@ -4297,47 +4345,6 @@ export default function TripDetailPage() {
                         </div>
                       ) : null}
                     </div>
-                    <div
-                      style={{
-                        height: 28,
-                        padding: "0 9px",
-                        borderRadius: 999,
-                        border: "1px solid color-mix(in srgb, var(--border) 76%, transparent)",
-                        background: "color-mix(in srgb, var(--card) 90%, var(--bg))",
-                        color: "var(--text)",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        fontSize: 11,
-                        fontWeight: 900,
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {teeReadyCount}/{defaultTeeTimeChecklistItems.length} ready
-                    </div>
-                    {mapUrl ? (
-                      <a
-                        href={mapUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{
-                          height: 28,
-                          padding: "0 9px",
-                          borderRadius: 999,
-                          border: "1px solid var(--border)",
-                          background: "transparent",
-                          color: "var(--text)",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          textDecoration: "none",
-                          fontWeight: 900,
-                          fontSize: 11,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        Open map
-                      </a>
-                    ) : null}
                   </div>
 
                   {participants || location ? (
@@ -4365,59 +4372,58 @@ export default function TripDetailPage() {
 
                   <div
                     style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-                      gap: 6,
+                      ...wrappingActionRowStyle,
+                      gap: 7,
                     }}
                   >
-                    {defaultTeeTimeChecklistItems.map((check) => {
-                      const checked = teeChecklist.has(check.id);
-
-                      return (
-                        <label
-                          key={`${item.id}-${check.id}`}
-                          style={{
-                            minWidth: 0,
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                            padding: "8px 9px",
-                            borderRadius: 12,
-                            border: "1px solid var(--border)",
-                            background: "var(--card)",
-                            color: checked ? "var(--sub)" : "var(--text)",
-                            cursor: "pointer",
-                            fontSize: 12,
-                            fontWeight: 900,
-                            lineHeight: 1.25,
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() =>
-                              toggleTeeTimeChecklistItem(item.id, check.id)
-                            }
-                            style={{
-                              width: 15,
-                              height: 15,
-                              margin: 0,
-                              accentColor: "var(--text)",
-                              flex: "0 0 auto",
-                            }}
-                          />
-                          <span
-                            style={{
-                              minWidth: 0,
-                              overflowWrap: "anywhere",
-                              textDecoration: checked ? "line-through" : "none",
-                            }}
-                          >
-                            {check.label}
-                          </span>
-                        </label>
-                      );
-                    })}
+                    {mapUrl ? (
+                      <a
+                        href={mapUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          height: 28,
+                          padding: "0 9px",
+                          borderRadius: 999,
+                          border: "1px solid var(--border)",
+                          background: "transparent",
+                          color: "var(--text)",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          textDecoration: "none",
+                          fontWeight: 900,
+                          fontSize: 11,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        Open map
+                      </a>
+                    ) : null}
+                    {directionsUrl ? (
+                      <a
+                        href={directionsUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          height: 28,
+                          padding: "0 9px",
+                          borderRadius: 999,
+                          border: "1px solid var(--border)",
+                          background: "var(--accent)",
+                          color: "#f8fbf6",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          textDecoration: "none",
+                          fontWeight: 900,
+                          fontSize: 11,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        Get me there
+                      </a>
+                    ) : null}
                   </div>
                 </article>
               );
@@ -4428,7 +4434,7 @@ export default function TripDetailPage() {
 
       <section
         id="travel-essentials"
-        style={{ ...overviewAnchorStyle, ...sectionCardStyle }}
+        style={{ ...overviewAnchorStyle, ...sectionCardStyle, ...travelSectionCardStyle }}
       >
         <div
           style={{
@@ -4815,7 +4821,7 @@ export default function TripDetailPage() {
       </section>
 
       <section
-        style={{ ...sectionCardStyle }}
+        style={{ ...sectionCardStyle, ...socialSectionCardStyle }}
       >
         <div
           style={{
@@ -6799,8 +6805,7 @@ export default function TripDetailPage() {
                 gap: 10,
                 padding: 14,
                 borderRadius: 22,
-                background: "var(--card)",
-                border: "1px solid var(--border)",
+                ...documentSectionCardStyle,
                 boxShadow: "0 12px 34px rgba(0,0,0,0.16)",
               }}
             >
@@ -6937,8 +6942,7 @@ export default function TripDetailPage() {
               gap: 10,
               padding: 14,
               borderRadius: 22,
-              background: "var(--card)",
-              border: "1px solid var(--border)",
+              ...documentSectionCardStyle,
             }}
           >
             <div
@@ -7028,8 +7032,8 @@ export default function TripDetailPage() {
                       padding: "0 11px",
                       borderRadius: 999,
                       border: "1px solid var(--border)",
-                      background: active ? "var(--text)" : "var(--bg)",
-                      color: active ? "var(--bg)" : "var(--sub)",
+                      background: active ? "var(--accent)" : "var(--bg)",
+                      color: active ? "#f8fbf6" : "var(--sub)",
                       cursor: "pointer",
                       fontWeight: 900,
                       fontSize: 12,
@@ -7244,8 +7248,7 @@ export default function TripDetailPage() {
             gap: 12,
             padding: 14,
             borderRadius: 22,
-            background: "var(--card)",
-            border: "1px solid var(--border)",
+            ...financeSectionCardStyle,
             overflow: "hidden",
           }}
         >
@@ -7384,6 +7387,7 @@ export default function TripDetailPage() {
           <div
             style={{
               ...sectionCardStyle,
+              ...financeSectionCardStyle,
             }}
           >
             <div

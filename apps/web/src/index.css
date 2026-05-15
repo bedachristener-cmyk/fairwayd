@@ -2,36 +2,74 @@
 
 /* DARK (default) */
 html[data-theme="dark"] {
-  --bg: #0d1117;
-  --card: #171d25;
-  --muted: #1c232d;
-  --text: #f3f4f6;
-  --sub: #9fb0c0;
-  --border: #263240;
-  --green: #54d39d;
+  --bg: #07100f;
+  --card: #0f1a19;
+  --muted: #162321;
+  --text: #f5f7f5;
+  --sub: #a8b8b3;
+  --border: #263633;
+  --green: #73c98a;
+  --accent: #73c98a;
+  --accent-strong: #96d9a8;
+  --accent-soft: rgba(115, 201, 138, 0.16);
+  --sand: #cbb27d;
+  --sand-soft: rgba(203, 178, 125, 0.11);
+  --sky: #79b8c5;
+  --sky-soft: rgba(121, 184, 197, 0.12);
+  --coral: #d78d7d;
+  --coral-soft: rgba(215, 141, 125, 0.14);
   --danger: #fca5a5;
   --danger-soft: rgba(252, 165, 165, 0.12);
-  --bottom-tabs-bg: rgba(10, 14, 11, 0.92);
-  --bottom-tab-active: #ffffff;
-  --bottom-tab-inactive: rgba(243, 244, 246, 0.68);
+  --atmosphere-golf: #84b08f;
+  --atmosphere-travel: #bda574;
+  --atmosphere-finance: #b89e68;
+  --atmosphere-document: #91a4ad;
+  --atmosphere-social: #86adb7;
+  --atmosphere-golf-soft: rgba(132, 176, 143, 0.12);
+  --atmosphere-travel-soft: rgba(189, 165, 116, 0.1);
+  --atmosphere-finance-soft: rgba(184, 158, 104, 0.1);
+  --atmosphere-document-soft: rgba(145, 164, 173, 0.12);
+  --atmosphere-social-soft: rgba(134, 173, 183, 0.12);
+  --bottom-tabs-bg: rgba(7, 16, 15, 0.84);
+  --bottom-tab-active: var(--accent-strong);
+  --bottom-tab-inactive: rgba(244, 245, 239, 0.66);
   --bottom-tab-indicator: var(--green);
 }
 
 /* LIGHT */
 html[data-theme="light"] {
-  --bg: #f6f1e8;
-  --card: #fffaf1;
-  --muted: #f3eadf;
-  --text: #111827;
-  --sub: #6f655d;
-  --border: #e7dccd;
-  --green: #2f7d5b;
+  --bg: #f7faf8;
+  --card: #ffffff;
+  --muted: #edf4f0;
+  --text: #17251f;
+  --sub: #64736d;
+  --border: #dce7e1;
+  --green: #4c9863;
+  --accent: #4c9863;
+  --accent-strong: #34764c;
+  --accent-soft: rgba(76, 152, 99, 0.12);
+  --sand: #d2b57c;
+  --sand-soft: rgba(210, 181, 124, 0.1);
+  --sky: #6fb7c5;
+  --sky-soft: rgba(111, 183, 197, 0.12);
+  --coral: #d98272;
+  --coral-soft: rgba(217, 130, 114, 0.1);
   --danger: #dc2626;
   --danger-soft: rgba(220, 38, 38, 0.08);
-  --bottom-tabs-bg: rgba(255, 255, 255, 0.94);
-  --bottom-tab-active: #111827;
-  --bottom-tab-inactive: #6b7280;
-  --bottom-tab-indicator: #111827;
+  --atmosphere-golf: #75a782;
+  --atmosphere-travel: #a7b7ad;
+  --atmosphere-finance: #b2a06f;
+  --atmosphere-document: #8195a2;
+  --atmosphere-social: #74a8b5;
+  --atmosphere-golf-soft: rgba(117, 167, 130, 0.12);
+  --atmosphere-travel-soft: rgba(167, 183, 173, 0.1);
+  --atmosphere-finance-soft: rgba(178, 160, 111, 0.1);
+  --atmosphere-document-soft: rgba(129, 149, 162, 0.11);
+  --atmosphere-social-soft: rgba(116, 168, 181, 0.11);
+  --bottom-tabs-bg: rgba(255, 255, 255, 0.86);
+  --bottom-tab-active: var(--accent-strong);
+  --bottom-tab-inactive: #728078;
+  --bottom-tab-indicator: var(--accent);
 }
 
 /* FORREST */
@@ -45,6 +83,16 @@ html[data-theme="forest"] {
   --green: #34d300;
   --danger: #fda4af;
   --danger-soft: rgba(253, 164, 175, 0.12);
+  --atmosphere-golf: #8fa989;
+  --atmosphere-travel: #b79a75;
+  --atmosphere-finance: #ad965f;
+  --atmosphere-document: #8b98a6;
+  --atmosphere-social: #8398a4;
+  --atmosphere-golf-soft: rgba(143, 169, 137, 0.1);
+  --atmosphere-travel-soft: rgba(183, 154, 117, 0.1);
+  --atmosphere-finance-soft: rgba(173, 150, 95, 0.1);
+  --atmosphere-document-soft: rgba(139, 152, 166, 0.1);
+  --atmosphere-social-soft: rgba(131, 152, 164, 0.1);
   --bottom-tabs-bg: rgba(15, 26, 20, 0.94);
   --bottom-tab-active: #ffffff;
   --bottom-tab-inactive: rgba(230, 244, 234, 0.68);
@@ -61,6 +109,16 @@ html[data-theme="ocean"] {
   --green: #38bdf8;
   --danger: #fda4af;
   --danger-soft: rgba(253, 164, 175, 0.12);
+  --atmosphere-golf: #8ea78f;
+  --atmosphere-travel: #b79c7a;
+  --atmosphere-finance: #af9663;
+  --atmosphere-document: #8f9aaa;
+  --atmosphere-social: #8199aa;
+  --atmosphere-golf-soft: rgba(142, 167, 143, 0.1);
+  --atmosphere-travel-soft: rgba(183, 156, 122, 0.1);
+  --atmosphere-finance-soft: rgba(175, 150, 99, 0.1);
+  --atmosphere-document-soft: rgba(143, 154, 170, 0.1);
+  --atmosphere-social-soft: rgba(129, 153, 170, 0.1);
   --bottom-tabs-bg: rgba(11, 18, 32, 0.94);
   --bottom-tab-active: #ffffff;
   --bottom-tab-inactive: rgba(230, 240, 255, 0.68);
@@ -77,6 +135,16 @@ html[data-theme="warm"] {
   --green: #d97706;
   --danger: #b91c1c;
   --danger-soft: rgba(185, 28, 28, 0.08);
+  --atmosphere-golf: #80997b;
+  --atmosphere-travel: #b58e63;
+  --atmosphere-finance: #ad873f;
+  --atmosphere-document: #87909d;
+  --atmosphere-social: #8094a3;
+  --atmosphere-golf-soft: rgba(128, 153, 123, 0.11);
+  --atmosphere-travel-soft: rgba(181, 142, 99, 0.11);
+  --atmosphere-finance-soft: rgba(173, 135, 63, 0.11);
+  --atmosphere-document-soft: rgba(135, 144, 157, 0.11);
+  --atmosphere-social-soft: rgba(128, 148, 163, 0.11);
   --bottom-tabs-bg: rgba(255, 255, 255, 0.94);
   --bottom-tab-active: #3b2f2f;
   --bottom-tab-inactive: #8b6f6f;
@@ -93,6 +161,16 @@ html[data-theme="contrast"] {
   --green: #00ff88;
   --danger: #ff8a8a;
   --danger-soft: rgba(255, 138, 138, 0.14);
+  --atmosphere-golf: #9db19a;
+  --atmosphere-travel: #c3ab87;
+  --atmosphere-finance: #bea56e;
+  --atmosphere-document: #9da7b5;
+  --atmosphere-social: #94a7b6;
+  --atmosphere-golf-soft: rgba(157, 177, 154, 0.12);
+  --atmosphere-travel-soft: rgba(195, 171, 135, 0.12);
+  --atmosphere-finance-soft: rgba(190, 165, 110, 0.12);
+  --atmosphere-document-soft: rgba(157, 167, 181, 0.12);
+  --atmosphere-social-soft: rgba(148, 167, 182, 0.12);
   --bottom-tabs-bg: rgba(0, 0, 0, 0.96);
   --bottom-tab-active: #ffffff;
   --bottom-tab-inactive: #d1d5db;
@@ -101,18 +179,37 @@ html[data-theme="contrast"] {
 
 /* fallback if attribute missing */
 :root {
-  --bg: #0d1117;
-  --card: #171d25;
-  --muted: #1c232d;
-  --border: #263240;
-  --text: #e9eef2;
-  --sub: #9fb0c0;
-  --green: #54d39d;
+  --bg: #07100f;
+  --card: #0f1a19;
+  --muted: #162321;
+  --border: #263633;
+  --text: #f5f7f5;
+  --sub: #a8b8b3;
+  --green: #73c98a;
+  --accent: #73c98a;
+  --accent-strong: #96d9a8;
+  --accent-soft: rgba(115, 201, 138, 0.16);
+  --sand: #cbb27d;
+  --sand-soft: rgba(203, 178, 125, 0.11);
+  --sky: #79b8c5;
+  --sky-soft: rgba(121, 184, 197, 0.12);
+  --coral: #d78d7d;
+  --coral-soft: rgba(215, 141, 125, 0.14);
   --danger: #fca5a5;
   --danger-soft: rgba(252, 165, 165, 0.12);
-  --bottom-tabs-bg: rgba(10, 14, 11, 0.92);
-  --bottom-tab-active: #ffffff;
-  --bottom-tab-inactive: rgba(233, 238, 242, 0.68);
+  --atmosphere-golf: #84b08f;
+  --atmosphere-travel: #bda574;
+  --atmosphere-finance: #b89e68;
+  --atmosphere-document: #91a4ad;
+  --atmosphere-social: #86adb7;
+  --atmosphere-golf-soft: rgba(132, 176, 143, 0.12);
+  --atmosphere-travel-soft: rgba(189, 165, 116, 0.1);
+  --atmosphere-finance-soft: rgba(184, 158, 104, 0.1);
+  --atmosphere-document-soft: rgba(145, 164, 173, 0.12);
+  --atmosphere-social-soft: rgba(134, 173, 183, 0.12);
+  --bottom-tabs-bg: rgba(7, 16, 15, 0.84);
+  --bottom-tab-active: var(--accent-strong);
+  --bottom-tab-inactive: rgba(244, 245, 239, 0.66);
   --bottom-tab-indicator: var(--green);
 }
 
@@ -560,7 +657,7 @@ img.fw-post-img {
   margin: 0 !important;
   border-radius: 50% !important;
   border: 1px solid var(--border) !important;
-  background: var(--card) !important;
+  background: color-mix(in srgb, var(--card) 88%, transparent) !important;
   color: var(--text) !important;
   display: flex !important;
   align-items: center !important;
@@ -570,6 +667,7 @@ img.fw-post-img {
   line-height: 1 !important;
   box-sizing: border-box !important;
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22) !important;
+  backdrop-filter: blur(12px) !important;
   z-index: 999 !important;
   cursor: pointer !important;
   overflow: hidden !important;

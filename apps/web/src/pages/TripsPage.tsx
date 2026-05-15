@@ -159,9 +159,9 @@ const primaryActionButtonStyle: React.CSSProperties = {
   height: 40,
   padding: "0 14px",
   borderRadius: 999,
-  border: "1px solid var(--text)",
-  background: "var(--text)",
-  color: "var(--bg)",
+  border: "1px solid var(--accent-strong)",
+  background: "var(--accent)",
+  color: "#f8fbf6",
   cursor: "pointer",
   fontWeight: 900,
   whiteSpace: "nowrap",
@@ -622,7 +622,7 @@ export default function TripsPage() {
                         borderRadius: 14,
                         overflow: "hidden",
                         background:
-                          "linear-gradient(135deg, color-mix(in srgb, var(--green) 70%, var(--bg)), color-mix(in srgb, var(--muted) 88%, var(--bg)))",
+                          "linear-gradient(135deg, color-mix(in srgb, var(--accent) 72%, var(--bg)), color-mix(in srgb, var(--sky) 46%, var(--muted)))",
                         border: "1px solid color-mix(in srgb, var(--border) 76%, transparent)",
                         display: "grid",
                         alignContent: "end",
@@ -720,12 +720,20 @@ export default function TripsPage() {
 }
 
 function StatPill({ label, value }: { label: string; value: number }) {
+  const tint =
+    label === "Golf"
+      ? "var(--atmosphere-golf-soft)"
+      : label === "Hotels"
+        ? "var(--atmosphere-travel-soft)"
+        : "var(--sky-soft)";
+
   return (
     <span
       style={{
         ...pageMutedCardStyle,
         borderRadius: 999,
         color: "var(--text)",
+        background: tint,
         padding: "4px 7px",
         fontSize: 11,
         fontWeight: 800,
