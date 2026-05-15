@@ -331,6 +331,24 @@ button {
   background: var(--accent);
   color: #f8fbf6;
 }
+
+.fw-button-primary {
+  border: 1px solid var(--accent-strong);
+  background: var(--accent);
+  color: #f8fbf6;
+}
+
+.fw-button-secondary {
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  background: transparent;
+  color: var(--text);
+}
+
+.fw-button-destructive {
+  border: 1px solid color-mix(in srgb, var(--danger) 58%, var(--border));
+  background: transparent;
+  color: var(--danger);
+}
 /* ============ APP SHELL LAYOUT ============ */
 
 .fw-shell {

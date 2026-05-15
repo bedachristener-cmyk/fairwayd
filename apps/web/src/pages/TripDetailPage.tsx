@@ -4188,6 +4188,7 @@ export default function TripDetailPage() {
                   style={{ display: "none" }}
                 />
                 <button
+                  className="fw-button-secondary"
                   type="button"
                   onClick={() => coverInputRef.current?.click()}
                   disabled={!trip || deletingTrip || uploadingCover}
@@ -4195,9 +4196,6 @@ export default function TripDetailPage() {
                     height: 28,
                     padding: "0 9px",
                     borderRadius: 999,
-                    border: "1px solid var(--border)",
-                    background: "transparent",
-                    color: "var(--sub)",
                     cursor:
                       !trip || deletingTrip || uploadingCover
                         ? "default"
@@ -4210,6 +4208,7 @@ export default function TripDetailPage() {
                   {uploadingCover ? "Uploading..." : "Upload Cover"}
                 </button>
                 <button
+                  className="fw-button-secondary"
                   type="button"
                   onClick={startTripEdit}
                   disabled={!trip || deletingTrip}
@@ -4217,9 +4216,6 @@ export default function TripDetailPage() {
                     height: 28,
                     padding: "0 9px",
                     borderRadius: 999,
-                    border: "1px solid var(--border)",
-                    background: "transparent",
-                    color: "var(--sub)",
                     cursor: !trip || deletingTrip ? "default" : "pointer",
                     fontWeight: 900,
                     fontSize: 11,
@@ -4229,6 +4225,7 @@ export default function TripDetailPage() {
                   Edit Trip
                 </button>
                 <button
+                  className="fw-button-primary"
                   type="button"
                   onClick={openInviteSheet}
                   disabled={!trip || deletingTrip || inviteBusy}
@@ -4236,9 +4233,6 @@ export default function TripDetailPage() {
                     height: 28,
                     padding: "0 9px",
                     borderRadius: 999,
-                    border: "1px solid var(--border)",
-                    background: "transparent",
-                    color: "var(--sub)",
                     cursor:
                       !trip || deletingTrip || inviteBusy
                         ? "default"
@@ -4251,6 +4245,7 @@ export default function TripDetailPage() {
                   Share / Invite
                 </button>
                 <button
+                  className="fw-button-destructive"
                   type="button"
                   onClick={openDeleteTripConfirm}
                   disabled={!trip || deletingTrip}
@@ -4258,9 +4253,6 @@ export default function TripDetailPage() {
                     height: 28,
                     padding: "0 9px",
                     borderRadius: 999,
-                    border: "1px solid var(--border)",
-                    background: "transparent",
-                    color: "var(--sub)",
                     cursor: !trip || deletingTrip ? "default" : "pointer",
                     fontWeight: 900,
                     fontSize: 11,
@@ -4272,6 +4264,7 @@ export default function TripDetailPage() {
               </>
             ) : null}
             <button
+              className="fw-button-primary"
               type="button"
               onClick={() => {
                 if (tripId) nav(`/trips/${tripId}/add-item`);
@@ -4281,9 +4274,6 @@ export default function TripDetailPage() {
                 height: 32,
                 padding: "0 12px",
                 borderRadius: 999,
-                border: "1px solid var(--border)",
-                background: "var(--text)",
-                color: "var(--bg)",
                 cursor: editingTrip || deletingTrip ? "default" : "pointer",
                 fontWeight: 900,
                 whiteSpace: "nowrap",
@@ -4389,6 +4379,7 @@ export default function TripDetailPage() {
                   >
                     {mapUrl ? (
                       <a
+                        className="fw-button-secondary"
                         href={mapUrl}
                         target="_blank"
                         rel="noreferrer"
@@ -4396,9 +4387,6 @@ export default function TripDetailPage() {
                           height: 28,
                           padding: "0 9px",
                           borderRadius: 999,
-                          border: "1px solid var(--border)",
-                          background: "transparent",
-                          color: "var(--text)",
                           display: "inline-flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -4595,6 +4583,7 @@ export default function TripDetailPage() {
                     <div style={{ ...wrappingActionRowStyle, gap: 7 }}>
                       {mapUrl ? (
                         <a
+                          className="fw-button-secondary"
                           href={mapUrl}
                           target="_blank"
                           rel="noreferrer"
@@ -4602,9 +4591,6 @@ export default function TripDetailPage() {
                             height: 30,
                             padding: "0 10px",
                             borderRadius: 999,
-                            border: "1px solid var(--border)",
-                            background: "transparent",
-                            color: "var(--text)",
                             display: "inline-flex",
                             alignItems: "center",
                             justifyContent: "center",

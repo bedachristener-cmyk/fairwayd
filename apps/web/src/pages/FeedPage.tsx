@@ -75,15 +75,15 @@ const MAX_POST_IMAGES = 5;
 const FEED_FILTERS: { value: FeedFilter; label: string }[] = [
   { value: "following", label: "👥 Following" },
   { value: "courses", label: "⛳ Courses" },
-  { value: "destinations", label: "🌍 Destinations" },
+  { value: "destinations", label: "🌍 Travel" },
   { value: "trending", label: "🔥 Trending" },
 ];
 
 const FEED_FILTER_MOBILE_LABELS: Record<FeedFilter, string> = {
   following: "👥 Following",
   courses: "⛳ Courses",
-  destinations: "🌍 Trips",
-  trending: "🔥 Hot",
+  destinations: "🌍 Travel",
+  trending: "🔥 Trending",
 };
 
 async function resizeImage(file: File): Promise<File> {
