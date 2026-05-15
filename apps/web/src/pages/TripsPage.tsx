@@ -67,23 +67,6 @@ function dateRange(items?: TripItem[]) {
   return start === end ? start : `${start} - ${end}`;
 }
 
-function typeCounts(items?: TripItem[]) {
-  const counts = {
-    golf: 0,
-    hotels: 0,
-    flights: 0,
-  };
-
-  for (const item of items ?? []) {
-    const type = String(item.type ?? "").toLowerCase();
-    if (type === "golf_round" || type === "course") counts.golf += 1;
-    if (type === "hotel") counts.hotels += 1;
-    if (type === "flight" || type === "flights") counts.flights += 1;
-  }
-
-  return counts;
-}
-
 function destinationFlag(destination?: string | null) {
   const value = destination?.toLowerCase() ?? "";
 
@@ -105,12 +88,6 @@ const pageCardStyle: React.CSSProperties = {
   border: "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
   background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
   boxShadow: "0 10px 24px rgba(0,0,0,0.12)",
-};
-
-const pageMutedCardStyle: React.CSSProperties = {
-  borderRadius: 16,
-  border: "1px solid color-mix(in srgb, var(--border) 76%, transparent)",
-  background: "color-mix(in srgb, var(--card) 88%, var(--bg))",
 };
 
 const pageTitleStyle: React.CSSProperties = {
@@ -409,10 +386,9 @@ export default function TripsPage() {
         className="fw-page-shell"
       style={{
         boxSizing: "border-box",
-        padding: "16px 14px calc(96px + env(safe-area-inset-bottom, 0px))",
-        display: "grid",
-        gap: 14,
+        padding: "8px 14px calc(96px + env(safe-area-inset-bottom, 0px))",
         overflowX: "hidden",
+        alignContent: "start",
       }}
       >
       <div
@@ -421,13 +397,14 @@ export default function TripsPage() {
           alignItems: "flex-start",
           justifyContent: "space-between",
           flexWrap: "wrap",
-          gap: 12,
+          gap: 4,
           width: "100%",
           maxWidth: "100%",
           boxSizing: "border-box",
+          marginBottom: 12,
         }}
       >
-        <div style={{ minWidth: 0, flex: "1 1 220px", display: "grid", gap: 4 }}>
+        <div style={{ minWidth: 0, flex: "1 1 220px", display: "grid", gap: 1 }}>
           <div style={pageTitleStyle}>
             {headerText}
           </div>
@@ -440,7 +417,7 @@ export default function TripsPage() {
           style={{
             display: "flex",
             flexWrap: "wrap",
-            gap: 8,
+            gap: 6,
             justifyContent: "flex-end",
             flex: "0 1 auto",
           }}
@@ -481,6 +458,7 @@ export default function TripsPage() {
             justifyContent: "space-between",
             gap: 10,
             flexWrap: "wrap",
+            marginBottom: 10,
           }}
         >
           <span style={{ minWidth: 0, flex: "1 1 190px", display: "grid", gap: 2 }}>
@@ -504,13 +482,13 @@ export default function TripsPage() {
       ) : null}
 
       {isRefreshingTrips ? (
-        <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 800 }}>
+        <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 800, marginBottom: 10 }}>
           Updating trips...
         </div>
       ) : null}
 
       {loading && trips.length === 0 ? (
-        <div style={{ color: "var(--sub)", fontSize: 13, fontWeight: 750 }}>Loading...</div>
+        <div style={{ color: "var(--sub)", fontSize: 13, fontWeight: 750, marginBottom: 10 }}>Loading...</div>
       ) : null}
 
       {err ? (
@@ -521,6 +499,7 @@ export default function TripsPage() {
             color: "var(--text)",
             fontSize: 13,
             lineHeight: 1.4,
+            marginBottom: 10,
           }}
         >
           {err}
@@ -535,6 +514,7 @@ export default function TripsPage() {
             color: "var(--text)",
             display: "grid",
             gap: 5,
+            marginBottom: 10,
           }}
         >
           <div style={{ fontSize: 16, lineHeight: 1.2, fontWeight: 900 }}>
@@ -548,13 +528,12 @@ export default function TripsPage() {
       ) : null}
 
       {trips.length > 0 ? (
-        <div style={{ display: "grid", gap: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
           {trips.map((trip) => {
             const memberCount = trip.members?.length ?? 0;
             const itemCount = trip._count?.items ?? trip.items?.length ?? 0;
             const created = formatCreatedDate(trip.createdAt);
             const range = dateRange(trip.items);
-            const counts = typeCounts(trip.items);
             const flag = destinationFlag(trip.destination);
             const coverUrl = fileUrl(trip.coverImageUrl);
 
@@ -571,26 +550,27 @@ export default function TripsPage() {
                 role="button"
                 tabIndex={0}
                 style={{
-                  padding: 11,
+                  padding: 12,
                   ...pageCardStyle,
-                  display: "grid",
-                  gridTemplateColumns: "88px minmax(0, 1fr)",
-                  gap: 11,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
                   cursor: "pointer",
                   overflow: "hidden",
                   width: "100%",
                   maxWidth: "100%",
                   boxSizing: "border-box",
+                  minHeight: 0,
+                  height: "auto",
                 }}
               >
                 {coverUrl ? (
                   <div
                     aria-hidden="true"
-                      className="fw-trip-cover-thumb"
                       style={{
-                        width: 88,
-                        height: 104,
-                        minWidth: 88,
+                        width: 72,
+                        height: 82,
+                        minWidth: 72,
                         borderRadius: 14,
                         overflow: "hidden",
                         border: "1px solid color-mix(in srgb, var(--border) 76%, transparent)",
@@ -618,9 +598,9 @@ export default function TripsPage() {
                   <div
                     aria-hidden="true"
                       style={{
-                        width: 88,
-                        height: 104,
-                        minWidth: 88,
+                        width: 72,
+                        height: 82,
+                        minWidth: 72,
                         borderRadius: 14,
                         overflow: "hidden",
                         background:
@@ -642,47 +622,45 @@ export default function TripsPage() {
                 <div
                   style={{
                     minWidth: 0,
+                    flex: "1 1 auto",
                     display: "grid",
-                    gap: 7,
-                    alignContent: "space-between",
+                    gap: 3,
                   }}
                 >
-                  <div style={{ display: "grid", gap: 3, minWidth: 0 }}>
-                    <div
-                      style={{
-                        color: "var(--text)",
-                        fontSize: 17,
-                        lineHeight: 1.18,
-                        fontWeight: 900,
-                        overflowWrap: "anywhere",
-                      }}
-                    >
-                      {trip.title}
-                    </div>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: 7,
-                        color: "var(--sub)",
-                        fontSize: 12,
-                        fontWeight: 700,
-                      }}
-                    >
-                      {trip.destination ? (
-                        <span>{[flag, trip.destination].filter(Boolean).join(" ")}</span>
-                      ) : null}
-                      {range ? <span>{range}</span> : null}
-                      {!range && created ? <span>Created {created}</span> : null}
-                    </div>
+                  <div
+                    style={{
+                      color: "var(--text)",
+                      fontSize: 16,
+                      lineHeight: 1.18,
+                      fontWeight: 900,
+                      overflowWrap: "anywhere",
+                    }}
+                  >
+                    {trip.title}
                   </div>
 
                   <div
                     style={{
                       display: "flex",
                       flexWrap: "wrap",
-                      gap: 7,
+                      gap: 6,
+                      color: "var(--sub)",
+                      fontSize: 12,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {trip.destination ? (
+                      <span>{[flag, trip.destination].filter(Boolean).join(" ")}</span>
+                    ) : null}
+                    {range ? <span>{range}</span> : null}
+                    {!range && created ? <span>Created {created}</span> : null}
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 6,
                       color: "var(--sub)",
                       fontSize: 12,
                       fontWeight: 700,
@@ -691,26 +669,6 @@ export default function TripsPage() {
                     <span>{memberCount} members</span>
                     <span>{itemCount} items</span>
                   </div>
-
-                  {counts.golf || counts.hotels || counts.flights ? (
-                    <div
-                      style={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: 6,
-                      }}
-                    >
-                      {counts.golf ? (
-                        <StatPill label="Golf" value={counts.golf} />
-                      ) : null}
-                      {counts.hotels ? (
-                        <StatPill label="Hotels" value={counts.hotels} />
-                      ) : null}
-                      {counts.flights ? (
-                        <StatPill label="Flights" value={counts.flights} />
-                      ) : null}
-                    </div>
-                  ) : null}
                 </div>
               </article>
             );
@@ -719,30 +677,5 @@ export default function TripsPage() {
       ) : null}
       </div>
     </div>
-  );
-}
-
-function StatPill({ label, value }: { label: string; value: number }) {
-  const tint =
-    label === "Golf"
-      ? "var(--atmosphere-golf-soft)"
-      : label === "Hotels"
-        ? "var(--atmosphere-travel-soft)"
-        : "var(--sky-soft)";
-
-  return (
-    <span
-      style={{
-        ...pageMutedCardStyle,
-        borderRadius: 999,
-        color: "var(--text)",
-        background: tint,
-        padding: "4px 7px",
-        fontSize: 11,
-        fontWeight: 800,
-      }}
-    >
-      {label} {value}
-    </span>
   );
 }
