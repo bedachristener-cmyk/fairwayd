@@ -30,6 +30,12 @@ html[data-theme="dark"] {
   --atmosphere-finance-soft: rgba(184, 158, 104, 0.1);
   --atmosphere-document-soft: rgba(145, 164, 173, 0.12);
   --atmosphere-social-soft: rgba(134, 173, 183, 0.12);
+  --fw-atmosphere-bg:
+    radial-gradient(circle at 16% 10%, rgba(115, 201, 138, 0.12), transparent 34%),
+    radial-gradient(circle at 84% 4%, rgba(121, 184, 197, 0.14), transparent 32%),
+    linear-gradient(180deg, #07100f 0%, #091513 48%, #07100f 100%);
+  --fw-page-shell-bg: rgba(10, 18, 17, 0.72);
+  --fw-page-shell-border: rgba(150, 217, 168, 0.1);
   --bottom-tabs-bg: rgba(7, 16, 15, 0.84);
   --bottom-tab-active: var(--accent-strong);
   --bottom-tab-inactive: rgba(244, 245, 239, 0.66);
@@ -66,6 +72,12 @@ html[data-theme="light"] {
   --atmosphere-finance-soft: rgba(178, 160, 111, 0.1);
   --atmosphere-document-soft: rgba(129, 149, 162, 0.11);
   --atmosphere-social-soft: rgba(116, 168, 181, 0.11);
+  --fw-atmosphere-bg:
+    radial-gradient(circle at 16% 8%, rgba(111, 183, 197, 0.16), transparent 34%),
+    radial-gradient(circle at 84% 2%, rgba(76, 152, 99, 0.14), transparent 30%),
+    linear-gradient(180deg, #ffffff 0%, #f7faf8 58%, #f3f8f6 100%);
+  --fw-page-shell-bg: rgba(255, 255, 255, 0.72);
+  --fw-page-shell-border: rgba(76, 152, 99, 0.12);
   --bottom-tabs-bg: rgba(255, 255, 255, 0.86);
   --bottom-tab-active: var(--accent-strong);
   --bottom-tab-inactive: #728078;
@@ -207,6 +219,12 @@ html[data-theme="contrast"] {
   --atmosphere-finance-soft: rgba(184, 158, 104, 0.1);
   --atmosphere-document-soft: rgba(145, 164, 173, 0.12);
   --atmosphere-social-soft: rgba(134, 173, 183, 0.12);
+  --fw-atmosphere-bg:
+    radial-gradient(circle at 16% 10%, rgba(115, 201, 138, 0.12), transparent 34%),
+    radial-gradient(circle at 84% 4%, rgba(121, 184, 197, 0.14), transparent 32%),
+    linear-gradient(180deg, #07100f 0%, #091513 48%, #07100f 100%);
+  --fw-page-shell-bg: rgba(10, 18, 17, 0.72);
+  --fw-page-shell-border: rgba(150, 217, 168, 0.1);
   --bottom-tabs-bg: rgba(7, 16, 15, 0.84);
   --bottom-tab-active: var(--accent-strong);
   --bottom-tab-inactive: rgba(244, 245, 239, 0.66);
@@ -232,6 +250,86 @@ body,
 
 button {
   font-family: inherit;
+}
+
+.fw-page {
+  position: relative;
+  isolation: isolate;
+  min-height: 100%;
+  background: var(--fw-atmosphere-bg, var(--bg));
+  overflow: hidden;
+}
+
+.fw-page-atmosphere {
+  position: fixed;
+  inset: -12vh -12vw;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--fw-atmosphere-bg, var(--bg));
+}
+
+.fw-page-atmosphere-image {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-size: cover;
+  filter: blur(34px) saturate(1.08);
+  transform: scale(1.14);
+  opacity: 0.42;
+}
+
+.fw-page-atmosphere-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg) 70%, transparent), var(--bg)),
+    var(--fw-atmosphere-bg, var(--bg));
+}
+
+.fw-page-shell {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  background: var(--fw-page-shell-bg, color-mix(in srgb, var(--card) 82%, transparent));
+  border-inline: 1px solid var(--fw-page-shell-border, transparent);
+  backdrop-filter: blur(16px);
+  min-height: 100dvh;
+}
+
+@media (max-width: 980px) {
+  .fw-page-shell {
+    border-inline: none;
+  }
+}
+
+.fw-surface-card {
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  background: color-mix(in srgb, var(--card) 94%, var(--bg));
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+}
+
+.fw-surface-card-muted {
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--border) 76%, transparent);
+  background: color-mix(in srgb, var(--card) 88%, var(--bg));
+}
+
+.fw-pill {
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  background: color-mix(in srgb, var(--card) 86%, transparent);
+  color: var(--text);
+}
+
+.fw-pill-primary {
+  border-radius: 999px;
+  border: 1px solid var(--accent-strong);
+  background: var(--accent);
+  color: #f8fbf6;
 }
 /* ============ APP SHELL LAYOUT ============ */
 

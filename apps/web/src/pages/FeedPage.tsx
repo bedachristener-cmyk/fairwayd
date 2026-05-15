@@ -128,9 +128,9 @@ function Card({
   return (
     <div
       style={{
-        background: "var(--card)",
+        background: "color-mix(in srgb, var(--card) 96%, var(--bg))",
         borderRadius: isMobile ? 0 : 16,
-        border: "1px solid var(--border)",
+        border: "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
         padding: isMobile ? "0 0 12px" : 12,
         color: "var(--text)",
         width: "100%",
@@ -978,17 +978,22 @@ export default function FeedPage() {
 
   return (
     <>
-      <div
-        style={{
-          display: "grid",
-          gap: 12,
-          width: "100%",
-          maxWidth: "100%",
-          minWidth: 0,
-          boxSizing: "border-box",
-          overflowX: "hidden",
-        }}
-      >
+      <div className="fw-page">
+        <div className="fw-page-atmosphere" aria-hidden="true">
+          <div className="fw-page-atmosphere-overlay" />
+        </div>
+        <div
+          className="fw-page-shell"
+          style={{
+            display: "grid",
+            gap: 12,
+            width: "100%",
+            maxWidth: "100%",
+            minWidth: 0,
+            boxSizing: "border-box",
+            overflowX: "hidden",
+          }}
+        >
         {err && (
           <div
             style={{
@@ -2132,10 +2137,10 @@ export default function FeedPage() {
                       flex: "0 0 auto",
                       borderRadius: 999,
                       border: active
-                        ? "1px solid var(--text)"
+                        ? "1px solid var(--accent-strong)"
                         : "1px solid var(--border)",
-                      background: active ? "var(--text)" : "var(--card)",
-                      color: active ? "var(--bg)" : "var(--text)",
+                      background: active ? "var(--accent)" : "var(--card)",
+                      color: active ? "#f8fbf6" : "var(--text)",
                       fontSize: isMobile ? 12 : 13,
                       fontWeight: 800,
                       padding: isMobile ? "8px 11px" : "10px 16px",
@@ -2262,6 +2267,7 @@ export default function FeedPage() {
             })}
           </div>
         </Card>
+        </div>
       </div>
 
       <BackToTopButton />

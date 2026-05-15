@@ -401,18 +401,20 @@ export default function TripsPage() {
   const isRefreshingTrips = loading && trips.length > 0;
 
   return (
-    <div
+    <div className="fw-page">
+      <div className="fw-page-atmosphere" aria-hidden="true">
+        <div className="fw-page-atmosphere-overlay" />
+      </div>
+      <div
+        className="fw-page-shell"
       style={{
-        width: "100%",
-        maxWidth: 760,
-        margin: "0 auto",
         boxSizing: "border-box",
         padding: "16px 14px calc(96px + env(safe-area-inset-bottom, 0px))",
         display: "grid",
         gap: 14,
         overflowX: "hidden",
       }}
-    >
+      >
       <div
         style={{
           display: "flex",
@@ -715,6 +717,7 @@ export default function TripsPage() {
           })}
         </div>
       ) : null}
+      </div>
     </div>
   );
 }

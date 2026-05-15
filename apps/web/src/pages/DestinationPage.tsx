@@ -450,11 +450,14 @@ export default function DestinationPage() {
   });
 
   return (
-    <div
+    <div className="fw-page">
+      <div className="fw-page-atmosphere" aria-hidden="true">
+        <div className="fw-page-atmosphere-overlay" />
+      </div>
+      <div
+        className="fw-page-shell"
       style={{
         padding: isMobile ? 12 : 20,
-        boxSizing: "border-box",
-        width: "100%",
         overflowX: "hidden",
       }}
     >
@@ -490,9 +493,10 @@ export default function DestinationPage() {
             gap: 8,
             padding: 4,
             borderRadius: 999,
-            background: "var(--card)",
-            border: "1px solid var(--border)",
+            background: "color-mix(in srgb, var(--card) 84%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
             boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
+            backdropFilter: "blur(12px)",
             maxWidth: "100%",
             overflowX: "auto",
           }}
@@ -513,8 +517,8 @@ export default function DestinationPage() {
                 }
                 style={{
                   border: isActive ? "none" : "1px solid transparent",
-                  background: isActive ? "var(--text)" : "transparent",
-                  color: isActive ? "var(--bg)" : "var(--sub)",
+                  background: isActive ? "var(--accent)" : "transparent",
+                  color: isActive ? "#f8fbf6" : "var(--sub)",
                   fontWeight: isActive ? 800 : 700,
                   fontSize: 13,
                   padding: "9px 16px",
@@ -788,8 +792,8 @@ export default function DestinationPage() {
                     border: "1px solid rgba(255,255,255,0.32)",
                     background: destinationFollowing
                       ? "rgba(0,0,0,0.38)"
-                      : "rgba(255,255,255,0.92)",
-                    color: destinationFollowing ? "#fff" : "#111",
+                      : "var(--accent)",
+                    color: destinationFollowing ? "#fff" : "#f8fbf6",
                     height: 44,
                     padding: "0 18px",
                     borderRadius: 999,
@@ -2156,6 +2160,7 @@ export default function DestinationPage() {
       ) : null}
 
       <BackToTopButton />
+      </div>
     </div>
   );
 }

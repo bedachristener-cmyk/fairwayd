@@ -578,10 +578,10 @@ export default function PostCard({
         overflowX: "hidden",
         borderRadius: isMobile ? 14 : 14,
         background: isMobile
-          ? "var(--card)"
+          ? "color-mix(in srgb, var(--card) 96%, var(--bg))"
           : isCommentTarget
             ? "rgba(0, 200, 100, 0.08)"
-            : "var(--card)",
+            : "color-mix(in srgb, var(--card) 96%, var(--bg))",
         border: isMobile
           ? "1px solid color-mix(in srgb, var(--border) 82%, var(--text) 18%)"
           : isCommentTarget

@@ -276,7 +276,12 @@ export default function DestinationsPage() {
   );
 
   return (
-    <div
+    <div className="fw-page">
+      <div className="fw-page-atmosphere" aria-hidden="true">
+        <div className="fw-page-atmosphere-overlay" />
+      </div>
+      <div
+        className="fw-page-shell"
       style={{
         display: "grid",
         gap: 12,
@@ -287,7 +292,7 @@ export default function DestinationsPage() {
         boxSizing: "border-box",
         overflowX: "hidden",
       }}
-    >
+      >
       <div
         style={{
           display: "grid",
@@ -385,10 +390,9 @@ export default function DestinationsPage() {
                   width: "100%",
                   minWidth: 0,
                   padding: "16px 16px",
-                  borderRadius: 18,
-                  border: "1px solid var(--border)",
-                  background:
-                    "color-mix(in srgb, var(--card) 88%, var(--bg) 12%)",
+                  borderRadius: 20,
+                  border: "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
+                  background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
                   color: "var(--text)",
                   textAlign: "left",
                   cursor: "pointer",
@@ -495,11 +499,11 @@ export default function DestinationsPage() {
                     }}
                     disabled={isBusy}
                     style={{
-                      border: "1px solid var(--border)",
-                      background: isFollowing
-                        ? "rgba(255,255,255,0.06)"
-                        : "transparent",
-                      color: "var(--text)",
+                      border: isFollowing
+                        ? "1px solid var(--accent-strong)"
+                        : "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
+                      background: isFollowing ? "var(--accent)" : "transparent",
+                      color: isFollowing ? "#f8fbf6" : "var(--text)",
                       minWidth: 90,
                       height: 34,
                       padding: "0 14px",
@@ -522,6 +526,7 @@ export default function DestinationsPage() {
       )}
 
       <BackToTopButton />
+      </div>
     </div>
   );
 }

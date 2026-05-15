@@ -3883,23 +3883,34 @@ export default function TripDetailPage() {
     );
   }, [documentCategoryFilter, documents]);
   const isRefreshingTrip = loading && !!trip;
+  const atmosphereCoverUrl = trip?.coverImageUrl ? fileUrl(trip.coverImageUrl) : "";
 
   return (
-    <div
-      style={{
-        width: "100%",
-        maxWidth: 760,
-        margin: "0 auto",
-        boxSizing: "border-box",
-        overflowX: "hidden",
-        padding:
-          activeView === "overview"
-            ? "16px 16px calc(96px + env(safe-area-inset-bottom, 0px))"
-            : "4px 12px calc(112px + env(safe-area-inset-bottom, 0px))",
-        display: "grid",
-        gap: activeView === "overview" ? 16 : 8,
-      }}
-    >
+    <div className="fw-page">
+      <div className="fw-page-atmosphere" aria-hidden="true">
+        {atmosphereCoverUrl ? (
+          <div
+            className="fw-page-atmosphere-image"
+            style={{
+              backgroundImage: `url("${atmosphereCoverUrl}")`,
+            }}
+          />
+        ) : null}
+        <div className="fw-page-atmosphere-overlay" />
+      </div>
+
+      <div
+        className="fw-page-shell"
+        style={{
+          overflowX: "hidden",
+          padding:
+            activeView === "overview"
+              ? "16px 16px calc(96px + env(safe-area-inset-bottom, 0px))"
+              : "4px 12px calc(112px + env(safe-area-inset-bottom, 0px))",
+          display: "grid",
+          gap: activeView === "overview" ? 16 : 8,
+        }}
+      >
       {showingCachedTrip ? (
         <div
           role="status"
@@ -8055,6 +8066,7 @@ export default function TripDetailPage() {
         ,
         document.body,
       ) : null}
+      </div>
     </div>
   );
 }
