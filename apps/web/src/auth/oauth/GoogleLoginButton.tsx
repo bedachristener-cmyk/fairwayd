@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
@@ -64,7 +66,6 @@ async function waitForGoogle(timeoutMs = 8000) {
       waitForScriptEvent,
       new Promise((resolve) => setTimeout(resolve, Math.min(100, remaining))),
     ]);
-
   }
 
   return hasGoogleIdentity();
@@ -81,12 +82,38 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
   const [msg, setMsg] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
+  const isNative = Capacitor.isNativePlatform();
+  console.log("Fairwayd GoogleLoginButton platform", {
+    platform: Capacitor.getPlatform(),
+    isNative,
+    origin: window.location.origin,
+  });
+
   useEffect(() => {
     onTokenRef.current = onToken;
     onErrorRef.current = onError;
   }, [onToken, onError]);
 
+  const startNativeGoogleLogin = async () => {
+    try {
+      setMsg(null);
+
+      await Browser.open({
+        url: `${API_BASE}/auth/google/native/start`,
+      });
+    } catch (e: unknown) {
+      const message = errMsg(e);
+      setMsg(message);
+      onErrorRef.current?.(message);
+    }
+  };
+
   useEffect(() => {
+    if (isNative) {
+      setReady(true);
+      return;
+    }
+
     let cancelled = false;
 
     const fail = (m: string) => {
@@ -198,7 +225,34 @@ export default function GoogleLoginButton({ onToken, onError }: Props) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isNative]);
+
+  if (isNative) {
+    return (
+      <div>
+        <button
+          type="button"
+          onClick={startNativeGoogleLogin}
+          style={{
+            width: "100%",
+            maxWidth: 280,
+            padding: "11px 14px",
+            borderRadius: 999,
+            border: "1px solid rgba(0,0,0,0.18)",
+            background: "white",
+            color: "#111",
+            cursor: "pointer",
+            fontWeight: 900,
+            boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+          }}
+        >
+          Continue with Google
+        </button>
+
+        {msg && <div style={{ marginTop: 6, fontSize: 12 }}>{msg}</div>}
+      </div>
+    );
+  }
 
   return (
     <div>

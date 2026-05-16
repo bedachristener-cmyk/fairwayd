@@ -4,9 +4,12 @@ import {
   Post,
   Get,
   Req,
+  Res,
+  Query,
   UseGuards,
   BadRequestException,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
@@ -52,6 +55,65 @@ export class AuthController {
       idToken: body.idToken,
       accessToken: body.accessToken,
     });
+  }
+
+  @Get('google/native/start')
+  startGoogleNative(@Res() res: Response) {
+    const clientId = String(process.env.GOOGLE_CLIENT_ID ?? '').trim();
+    if (!clientId) {
+      throw new BadRequestException('GOOGLE_CLIENT_ID is not set');
+    }
+
+    const redirectUri = this.auth.getGoogleNativeRedirectUri();
+
+    const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+    url.searchParams.set('client_id', clientId);
+    url.searchParams.set('redirect_uri', redirectUri);
+    url.searchParams.set('response_type', 'code');
+    url.searchParams.set('scope', 'openid email profile');
+    url.searchParams.set('prompt', 'select_account');
+    url.searchParams.set('access_type', 'offline');
+
+    return res.redirect(url.toString());
+  }
+
+  @Get('google/native/callback')
+  async googleNativeCallback(
+    @Query('code') code: string | undefined,
+    @Query('error') error: string | undefined,
+    @Res() res: Response,
+  ) {
+    if (error) {
+      const target = `fairwayd://auth/native-callback?error=${encodeURIComponent(error)}`;
+      return res.redirect(target);
+    }
+
+    if (!code) {
+      const target = `fairwayd://auth/native-callback?error=${encodeURIComponent(
+        'Missing Google authorization code',
+      )}`;
+      return res.redirect(target);
+    }
+
+    try {
+      const result = await this.auth.loginWithGoogleAuthorizationCode(code);
+      const token = result?.token;
+
+      if (!token) {
+        throw new Error('Backend returned no token');
+      }
+
+      const target = `fairwayd://auth/native-callback?token=${encodeURIComponent(
+        token,
+      )}`;
+      return res.redirect(target);
+    } catch (e: any) {
+      const message = e?.message ?? 'Google native login failed';
+      const target = `fairwayd://auth/native-callback?error=${encodeURIComponent(
+        message,
+      )}`;
+      return res.redirect(target);
+    }
   }
 
   /**

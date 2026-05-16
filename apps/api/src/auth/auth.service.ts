@@ -60,6 +60,47 @@ export class AuthService {
     throw new BadRequestException('Unknown provider');
   }
 
+  async loginWithGoogleAuthorizationCode(codeInput: string) {
+    const code = String(codeInput ?? '').trim();
+    if (!code) {
+      throw new BadRequestException('Missing Google authorization code');
+    }
+
+    const clientId = this.getGoogleClientId();
+    const clientSecret = String(process.env.GOOGLE_CLIENT_SECRET ?? '').trim();
+    const redirectUri = this.getGoogleNativeRedirectUri();
+
+    if (!clientSecret) {
+      throw new BadRequestException('GOOGLE_CLIENT_SECRET is not set');
+    }
+
+    const client = new OAuth2Client(clientId, clientSecret, redirectUri);
+
+    try {
+      const { tokens } = await client.getToken(code);
+
+      if (!tokens.id_token) {
+        throw new Error('Google returned no id_token');
+      }
+
+      return this.loginWithOAuth({
+        provider: 'GOOGLE',
+        idToken: tokens.id_token,
+      });
+    } catch (e: any) {
+      console.error('[OAuth] Google authorization code exchange failed', {
+        message: e?.message ?? String(e),
+        name: e?.name,
+        code: e?.code,
+        node: process.version,
+      });
+
+      throw new BadRequestException(
+        'Google authorization code exchange failed',
+      );
+    }
+  }
+
   async devLogin(handle: string) {
     const safeHandle =
       handle
@@ -291,6 +332,27 @@ export class AuthService {
 
   private hashMagicToken(token: string) {
     return createHash('sha256').update(token).digest('hex');
+  }
+
+  getGoogleNativeRedirectUri() {
+    return String(
+      process.env.GOOGLE_NATIVE_REDIRECT_URI ||
+        `${this.getApiBaseUrl()}/auth/google/native/callback`,
+    )
+      .trim()
+      .replace(/\/+$/, '');
+  }
+
+  getApiBaseUrl() {
+    return String(
+      process.env.API_PUBLIC_URL ||
+        process.env.API_BASE_URL ||
+        'http://localhost:3000',
+    )
+      .trim()
+      .replace(/^https?:\/\/https?:\/\//i, 'https://')
+      .replace(/\/+$/, '')
+      .replace(/^(?!https?:\/\/)/i, 'https://');
   }
 
   private getFrontendUrl() {

@@ -5,6 +5,8 @@ import React, {
   useMemo,
   useState,
 } from "react";
+import { App } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
 
 type Me = {
   id: string;
@@ -118,6 +120,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const store = rememberMe ? localStorage : sessionStorage;
     store.setItem(STORAGE_KEY, t);
   };
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) {
+      return;
+    }
+
+    const listener = App.addListener("appUrlOpen", async ({ url }) => {
+      try {
+        if (!url?.startsWith("fairwayd://auth/native-callback")) {
+          return;
+        }
+
+        const parsed = new URL(url);
+
+        const token = parsed.searchParams.get("token");
+        const error = parsed.searchParams.get("error");
+
+        if (error) {
+          console.error("Native Google login failed:", error);
+          return;
+        }
+
+        if (!token) {
+          console.error("Native Google login returned no token");
+          return;
+        }
+
+        login(token, true);
+      } catch (e) {
+        console.error("Failed to process native auth callback", e);
+      }
+    });
+
+    return () => {
+      listener.then((l) => l.remove());
+    };
+  }, []);
 
   // Wenn token gesetzt ist, user laden
   useEffect(() => {
