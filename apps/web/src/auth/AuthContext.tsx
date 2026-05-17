@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { App } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
+import { API_BASE } from "../api/base";
 
 type Me = {
   id: string;
@@ -31,8 +32,6 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 
 export const STORAGE_KEY = "fairwayd_token";
 const FALLBACK_KEYS = ["token", "jwt", "access_token"];
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
 function loadTokenFromStorage(): string | null {
   // 1) offizieller Key in local + session
