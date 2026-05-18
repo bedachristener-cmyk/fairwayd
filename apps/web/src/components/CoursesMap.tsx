@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import L from "leaflet";
 import {
   MapContainer,
@@ -208,7 +208,6 @@ function PersistMapView() {
 
 function FitToData({
   userPos,
-  courses,
   locked,
 }: {
   userPos: Geo | null;
@@ -219,83 +218,18 @@ function FitToData({
 
   useEffect(() => {
     if (locked) return;
+    if (!userPos) return;
 
-    if (userPos) {
-      const lat = toFiniteNumber(userPos.lat);
-      const lon = toFiniteNumber(userPos.lon);
-      if (!Number.isFinite(lat as number) || !Number.isFinite(lon as number)) {
-        console.warn("FitToData skip setView invalid userPos", userPos);
-        return;
-      }
-      map.setView([lat as number, lon as number], 10);
+    const lat = toFiniteNumber(userPos.lat);
+    const lon = toFiniteNumber(userPos.lon);
+
+    if (lat === null || lon === null) {
+      console.warn("FitToData skip setView invalid userPos", userPos);
       return;
     }
 
-    if (courses.length > 0) {
-      const first = courses[0];
-      const lat = toFiniteNumber(first?.lat);
-      const lon = toFiniteNumber(first?.lon);
-
-      if (!Number.isFinite(lat as number) || !Number.isFinite(lon as number)) {
-        console.warn(
-          "FitToData skip setView invalid first course coords",
-          first,
-        );
-        return;
-      }
-
-      map.setView([lat as number, lon as number], 8);
-    }
-  }, [userPos, courses, map, locked]);
-
-  return null;
-}
-
-function ZoomToCourse({
-  courseId,
-  courses,
-  markerRefs,
-  onOpenCourse,
-  onSelectCourse,
-}: {
-  courseId: string | null;
-  courses: Course[];
-  markerRefs: React.MutableRefObject<Record<string, L.Marker | null>>;
-  onOpenCourse: (courseId: string) => void;
-  onSelectCourse: (courseId: string) => void;
-}) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (!courseId) return;
-    if (!courses || courses.length === 0) return;
-
-    const c = courses.find((x) => x.id === courseId);
-    if (!c) return;
-
-    const lat = toFiniteNumber(c.lat);
-    const lon = toFiniteNumber(c.lon);
-    console.log("COURSE DEBUG", c.name, "lat=", c.lat, "lon=", c.lon);
-
-    if (!Number.isFinite(lat as number) || !Number.isFinite(lon as number)) {
-      console.warn("ZoomToCourse skip setView invalid course coords", c);
-      return;
-    }
-
-    map.setView([lat as number, lon as number], 14, { animate: true });
-
-    onSelectCourse(courseId);
-    onOpenCourse(courseId);
-
-    setTimeout(() => {
-      const m = markerRefs.current[courseId];
-      if (m) m.openPopup();
-
-      const url = new URL(window.location.href);
-      url.searchParams.delete("courseId");
-      window.history.replaceState({}, "", url.pathname + url.search);
-    }, 150);
-  }, [courseId, courses, map, markerRefs, onOpenCourse, onSelectCourse]);
+    map.setView([lat, lon], 10);
+  }, [userPos, map, locked]);
 
   return null;
 }
@@ -465,8 +399,11 @@ function ClusteredCourseMarkers({
 }
 
 export default function CoursesMap() {
+  useEffect(() => {
+    localStorage.removeItem("fairwayd-map-view");
+  }, []);
+
   const userPos = useGeolocation();
-  const location = useLocation();
   const nav = useNavigate();
 
   const { token, isAuthenticated } = useAuth();
@@ -504,9 +441,9 @@ export default function CoursesMap() {
   const hasValidUserPos = userLat !== null && userLon !== null;
 
   const courseIdFromUrl = useMemo(() => {
-    const sp = new URLSearchParams(location.search);
-    return sp.get("courseId");
-  }, [location.search]);
+    return null;
+  }, []);
+
   const mapTileUrl =
     "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 
@@ -548,19 +485,6 @@ export default function CoursesMap() {
   };
 
   const center = useMemo<[number, number]>(() => {
-    try {
-      const saved = localStorage.getItem("fairwayd-map-view");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        const sLat = toFiniteNumber(parsed?.lat);
-        const sLon = toFiniteNumber(parsed?.lon);
-
-        if (sLat !== null && sLon !== null) {
-          return [sLat, sLon];
-        }
-      }
-    } catch {}
-
     const lat = toFiniteNumber(userPos?.lat);
     const lon = toFiniteNumber(userPos?.lon);
 
@@ -568,7 +492,7 @@ export default function CoursesMap() {
       return [lat, lon];
     }
 
-    return [20, 0];
+    return [47.3769, 8.5417]; // Zurich fallback
   }, [userPos]);
 
   useEffect(() => {
@@ -629,9 +553,8 @@ export default function CoursesMap() {
       if (course) setSelectedCourse(course);
       setHighlightedCourseId(null);
       setActiveCourseId(courseId);
-      void loadPostsForCourse(courseId, false);
     },
-    [courses, loadPostsForCourse, setSelectedCourse],
+    [courses, setSelectedCourse],
   );
 
   const handleSearchSelectCourse = useCallback(
@@ -958,14 +881,6 @@ export default function CoursesMap() {
           userPos={userPos}
           courses={courses}
           locked={!!courseIdFromUrl}
-        />
-
-        <ZoomToCourse
-          courseId={courseIdFromUrl}
-          courses={courses}
-          markerRefs={markerRefs}
-          onOpenCourse={(id) => loadPostsForCourse(id, false)}
-          onSelectCourse={handleSelectCourse}
         />
 
         {userPos &&

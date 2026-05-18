@@ -8,7 +8,6 @@ import {
   useMap,
 } from "react-leaflet";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
-import { useNavigate } from "react-router-dom";
 import L from "leaflet";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
@@ -145,7 +144,6 @@ function CoursesByBoundsLoader({
 
 export default function MapView() {
   const { setSelectedCourse } = useSelectedCourse();
-  const nav = useNavigate();
 
   const [center, setCenter] = useState<[number, number]>([47.5596, 7.5886]);
   const [radiusM] = useState(50000);
@@ -181,10 +179,8 @@ export default function MapView() {
         lat: c.lat,
         lon: c.lon,
       });
-
-      setTimeout(() => nav("/feed"), 50);
     },
-    [setSelectedCourse, nav],
+    [setSelectedCourse],
   );
 
   const ensureFollowingLoaded = useCallback(
