@@ -96,11 +96,14 @@ export class CoursesService {
       select: {
         id: true,
         name: true,
+        city: true,
+        region: true,
+        country: true,
         lat: true,
         lon: true,
-        country: true,
-        region: true,
         holes: true,
+        par: true,
+        website: true,
         access: true,
       },
     });
