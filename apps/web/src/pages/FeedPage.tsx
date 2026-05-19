@@ -2273,6 +2273,24 @@ export default function FeedPage() {
           post={activeCommentPost}
           isMobile={isMobile}
           onClose={() => setActiveCommentPostId(null)}
+          onCommentCreated={(postId) => {
+            setPosts((prev) =>
+              prev.map((item) =>
+                item.id === postId
+                  ? {
+                      ...item,
+                      _count: {
+                        ...item._count,
+                        comments:
+                          (item._count?.comments ??
+                            item.comments?.length ??
+                            0) + 1,
+                      },
+                    }
+                  : item,
+              ),
+            );
+          }}
         />
       ) : null}
 

@@ -56,12 +56,14 @@ type CommentModalProps = {
   post: CommentModalPost;
   isMobile: boolean;
   onClose: () => void;
+  onCommentCreated?: (postId: string) => void;
 };
 
 export default function CommentModal({
   post,
   isMobile,
   onClose,
+  onCommentCreated,
 }: CommentModalProps) {
   const { token } = useAuth();
   const nav = useNavigate();
@@ -217,6 +219,7 @@ export default function CommentModal({
       }
 
       setCommentDraft("");
+      onCommentCreated?.(post.id);
       await loadComments();
     } catch (err) {
       console.error("Comment post failed", err);
@@ -249,6 +252,7 @@ export default function CommentModal({
 
       setReplyDraft("");
       setReplyTargetId(null);
+      onCommentCreated?.(post.id);
       await loadComments();
     } catch (err) {
       console.error("Reply post failed", err);
@@ -796,7 +800,9 @@ export default function CommentModal({
       style={{
         position: "fixed",
         inset: 0,
-        background: isMobile ? "var(--bg)" : "rgba(0,0,0,0.55)",
+        background: isMobile
+          ? "color-mix(in srgb, var(--bg) 92%, var(--green) 8%)"
+          : "rgba(0,0,0,0.62)",
         zIndex: 10000,
         display: "flex",
         alignItems: isMobile ? "stretch" : "center",
@@ -811,11 +817,11 @@ export default function CommentModal({
           height: isMobile ? "100dvh" : "min(85vh, 900px)",
           maxHeight: isMobile ? "100dvh" : "85vh",
           overflow: "hidden",
-          background: isMobile ? "var(--bg)" : "var(--card)",
+          background: "color-mix(in srgb, var(--card) 96%, var(--bg))",
           color: "var(--text)",
           border: isMobile ? "none" : "1px solid var(--border)",
-          borderRadius: isMobile ? 0 : 18,
-          boxShadow: isMobile ? "none" : "0 20px 60px rgba(0,0,0,0.35)",
+          borderRadius: isMobile ? 0 : 28,
+          boxShadow: isMobile ? "none" : "0 24px 70px rgba(0,0,0,0.42)",
           display: "flex",
           flexDirection: "column",
         }}
@@ -828,38 +834,62 @@ export default function CommentModal({
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "14px 16px",
-            borderBottom: "1px solid var(--border)",
-            background: isMobile ? "var(--bg)" : "var(--card)",
+            gap: 12,
+            padding: isMobile
+              ? "calc(12px + env(safe-area-inset-top, 0px)) 16px 12px"
+              : "16px 18px",
+            borderBottom: "1px solid color-mix(in srgb, var(--border) 76%, transparent)",
+            background: "color-mix(in srgb, var(--card) 88%, transparent)",
+            backdropFilter: "blur(16px)",
           }}
         >
-          <div style={{ fontWeight: 900, fontSize: 16 }}>
-            {t("comments_title")}
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 850, fontSize: 17, letterSpacing: -0.2 }}>
+              {t("comments_title")}
+            </div>
+            <div
+              style={{
+                marginTop: 2,
+                fontSize: 12,
+                color: "var(--sub)",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {post.course.name}
+            </div>
           </div>
 
           <button
             type="button"
             onClick={onClose}
+            aria-label={t("close")}
             style={{
-              border: "1px solid var(--text)",
-              background: "var(--text)",
-              color: "var(--bg)",
-              borderRadius: 10,
-              padding: "8px 12px",
+              width: 38,
+              height: 38,
+              border: "1px solid var(--border)",
+              background: "var(--muted)",
+              color: "var(--text)",
+              borderRadius: 999,
+              padding: 0,
               fontWeight: 800,
+              fontSize: 20,
+              lineHeight: 1,
               cursor: "pointer",
+              flexShrink: 0,
             }}
           >
-            {t("close")}
+            ×
           </button>
         </div>
 
         <div
           style={{
-            padding: 16,
+            padding: isMobile ? "14px 14px 0" : 18,
             display: "flex",
             flexDirection: "column",
-            gap: 14,
+            gap: 12,
             flex: 1,
             minHeight: 0,
             overflow: "hidden",
@@ -871,26 +901,27 @@ export default function CommentModal({
               minHeight: 0,
               overflowY: "auto",
               display: "grid",
-              gap: 14,
+              gap: 16,
               paddingBottom: isMobile ? 120 : 16,
               WebkitOverflowScrolling: "touch",
             }}
           >
             <div
               style={{
-                border: "1px solid var(--border)",
-                borderRadius: 14,
+                border: "1px solid color-mix(in srgb, var(--border) 78%, transparent)",
+                borderRadius: 22,
                 overflow: "hidden",
-                background: "var(--card)",
+                background:
+                  "linear-gradient(135deg, color-mix(in srgb, var(--card) 96%, var(--green) 4%), color-mix(in srgb, var(--card) 98%, var(--bg)))",
+                boxShadow: "0 10px 28px rgba(0,0,0,0.10)",
               }}
             >
-              <div style={{ padding: "12px 12px 10px 12px" }}>
+              <div style={{ padding: "14px 14px 12px" }}>
                 <div
                   style={{
                     display: "flex",
-                    gap: 10,
+                    gap: 11,
                     alignItems: "flex-start",
-                    marginBottom: 8,
                   }}
                 >
                   {renderAvatar(
@@ -907,12 +938,13 @@ export default function CommentModal({
                         background: "transparent",
                         border: "none",
                         padding: 0,
-                        margin: "0 0 4px 0",
-                        fontWeight: 800,
-                        fontSize: 16,
+                        margin: "0 0 5px 0",
+                        fontWeight: 850,
+                        fontSize: 17,
                         color: "var(--text)",
                         cursor: "pointer",
                         textAlign: "left",
+                        lineHeight: 1.2,
                       }}
                       title="Open course"
                     >
@@ -923,7 +955,7 @@ export default function CommentModal({
                       style={{
                         fontSize: 12,
                         color: "var(--sub)",
-                        marginBottom: 8,
+                        marginBottom: 10,
                         display: "flex",
                         flexWrap: "wrap",
                         gap: 6,
@@ -946,8 +978,9 @@ export default function CommentModal({
                     <div
                       style={{
                         whiteSpace: "pre-wrap",
-                        lineHeight: 1.5,
+                        lineHeight: 1.55,
                         color: "var(--text)",
+                        fontSize: 14,
                       }}
                     >
                       {post.content}
@@ -961,7 +994,7 @@ export default function CommentModal({
                   style={{
                     display: "grid",
                     gap: 8,
-                    padding: "0 12px 10px 12px",
+                    padding: "0 14px 14px",
                   }}
                 >
                   {validImages.map((img) => (
@@ -976,9 +1009,9 @@ export default function CommentModal({
                         display: "block",
                         objectFit: "contain",
                         maxHeight: isMobile ? "min(260px, 32vh)" : 420,
-                        borderRadius: 10,
-                        border: "1px solid var(--border)",
-                        background: "var(--card)",
+                        borderRadius: 16,
+                        border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                        background: "var(--muted)",
                         boxSizing: "border-box",
                       }}
                     />
@@ -991,17 +1024,47 @@ export default function CommentModal({
               style={{
                 display: "grid",
                 gap: 12,
-                paddingTop: 6,
-                borderTop: "1px solid var(--border)",
+                paddingTop: 2,
               }}
             >
               {loading ? (
-                <div style={{ fontSize: 13, color: "var(--sub)" }}>
+                <div
+                  style={{
+                    padding: 18,
+                    borderRadius: 20,
+                    border: "1px solid var(--border)",
+                    background: "var(--card)",
+                    fontSize: 13,
+                    color: "var(--sub)",
+                    textAlign: "center",
+                  }}
+                >
                   {t("comments_loading")}
                 </div>
               ) : comments.length === 0 ? (
-                <div style={{ fontSize: 13, color: "var(--sub)" }}>
-                  {t("comments_empty")}
+                <div
+                  style={{
+                    padding: "22px 18px",
+                    borderRadius: 22,
+                    border: "1px solid color-mix(in srgb, var(--border) 78%, transparent)",
+                    background: "color-mix(in srgb, var(--muted) 72%, transparent)",
+                    color: "var(--sub)",
+                    textAlign: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 15,
+                      fontWeight: 850,
+                      color: "var(--text)",
+                      marginBottom: 4,
+                    }}
+                  >
+                    {t("comments_empty")}
+                  </div>
+                  <div style={{ fontSize: 13 }}>
+                    Be the first to add a thought.
+                  </div>
                 </div>
               ) : (
                 comments.map((comment) => renderComment(comment))
@@ -1011,13 +1074,14 @@ export default function CommentModal({
 
           <div
             style={{
-              borderTop: "1px solid var(--border)",
+              borderTop: "1px solid color-mix(in srgb, var(--border) 76%, transparent)",
               padding: isMobile
-                ? "12px 16px calc(92px + env(safe-area-inset-bottom)) 16px"
-                : "12px 16px 16px 16px",
+                ? "12px 14px calc(18px + env(safe-area-inset-bottom, 0px))"
+                : "14px 18px 18px",
               display: "grid",
               gap: 10,
-              background: isMobile ? "var(--bg)" : "var(--card)",
+              background: "color-mix(in srgb, var(--card) 92%, transparent)",
+              backdropFilter: "blur(16px)",
               position: "sticky",
               bottom: 0,
               zIndex: 10,
@@ -1034,11 +1098,12 @@ export default function CommentModal({
                 width: "100%",
                 boxSizing: "border-box",
                 padding: 12,
-                borderRadius: 12,
+                borderRadius: 18,
                 border: "1px solid var(--border)",
-                background: "var(--card)",
+                background: "var(--muted)",
                 color: "var(--text)",
                 resize: "vertical",
+                outline: "none",
               }}
             />
 
@@ -1054,11 +1119,12 @@ export default function CommentModal({
                 disabled={!commentDraft.trim() || sending}
                 style={{
                   padding: "10px 14px",
-                  borderRadius: 12,
-                  border: "1px solid var(--border)",
-                  background: "var(--muted)",
-                  color: "var(--text)",
-                  fontWeight: 800,
+                  minHeight: 40,
+                  borderRadius: 999,
+                  border: "1px solid color-mix(in srgb, var(--green) 72%, var(--border))",
+                  background: "var(--green)",
+                  color: "white",
+                  fontWeight: 850,
                   cursor:
                     commentDraft.trim() && !sending ? "pointer" : "default",
                   opacity: commentDraft.trim() && !sending ? 1 : 0.5,
