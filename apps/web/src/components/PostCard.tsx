@@ -508,14 +508,20 @@ export default function PostCard({
   }
 
   const actionButtonStyle: React.CSSProperties = {
-    background: "transparent",
-    border: "none",
+    background: "var(--muted)",
+    border: "1px solid var(--border)",
+    borderRadius: 999,
     cursor: "pointer",
-    color: "var(--text)",
-    fontWeight: 700,
-    minWidth: isMobile ? 72 : "auto",
-    textAlign: "left",
-    padding: isMobile ? "6px 0" : 0,
+    color: "var(--sub)",
+    fontWeight: 800,
+    minWidth: "auto",
+    textAlign: "center",
+    padding: isMobile ? "8px 12px" : "8px 12px",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    lineHeight: 1,
   };
 
   const copyText = async (text: string) => {
@@ -570,31 +576,31 @@ export default function PostCard({
       ref={rootRef}
       onClick={handleOpenPost}
       style={{
-        padding: isMobile ? "10px 0" : 12,
+        padding: isMobile ? "14px 0" : 14,
         width: "100%",
         maxWidth: "100%",
         minWidth: 0,
         boxSizing: "border-box",
         overflowX: "hidden",
-        borderRadius: isMobile ? 14 : 14,
+        borderRadius: isMobile ? 22 : 22,
         background: isMobile
-          ? "color-mix(in srgb, var(--card) 96%, var(--bg))"
+          ? "color-mix(in srgb, var(--card) 98%, var(--bg))"
           : isCommentTarget
             ? "rgba(0, 200, 100, 0.08)"
-            : "color-mix(in srgb, var(--card) 96%, var(--bg))",
+            : "color-mix(in srgb, var(--card) 98%, var(--bg))",
         border: isMobile
-          ? "1px solid color-mix(in srgb, var(--border) 82%, var(--text) 18%)"
+          ? "1px solid color-mix(in srgb, var(--border) 74%, transparent)"
           : isCommentTarget
             ? "1px solid var(--green)"
-            : "1px solid color-mix(in srgb, var(--border) 82%, var(--text) 18%)",
+            : "1px solid color-mix(in srgb, var(--border) 74%, transparent)",
         borderBottom: isMobile
-          ? "1px solid color-mix(in srgb, var(--border) 82%, var(--text) 18%)"
+          ? "1px solid color-mix(in srgb, var(--border) 74%, transparent)"
           : undefined,
         boxShadow: isCommentTarget
           ? "0 0 0 2px rgba(0, 200, 100, 0.25)"
           : isMobile
             ? "0 8px 24px rgba(0,0,0,0.10)"
-            : "0 8px 22px rgba(0,0,0,0.08)",
+            : "0 12px 30px rgba(0,0,0,0.10)",
         color: "var(--text)",
         cursor: onOpenPost && !isEditing && !isMenuOpen ? "pointer" : "default",
       }}
@@ -629,15 +635,15 @@ export default function PostCard({
             {avatarSrc(post.user?.avatarUrl) ? (
               <div
                 style={{
-                  width: 36,
-                  height: 36,
-                  minWidth: 36,
-                  minHeight: 36,
-                  maxWidth: 36,
-                  maxHeight: 36,
+                  width: 40,
+                  height: 40,
+                  minWidth: 40,
+                  minHeight: 40,
+                  maxWidth: 40,
+                  maxHeight: 40,
                   borderRadius: "50%",
                   overflow: "hidden",
-                  border: "1px solid var(--border)",
+                  border: "1px solid color-mix(in srgb, var(--border) 78%, var(--green))",
                   flexShrink: 0,
                   background: "var(--muted)",
                 }}
@@ -664,22 +670,22 @@ export default function PostCard({
               <div
                 className="fw-avatar-wrap"
                 style={{
-                  width: 36,
-                  height: 36,
-                  minWidth: 36,
-                  minHeight: 36,
-                  maxWidth: 36,
-                  maxHeight: 36,
+                  width: 40,
+                  height: 40,
+                  minWidth: 40,
+                  minHeight: 40,
+                  maxWidth: 40,
+                  maxHeight: 40,
                   borderRadius: "50%",
                   overflow: "hidden",
-                  border: "1px solid var(--border)",
+                  border: "1px solid color-mix(in srgb, var(--border) 78%, var(--green))",
                   background: "var(--muted)",
                   color: "var(--text)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontSize: 12,
-                  fontWeight: 800,
+                  fontWeight: 900,
                   flexShrink: 0,
                 }}
               >
@@ -704,8 +710,8 @@ export default function PostCard({
                   textAlign: "left",
                   display: "block",
                   fontSize: 14,
-                  fontWeight: 800,
-                  lineHeight: 1.2,
+                  fontWeight: 850,
+                  lineHeight: 1.18,
                   maxWidth: "100%",
                 }}
                 title={`${t("open_user_profile")} @${post.user.handle}`}
@@ -718,7 +724,7 @@ export default function PostCard({
                   fontSize: 12,
                   color: "var(--sub)",
                   lineHeight: 1.35,
-                  marginTop: 2,
+                  marginTop: 3,
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
@@ -733,7 +739,7 @@ export default function PostCard({
                   alignItems: "center",
                   gap: 8,
                   flexWrap: "wrap",
-                  marginTop: 6,
+                  marginTop: 9,
                   minWidth: 0,
                 }}
               >
@@ -750,7 +756,7 @@ export default function PostCard({
                     border: "none",
                     padding: 0,
                     margin: 0,
-                    fontWeight: 700,
+                    fontWeight: 850,
                     fontSize: 13,
                     color: "var(--text)",
                     cursor: onSelectCourse ? "pointer" : "default",
@@ -760,14 +766,19 @@ export default function PostCard({
                 >
                   ⛳ {post.course.name}
                 </button>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    gap: 4,
-                  }}
-                >
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "flex-start",
+                      gap: 6,
+                      padding: "8px 10px",
+                      borderRadius: 16,
+                      background: "var(--muted)",
+                      border: "1px solid var(--border)",
+                      minWidth: 0,
+                    }}
+                  >
                   <div
                     style={{
                       display: "flex",
@@ -847,8 +858,7 @@ export default function PostCard({
                       textAlign: "left",
                       cursor: "pointer",
                       width: "fit-content",
-                      textDecoration: "underline",
-                      textUnderlineOffset: 2,
+                      textDecoration: "none",
                       whiteSpace: "nowrap",
                       position: "relative",
                       zIndex: 2,
@@ -907,11 +917,11 @@ export default function PostCard({
                 style={{
                   marginTop: 6,
                   border: courseFollowed
-                    ? "1px solid rgba(80,140,255,0.4)"
+                    ? "1px solid var(--green)"
                     : "1px solid var(--border)",
                   background: courseFollowed
-                    ? "rgba(80,140,255,0.10)"
-                    : "transparent",
+                    ? "color-mix(in srgb, var(--green) 14%, var(--muted))"
+                    : "var(--muted)",
                   color: courseFollowed ? "var(--text)" : "var(--sub)",
                   padding: "3px 10px",
                   borderRadius: 999,
@@ -1170,8 +1180,10 @@ export default function PostCard({
             style={{
               marginTop: 8,
               whiteSpace: "pre-wrap",
-              lineHeight: 1.5,
+              lineHeight: 1.58,
               wordBreak: "break-word",
+              fontSize: 14,
+              color: "var(--text)",
             }}
           >
             <div
@@ -1216,8 +1228,8 @@ export default function PostCard({
         <div
           style={{
             display: "grid",
-            gap: 8,
-            marginTop: 12,
+            gap: 10,
+            marginTop: 14,
             width: "100%",
             maxWidth: "100%",
             minWidth: 0,
@@ -1245,11 +1257,11 @@ export default function PostCard({
                   style={{
                     position: "relative",
                     overflow: "hidden",
-                    borderRadius: isMobile ? 0 : 12,
+                    borderRadius: 0,
                     background: "var(--muted)",
                     minHeight: 60,
-                    border: "1px solid var(--border)",
-                    boxShadow: "0 0 0 1px rgba(255,255,255,0.08) inset",
+                    border: "none",
+                    boxShadow: "none",
                     cursor: "pointer",
                     userSelect: "none",
                     touchAction: hasMultipleImages ? "pan-y" : "auto",
@@ -1265,6 +1277,7 @@ export default function PostCard({
                     display: "block",
                     objectFit: "cover",
                     maxHeight: isMobile ? 320 : 420,
+                    borderRadius: 0,
                     transform: isHovered ? "scale(1.08)" : "scale(1)",
                     transition: "transform 180ms ease",
                   }}
@@ -1421,10 +1434,11 @@ export default function PostCard({
           display: "flex",
           gap: isMobile ? 8 : 12,
           alignItems: "center",
-          marginTop: 12,
-          fontSize: 14,
+          marginTop: 14,
+          fontSize: 13,
           flexWrap: "wrap",
           padding: "0 12px",
+          color: "var(--sub)",
         }}
       >
         <button
@@ -1438,6 +1452,9 @@ export default function PostCard({
             flexShrink: 0,
             cursor: likeBusy ? "default" : "pointer",
             color: liked ? "#ff4d6d" : "var(--text)",
+            background: liked
+              ? "color-mix(in srgb, #ff4d6d 12%, var(--muted))"
+              : "var(--muted)",
             opacity: likeBusy ? 0.7 : 1,
           }}
         >

@@ -494,11 +494,7 @@ export default function FeedPage() {
 
   useEffect(() => {
     if (!selectedCourse) return;
-    setComposerOpen(true);
-    const t = window.setTimeout(() => {
-      draftRef.current?.focus();
-    }, 50);
-    return () => window.clearTimeout(t);
+    setComposerHint(null);
   }, [selectedCourse]);
 
   useEffect(() => {

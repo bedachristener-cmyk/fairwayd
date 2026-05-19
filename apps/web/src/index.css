@@ -540,7 +540,7 @@ body.is-pwa-standalone {
   }
 
   .fw-post-img {
-    border-radius: 14px;
+    border-radius: 0;
   }
 
   /* FEED / CARDS – NOT MAP */
@@ -768,18 +768,12 @@ img.fw-avatar-img {
 img.fw-post-img {
   width: 100% !important;
   height: auto !important;
-  border-radius: 0 !important;
   display: block !important;
+  border-radius: 0 !important;
 }
 
 .fw-post-image-wrap {
-  border-radius: 12px;
-}
-
-@media (max-width: 980px) {
-  .fw-post-image-wrap {
-    border-radius: 0 !important;
-  }
+  border-radius: 0 !important;
 }
 
 .back-to-top-fab {
