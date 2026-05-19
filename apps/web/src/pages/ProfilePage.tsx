@@ -252,14 +252,51 @@ function ProfileSettingsCard() {
   }, [theme]);
 
   return (
-    <Card title={t("settings")}>
+    <div
+      style={{
+        background:
+          "linear-gradient(145deg, color-mix(in srgb, var(--card) 94%, var(--green) 6%), color-mix(in srgb, var(--card) 98%, var(--bg)))",
+        border:
+          "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
+        borderRadius: isMobile ? 24 : 26,
+        padding: isMobile ? 14 : 16,
+        boxShadow: isMobile ? "none" : "0 14px 38px rgba(0,0,0,0.12)",
+        boxSizing: "border-box",
+        width: "100%",
+        maxWidth: "100%",
+        overflow: "hidden",
+      }}
+    >
       <div
         style={{
           display: "grid",
-          gap: 10,
-          padding: isMobile ? "0 12px 4px" : 0,
+          gap: 14,
         }}
       >
+        <div>
+          <div
+            style={{
+              fontWeight: 850,
+              color: "var(--text)",
+              fontSize: 16,
+              letterSpacing: -0.2,
+            }}
+          >
+            {t("settings")}
+          </div>
+          <div
+            style={{
+              marginTop: 2,
+              color: "var(--sub)",
+              fontSize: 12,
+              lineHeight: 1.35,
+            }}
+          >
+            App appearance and language
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gap: 10 }}>
         <SettingsControlRow
           icon="Aa"
           label={t("theme")}
@@ -337,8 +374,9 @@ function ProfileSettingsCard() {
             })}
           </SettingsOptions>
         </SettingsControlRow>
+        </div>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -404,10 +442,13 @@ function AboutGolfProfileCard({
   return (
     <div
       style={{
-        background: isMobile ? "transparent" : "var(--card)",
-        border: isMobile ? "none" : "1px solid var(--border)",
-        borderRadius: isMobile ? 0 : 16,
-        padding: isMobile ? "0 12px" : 12,
+        background:
+          "linear-gradient(145deg, color-mix(in srgb, var(--card) 94%, var(--green) 6%), color-mix(in srgb, var(--card) 98%, var(--bg)))",
+        border:
+          "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
+        borderRadius: isMobile ? 24 : 26,
+        padding: isMobile ? 14 : 16,
+        boxShadow: isMobile ? "none" : "0 14px 38px rgba(0,0,0,0.12)",
         boxSizing: "border-box",
         width: "100%",
         maxWidth: "100%",
@@ -417,7 +458,7 @@ function AboutGolfProfileCard({
       <div
         style={{
           display: "grid",
-          gap: fields.length === 0 ? 8 : 10,
+          gap: fields.length === 0 ? 12 : 14,
           boxSizing: "border-box",
           width: "100%",
           maxWidth: "100%",
@@ -426,25 +467,68 @@ function AboutGolfProfileCard({
       >
         <div
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-          }}
-        >
-          <div style={{ fontWeight: 900, color: "var(--text)" }}>
-            Intro
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+        }}
+      >
+          <div>
+            <div
+              style={{
+                fontWeight: 850,
+                color: "var(--text)",
+                fontSize: 16,
+                letterSpacing: -0.2,
+              }}
+            >
+              Intro
+            </div>
+            <div
+              style={{
+                marginTop: 2,
+                color: "var(--sub)",
+                fontSize: 12,
+                lineHeight: 1.35,
+              }}
+            >
+              Golf details and travel preferences
+            </div>
           </div>
+
+          {isOwnProfile && fields.length > 0 ? (
+            <button
+              type="button"
+              onClick={onEditProfile}
+              style={{
+                border:
+                  "1px solid color-mix(in srgb, var(--border) 56%, transparent)",
+                background: "color-mix(in srgb, var(--muted) 70%, transparent)",
+                color: "var(--text)",
+                borderRadius: 999,
+                minHeight: 36,
+                padding: "0 12px",
+                fontSize: 12,
+                fontWeight: 850,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Edit
+            </button>
+          ) : null}
         </div>
 
         {fields.length === 0 ? (
           <div
             style={{
               display: "grid",
-              gap: 10,
-              border: "1px solid var(--border)",
-              borderRadius: 14,
-              background: "var(--bg)",
-              padding: 12,
+              gap: 12,
+              border:
+                "1px solid color-mix(in srgb, var(--border) 48%, transparent)",
+              borderRadius: 20,
+              background: "color-mix(in srgb, var(--muted) 62%, transparent)",
+              padding: 14,
             }}
           >
             <div style={{ color: "var(--sub)", fontSize: 13, lineHeight: 1.4 }}>
@@ -457,13 +541,17 @@ function AboutGolfProfileCard({
               onClick={onEditProfile}
               style={{
                 justifySelf: "start",
-                border: "1px solid var(--border)",
-                background: "var(--text)",
-                color: "var(--bg)",
+                border:
+                  "1px solid color-mix(in srgb, var(--green) 72%, var(--border))",
+                background: "var(--green)",
+                color: "white",
                 borderRadius: 999,
-                padding: "8px 12px",
-                fontWeight: 900,
+                minHeight: 38,
+                padding: "0 14px",
+                fontWeight: 850,
                 cursor: "pointer",
+                boxShadow:
+                  "0 10px 24px color-mix(in srgb, var(--green) 22%, transparent)",
               }}
             >
               Edit profile
@@ -473,7 +561,7 @@ function AboutGolfProfileCard({
           <div
             style={{
               display: "grid",
-              gap: 12,
+              gap: 13,
               boxSizing: "border-box",
               width: "100%",
               maxWidth: "100%",
@@ -485,7 +573,7 @@ function AboutGolfProfileCard({
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                  gap: isMobile ? 7 : 8,
+                  gap: isMobile ? 8 : 10,
                   width: "100%",
                   maxWidth: "100%",
                   boxSizing: "border-box",
@@ -502,11 +590,13 @@ function AboutGolfProfileCard({
                       gap: isMobile ? 7 : 9,
                       minWidth: 0,
                       maxWidth: "100%",
-                      border: "1px solid var(--border)",
-                      borderRadius: 14,
-                      background: "var(--bg)",
-                      padding: isMobile ? "8px 9px" : "9px 10px",
-                      boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
+                      border:
+                        "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
+                      borderRadius: 18,
+                      background:
+                        "color-mix(in srgb, var(--muted) 58%, transparent)",
+                      padding: isMobile ? "10px 10px" : "11px 12px",
+                      boxShadow: "none",
                       boxSizing: "border-box",
                       overflow: "hidden",
                     }}
@@ -517,9 +607,11 @@ function AboutGolfProfileCard({
                         height: isMobile ? 26 : 28,
                         minWidth: isMobile ? 26 : 28,
                         borderRadius: 999,
-                        border: "1px solid var(--border)",
-                        background: "var(--card)",
-                        color: "var(--text)",
+                        border:
+                          "1px solid color-mix(in srgb, var(--border) 54%, transparent)",
+                        background:
+                          "color-mix(in srgb, var(--card) 86%, var(--green) 14%)",
+                        color: "var(--green)",
                         display: "grid",
                         placeItems: "center",
                         fontSize: isMobile ? 12 : 13,
@@ -542,7 +634,7 @@ function AboutGolfProfileCard({
                         style={{
                           color: "var(--sub)",
                           fontSize: 9,
-                          fontWeight: 900,
+                          fontWeight: 850,
                           lineHeight: 1.2,
                           textTransform: "uppercase",
                           minWidth: 0,
@@ -558,7 +650,7 @@ function AboutGolfProfileCard({
                         style={{
                           color: "var(--text)",
                           fontSize: isMobile ? 13 : 14,
-                          fontWeight: 950,
+                          fontWeight: 800,
                           lineHeight: 1.25,
                           minWidth: 0,
                           overflow: "hidden",
@@ -579,18 +671,19 @@ function AboutGolfProfileCard({
                 style={{
                   display: "grid",
                   gap: 6,
-                  border: "1px solid var(--border)",
-                  borderRadius: 14,
-                  background: "var(--bg)",
-                  padding: "11px 12px",
-                  marginTop: introChips.length > 0 ? 3 : 0,
+                  border:
+                    "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
+                  borderRadius: 20,
+                  background: "color-mix(in srgb, var(--muted) 52%, transparent)",
+                  padding: "13px 14px",
+                  marginTop: introChips.length > 0 ? 2 : 0,
                 }}
               >
                 <div
                   style={{
                     color: "var(--sub)",
                     fontSize: 11,
-                    fontWeight: 900,
+                    fontWeight: 850,
                     lineHeight: 1.2,
                     textTransform: "uppercase",
                   }}
@@ -602,8 +695,8 @@ function AboutGolfProfileCard({
                   style={{
                     color: "var(--text)",
                     fontSize: 14,
-                    lineHeight: 1.45,
-                    fontWeight: 700,
+                    lineHeight: 1.5,
+                    fontWeight: 600,
                     whiteSpace: "pre-wrap",
                     wordBreak: "break-word",
                   }}
@@ -637,9 +730,10 @@ function SettingsControlRow({
   return (
     <div
       style={{
-        border: "1px solid var(--border)",
-        borderRadius: 14,
-        background: "var(--bg)",
+        border:
+          "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
+        borderRadius: 20,
+        background: "color-mix(in srgb, var(--muted) 56%, transparent)",
         overflow: "hidden",
       }}
     >
@@ -649,14 +743,16 @@ function SettingsControlRow({
             width: 30,
             height: 30,
             borderRadius: 999,
-            border: "1px solid var(--border)",
-            background: "var(--card)",
-            color: "var(--text)",
+            border:
+              "1px solid color-mix(in srgb, var(--border) 54%, transparent)",
+            background:
+              "color-mix(in srgb, var(--card) 86%, var(--green) 14%)",
+            color: "var(--green)",
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
             fontSize: 12,
-            fontWeight: 900,
+            fontWeight: 850,
             flexShrink: 0,
           }}
         >
@@ -664,10 +760,10 @@ function SettingsControlRow({
         </div>
 
         <div style={{ minWidth: 0, display: "grid", gap: 1, flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 900, color: "var(--text)" }}>
+          <div style={{ fontSize: 14, fontWeight: 850, color: "var(--text)" }}>
             {label}
           </div>
-          <div style={{ fontSize: 11, color: "var(--sub)" }}>
+          <div style={{ fontSize: 12, color: "var(--sub)" }}>
             {t("current")}: {value}
           </div>
         </div>
@@ -675,7 +771,7 @@ function SettingsControlRow({
         <div
           style={{
             color: "var(--sub)",
-            fontSize: 18,
+            fontSize: 20,
             lineHeight: 1,
             transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
             transition: "transform 0.15s ease",
@@ -696,8 +792,8 @@ function SettingsOptions({ children }: { children: ReactNode }) {
     <div
       style={{
         display: "grid",
-        gap: 6,
-        padding: "0 10px 10px 49px",
+        gap: 8,
+        padding: "0 10px 12px 50px",
       }}
     >
       {children}
@@ -713,7 +809,7 @@ const settingsRowButtonStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: 10,
-  padding: "10px",
+  padding: "12px",
   textAlign: "left",
   cursor: "pointer",
   boxSizing: "border-box",
@@ -722,15 +818,20 @@ const settingsRowButtonStyle: CSSProperties = {
 function settingsOptionStyle(active: boolean): CSSProperties {
   return {
     width: "100%",
-    border: "1px solid var(--border)",
-    background: active ? "var(--text)" : "var(--card)",
-    color: active ? "var(--bg)" : "var(--text)",
-    borderRadius: 12,
-    padding: "9px 10px",
+    border: active
+      ? "1px solid color-mix(in srgb, var(--green) 52%, var(--border))"
+      : "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
+    background: active
+      ? "color-mix(in srgb, var(--green) 14%, var(--card))"
+      : "color-mix(in srgb, var(--card) 72%, transparent)",
+    color: "var(--text)",
+    borderRadius: 999,
+    padding: "10px 12px",
     cursor: "pointer",
-    fontWeight: 800,
+    fontWeight: 850,
     fontSize: 12,
     textAlign: "left",
+    boxShadow: active ? "0 8px 18px rgba(0,0,0,0.08)" : "none",
   };
 }
 
@@ -1498,6 +1599,16 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
     [followStatus, isSelf, mode, profile],
   );
 
+  const visibleHeaderBio =
+    hasProfileFieldValue(profile?.bio) &&
+    canShowProfileField(
+      profile?.bioPrivacy,
+      mode === "me" || isSelf,
+      followStatus,
+    )
+      ? String(profile?.bio)
+      : "";
+
   return (
     <div style={{ display: "grid", gap: 12, minWidth: 0 }}>
       {err && (
@@ -1518,98 +1629,123 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
       <div
         style={{
-          background: isMobile ? "transparent" : "var(--card)",
-          border: isMobile ? "none" : "1px solid var(--border)",
-          borderRadius: isMobile ? 0 : 22,
-          boxShadow: isMobile ? "none" : "0 14px 34px rgba(0,0,0,.24)",
+          position: "relative",
           overflow: "hidden",
+          borderRadius: isMobile ? 26 : 30,
+          border:
+            "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
+          background:
+            "linear-gradient(145deg, color-mix(in srgb, var(--card) 92%, var(--green) 8%), color-mix(in srgb, var(--card) 96%, var(--bg)))",
+          boxShadow: isMobile ? "none" : "0 20px 54px rgba(0,0,0,0.16)",
         }}
       >
         <div
+          aria-hidden="true"
           style={{
-            height: isMobile ? 106 : 152,
-            background: "var(--bg)",
-            borderBottom: "1px solid var(--border)",
-            position: "relative",
+            position: "absolute",
+            inset: 0,
+            pointerEvents: "none",
+            background:
+              "radial-gradient(circle at 16% 0%, color-mix(in srgb, var(--green) 20%, transparent), transparent 36%), radial-gradient(circle at 88% 10%, color-mix(in srgb, var(--muted) 76%, transparent), transparent 40%), linear-gradient(180deg, color-mix(in srgb, var(--card) 18%, transparent), transparent 48%)",
+            opacity: 0.82,
           }}
-        >
-          <button
-            onClick={() => nav(backTo)}
-            type="button"
-            style={{
-              position: "absolute",
-              top: 12,
-              left: 12,
-              border: "1px solid var(--border)",
-              background: "var(--card)",
-              color: "var(--text)",
-              borderRadius: 999,
-              padding: "6px 10px",
-              fontSize: 12,
-              fontWeight: 800,
-              cursor: "pointer",
-              boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
-            }}
-          >
-            ← {t("back")}
-          </button>
-
-          <button
-            onClick={() =>
-              mode === "me" ? nav("/onboarding/profile") : nav("/profile")
-            }
-            type="button"
-            style={{
-              position: "absolute",
-              top: 12,
-              right: 12,
-              border: "1px solid var(--border)",
-              background: "var(--card)",
-              color: "var(--text)",
-              borderRadius: 999,
-              padding: "6px 11px",
-              fontSize: 12,
-              fontWeight: 900,
-              cursor: "pointer",
-              boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
-            }}
-          >
-            {mode === "me" ? t("edit") : t("my_profile")}
-          </button>
-        </div>
+        />
 
         <div
           style={{
-            padding: isMobile ? "0 14px 16px" : "0 22px 22px",
+            position: "relative",
+            zIndex: 1,
             display: "grid",
-            gap: isMobile ? 15 : 18,
+            gap: isMobile ? 16 : 22,
+            padding: isMobile ? "13px 13px 15px" : "18px 22px 22px",
           }}
         >
           <div
             style={{
               display: "flex",
-              alignItems: "flex-end",
-              gap: isMobile ? 13 : 18,
-              marginTop: isMobile ? -44 : -58,
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 10,
+            }}
+          >
+            <button
+              onClick={() => nav(backTo)}
+              type="button"
+              style={{
+                minHeight: 38,
+                border:
+                  "1px solid color-mix(in srgb, var(--border) 52%, transparent)",
+                background: "color-mix(in srgb, var(--card) 70%, transparent)",
+                color: "var(--text)",
+                borderRadius: 999,
+                padding: "0 13px",
+                fontSize: 12,
+                fontWeight: 850,
+                cursor: "pointer",
+                backdropFilter: "blur(12px)",
+                boxShadow: "0 8px 22px rgba(0,0,0,0.08)",
+              }}
+            >
+              ? {t("back")}
+            </button>
+
+            <button
+              onClick={() =>
+                mode === "me" ? nav("/onboarding/profile") : nav("/profile")
+              }
+              type="button"
+              style={{
+                minHeight: 38,
+                border:
+                  mode === "me"
+                    ? "1px solid color-mix(in srgb, var(--green) 70%, var(--border))"
+                    : "1px solid color-mix(in srgb, var(--border) 52%, transparent)",
+                background:
+                  mode === "me"
+                    ? "var(--green)"
+                    : "color-mix(in srgb, var(--card) 70%, transparent)",
+                color: mode === "me" ? "white" : "var(--text)",
+                borderRadius: 999,
+                padding: "0 14px",
+                fontSize: 12,
+                fontWeight: 900,
+                cursor: "pointer",
+                backdropFilter: "blur(12px)",
+                boxShadow:
+                  mode === "me"
+                    ? "0 10px 24px color-mix(in srgb, var(--green) 22%, transparent)"
+                    : "0 8px 22px rgba(0,0,0,0.08)",
+              }}
+            >
+              {mode === "me" ? t("edit") : t("my_profile")}
+            </button>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: isMobile ? "center" : "center",
+              gap: isMobile ? 13 : 20,
               minWidth: 0,
             }}
           >
             <div
               style={{
-                width: isMobile ? 98 : 124,
-                height: isMobile ? 98 : 124,
-                minWidth: isMobile ? 98 : 124,
+                width: isMobile ? 82 : 108,
+                height: isMobile ? 82 : 108,
+                minWidth: isMobile ? 82 : 108,
                 borderRadius: "50%",
-                border: isMobile
-                  ? "5px solid var(--bg)"
-                  : "5px solid var(--card)",
-                background: "var(--bg)",
+                border:
+                  "3px solid color-mix(in srgb, var(--card) 92%, transparent)",
+                background:
+                  "linear-gradient(135deg, color-mix(in srgb, var(--green) 12%, var(--muted)), var(--muted))",
                 overflow: "hidden",
                 boxShadow:
-                  "0 16px 34px rgba(0,0,0,0.26), 0 0 0 1px var(--border), 0 0 0 8px var(--card)",
+                  "0 16px 36px rgba(0,0,0,0.20), 0 0 0 1px color-mix(in srgb, var(--border) 64%, transparent), 0 0 0 7px color-mix(in srgb, var(--card) 34%, transparent)",
                 display: "grid",
                 placeItems: "center",
                 boxSizing: "border-box",
+                flexShrink: 0,
               }}
             >
               {profile?.avatarUrl ? (
@@ -1630,10 +1766,11 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                     height: "100%",
                     display: "grid",
                     placeItems: "center",
-                    fontSize: isMobile ? 36 : 44,
-                    fontWeight: 950,
+                    fontSize: isMobile ? 30 : 38,
+                    fontWeight: 850,
                     color: "var(--text)",
-                    background: "rgba(255,255,255,0.06)",
+                    background:
+                      "linear-gradient(135deg, color-mix(in srgb, var(--green) 16%, var(--muted)), var(--muted))",
                   }}
                 >
                   {(profile?.handle ?? targetHandle ?? "?")
@@ -1643,20 +1780,38 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
               )}
             </div>
 
-            <div
-              style={{
-                minWidth: 0,
-                flex: 1,
-                paddingBottom: isMobile ? 7 : 8,
-              }}
-            >
+            <div style={{ minWidth: 0, flex: 1 }}>
               <div
                 style={{
-                  fontWeight: 950,
-                  fontSize: isMobile ? 26 : 31,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 7,
+                  maxWidth: "100%",
+                  padding: "5px 10px",
+                  marginBottom: 9,
+                  borderRadius: 999,
+                  border:
+                    "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
+                  background:
+                    "color-mix(in srgb, var(--muted) 56%, transparent)",
+                  color: "var(--sub)",
+                  fontSize: 11,
+                  fontWeight: 750,
+                }}
+              >
+                <span>Fairwayd profile</span>
+                {profile?.createdAt ? (
+                  <span>· {prettyDate(profile.createdAt)}</span>
+                ) : null}
+              </div>
+
+              <div
+                style={{
+                  fontWeight: 800,
+                  fontSize: isMobile ? 24 : 30,
                   color: "var(--text)",
-                  lineHeight: 1.06,
-                  letterSpacing: 0,
+                  lineHeight: 1.12,
+                  letterSpacing: -0.35,
                   wordBreak: "break-word",
                 }}
               >
@@ -1666,7 +1821,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
               <div
                 style={{
-                  marginTop: 4,
+                  marginTop: 5,
                   fontSize: isMobile ? 13 : 14,
                   fontWeight: 650,
                   color: "var(--sub)",
@@ -1675,21 +1830,23 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
               >
                 @{profile?.handle ?? targetHandle ?? "unknown"}
               </div>
+
+              {visibleHeaderBio ? (
+                <div
+                  style={{
+                    marginTop: 11,
+                    maxWidth: 600,
+                    color: "var(--text)",
+                    fontSize: 14,
+                    lineHeight: 1.5,
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {visibleHeaderBio}
+                </div>
+              ) : null}
             </div>
           </div>
-
-          {profile?.createdAt ? (
-            <div
-              style={{
-                fontSize: 11,
-                color: "var(--sub)",
-                fontWeight: 600,
-                lineHeight: 1.25,
-              }}
-            >
-              {t("member_since")} {prettyDate(profile.createdAt)}
-            </div>
-          ) : null}
 
           {mode === "handle" && !isSelf && followLabel ? (
             <PillButton
@@ -1705,8 +1862,24 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
               style={{
                 ...followButtonStyle,
                 width: isMobile ? "100%" : "fit-content",
-                minWidth: isMobile ? undefined : 160,
+                minWidth: isMobile ? undefined : 168,
+                minHeight: 44,
+                borderRadius: 999,
                 textAlign: "center",
+                fontWeight: 850,
+                background:
+                  followStatus === "ACCEPTED"
+                    ? "color-mix(in srgb, var(--green) 14%, var(--card))"
+                    : "var(--green)",
+                color: followStatus === "ACCEPTED" ? "var(--text)" : "white",
+                border:
+                  followStatus === "ACCEPTED"
+                    ? "1px solid color-mix(in srgb, var(--green) 42%, var(--border))"
+                    : "1px solid color-mix(in srgb, var(--green) 72%, var(--border))",
+                boxShadow:
+                  followStatus === "ACCEPTED"
+                    ? "none"
+                    : "0 10px 24px color-mix(in srgb, var(--green) 22%, transparent)",
               }}
             >
               {followBusy ? "..." : followLabel}
@@ -1715,11 +1888,15 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-              gap: isMobile ? 7 : 10,
-              borderTop: "1px solid var(--border)",
-              paddingTop: isMobile ? 11 : 14,
+              display: "flex",
+              gap: 8,
+              overflowX: isMobile ? "auto" : "visible",
+              padding: 4,
+              borderRadius: 999,
+              border: "1px solid color-mix(in srgb, var(--border) 42%, transparent)",
+              background: "color-mix(in srgb, var(--muted) 48%, transparent)",
+              WebkitOverflowScrolling: "touch",
+              scrollbarWidth: "none",
             }}
           >
             {[
@@ -1727,25 +1904,21 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                 key: "posts" as const,
                 count: posts.length,
                 label: t("posts"),
-                icon: "📝",
               },
               {
                 key: "following" as const,
                 count: followingUsers.length,
                 label: t("following"),
-                icon: "➕",
               },
               {
                 key: "followers" as const,
                 count: followers.length,
                 label: t("followers"),
-                icon: "👥",
               },
               {
                 key: "courses" as const,
                 count: followingCourses.length,
                 label: t("courses"),
-                icon: "⛳",
               },
             ].map((item) => {
               const active = activeSection === item.key;
@@ -1756,49 +1929,45 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                   type="button"
                   onClick={() => setActiveSection(item.key)}
                   style={{
-                    minWidth: 0,
+                    flex: isMobile ? "0 0 auto" : 1,
+                    minWidth: isMobile ? 104 : 0,
                     border: active
-                      ? "1px solid var(--border)"
+                      ? "1px solid color-mix(in srgb, var(--green) 52%, var(--border))"
                       : "1px solid transparent",
-                    background: active ? "var(--bg)" : "transparent",
+                    background: active
+                      ? "color-mix(in srgb, var(--card) 96%, var(--green) 4%)"
+                      : "transparent",
                     color: "var(--text)",
-                    borderRadius: 14,
-                    padding: isMobile ? "9px 5px 10px" : "11px 9px",
+                    borderRadius: 999,
+                    padding: isMobile ? "9px 12px" : "10px 14px",
                     cursor: "pointer",
-                    display: "grid",
-                    gap: 4,
-                    justifyItems: "center",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
                     textAlign: "center",
                     boxShadow: active
                       ? "0 8px 18px rgba(0,0,0,0.10)"
                       : "none",
                     transition:
-                      "background 160ms ease, box-shadow 160ms ease, transform 160ms ease",
+                      "background 160ms ease, box-shadow 160ms ease, border-color 160ms ease",
                   }}
                 >
-                  <div
+                  <span
                     style={{
-                      fontSize: 16,
+                      fontSize: 15,
+                      fontWeight: 900,
                       lineHeight: 1,
-                    }}
-                  >
-                    {item.icon}
-                  </div>
-
-                  <div
-                    style={{
-                      fontSize: isMobile ? 17 : 20,
-                      fontWeight: 950,
-                      lineHeight: 1,
+                      color: active ? "var(--green)" : "var(--text)",
                     }}
                   >
                     {item.count}
-                  </div>
+                  </span>
 
-                  <div
+                  <span
                     style={{
                       maxWidth: "100%",
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: 850,
                       color: active ? "var(--text)" : "var(--sub)",
                       whiteSpace: "nowrap",
@@ -1807,7 +1976,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                     }}
                   >
                     {item.label}
-                  </div>
+                  </span>
                 </button>
               );
             })}
@@ -1919,282 +2088,450 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
       {mode === "me" && (
         <div style={{ order: 2 }}>
-          <Card
-            title={t("follow_requests")}
-            right={
-              <span style={{ fontSize: 11, color: "var(--sub)" }}>
+          <div
+            style={{
+              background:
+                "linear-gradient(145deg, color-mix(in srgb, var(--card) 94%, var(--green) 6%), color-mix(in srgb, var(--card) 98%, var(--bg)))",
+              border:
+                "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
+              borderRadius: isMobile ? 24 : 26,
+              padding: isMobile ? 14 : 16,
+              boxShadow: isMobile ? "none" : "0 14px 38px rgba(0,0,0,0.12)",
+              boxSizing: "border-box",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                marginBottom: 12,
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontWeight: 850,
+                    color: "var(--text)",
+                    fontSize: 16,
+                    letterSpacing: -0.2,
+                  }}
+                >
+                  {t("follow_requests")}
+                </div>
+                <div
+                  style={{
+                    marginTop: 2,
+                    color: "var(--sub)",
+                    fontSize: 12,
+                    lineHeight: 1.35,
+                  }}
+                >
+                  People who want to follow your Fairwayd profile
+                </div>
+              </div>
+
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  minWidth: 28,
+                  height: 28,
+                  padding: "0 9px",
+                  borderRadius: 999,
+                  border:
+                    "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
+                  background: "color-mix(in srgb, var(--muted) 58%, transparent)",
+                  color: "var(--sub)",
+                  fontSize: 12,
+                  fontWeight: 850,
+                }}
+              >
                 {followRequests.length}
               </span>
-            }
-          >
-          {followRequests.length === 0 ? (
-            <div style={{ padding: 10, color: "var(--sub)", fontSize: 13 }}>
-              {t("no_open_requests")}
             </div>
-          ) : (
-            <div style={{ display: "grid", gap: 8 }}>
-              {followRequests.map((x) => {
-                const userId = x.followerId ?? x.follower?.id;
-                const handle =
-                  x.followerHandle || x.follower?.handle || userId || "unknown";
-                const name = x.followerName || x.follower?.name || null;
-                const avatarUrl =
-                  x.followerAvatarUrl || x.follower?.avatarUrl || null;
-                const busy = followReqBusy === userId;
 
-                return (
-                  <div
-                    key={userId}
-                    style={{
-                      display: "flex",
-                      alignItems: isMobile ? "stretch" : "center",
-                      flexWrap: isMobile ? "wrap" : "nowrap",
-                      gap: 8,
-                      padding: isMobile ? "10px" : "8px 10px",
-                      borderRadius: 12,
-                      border: "1px solid var(--border)",
-                      background: "var(--card)",
-                      boxSizing: "border-box",
-                    }}
-                  >
+            {followRequests.length === 0 ? (
+              <div
+                style={{
+                  padding: "15px 14px",
+                  borderRadius: 20,
+                  border:
+                    "1px solid color-mix(in srgb, var(--border) 42%, transparent)",
+                  background: "color-mix(in srgb, var(--muted) 54%, transparent)",
+                  color: "var(--sub)",
+                  fontSize: 13,
+                  lineHeight: 1.4,
+                }}
+              >
+                {t("no_open_requests")}
+              </div>
+            ) : (
+              <div style={{ display: "grid", gap: 10 }}>
+                {followRequests.map((x) => {
+                  const userId = x.followerId ?? x.follower?.id;
+                  const handle =
+                    x.followerHandle || x.follower?.handle || userId || "unknown";
+                  const name = x.followerName || x.follower?.name || null;
+                  const avatarUrl =
+                    x.followerAvatarUrl || x.follower?.avatarUrl || null;
+                  const busy = followReqBusy === userId;
+
+                  return (
                     <div
+                      key={userId}
                       style={{
-                        width: 32,
-                        height: 32,
-                        minWidth: 32,
-                        minHeight: 32,
-                        maxWidth: 32,
-                        maxHeight: 32,
-                        flexShrink: 0,
+                        display: "flex",
+                        alignItems: isMobile ? "flex-start" : "center",
+                        flexWrap: isMobile ? "wrap" : "nowrap",
+                        gap: 11,
+                        padding: isMobile ? "12px" : "11px 12px",
+                        borderRadius: 20,
+                        border:
+                          "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
+                        background: "color-mix(in srgb, var(--muted) 54%, transparent)",
+                        boxSizing: "border-box",
                       }}
                     >
-                      <AvatarCircle handle={handle} avatarUrl={avatarUrl} />
-                    </div>
+                      <div
+                        style={{
+                          width: 40,
+                          height: 40,
+                          minWidth: 40,
+                          minHeight: 40,
+                          maxWidth: 40,
+                          maxHeight: 40,
+                          flexShrink: 0,
+                          borderRadius: 999,
+                          boxShadow:
+                            "0 8px 20px rgba(0,0,0,0.12), 0 0 0 1px color-mix(in srgb, var(--border) 54%, transparent)",
+                        }}
+                      >
+                        <AvatarCircle handle={handle} avatarUrl={avatarUrl} />
+                      </div>
 
-                    <div
-                      style={{
-                        flex: 1,
-                        minWidth: isMobile ? "calc(100% - 66px)" : 0,
-                        display: "grid",
-                        gap: 2,
-                      }}
-                    >
-                      {name ? (
+                      <div
+                        style={{
+                          flex: 1,
+                          minWidth: isMobile ? "calc(100% - 58px)" : 0,
+                          display: "grid",
+                          gap: 3,
+                        }}
+                      >
+                        {name ? (
+                          <div
+                            style={{
+                              fontWeight: 850,
+                              fontSize: 14,
+                              color: "var(--text)",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {name}
+                          </div>
+                        ) : null}
+
                         <div
                           style={{
-                            fontWeight: 800,
-                            fontSize: 13,
-                            color: "var(--text)",
+                            fontSize: 12,
+                            fontWeight: 650,
+                            color: "var(--sub)",
                             whiteSpace: "nowrap",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                           }}
                         >
-                          {name}
+                          @{handle}
                         </div>
-                      ) : null}
+                      </div>
 
                       <div
                         style={{
-                          fontSize: 12,
-                          color: "var(--sub)",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
+                          display: "flex",
+                          gap: 8,
+                          width: isMobile ? "100%" : "auto",
+                          marginLeft: isMobile ? 0 : "auto",
+                          marginTop: isMobile ? 3 : 0,
                         }}
                       >
-                        @{handle}
+                        <button
+                          disabled={busy || !userId}
+                          onClick={() => handleReject(userId)}
+                          style={{
+                            flex: isMobile ? 1 : undefined,
+                            minHeight: 38,
+                            padding: "0 13px",
+                            fontSize: 12,
+                            fontWeight: 850,
+                            borderRadius: 999,
+                            border:
+                              "1px solid color-mix(in srgb, var(--border) 54%, transparent)",
+                            background: "transparent",
+                            color: "var(--text)",
+                            cursor: busy || !userId ? "default" : "pointer",
+                            opacity: busy || !userId ? 0.55 : 1,
+                          }}
+                          type="button"
+                        >
+                          {t("reject")}
+                        </button>
+
+                        <button
+                          disabled={busy || !userId}
+                          onClick={() => handleAccept(userId)}
+                          style={{
+                            flex: isMobile ? 1 : undefined,
+                            minHeight: 38,
+                            padding: "0 14px",
+                            fontSize: 12,
+                            fontWeight: 850,
+                            borderRadius: 999,
+                            border:
+                              "1px solid color-mix(in srgb, var(--green) 72%, var(--border))",
+                            background: "var(--green)",
+                            color: "white",
+                            cursor: busy || !userId ? "default" : "pointer",
+                            opacity: busy || !userId ? 0.55 : 1,
+                            boxShadow:
+                              busy || !userId
+                                ? "none"
+                                : "0 10px 22px color-mix(in srgb, var(--green) 20%, transparent)",
+                          }}
+                          type="button"
+                        >
+                          {t("accept")}
+                        </button>
                       </div>
                     </div>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 8,
-                        width: isMobile ? "100%" : "auto",
-                        marginLeft: isMobile ? 0 : "auto",
-                        marginTop: isMobile ? 4 : 0,
-                      }}
-                    >
-                      <button
-                        disabled={busy || !userId}
-                        onClick={() => handleReject(userId)}
-                        style={{
-                          flex: isMobile ? 1 : undefined,
-                          padding: "6px 8px",
-                          fontSize: 12,
-                          borderRadius: 8,
-                          border: "1px solid var(--border)",
-                          background: "transparent",
-                          cursor: "pointer",
-                        }}
-                      >
-                        {t("reject")}
-                      </button>
-
-                      <button
-                        disabled={busy || !userId}
-                        onClick={() => handleAccept(userId)}
-                        style={{
-                          flex: isMobile ? 1 : undefined,
-                          padding: "6px 8px",
-                          fontSize: 12,
-                          borderRadius: 8,
-                          border: "1px solid var(--border)",
-                          background: "var(--text)",
-                          color: "var(--bg)",
-                          cursor: "pointer",
-                        }}
-                      >
-                        {t("accept")}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
       {mode === "me" && (
         <div style={{ order: 3 }}>
-          <Card
-            title={t("sent_requests")}
-            right={
-              <span style={{ fontSize: 11, color: "var(--sub)" }}>
+          <div
+            style={{
+              background:
+                "linear-gradient(145deg, color-mix(in srgb, var(--card) 94%, var(--green) 6%), color-mix(in srgb, var(--card) 98%, var(--bg)))",
+              border:
+                "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
+              borderRadius: isMobile ? 24 : 26,
+              padding: isMobile ? 14 : 16,
+              boxShadow: isMobile ? "none" : "0 14px 38px rgba(0,0,0,0.12)",
+              boxSizing: "border-box",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                marginBottom: 12,
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontWeight: 850,
+                    color: "var(--text)",
+                    fontSize: 16,
+                    letterSpacing: -0.2,
+                  }}
+                >
+                  {t("sent_requests")}
+                </div>
+                <div
+                  style={{
+                    marginTop: 2,
+                    color: "var(--sub)",
+                    fontSize: 12,
+                    lineHeight: 1.35,
+                  }}
+                >
+                  Follow requests you have sent
+                </div>
+              </div>
+
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  minWidth: 28,
+                  height: 28,
+                  padding: "0 9px",
+                  borderRadius: 999,
+                  border:
+                    "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
+                  background: "color-mix(in srgb, var(--muted) 58%, transparent)",
+                  color: "var(--sub)",
+                  fontSize: 12,
+                  fontWeight: 850,
+                }}
+              >
                 {sentFollowRequests.length}
               </span>
-            }
-          >
-          {sentFollowRequests.length === 0 ? (
-            <div style={{ padding: 10, color: "var(--sub)", fontSize: 13 }}>
-              {t("no_open_sent_requests")}
             </div>
-          ) : (
-            <div style={{ display: "grid", gap: 8 }}>
-              {sentFollowRequests.map((x) => {
-                const userId = x.followingId ?? x.following?.id;
-                const handle =
-                  x.followingHandle ||
-                  x.following?.handle ||
-                  userId ||
-                  "unknown";
-                const name = x.followingName || x.following?.name || null;
-                const avatarUrl =
-                  x.followingAvatarUrl || x.following?.avatarUrl || null;
-                const busy = sentFollowReqBusy === userId;
 
-                return (
-                  <div
-                    key={userId}
-                    style={{
-                      display: "flex",
-                      alignItems: isMobile ? "stretch" : "center",
-                      flexWrap: isMobile ? "wrap" : "nowrap",
-                      gap: 8,
-                      padding: isMobile ? "10px" : "8px 10px",
-                      borderRadius: 12,
-                      border: "1px solid var(--border)",
-                      background: "var(--card)",
-                      boxSizing: "border-box",
-                    }}
-                  >
+            {sentFollowRequests.length === 0 ? (
+              <div
+                style={{
+                  padding: "15px 14px",
+                  borderRadius: 20,
+                  border:
+                    "1px solid color-mix(in srgb, var(--border) 42%, transparent)",
+                  background: "color-mix(in srgb, var(--muted) 54%, transparent)",
+                  color: "var(--sub)",
+                  fontSize: 13,
+                  lineHeight: 1.4,
+                }}
+              >
+                {t("no_open_sent_requests")}
+              </div>
+            ) : (
+              <div style={{ display: "grid", gap: 10 }}>
+                {sentFollowRequests.map((x) => {
+                  const userId = x.followingId ?? x.following?.id;
+                  const handle =
+                    x.followingHandle ||
+                    x.following?.handle ||
+                    userId ||
+                    "unknown";
+                  const name = x.followingName || x.following?.name || null;
+                  const avatarUrl =
+                    x.followingAvatarUrl || x.following?.avatarUrl || null;
+                  const busy = sentFollowReqBusy === userId;
+
+                  return (
                     <div
+                      key={userId}
                       style={{
-                        width: 32,
-                        height: 32,
-                        minWidth: 32,
-                        minHeight: 32,
-                        maxWidth: 32,
-                        maxHeight: 32,
-                        flexShrink: 0,
+                        display: "flex",
+                        alignItems: isMobile ? "flex-start" : "center",
+                        flexWrap: isMobile ? "wrap" : "nowrap",
+                        gap: 11,
+                        padding: isMobile ? "12px" : "11px 12px",
+                        borderRadius: 20,
+                        border:
+                          "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
+                        background: "color-mix(in srgb, var(--muted) 54%, transparent)",
+                        boxSizing: "border-box",
                       }}
                     >
-                      <AvatarCircle handle={handle} avatarUrl={avatarUrl} />
-                    </div>
+                      <div
+                        style={{
+                          width: 40,
+                          height: 40,
+                          minWidth: 40,
+                          minHeight: 40,
+                          maxWidth: 40,
+                          maxHeight: 40,
+                          flexShrink: 0,
+                          borderRadius: 999,
+                          boxShadow:
+                            "0 8px 20px rgba(0,0,0,0.12), 0 0 0 1px color-mix(in srgb, var(--border) 54%, transparent)",
+                        }}
+                      >
+                        <AvatarCircle handle={handle} avatarUrl={avatarUrl} />
+                      </div>
 
-                    <div
-                      style={{
-                        flex: 1,
-                        minWidth: isMobile ? "calc(100% - 66px)" : 0,
-                        display: "grid",
-                        gap: 2,
-                      }}
-                    >
-                      {name ? (
+                      <div
+                        style={{
+                          flex: 1,
+                          minWidth: isMobile ? "calc(100% - 58px)" : 0,
+                          display: "grid",
+                          gap: 3,
+                        }}
+                      >
+                        {name ? (
+                          <div
+                            style={{
+                              fontWeight: 850,
+                              fontSize: 14,
+                              color: "var(--text)",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {name}
+                          </div>
+                        ) : null}
+
                         <div
                           style={{
-                            fontWeight: 800,
-                            fontSize: 13,
-                            color: "var(--text)",
+                            fontSize: 12,
+                            fontWeight: 650,
+                            color: "var(--sub)",
                             whiteSpace: "nowrap",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                           }}
                         >
-                          {name}
+                          @{handle}
                         </div>
-                      ) : null}
+                      </div>
 
                       <div
                         style={{
-                          fontSize: 12,
-                          color: "var(--sub)",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          width: isMobile ? "100%" : "auto",
+                          marginLeft: isMobile ? 0 : "auto",
+                          marginTop: isMobile ? 3 : 0,
                         }}
                       >
-                        @{handle}
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: "var(--sub)",
+                            fontWeight: 750,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {t("requested")}
+                        </div>
+
+                        <button
+                          disabled={busy || !userId}
+                          onClick={() => handleCancelSentRequest(userId)}
+                          style={{
+                            flex: isMobile ? 1 : undefined,
+                            minHeight: 38,
+                            padding: "0 14px",
+                            fontSize: 12,
+                            fontWeight: 850,
+                            borderRadius: 999,
+                            border:
+                              "1px solid color-mix(in srgb, var(--border) 54%, transparent)",
+                            background: "transparent",
+                            color: "var(--text)",
+                            cursor: busy || !userId ? "default" : "pointer",
+                            opacity: busy || !userId ? 0.55 : 1,
+                          }}
+                          type="button"
+                        >
+                          {busy ? "..." : t("cancel")}
+                        </button>
                       </div>
                     </div>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        width: isMobile ? "100%" : "auto",
-                        marginLeft: isMobile ? 0 : "auto",
-                        marginTop: isMobile ? 4 : 0,
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: "var(--sub)",
-                          fontWeight: 700,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {t("requested")}
-                      </div>
-
-                      <button
-                        disabled={busy || !userId}
-                        onClick={() => handleCancelSentRequest(userId)}
-                        style={{
-                          flex: isMobile ? 1 : undefined,
-                          padding: "6px 10px",
-                          fontSize: 12,
-                          borderRadius: 8,
-                          border: "1px solid var(--border)",
-                          background: "transparent",
-                          color: "var(--text)",
-                          cursor: busy ? "default" : "pointer",
-                        }}
-                      >
-                        {busy ? "..." : t("cancel")}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
