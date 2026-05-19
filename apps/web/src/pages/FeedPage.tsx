@@ -939,15 +939,16 @@ export default function FeedPage() {
     .toUpperCase();
 
   const composerBoxStyle: React.CSSProperties = {
-    padding: isMobile ? 12 : 12,
-    borderRadius: isMobile ? 16 : 14,
-    background: "var(--card)",
-    border: "1px solid var(--border)",
+    padding: isMobile ? 10 : 12,
+    borderRadius: isMobile ? 22 : 24,
+    background: "color-mix(in srgb, var(--card) 88%, transparent)",
+    border: "1px solid color-mix(in srgb, var(--border) 42%, transparent)",
     width: "100%",
     maxWidth: "100%",
     minWidth: 0,
     boxSizing: "border-box",
     overflowX: "hidden",
+    boxShadow: "none",
   };
 
   if (loading) return null;
@@ -1160,12 +1161,12 @@ export default function FeedPage() {
                             gap: 12,
                             flexWrap: isMobile ? "wrap" : "nowrap",
                             padding: isMobile ? "12px" : "12px 14px",
-                            borderRadius: 16,
-                            border: "1px solid var(--border)",
-                            background: "var(--card)",
-                            boxShadow: isMobile
-                              ? "none"
-                              : "0 4px 14px rgba(0,0,0,0.04)",
+                            borderRadius: 20,
+                            border:
+                              "1px solid color-mix(in srgb, var(--border) 56%, transparent)",
+                            background:
+                              "color-mix(in srgb, var(--muted) 68%, transparent)",
+                            boxShadow: "none",
                           }}
                         >
                           <div
@@ -1242,8 +1243,10 @@ export default function FeedPage() {
                                       color: "var(--sub)",
                                       padding: "6px 10px",
                                       borderRadius: 999,
-                                      border: "1px solid var(--border)",
-                                      background: "var(--bg)",
+                                      border:
+                                        "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
+                                      background:
+                                        "color-mix(in srgb, var(--card) 72%, transparent)",
                                     }}
                                   >
                                     📍 {selectedLocationLabel}
@@ -1257,8 +1260,10 @@ export default function FeedPage() {
                                       color: "var(--sub)",
                                       padding: "6px 10px",
                                       borderRadius: 999,
-                                      border: "1px solid var(--border)",
-                                      background: "var(--bg)",
+                                      border:
+                                        "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
+                                      background:
+                                        "color-mix(in srgb, var(--card) 72%, transparent)",
                                     }}
                                   >
                                     ⛳ {selectedHoles} {t("holes")}
@@ -1272,8 +1277,10 @@ export default function FeedPage() {
                                       color: "var(--sub)",
                                       padding: "6px 10px",
                                       borderRadius: 999,
-                                      border: "1px solid var(--border)",
-                                      background: "var(--bg)",
+                                      border:
+                                        "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
+                                      background:
+                                        "color-mix(in srgb, var(--card) 72%, transparent)",
                                     }}
                                   >
                                     {selectedIsPrivate
@@ -1292,8 +1299,10 @@ export default function FeedPage() {
                                       color: "var(--text)",
                                       padding: "6px 10px",
                                       borderRadius: 999,
-                                      border: "1px solid var(--border)",
-                                      background: "var(--bg)",
+                                      border:
+                                        "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
+                                      background:
+                                        "color-mix(in srgb, var(--card) 72%, transparent)",
                                       textDecoration: "none",
                                       fontWeight: 700,
                                     }}
@@ -1365,14 +1374,13 @@ export default function FeedPage() {
                         marginLeft: isMobile ? 0 : "auto",
                         minWidth: isMobile ? "100%" : "auto",
                         background: "var(--card)",
-                        border: "1px solid var(--border)",
-                        borderRadius: 14,
+                        border:
+                          "1px solid color-mix(in srgb, var(--border) 54%, transparent)",
+                        borderRadius: 999,
                         paddingRight: 10,
                         display: "flex",
                         alignItems: "center",
-                        boxShadow: isMobile
-                          ? "none"
-                          : "0 2px 10px rgba(0,0,0,0.03)",
+                        boxShadow: "none",
                       }}
                     >
                       <select
@@ -1389,14 +1397,14 @@ export default function FeedPage() {
                           padding: "10px 12px",
                           border: "none",
                           outline: "none",
-                          background: "var(--card)",
+                          background: "transparent",
                           color: "var(--text)",
                           fontWeight: 800,
                           fontSize: 13,
                           appearance: "none",
                           WebkitAppearance: "none",
                           MozAppearance: "none",
-                          borderRadius: 14,
+                          borderRadius: 999,
                           cursor: posting ? "default" : "pointer",
                           width: isMobile ? "100%" : "auto",
                         }}
@@ -1433,39 +1441,87 @@ export default function FeedPage() {
                     </div>
                   </div>
 
-                  <textarea
-                    ref={draftRef}
-                    value={draft}
-                    onChange={(e) => {
-                      setDraft(e.target.value);
-                      if (err) setErr(null);
-                      if (composerHint) setComposerHint(null);
-                    }}
-                    placeholder={t("composer_moment_placeholder")}
-                    rows={3}
+                  <div
                     style={{
-                      width: "100%",
-                      boxSizing: "border-box",
-                      marginTop: 10,
-                      borderRadius: isMobile ? 0 : 12,
-                      border: isMobile ? "none" : "1px solid var(--border)",
-                      padding: 12,
-                      background: "var(--bg)",
-                      color: "var(--text)",
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 11,
+                      marginTop: 12,
+                      padding: "2px 0",
                     }}
-                    disabled={posting}
-                  />
+                  >
+                    <div
+                      style={{
+                        width: 38,
+                        height: 38,
+                        minWidth: 38,
+                        borderRadius: "50%",
+                        border: "1px solid var(--border)",
+                        background: "var(--muted)",
+                        color: "var(--text)",
+                        display: "grid",
+                        placeItems: "center",
+                        fontSize: 13,
+                        fontWeight: 900,
+                        overflow: "hidden",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {composerAvatarUrl ? (
+                        <img
+                          src={composerAvatarUrl}
+                          alt="avatar"
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            display: "block",
+                          }}
+                        />
+                      ) : (
+                        avatarLabel
+                      )}
+                    </div>
+
+                    <textarea
+                      ref={draftRef}
+                      value={draft}
+                      onChange={(e) => {
+                        setDraft(e.target.value);
+                        if (err) setErr(null);
+                        if (composerHint) setComposerHint(null);
+                      }}
+                      placeholder={t("composer_moment_placeholder")}
+                      rows={4}
+                      style={{
+                        width: "100%",
+                        boxSizing: "border-box",
+                        borderRadius: 0,
+                        border: "none",
+                        padding: "6px 0 8px",
+                        background: "transparent",
+                        color: "var(--text)",
+                        fontSize: 16,
+                        lineHeight: 1.45,
+                        outline: "none",
+                        resize: "none",
+                        minHeight: 118,
+                      }}
+                      disabled={posting}
+                    />
+                  </div>
                   <div
                     style={{
                       display: "flex",
                       gap: 10,
                       alignItems: "center",
                       marginTop: 12,
-                      padding: isMobile ? "12px 0 0" : "12px",
+                      padding: "12px 0 0",
                       flexWrap: "wrap",
                       rowGap: 10,
                       justifyContent: "space-between",
-                      borderTop: "1px solid var(--border)",
+                      borderTop:
+                        "1px solid color-mix(in srgb, var(--border) 48%, transparent)",
                     }}
                   >
                     <div
@@ -1508,10 +1564,12 @@ export default function FeedPage() {
                               gap: 8,
                               padding: "8px 12px",
                               borderRadius: 999,
-                              border: "1px solid var(--border)",
-                              background: "var(--bg)",
+                              border:
+                                "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
+                              background:
+                                "color-mix(in srgb, var(--muted) 78%, transparent)",
                               color: posting ? "var(--sub)" : "var(--text)",
-                              fontWeight: 700,
+                              fontWeight: 800,
                               fontSize: 12,
                               cursor: posting ? "default" : "pointer",
                               opacity: posting ? 0.6 : 1,
@@ -1531,10 +1589,12 @@ export default function FeedPage() {
                               gap: 8,
                               padding: "8px 12px",
                               borderRadius: 999,
-                              border: "1px solid var(--border)",
-                              background: "var(--bg)",
+                              border:
+                                "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
+                              background:
+                                "color-mix(in srgb, var(--muted) 78%, transparent)",
                               color: posting ? "var(--sub)" : "var(--text)",
-                              fontWeight: 700,
+                              fontWeight: 800,
                               fontSize: 12,
                               cursor: posting ? "default" : "pointer",
                               opacity: posting ? 0.6 : 1,
@@ -1555,10 +1615,12 @@ export default function FeedPage() {
                             gap: 8,
                             padding: "8px 12px",
                             borderRadius: 999,
-                            border: "1px solid var(--border)",
-                            background: "var(--bg)",
+                            border:
+                              "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
+                            background:
+                              "color-mix(in srgb, var(--muted) 78%, transparent)",
                             color: posting ? "var(--sub)" : "var(--text)",
-                            fontWeight: 700,
+                            fontWeight: 800,
                             fontSize: 12,
                             cursor: posting ? "default" : "pointer",
                             opacity: posting ? 0.6 : 1,
@@ -1579,9 +1641,11 @@ export default function FeedPage() {
                           minWidth: 0,
                           maxWidth: isMobile ? "100%" : 360,
                           padding: "10px 12px",
-                          borderRadius: 14,
-                          background: "var(--bg)",
-                          border: "1px solid var(--border)",
+                          borderRadius: 18,
+                          background:
+                            "color-mix(in srgb, var(--muted) 72%, transparent)",
+                          border:
+                            "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
                         }}
                       >
                         <div
@@ -1642,8 +1706,9 @@ export default function FeedPage() {
                             }}
                             disabled={posting}
                             style={{
-                              border: "1px solid var(--border)",
-                              background: "var(--card)",
+                              border:
+                                "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
+                              background: "transparent",
                               color: posting ? "var(--sub)" : "var(--text)",
                               fontSize: 12,
                               fontWeight: 800,
@@ -1666,8 +1731,9 @@ export default function FeedPage() {
                           }}
                           disabled={posting}
                           style={{
-                            border: "1px solid var(--border)",
-                            background: "var(--card)",
+                            border:
+                              "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
+                            background: "transparent",
                             color: posting ? "var(--sub)" : "var(--text)",
                             fontSize: 12,
                             fontWeight: 800,
@@ -1740,10 +1806,11 @@ export default function FeedPage() {
                         style={{
                           padding: "10px 16px",
                           borderRadius: 999,
-                          border: "1px solid var(--border)",
-                          background: "var(--text)",
-                          color: "var(--bg)",
-                          fontWeight: 800,
+                          border:
+                            "1px solid color-mix(in srgb, var(--green) 72%, var(--border))",
+                          background: "var(--green)",
+                          color: "white",
+                          fontWeight: 850,
                           cursor:
                             posting ||
                             !selectedCourse ||
@@ -1756,6 +1823,12 @@ export default function FeedPage() {
                             (!draft.trim() && files.length === 0)
                               ? 0.5
                               : 1,
+                          boxShadow:
+                            posting ||
+                            !selectedCourse ||
+                            (!draft.trim() && files.length === 0)
+                              ? "none"
+                              : "0 10px 24px color-mix(in srgb, var(--green) 22%, transparent)",
                         }}
                         type="button"
                       >
