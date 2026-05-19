@@ -62,16 +62,17 @@ function RatingRow({ label, value }: { label: string; value: number }) {
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "92px 1fr 40px",
+        gridTemplateColumns: "86px 1fr 38px",
         alignItems: "center",
-        gap: 10,
+        gap: 12,
+        padding: "2px 0",
       }}
     >
       <div
         style={{
           fontSize: 13,
           color: "var(--sub)",
-          fontWeight: 600,
+          fontWeight: 750,
         }}
       >
         {label}
@@ -79,7 +80,7 @@ function RatingRow({ label, value }: { label: string; value: number }) {
 
       <div
         style={{
-          height: 8,
+          height: 9,
           borderRadius: 999,
           background: "var(--muted)",
           border: "1px solid var(--border)",
@@ -90,9 +91,8 @@ function RatingRow({ label, value }: { label: string; value: number }) {
           style={{
             width: `${(value / 5) * 100}%`,
             height: "100%",
-            background:
-              "linear-gradient(90deg, var(--text), rgba(255,255,255,0.6))",
-            opacity: 0.35,
+            background: "var(--green)",
+            opacity: 0.72,
           }}
         />
       </div>
@@ -100,7 +100,7 @@ function RatingRow({ label, value }: { label: string; value: number }) {
       <div
         style={{
           fontSize: 13,
-          fontWeight: 700,
+          fontWeight: 850,
           color: "var(--text)",
           textAlign: "right",
         }}
@@ -125,15 +125,17 @@ export default function CourseRatingSummary({
       <section
         style={{
           padding: 16,
-          borderRadius: 16,
-          background: "var(--card)",
+          borderRadius: 22,
+          background:
+            "linear-gradient(135deg, color-mix(in srgb, var(--green) 8%, var(--card)), var(--card))",
           border: "1px solid var(--border)",
+          boxShadow: "0 14px 34px rgba(0,0,0,0.12)",
         }}
       >
         <div
           style={{
-            fontSize: 16,
-            fontWeight: 800,
+            fontSize: 17,
+            fontWeight: 900,
             color: "var(--text)",
           }}
         >
@@ -156,12 +158,13 @@ export default function CourseRatingSummary({
           onClick={onRateClick}
           style={{
             marginTop: 14,
-            padding: "10px 14px",
-            borderRadius: 999,
-            border: "1px solid var(--border)",
-            background: "var(--card)",
-            color: "var(--text)",
-            fontWeight: 800,
+            minHeight: 40,
+            padding: "0 14px",
+            borderRadius: 16,
+            border: "1px solid var(--green)",
+            background: "var(--green)",
+            color: "white",
+            fontWeight: 900,
             cursor: "pointer",
           }}
         >
@@ -174,13 +177,15 @@ export default function CourseRatingSummary({
   return (
     <section
       style={{
-        padding: 16,
-        borderRadius: 16,
-        background: "var(--card)",
+        padding: 18,
+        borderRadius: 24,
+        background:
+          "linear-gradient(135deg, color-mix(in srgb, var(--green) 8%, var(--card)), var(--card) 52%, color-mix(in srgb, var(--bg) 14%, var(--card)))",
         border: "1px solid var(--border)",
+        boxShadow: "0 16px 38px rgba(0,0,0,0.14)",
         display: "flex",
         flexDirection: "column",
-        gap: 14,
+        gap: 16,
       }}
     >
       <div
@@ -195,8 +200,8 @@ export default function CourseRatingSummary({
         <div style={{ minWidth: 0 }}>
           <div
             style={{
-              fontSize: 16,
-              fontWeight: 800,
+            fontSize: 17,
+            fontWeight: 900,
               color: "var(--text)",
             }}
           >
@@ -206,7 +211,7 @@ export default function CourseRatingSummary({
           <div
             style={{
               marginTop: 6,
-              fontSize: 14,
+              fontSize: 13,
               color: "var(--sub)",
             }}
           >
@@ -219,14 +224,18 @@ export default function CourseRatingSummary({
             display: "flex",
             flexDirection: "column",
             alignItems: "flex-end",
-            minWidth: 88,
+            minWidth: 96,
+            padding: "8px 10px",
+            borderRadius: 18,
+            background: "var(--muted)",
+            border: "1px solid var(--border)",
           }}
         >
           <div
             style={{
-              fontSize: 28,
+              fontSize: 34,
               lineHeight: 1,
-              fontWeight: 900,
+              fontWeight: 950,
               color: "var(--text)",
             }}
           >
@@ -239,10 +248,14 @@ export default function CourseRatingSummary({
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 6,
+          gap: 8,
           fontSize: 14,
           color: "var(--text)",
-          fontWeight: 700,
+          fontWeight: 800,
+          padding: "10px 12px",
+          borderRadius: 18,
+          background: "color-mix(in srgb, var(--muted) 72%, transparent)",
+          border: "1px solid var(--border)",
         }}
       >
         <span aria-hidden="true">⭐</span>
@@ -259,7 +272,7 @@ export default function CourseRatingSummary({
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: 10,
+          gap: 11,
         }}
       >
         <RatingRow label="Condition" value={rating.breakdown.condition} />
@@ -273,12 +286,13 @@ export default function CourseRatingSummary({
         onClick={onRateClick}
         style={{
           marginTop: 2,
-          padding: "10px 14px",
-          borderRadius: 999,
-          border: "1px solid var(--border)",
-          background: "var(--card)",
-          color: "var(--text)",
-          fontWeight: 800,
+          minHeight: 40,
+          padding: "0 14px",
+          borderRadius: 16,
+          border: "1px solid var(--green)",
+          background: "var(--green)",
+          color: "white",
+          fontWeight: 900,
           cursor: "pointer",
           width: "fit-content",
         }}

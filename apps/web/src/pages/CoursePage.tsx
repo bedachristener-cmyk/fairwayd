@@ -547,12 +547,25 @@ export default function CoursePage() {
 
   if (loading) return null;
 
+  const locationLine = [course?.city, course?.region, course?.country]
+    .filter(Boolean)
+    .join(", ");
+  const websiteUrl = normalizeWebsite(course?.website);
+  const directionsUrl = course
+    ? `https://www.google.com/maps/dir/?api=1&destination=${course.lat},${course.lon}`
+    : null;
+  const metadataPills = [
+    course?.holes ? `${course.holes} holes` : null,
+    course?.par ? `Par ${course.par}` : null,
+    course?.access ? course.access.replaceAll("_", " ") : null,
+  ].filter(Boolean);
+
   return (
     <div
       style={{
         display: "grid",
-        gap: isMobile ? 10 : 12,
-        paddingBottom: isMobile ? 16 : 0,
+        gap: isMobile ? 14 : 16,
+        paddingBottom: isMobile ? 20 : 0,
       }}
     >
       <div style={{ padding: isMobile ? "8px 12px 0" : 0 }}>
@@ -565,8 +578,9 @@ export default function CoursePage() {
             color: "var(--text)",
             borderRadius: 999,
             padding: "8px 12px",
-            fontWeight: 700,
+            fontWeight: 800,
             cursor: "pointer",
+            boxShadow: "0 8px 20px rgba(0,0,0,0.10)",
           }}
         >
           ← Back to map
@@ -576,160 +590,82 @@ export default function CoursePage() {
       {/* ===== HEADER ===== */}
       <div
         style={{
-          padding: isMobile ? 12 : 18,
-          borderRadius: 16,
-          background: isMobile ? "rgba(0,0,0,0.03)" : "var(--card)",
-          border: isMobile ? "none" : "1px solid var(--border)",
+          margin: isMobile ? "0 12px" : 0,
+          padding: isMobile ? 16 : 22,
+          borderRadius: 26,
+          background:
+            "linear-gradient(135deg, color-mix(in srgb, var(--green) 10%, var(--card)), var(--card) 46%, color-mix(in srgb, var(--bg) 18%, var(--card)))",
+          border: "1px solid var(--border)",
+          boxShadow: "0 18px 42px rgba(0,0,0,0.16)",
+          display: "grid",
+          gap: 16,
+          overflow: "hidden",
         }}
       >
-        <div
-          style={{
-            fontSize: isMobile ? 20 : 24,
-            fontWeight: 900,
-            lineHeight: 1.2,
-          }}
-        >
-          ⛳ {course?.name ?? "Course"}
+        <div style={{ display: "grid", gap: 8 }}>
+          <div
+            style={{
+              fontSize: isMobile ? 22 : 31,
+              fontWeight: 880,
+              lineHeight: 1.14,
+              letterSpacing: "-0.025em",
+              color: "var(--text)",
+            }}
+          >
+            {course?.name ?? "Course"}
+          </div>
+
+          {locationLine ? (
+            <div
+              style={{
+                fontSize: 14,
+                lineHeight: 1.4,
+                color: "var(--sub)",
+              }}
+            >
+              {locationLine}
+            </div>
+          ) : null}
         </div>
 
-        <div style={{ fontSize: 13, color: "var(--sub)", marginTop: 4 }}>
-          {[course?.city, course?.region, course?.country]
-            .filter(Boolean)
-            .join(", ")}
-        </div>
-        {(course?.holes || course?.par || course?.access) && (
+        {metadataPills.length > 0 ? (
           <div
             style={{
               display: "flex",
               gap: 8,
               flexWrap: "wrap",
-              marginTop: 10,
+              marginTop: -2,
             }}
           >
-            {course?.holes ? (
+            {metadataPills.map((label) => (
               <span
+                key={label}
                 style={{
-                  padding: "4px 10px",
+                  minHeight: 28,
+                  padding: "0 11px",
                   borderRadius: 999,
                   background: "var(--muted)",
                   border: "1px solid var(--border)",
+                  color: "var(--text)",
                   fontSize: 12,
-                  fontWeight: 700,
+                  fontWeight: 800,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  textTransform: label === course?.access?.replaceAll("_", " ") ? "capitalize" : undefined,
                 }}
               >
-                🏌️ {course.holes} holes
+                {label}
               </span>
-            ) : null}
-
-            {course?.par ? (
-              <span
-                style={{
-                  padding: "4px 10px",
-                  borderRadius: 999,
-                  background: "var(--muted)",
-                  border: "1px solid var(--border)",
-                  fontSize: 12,
-                  fontWeight: 700,
-                }}
-              >
-                Par {course.par}
-              </span>
-            ) : null}
-
-            {course?.access ? (
-              <span
-                style={{
-                  padding: "4px 10px",
-                  borderRadius: 999,
-                  background: "var(--muted)",
-                  border: "1px solid var(--border)",
-                  fontSize: 12,
-                  fontWeight: 700,
-                }}
-              >
-                {course.access}
-              </span>
-            ) : null}
+            ))}
           </div>
-        )}
+        ) : null}
 
-        {normalizeWebsite(course?.website) && (
-          <div style={{ marginTop: 10 }}>
-            <a
-              href={normalizeWebsite(course?.website)!}
-              target="_blank"
-              rel="noreferrer"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                fontSize: 13,
-                fontWeight: 700,
-                color: "var(--green)",
-                textDecoration: "none",
-                wordBreak: "break-word",
-              }}
-            >
-              🌐 Visit website ↗
-            </a>
-          </div>
-        )}
-
-        {/* Guest sign-in banner */}
-        {!token && (
-          <div
-            style={{
-              marginTop: 12,
-              padding: "12px 14px",
-              borderRadius: 14,
-              border: "1px solid rgba(0,0,0,0.10)",
-              background: "rgba(0,0,0,0.4)",
-              display: "flex",
-              flexDirection: "column",
-              gap: 8,
-              width: "100%",
-              boxSizing: "border-box",
-            }}
-          >
-            <div style={{ fontSize: 14, fontWeight: 800 }}>
-              🔒 Sign in to unlock full experience
-            </div>
-
-            <div
-              style={{
-                fontSize: 13,
-                color: "var(--sub)",
-                lineHeight: 1.5,
-              }}
-            >
-              Follow this course, post updates and join the conversation.
-            </div>
-
-            <button
-              onClick={() => nav("/")}
-              style={{
-                padding: "8px 14px",
-                borderRadius: 999,
-                border: "1px solid var(--border)",
-                background: "var(--card)",
-                color: "var(--text)",
-                fontWeight: 800,
-                cursor: "pointer",
-                width: "fit-content",
-              }}
-            >
-              Sign in
-            </button>
-          </div>
-        )}
-
-        {/* Actions */}
         <div
           style={{
             display: "flex",
-            gap: 10,
-            marginTop: 12,
+            gap: 8,
             flexWrap: "wrap",
+            marginTop: 2,
           }}
         >
           <button
@@ -761,19 +697,70 @@ export default function CoursePage() {
             }}
             disabled={followBusy}
             style={{
-              padding: "10px 14px",
-              borderRadius: 999,
-              border: "1px solid var(--border)",
-              background: following ? "rgba(0,0,0,0.06)" : "var(--card)",
-              color: "var(--text)",
-              fontWeight: 800,
+              minHeight: 40,
+              padding: "0 14px",
+              borderRadius: 16,
+              border: following
+                ? "1px solid var(--green)"
+                : "1px solid var(--border)",
+              background: following
+                ? "var(--green)"
+                : "var(--muted)",
+              color: following ? "white" : "var(--text)",
+              fontWeight: 850,
+              fontSize: 13,
               cursor: followBusy ? "default" : "pointer",
-              opacity: followBusy ? 0.7 : 1,
-              boxShadow: "none",
+              opacity: followBusy ? 0.72 : 1,
             }}
           >
-            {followBusy ? "Saving..." : following ? "✓ Following" : "+ Follow"}
+            {followBusy ? "Saving..." : following ? "Following" : "Follow"}
           </button>
+
+          {websiteUrl ? (
+            <a
+              href={websiteUrl}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                minHeight: 40,
+                padding: "0 14px",
+                borderRadius: 16,
+                border: "1px solid var(--border)",
+                background: "var(--muted)",
+                color: "var(--text)",
+                fontWeight: 850,
+                fontSize: 13,
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+              }}
+            >
+              Website
+            </a>
+          ) : null}
+
+          {directionsUrl ? (
+            <a
+              href={directionsUrl}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                minHeight: 40,
+                padding: "0 14px",
+                borderRadius: 16,
+                border: "1px solid var(--green)",
+                background: "var(--green)",
+                color: "white",
+                fontWeight: 900,
+                fontSize: 13,
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+              }}
+            >
+              Directions
+            </a>
+          ) : null}
 
           <button
             type="button"
@@ -791,11 +778,66 @@ export default function CoursePage() {
                 },
               });
             }}
-            style={secondaryBtnStyle}
+            style={{
+              minHeight: 40,
+              padding: "0 14px",
+              borderRadius: 16,
+              border: "1px solid var(--border)",
+              background: "color-mix(in srgb, var(--card) 72%, transparent)",
+              color: "var(--text)",
+              fontWeight: 850,
+              fontSize: 13,
+              cursor: "pointer",
+            }}
           >
             Post here
           </button>
         </div>
+
+        {!token ? (
+          <div
+            style={{
+              padding: "12px 14px",
+              borderRadius: 18,
+              border: "1px solid var(--border)",
+              background: "var(--muted)",
+              display: "grid",
+              gap: 8,
+              boxSizing: "border-box",
+            }}
+          >
+            <div style={{ fontSize: 14, fontWeight: 900, color: "var(--text)" }}>
+              Sign in to unlock the full course experience
+            </div>
+
+            <div
+              style={{
+                fontSize: 13,
+                color: "var(--sub)",
+                lineHeight: 1.45,
+              }}
+            >
+              Follow this course, post updates and join the conversation.
+            </div>
+
+            <button
+              onClick={() => nav("/")}
+              style={{
+                minHeight: 38,
+                padding: "0 14px",
+                borderRadius: 999,
+                border: "1px solid var(--border)",
+                background: "var(--card)",
+                color: "var(--text)",
+                fontWeight: 850,
+                cursor: "pointer",
+                width: "fit-content",
+              }}
+            >
+              Sign in
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <section ref={ratingSectionRef}>
