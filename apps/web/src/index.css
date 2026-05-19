@@ -357,6 +357,22 @@ body.is-pwa-standalone {
   background: transparent;
   color: var(--danger);
 }
+
+.fw-course-popup .leaflet-popup-content-wrapper {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  padding: 0 !important;
+}
+
+.fw-course-popup .leaflet-popup-content {
+  margin: 0 !important;
+}
+
+.fw-course-popup .leaflet-popup-tip {
+  background: var(--card) !important;
+  box-shadow: none !important;
+}
 /* ============ APP SHELL LAYOUT ============ */
 
 .fw-shell {
@@ -491,8 +507,7 @@ body.is-pwa-standalone {
 @media (max-width: 980px) {
   textarea,
   select,
-  input,
-  button {
+  input {
     border-radius: 0 !important;
   }
 

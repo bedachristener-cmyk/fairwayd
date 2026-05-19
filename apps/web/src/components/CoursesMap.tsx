@@ -245,7 +245,13 @@ function LoggedInBadge({ isLoggedIn }: { isLoggedIn: boolean }) {
   );
 }
 
-function CourseFollowButton({ courseId }: { courseId: string }) {
+function CourseFollowButton({
+  courseId,
+  fullWidth = false,
+}: {
+  courseId: string;
+  fullWidth?: boolean;
+}) {
   const { token, isFollowing, followBusy, toggleFollow } =
     useCourseFollow(courseId);
 
@@ -264,18 +270,28 @@ function CourseFollowButton({ courseId }: { courseId: string }) {
       disabled={followBusy || !token}
       title={!token ? "Please login" : "Follow course"}
       style={{
-        fontSize: 12,
-        padding: "8px 12px",
-        borderRadius: 999,
-        border: "1px solid var(--border)",
-        background: isFollowing ? "rgba(31,138,59,0.12)" : "var(--muted)",
+        width: fullWidth ? "100%" : undefined,
+        minHeight: fullWidth ? 40 : undefined,
+        fontSize: 13,
+        padding: fullWidth ? "0 13px" : "8px 12px",
+        borderRadius: fullWidth ? 18 : 999,
+        border: isFollowing
+          ? "1px solid var(--green)"
+          : "1px solid var(--border)",
+        background: isFollowing
+          ? "color-mix(in srgb, var(--green) 16%, var(--muted))"
+          : "var(--muted)",
         color: "var(--text)",
-        fontWeight: 800,
+        fontWeight: 850,
         cursor: !token ? "not-allowed" : followBusy ? "default" : "pointer",
-        opacity: !token ? 0.6 : 1,
+        opacity: !token ? 0.72 : 1,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        boxSizing: "border-box",
       }}
     >
-      {followBusy ? "..." : isFollowing ? "✓ Following" : "+ Follow"}
+      {followBusy ? "..." : isFollowing ? "Following" : "Follow"}
     </button>
   );
 }
@@ -645,14 +661,16 @@ export default function CoursesMap() {
           top: isMobile ? 72 : 76,
           left: isMobile ? 52 : 12,
           zIndex: 1000,
-          display: "flex",
-          gap: isMobile ? 3 : 6,
-          background: "rgba(255,255,255,0.94)",
-          padding: isMobile ? 3 : 6,
+          display: "inline-flex",
+          gap: 4,
+          padding: 4,
           borderRadius: 999,
-          boxShadow: "0 2px 12px rgba(0,0,0,.15)",
-          border: "1px solid rgba(0,0,0,0.08)",
-          backdropFilter: "blur(6px)",
+          background: "var(--card)",
+          border: "1px solid var(--border)",
+          boxShadow: "0 8px 22px rgba(0,0,0,.16)",
+          backdropFilter: "blur(12px)",
+          overflow: "hidden",
+          boxSizing: "border-box",
         }}
       >
         <button
@@ -661,19 +679,23 @@ export default function CoursesMap() {
           aria-pressed={mapStyle === "map"}
           title="Standard map"
           style={{
-            border:
-              mapStyle === "map"
-                ? "1px solid #1f8a3b"
-                : "1px solid transparent",
+            border: 0,
+            outline: 0,
             borderRadius: 999,
-            padding: isMobile ? "5px 8px" : "8px 12px",
+            height: isMobile ? 30 : 32,
+            padding: isMobile ? "0 14px" : "0 18px",
+            minWidth: isMobile ? 58 : 70,
+            background: mapStyle === "map" ? "var(--green)" : "transparent",
+            color: mapStyle === "map" ? "white" : "var(--text)",
+            fontWeight: 850,
+            fontSize: isMobile ? 12 : 13,
+            boxShadow:
+              mapStyle === "map"
+                ? "inset 0 -1px 0 rgba(0,0,0,.16)"
+                : "none",
             cursor: "pointer",
-            fontWeight: 700,
-            fontSize: isMobile ? 12 : 14,
-            background: mapStyle === "map" ? "#1f8a3b" : "transparent",
-            color: mapStyle === "map" ? "white" : "#111",
-            minWidth: isMobile ? 50 : 72,
-            transition: "all 0.15s ease",
+            transition:
+              "background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease, opacity 0.15s ease",
           }}
         >
           Map
@@ -685,19 +707,24 @@ export default function CoursesMap() {
           aria-pressed={mapStyle === "satellite"}
           title="Satellite hybrid"
           style={{
-            border:
-              mapStyle === "satellite"
-                ? "1px solid #1f8a3b"
-                : "1px solid transparent",
+            border: 0,
+            outline: 0,
             borderRadius: 999,
-            padding: isMobile ? "6px 10px" : "8px 12px",
+            height: isMobile ? 30 : 32,
+            padding: isMobile ? "0 14px" : "0 18px",
+            minWidth: isMobile ? 82 : 94,
+            background:
+              mapStyle === "satellite" ? "var(--green)" : "transparent",
+            color: mapStyle === "satellite" ? "white" : "var(--text)",
+            fontWeight: 850,
+            fontSize: isMobile ? 12 : 13,
+            boxShadow:
+              mapStyle === "satellite"
+                ? "inset 0 -1px 0 rgba(0,0,0,.16)"
+                : "none",
             cursor: "pointer",
-            fontWeight: 700,
-            fontSize: isMobile ? 13 : 14,
-            background: mapStyle === "satellite" ? "#1f8a3b" : "transparent",
-            color: mapStyle === "satellite" ? "white" : "#111",
-            minWidth: isMobile ? 78 : 92,
-            transition: "all 0.15s ease",
+            transition:
+              "background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease, opacity 0.15s ease",
           }}
         >
           Satellite
@@ -763,9 +790,14 @@ export default function CoursesMap() {
               .filter(Boolean)
               .join(", ");
             const websiteUrl = normalizeWebsite(c.website);
+            const golfMeta = [c.holes ? `${c.holes} holes` : null, c.par ? `Par ${c.par}` : null]
+              .filter(Boolean)
+              .join(" / ");
+            const accessLabel = c.access?.replaceAll("_", " ");
 
             return (
               <Popup
+                className="fw-course-popup"
                 position={[lat, lon]}
                 offset={[0, -10]}
                 autoPan={true}
@@ -777,29 +809,36 @@ export default function CoursesMap() {
               >
                 <div
                   style={{
-                    width: 256,
+                    width: 272,
+                    maxWidth: "calc(100vw - 48px)",
+                    boxSizing: "border-box",
                     display: "flex",
                     flexDirection: "column",
-                    gap: 10,
-                    padding: 4,
+                    gap: 12,
+                    padding: 12,
+                    borderRadius: 22,
+                    border: "1px solid var(--border)",
+                    background: "var(--card)",
+                    color: "var(--text)",
+                    boxShadow: "0 18px 40px rgba(0,0,0,0.28)",
                   }}
                 >
-                  <div>
+                  <div style={{ display: "grid", gap: 5 }}>
                     <div
                       style={{
-                        fontSize: 16,
-                        fontWeight: 800,
-                        lineHeight: 1.2,
+                        fontSize: 17,
+                        fontWeight: 900,
+                        lineHeight: 1.15,
                         color: "var(--text)",
+                        letterSpacing: "-0.01em",
                       }}
                     >
                       {c.name}
                     </div>
 
-                    {locationLine && (
+                    {locationLine ? (
                       <div
                         style={{
-                          marginTop: 4,
                           fontSize: 12,
                           lineHeight: 1.35,
                           color: "var(--sub)",
@@ -807,97 +846,72 @@ export default function CoursesMap() {
                       >
                         {locationLine}
                       </div>
-                    )}
+                    ) : null}
                   </div>
 
-                  {(c.holes || c.par) && (
+                  {(golfMeta || accessLabel) && (
                     <div
                       style={{
                         display: "flex",
-                        flexWrap: "wrap",
-                        gap: 6,
+                        alignItems: "center",
+                        gap: 7,
+                        flexWrap: "nowrap",
+                        overflow: "hidden",
                       }}
                     >
-                      {c.holes ? (
+                      {golfMeta ? (
                         <span
                           style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            minHeight: 24,
+                            minWidth: 0,
+                            minHeight: 28,
                             padding: "0 9px",
                             borderRadius: 999,
                             border: "1px solid var(--border)",
-                            background: "var(--card)",
+                            background: "var(--muted)",
                             color: "var(--text)",
-                            fontSize: 11,
-                            fontWeight: 700,
+                            fontSize: 12,
+                            fontWeight: 800,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
                           }}
                         >
-                          {c.holes} holes
+                          {golfMeta}
                         </span>
                       ) : null}
 
-                      {c.par ? (
+                      {accessLabel ? (
                         <span
                           style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            minHeight: 24,
+                            minWidth: 0,
+                            minHeight: 28,
                             padding: "0 9px",
                             borderRadius: 999,
                             border: "1px solid var(--border)",
-                            background: "var(--card)",
+                            background: "var(--muted)",
                             color: "var(--text)",
-                            fontSize: 11,
-                            fontWeight: 700,
+                            fontSize: 12,
+                            fontWeight: 800,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            textTransform: "capitalize",
                           }}
                         >
-                          Par {c.par}
+                          {accessLabel}
                         </span>
                       ) : null}
-                    </div>
-                  )}
-
-                  {c.access && (
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 8,
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 800,
-                          padding: "5px 8px",
-                          borderRadius: 999,
-                          background:
-                            c.access === "PRIVATE"
-                              ? "rgba(220,60,60,.15)"
-                              : c.access === "RESORT"
-                                ? "rgba(255,180,0,.15)"
-                                : "rgba(40,160,80,.15)",
-                          color:
-                            c.access === "PRIVATE"
-                              ? "#ff6b6b"
-                              : c.access === "RESORT"
-                                ? "#ffcc66"
-                                : "#7ee787",
-                          border: "1px solid var(--border)",
-                          textTransform: "capitalize",
-                        }}
-                      >
-                        {c.access.replaceAll("_", " ")}
-                      </span>
                     </div>
                   )}
 
                   <div
                     style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 7,
+                      display: "grid",
+                      gap: 8,
                     }}
                   >
                     <button
@@ -916,20 +930,26 @@ export default function CoursesMap() {
                         nav(`/courses/${c.id}`);
                       }}
                       style={{
-                        border: "1px solid var(--border)",
-                        background: "var(--card)",
-                        color: "var(--text)",
-                        borderRadius: 10,
-                        padding: "8px 12px",
-                        fontSize: 12,
-                        fontWeight: 700,
+                        width: "100%",
+                        minHeight: 40,
+                        border: "1px solid var(--green)",
+                        background: "var(--green)",
+                        color: "var(--bg)",
+                        borderRadius: 18,
+                        padding: "0 13px",
+                        fontSize: 13,
+                        fontWeight: 900,
                         cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxSizing: "border-box",
                       }}
                     >
                       Open Course
                     </button>
 
-                    <CourseFollowButton courseId={c.id} />
+                    <CourseFollowButton courseId={c.id} fullWidth />
 
                     <a
                       href={`https://www.google.com/maps/search/?api=1&query=${lat},${lon}`}
@@ -938,16 +958,20 @@ export default function CoursesMap() {
                       onMouseDown={stopBtn}
                       onClick={(e) => e.stopPropagation()}
                       style={{
+                        width: "100%",
+                        minHeight: 40,
                         border: "1px solid var(--border)",
-                        background: "var(--card)",
+                        background: "var(--muted)",
                         color: "var(--text)",
-                        borderRadius: 10,
-                        padding: "8px 12px",
-                        fontSize: 12,
-                        fontWeight: 700,
+                        borderRadius: 18,
+                        padding: "0 13px",
+                        fontSize: 13,
+                        fontWeight: 850,
                         textDecoration: "none",
                         display: "inline-flex",
                         alignItems: "center",
+                        justifyContent: "center",
+                        boxSizing: "border-box",
                       }}
                     >
                       Check on Google
@@ -960,16 +984,20 @@ export default function CoursesMap() {
                       onMouseDown={stopBtn}
                       onClick={(e) => e.stopPropagation()}
                       style={{
+                        width: "100%",
+                        minHeight: 40,
                         border: "1px solid var(--green)",
-                        background: "rgba(31,138,59,0.12)",
+                        background: "color-mix(in srgb, var(--green) 18%, var(--card))",
                         color: "var(--text)",
-                        borderRadius: 10,
-                        padding: "8px 12px",
-                        fontSize: 12,
-                        fontWeight: 700,
+                        borderRadius: 18,
+                        padding: "0 13px",
+                        fontSize: 13,
+                        fontWeight: 900,
                         textDecoration: "none",
                         display: "inline-flex",
                         alignItems: "center",
+                        justifyContent: "center",
+                        boxSizing: "border-box",
                       }}
                     >
                       Bring me there
@@ -986,8 +1014,9 @@ export default function CoursesMap() {
                       style={{
                         color: "var(--green)",
                         fontSize: 12,
-                        fontWeight: 700,
+                        fontWeight: 800,
                         lineHeight: 1.35,
+                        textAlign: "center",
                         textDecoration: "none",
                       }}
                     >
