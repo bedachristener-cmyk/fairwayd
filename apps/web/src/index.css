@@ -36,6 +36,17 @@ html[data-theme="dark"] {
     linear-gradient(180deg, #07100f 0%, #091513 48%, #07100f 100%);
   --fw-page-shell-bg: rgba(10, 18, 17, 0.72);
   --fw-page-shell-border: rgba(150, 217, 168, 0.1);
+  --fw-destination-hero-bg: #111918;
+  --fw-destination-hero-border: rgba(255, 255, 255, 0.14);
+  --fw-destination-hero-overlay:
+    linear-gradient(to top, rgba(0, 0, 0, 0.76), rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.22));
+  --fw-destination-hero-title: #ffffff;
+  --fw-destination-hero-copy: rgba(255, 255, 255, 0.86);
+  --fw-destination-hero-subtle: rgba(255, 255, 255, 0.72);
+  --fw-destination-hero-pill-bg: rgba(0, 0, 0, 0.34);
+  --fw-destination-hero-pill-bg-hover: rgba(0, 0, 0, 0.48);
+  --fw-destination-hero-pill-border: rgba(255, 255, 255, 0.24);
+  --fw-destination-hero-pill-text: #ffffff;
   --bottom-tabs-bg: rgba(7, 16, 15, 0.84);
   --bottom-tab-active: var(--accent-strong);
   --bottom-tab-inactive: rgba(244, 245, 239, 0.66);
@@ -78,6 +89,19 @@ html[data-theme="light"] {
     linear-gradient(180deg, #ffffff 0%, #f7faf8 58%, #f3f8f6 100%);
   --fw-page-shell-bg: rgba(255, 255, 255, 0.72);
   --fw-page-shell-border: rgba(76, 152, 99, 0.12);
+  --fw-destination-hero-bg:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(237, 246, 242, 0.88));
+  --fw-destination-hero-border: rgba(76, 152, 99, 0.16);
+  --fw-destination-hero-overlay:
+    linear-gradient(to top, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.66), rgba(255, 255, 255, 0.38)),
+    linear-gradient(135deg, rgba(76, 152, 99, 0.12), rgba(111, 183, 197, 0.1));
+  --fw-destination-hero-title: var(--text);
+  --fw-destination-hero-copy: rgba(23, 37, 31, 0.82);
+  --fw-destination-hero-subtle: rgba(23, 37, 31, 0.58);
+  --fw-destination-hero-pill-bg: rgba(255, 255, 255, 0.72);
+  --fw-destination-hero-pill-bg-hover: rgba(255, 255, 255, 0.9);
+  --fw-destination-hero-pill-border: rgba(76, 152, 99, 0.2);
+  --fw-destination-hero-pill-text: var(--text);
   --bottom-tabs-bg: rgba(255, 255, 255, 0.86);
   --bottom-tab-active: var(--accent-strong);
   --bottom-tab-inactive: #728078;

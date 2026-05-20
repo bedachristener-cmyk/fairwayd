@@ -288,13 +288,7 @@ export default function ImageLightbox({
             <button
               type="button"
               onPointerDown={stopControlEvent}
-              onMouseDown={stopControlEvent}
-              onTouchStart={stopControlEvent}
-              onTouchEnd={(event) => {
-                stopControlEvent(event);
-                showPreviousImage();
-              }}
-              onClick={(event) => {
+              onPointerUp={(event) => {
                 stopControlEvent(event);
                 showPreviousImage();
               }}
@@ -325,13 +319,7 @@ export default function ImageLightbox({
             <button
               type="button"
               onPointerDown={stopControlEvent}
-              onMouseDown={stopControlEvent}
-              onTouchStart={stopControlEvent}
-              onTouchEnd={(event) => {
-                stopControlEvent(event);
-                showNextImage();
-              }}
-              onClick={(event) => {
+              onPointerUp={(event) => {
                 stopControlEvent(event);
                 showNextImage();
               }}

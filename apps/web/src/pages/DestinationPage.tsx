@@ -101,6 +101,8 @@ export default function DestinationPage() {
   const { token, logout, user } = useAuth();
   const isMobile = window.innerWidth <= 980;
   const overviewExperienceRef = useRef<HTMLDivElement | null>(null);
+  const galleryTouchStartXRef = useRef<number | null>(null);
+  const galleryTouchStartYRef = useRef<number | null>(null);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -117,6 +119,7 @@ export default function DestinationPage() {
   const [galleryImageIndex, setGalleryImageIndex] = useState<number | null>(
     null,
   );
+  const [galleryCarouselIndex, setGalleryCarouselIndex] = useState(0);
   const [activeTab, setActiveTab] = useState<"overview" | "courses" | "posts">(
     "overview",
   );
@@ -133,6 +136,58 @@ export default function DestinationPage() {
   const info = slug ? DESTINATION_INFO[slug] : undefined;
   const heroImage = info?.heroImage;
   const galleryImages = info?.galleryImages ?? [];
+  const hasMultipleGalleryImages = galleryImages.length > 1;
+
+  useEffect(() => {
+    setGalleryCarouselIndex(0);
+  }, [slug, galleryImages.length]);
+
+  const showPreviousGalleryImage = () => {
+    if (!hasMultipleGalleryImages) return;
+    setGalleryCarouselIndex((index) =>
+      index === 0 ? galleryImages.length - 1 : index - 1,
+    );
+  };
+
+  const showNextGalleryImage = () => {
+    if (!hasMultipleGalleryImages) return;
+    setGalleryCarouselIndex((index) =>
+      index === galleryImages.length - 1 ? 0 : index + 1,
+    );
+  };
+
+  const handleGalleryTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (event.touches.length !== 1) return;
+
+    const touch = event.touches[0];
+    galleryTouchStartXRef.current = touch.clientX;
+    galleryTouchStartYRef.current = touch.clientY;
+  };
+
+  const handleGalleryTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    const startX = galleryTouchStartXRef.current;
+    const startY = galleryTouchStartYRef.current;
+    galleryTouchStartXRef.current = null;
+    galleryTouchStartYRef.current = null;
+
+    const touch = event.changedTouches[0];
+    if (!hasMultipleGalleryImages || startX === null || startY === null || !touch) {
+      return;
+    }
+
+    const deltaX = touch.clientX - startX;
+    const deltaY = touch.clientY - startY;
+
+    if (Math.abs(deltaX) < 35 || Math.abs(deltaX) <= Math.abs(deltaY) * 1.2) {
+      return;
+    }
+
+    if (deltaX < 0) {
+      showNextGalleryImage();
+    } else {
+      showPreviousGalleryImage();
+    }
+  };
 
   const isOwnPost = (p: DestinationPost) => {
     return user?.id && p.user?.id === user.id;
@@ -481,24 +536,25 @@ export default function DestinationPage() {
         style={{
           display: "flex",
           justifyContent: "center",
-          marginBottom: 18,
+          marginBottom: 16,
           position: "sticky",
-          top: 10,
+          top: 8,
           zIndex: 5,
         }}
       >
         <div
           style={{
             display: "flex",
-            gap: 8,
-            padding: 4,
+            gap: 4,
+            padding: 5,
             borderRadius: 999,
-            background: "color-mix(in srgb, var(--card) 84%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
-            boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
-            backdropFilter: "blur(12px)",
+            background: "color-mix(in srgb, var(--card) 88%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+            boxShadow: "0 10px 26px rgba(0,0,0,0.10)",
+            backdropFilter: "blur(16px)",
             maxWidth: "100%",
             overflowX: "auto",
+            boxSizing: "border-box",
           }}
         >
           {[
@@ -516,17 +572,22 @@ export default function DestinationPage() {
                   setActiveTab(tab.key as "overview" | "courses" | "posts")
                 }
                 style={{
-                  border: isActive ? "none" : "1px solid transparent",
-                  background: isActive ? "var(--accent)" : "transparent",
-                  color: isActive ? "#f8fbf6" : "var(--sub)",
-                  fontWeight: isActive ? 800 : 700,
+                  border: "0",
+                  background: isActive
+                    ? "color-mix(in srgb, var(--green) 18%, var(--card))"
+                    : "transparent",
+                  color: isActive ? "var(--text)" : "var(--sub)",
+                  fontWeight: isActive ? 850 : 750,
                   fontSize: 13,
-                  padding: "9px 16px",
+                  padding: "9px 15px",
                   borderRadius: 999,
                   cursor: "pointer",
                   whiteSpace: "nowrap",
                   transition: "all 0.15s ease",
                   opacity: isActive ? 1 : 0.95,
+                  boxShadow: isActive
+                    ? "inset 0 0 0 1px color-mix(in srgb, var(--green) 32%, transparent)"
+                    : "none",
                 }}
               >
                 {tab.label}
@@ -573,9 +634,10 @@ export default function DestinationPage() {
               minHeight: isMobile ? 300 : 380,
               padding: isMobile ? "18px 18px 46px" : "30px 30px 38px",
               borderRadius: 24,
-              border: "1px solid rgba(255,255,255,0.14)",
-              background: "#111",
+              border: "1px solid var(--fw-destination-hero-border, rgba(255,255,255,0.14))",
+              background: "var(--fw-destination-hero-bg, #111)",
               boxSizing: "border-box",
+              boxShadow: "0 18px 44px rgba(0,0,0,0.12)",
             }}
           >
             {heroImage ? (
@@ -598,7 +660,7 @@ export default function DestinationPage() {
                     position: "absolute",
                     inset: 0,
                     background:
-                      "linear-gradient(to top, rgba(0,0,0,0.75), rgba(0,0,0,0.4), rgba(0,0,0,0.2))",
+                      "var(--fw-destination-hero-overlay, linear-gradient(to top, rgba(0,0,0,0.75), rgba(0,0,0,0.4), rgba(0,0,0,0.2)))",
                     pointerEvents: "none",
                   }}
                 />
@@ -657,7 +719,7 @@ export default function DestinationPage() {
                       fontSize: 11,
                       fontWeight: 700,
                       letterSpacing: 0.6,
-                      color: "rgba(255,255,255,0.76)",
+                      color: "var(--fw-destination-hero-subtle, rgba(255,255,255,0.76))",
                       textTransform: "uppercase",
                     }}
                   >
@@ -669,7 +731,7 @@ export default function DestinationPage() {
                       fontSize: isMobile ? 36 : 52,
                       fontWeight: 900,
                       lineHeight: 1.05,
-                      color: "#fff",
+                      color: "var(--fw-destination-hero-title, #fff)",
                     }}
                   >
                     {data.destination?.name || getCountryName(data.country)}
@@ -688,7 +750,7 @@ export default function DestinationPage() {
                   style={{
                     fontSize: isMobile ? 15 : 17,
                     lineHeight: 1.65,
-                    color: "rgba(255,255,255,0.86)",
+                    color: "var(--fw-destination-hero-copy, rgba(255,255,255,0.86))",
                     maxWidth: 760,
                   }}
                 >
@@ -720,18 +782,20 @@ export default function DestinationPage() {
                   style={{
                     padding: "9px 13px",
                     borderRadius: 999,
-                    border: "1px solid rgba(255,255,255,0.24)",
-                    background: "rgba(0,0,0,0.34)",
-                    color: "#fff",
+                    border: "1px solid var(--fw-destination-hero-pill-border, rgba(255,255,255,0.24))",
+                    background: "var(--fw-destination-hero-pill-bg, rgba(0,0,0,0.34))",
+                    color: "var(--fw-destination-hero-pill-text, #fff)",
                     fontSize: 13,
                     fontWeight: 700,
                     cursor: "pointer",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "rgba(0,0,0,0.48)";
+                    e.currentTarget.style.background =
+                      "var(--fw-destination-hero-pill-bg-hover, rgba(0,0,0,0.48))";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "rgba(0,0,0,0.34)";
+                    e.currentTarget.style.background =
+                      "var(--fw-destination-hero-pill-bg, rgba(0,0,0,0.34))";
                   }}
                 >
                   ⛳ {data.courseCount} {t("course_plural")}
@@ -742,9 +806,9 @@ export default function DestinationPage() {
                   style={{
                     padding: "9px 13px",
                     borderRadius: 999,
-                    border: "1px solid rgba(255,255,255,0.24)",
-                    background: "rgba(0,0,0,0.34)",
-                    color: "#fff",
+                    border: "1px solid var(--fw-destination-hero-pill-border, rgba(255,255,255,0.24))",
+                    background: "var(--fw-destination-hero-pill-bg, rgba(0,0,0,0.34))",
+                    color: "var(--fw-destination-hero-pill-text, #fff)",
                     fontSize: 13,
                     fontWeight: 700,
                   }}
@@ -762,9 +826,9 @@ export default function DestinationPage() {
                     gap: 8,
                     padding: "9px 13px",
                     borderRadius: 999,
-                    border: "1px solid rgba(255,255,255,0.24)",
-                    background: "rgba(0,0,0,0.34)",
-                    color: "#fff",
+                    border: "1px solid var(--fw-destination-hero-pill-border, rgba(255,255,255,0.24))",
+                    background: "var(--fw-destination-hero-pill-bg, rgba(0,0,0,0.34))",
+                    color: "var(--fw-destination-hero-pill-text, #fff)",
                     fontSize: 13,
                     fontWeight: 700,
                   }}
@@ -821,8 +885,8 @@ export default function DestinationPage() {
                   bottom: 7,
                   right: 10,
                   fontSize: 10,
-                  color: "rgba(255,255,255,0.48)",
-                  background: "rgba(0,0,0,0.24)",
+                  color: "var(--fw-destination-hero-subtle, rgba(255,255,255,0.48))",
+                  background: "var(--fw-destination-hero-pill-bg, rgba(0,0,0,0.24))",
                   padding: "3px 6px",
                   borderRadius: 6,
                   backdropFilter: "blur(4px)",
@@ -849,18 +913,20 @@ export default function DestinationPage() {
               style={{
                 padding: "9px 13px",
                 borderRadius: 999,
-                border: "1px solid rgba(255,255,255,0.24)",
-                background: "rgba(0,0,0,0.34)",
-                color: "#fff",
+                border: "1px solid var(--fw-destination-hero-pill-border, rgba(255,255,255,0.24))",
+                background: "var(--fw-destination-hero-pill-bg, rgba(0,0,0,0.34))",
+                color: "var(--fw-destination-hero-pill-text, #fff)",
                 fontSize: 13,
                 fontWeight: 700,
                 cursor: "pointer",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = "rgba(0,0,0,0.48)";
+                e.currentTarget.style.background =
+                  "var(--fw-destination-hero-pill-bg-hover, rgba(0,0,0,0.48))";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = "rgba(0,0,0,0.34)";
+                e.currentTarget.style.background =
+                  "var(--fw-destination-hero-pill-bg, rgba(0,0,0,0.34))";
               }}
             >
               🏌️ {t("explore_experience")}
@@ -883,108 +949,303 @@ export default function DestinationPage() {
                 overflow: "hidden",
               }}
             >
-              <div style={{ display: "grid", gap: 4 }}>
-                <div
-                  style={{
-                    fontSize: isMobile ? 19 : 21,
-                    fontWeight: 850,
-                    color: "var(--text)",
-                  }}
-                >
-                  {info?.galleryTitle ?? "Destination Gallery"}
-                </div>
-                <div
-                  style={{
-                    fontSize: 13,
-                    color: "var(--sub)",
-                    lineHeight: 1.45,
-                  }}
-                >
-                  {info?.gallerySubtitle ??
-                    `A quick visual preview of ${
-                      data.destination?.name || getCountryName(data.country)
-                    }.`}
-                </div>
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: "var(--sub)",
-                    lineHeight: 1.35,
-                    opacity: 0.78,
-                  }}
-                >
-                  Some destination images may be AI-generated.
-                </div>
-              </div>
-
               <div
                 style={{
-                  display: isMobile ? "flex" : "grid",
-                  gridTemplateColumns: isMobile
-                    ? undefined
-                    : "repeat(3, minmax(0, 1fr))",
-                  gap: 10,
-                  overflowX: isMobile ? "auto" : "hidden",
-                  overflowY: "hidden",
-                  maxWidth: "100%",
-                  width: "100%",
-                  boxSizing: "border-box",
-                  paddingBottom: isMobile ? 2 : 0,
-                  WebkitOverflowScrolling: "touch",
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                  gap: 12,
                 }}
               >
-                {galleryImages.map((image, index) => (
-                  <button
-                    key={image.src}
-                    type="button"
-                    onClick={() => setGalleryImageIndex(index)}
+                <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
+                  <div
                     style={{
-                      border: "1px solid var(--border)",
-                      background: "var(--bg)",
+                      fontSize: isMobile ? 19 : 21,
+                      fontWeight: 850,
                       color: "var(--text)",
-                      borderRadius: 16,
-                      padding: 0,
-                      minWidth: isMobile ? 245 : 0,
-                      maxWidth: "100%",
-                      width: isMobile ? 245 : "100%",
-                      boxSizing: "border-box",
-                      overflow: "hidden",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      flex: isMobile ? "0 0 auto" : undefined,
                     }}
                   >
-                    <img
-                      src={image.src}
-                      alt={image.alt}
-                      loading="lazy"
+                    {info?.galleryTitle ?? "Destination Gallery"}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: "var(--sub)",
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    {info?.gallerySubtitle ??
+                      `A quick visual preview of ${
+                        data.destination?.name || getCountryName(data.country)
+                      }.`}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: "var(--sub)",
+                      lineHeight: 1.35,
+                      opacity: 0.78,
+                    }}
+                  >
+                    Some destination images may be AI-generated.
+                  </div>
+                </div>
+
+                {hasMultipleGalleryImages && !isMobile ? (
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={showPreviousGalleryImage}
+                      aria-label="Previous destination image"
                       style={{
-                        display: "block",
-                        width: "100%",
-                        height: isMobile ? 150 : 190,
-                        objectFit: "cover",
-                        background: "var(--card)",
+                        width: 34,
+                        height: 34,
+                        borderRadius: 999,
+                        border: "1px solid var(--border)",
+                        background: "var(--muted)",
+                        color: "var(--text)",
+                        cursor: "pointer",
+                        fontSize: 18,
+                        fontWeight: 900,
+                        lineHeight: 1,
                       }}
-                    />
-                    {image.caption ? (
-                      <div
+                    >
+                      {"<"}
+                    </button>
+                    <div
+                      style={{
+                        minWidth: 42,
+                        textAlign: "center",
+                        color: "var(--sub)",
+                        fontSize: 12,
+                        fontWeight: 800,
+                      }}
+                    >
+                      {galleryCarouselIndex + 1}/{galleryImages.length}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={showNextGalleryImage}
+                      aria-label="Next destination image"
+                      style={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: 999,
+                        border: "1px solid var(--border)",
+                        background: "var(--muted)",
+                        color: "var(--text)",
+                        cursor: "pointer",
+                        fontSize: 18,
+                        fontWeight: 900,
+                        lineHeight: 1,
+                      }}
+                    >
+                      {">"}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+
+              {isMobile ? (
+                <>
+                  {hasMultipleGalleryImages ? (
+                    <div
+                      style={{
+                        color: "var(--sub)",
+                        fontSize: 12,
+                        fontWeight: 750,
+                        lineHeight: 1.2,
+                        marginTop: -2,
+                      }}
+                    >
+                      Swipe to explore · {galleryCarouselIndex + 1}/
+                      {galleryImages.length}
+                    </div>
+                  ) : null}
+
+                  <div
+                    onTouchStart={handleGalleryTouchStart}
+                    onTouchEnd={handleGalleryTouchEnd}
+                    style={{
+                      display: "block",
+                      maxWidth: "100%",
+                      width: "100%",
+                      boxSizing: "border-box",
+                      overflow: "hidden",
+                      borderRadius: 16,
+                      touchAction: "pan-y",
+                    }}
+                  >
+                    {galleryImages[galleryCarouselIndex] ? (
+                      <button
+                        key={galleryImages[galleryCarouselIndex].src}
+                        type="button"
+                        onClick={() => setGalleryImageIndex(galleryCarouselIndex)}
                         style={{
-                          padding: "9px 10px",
-                          color: "var(--sub)",
-                          fontSize: 12,
-                          fontWeight: 750,
-                          lineHeight: 1.25,
+                          border: "1px solid var(--border)",
+                          background: "var(--bg)",
+                          color: "var(--text)",
+                          borderRadius: 16,
+                          padding: 0,
+                          minWidth: "100%",
+                          maxWidth: "100%",
+                          width: "100%",
+                          boxSizing: "border-box",
                           overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
+                          cursor: "pointer",
+                          textAlign: "left",
                         }}
                       >
-                        {image.caption}
-                      </div>
+                        <img
+                          src={galleryImages[galleryCarouselIndex].src}
+                          alt={galleryImages[galleryCarouselIndex].alt}
+                          loading="lazy"
+                          style={{
+                            display: "block",
+                            width: "100%",
+                            height: 190,
+                            objectFit: "cover",
+                            background: "var(--card)",
+                          }}
+                        />
+                        {galleryImages[galleryCarouselIndex].caption ? (
+                          <div
+                            style={{
+                              padding: "9px 10px",
+                              color: "var(--sub)",
+                              fontSize: 12,
+                              fontWeight: 750,
+                              lineHeight: 1.25,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {galleryImages[galleryCarouselIndex].caption}
+                          </div>
+                        ) : null}
+                      </button>
                     ) : null}
-                  </button>
-                ))}
-              </div>
+                  </div>
+
+                  {hasMultipleGalleryImages ? (
+                    <div
+                      aria-label="Destination gallery slides"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 7,
+                        paddingTop: 2,
+                      }}
+                    >
+                      {galleryImages.map((image, index) => {
+                        const isActive = index === galleryCarouselIndex;
+
+                        return (
+                          <button
+                            key={image.src}
+                            type="button"
+                            onClick={() => setGalleryCarouselIndex(index)}
+                            aria-label={`Show destination image ${index + 1}`}
+                            aria-current={isActive ? "true" : undefined}
+                            style={{
+                              width: isActive ? 22 : 7,
+                              height: 7,
+                              borderRadius: 999,
+                              border: "0",
+                              padding: 0,
+                              background: isActive
+                                ? "var(--green)"
+                                : "color-mix(in srgb, var(--sub) 38%, transparent)",
+                              cursor: "pointer",
+                              transition: "width 160ms ease, background 160ms ease",
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </>
+              ) : (
+                <div
+                  style={{
+                    maxWidth: "100%",
+                    width: "100%",
+                    boxSizing: "border-box",
+                    overflow: "hidden",
+                    borderRadius: 16,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      width: "100%",
+                      transform: `translateX(-${galleryCarouselIndex * 100}%)`,
+                      transition: "transform 220ms ease",
+                    }}
+                  >
+                    {galleryImages.map((image, index) => (
+                      <button
+                        key={image.src}
+                        type="button"
+                        onClick={() => setGalleryImageIndex(index)}
+                        style={{
+                          border: "1px solid var(--border)",
+                          background: "var(--bg)",
+                          color: "var(--text)",
+                          borderRadius: 16,
+                          padding: 0,
+                          minWidth: "100%",
+                          maxWidth: "100%",
+                          width: "100%",
+                          boxSizing: "border-box",
+                          overflow: "hidden",
+                          cursor: "pointer",
+                          textAlign: "left",
+                          flex: "0 0 100%",
+                        }}
+                      >
+                        <img
+                          src={image.src}
+                          alt={image.alt}
+                          loading="lazy"
+                          style={{
+                            display: "block",
+                            width: "100%",
+                            height: 300,
+                            objectFit: "cover",
+                            background: "var(--card)",
+                          }}
+                        />
+                        {image.caption ? (
+                          <div
+                            style={{
+                              padding: "9px 10px",
+                              color: "var(--sub)",
+                              fontSize: 12,
+                              fontWeight: 750,
+                              lineHeight: 1.25,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {image.caption}
+                          </div>
+                        ) : null}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : null}
 
@@ -996,18 +1257,21 @@ export default function DestinationPage() {
           {info?.bestTime ? (
             <div
               style={{
-                padding: isMobile ? 16 : 20,
-                borderRadius: 18,
-                border: "1px solid var(--border)",
-                background: "var(--card)",
+                padding: isMobile ? 18 : 22,
+                borderRadius: 24,
+                border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                background:
+                  "linear-gradient(145deg, color-mix(in srgb, var(--card) 96%, var(--bg) 4%), color-mix(in srgb, var(--card) 92%, var(--green) 3%))",
+                boxShadow: "0 14px 34px rgba(0,0,0,0.075)",
                 display: "grid",
-                gap: 10,
+                gap: 13,
               }}
             >
               <div
                 style={{
-                  fontSize: isMobile ? 20 : 22,
-                  fontWeight: 800,
+                  fontSize: isMobile ? 19 : 22,
+                  fontWeight: 850,
+                  letterSpacing: "-0.02em",
                   color: "var(--text)",
                 }}
               >
@@ -1033,12 +1297,14 @@ export default function DestinationPage() {
                     justifyContent: "space-between",
                     gap: 12,
                     fontSize: 13,
-                    borderTop: i === 0 ? "none" : "1px solid var(--border)",
-                    paddingTop: i === 0 ? 0 : 10,
+                    border: "1px solid color-mix(in srgb, var(--border) 66%, transparent)",
+                    background: "color-mix(in srgb, var(--muted) 52%, transparent)",
+                    borderRadius: 18,
+                    padding: "11px 12px",
                     flexWrap: "wrap",
                   }}
                 >
-                  <div style={{ fontWeight: 700, color: "var(--text)" }}>
+                  <div style={{ fontWeight: 850, color: "var(--text)" }}>
                     {item.label}
                   </div>
 
@@ -1059,18 +1325,21 @@ export default function DestinationPage() {
           {info?.highlights?.length ? (
             <div
               style={{
-                padding: isMobile ? 14 : 18,
-                borderRadius: 18,
-                border: "1px solid var(--border)",
-                background: "var(--card)",
+                padding: isMobile ? 16 : 20,
+                borderRadius: 24,
+                border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                background:
+                  "linear-gradient(145deg, color-mix(in srgb, var(--card) 96%, var(--bg) 4%), color-mix(in srgb, var(--card) 92%, var(--green) 3%))",
+                boxShadow: "0 14px 34px rgba(0,0,0,0.075)",
                 display: "grid",
-                gap: 10,
+                gap: 12,
               }}
             >
               <div
                 style={{
                   fontSize: 15,
-                  fontWeight: 800,
+                  fontWeight: 850,
+                  letterSpacing: "-0.01em",
                   color: "var(--text)",
                 }}
               >
@@ -1111,10 +1380,10 @@ export default function DestinationPage() {
                         setActiveTab("courses");
                       }}
                       style={{
-                        border: "1px solid var(--border)",
+                        border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
                         borderRadius: 999,
-                        background: "var(--bg)",
-                        padding: "8px 11px",
+                        background: "color-mix(in srgb, var(--muted) 62%, transparent)",
+                        padding: "9px 12px",
                         fontSize: 13,
                         color: "var(--text)",
                         lineHeight: 1.2,
@@ -1134,12 +1403,14 @@ export default function DestinationPage() {
           {info?.travelTips?.length ? (
             <div
               style={{
-                padding: isMobile ? 14 : 18,
-                borderRadius: 18,
-                border: "1px solid var(--border)",
-                background: "var(--card)",
+                padding: isMobile ? 16 : 20,
+                borderRadius: 24,
+                border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                background:
+                  "linear-gradient(145deg, color-mix(in srgb, var(--card) 96%, var(--bg) 4%), color-mix(in srgb, var(--card) 92%, var(--green) 3%))",
+                boxShadow: "0 14px 34px rgba(0,0,0,0.075)",
                 display: "grid",
-                gap: 10,
+                gap: 12,
               }}
             >
               <div style={{ display: "grid", gap: 4 }}>
@@ -1174,10 +1445,10 @@ export default function DestinationPage() {
                   <div
                     key={i}
                     style={{
-                      border: "1px solid var(--border)",
-                      borderRadius: 14,
-                      background: "var(--bg)",
-                      padding: "12px",
+                      border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                      borderRadius: 18,
+                      background: "color-mix(in srgb, var(--muted) 56%, transparent)",
+                      padding: "13px",
                       display: "flex",
                       gap: 10,
                       alignItems: "flex-start",
@@ -1188,8 +1459,8 @@ export default function DestinationPage() {
                         width: 28,
                         height: 28,
                         borderRadius: 999,
-                        border: "1px solid var(--border)",
-                        background: "var(--card)",
+                        border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                        background: "color-mix(in srgb, var(--card) 88%, var(--green) 4%)",
                         color: "var(--text)",
                         display: "inline-flex",
                         alignItems: "center",
@@ -1235,12 +1506,14 @@ export default function DestinationPage() {
           {info?.localKnowledge?.length ? (
             <div
               style={{
-                padding: isMobile ? 16 : 20,
-                borderRadius: 18,
-                border: "1px solid var(--border)",
-                background: "var(--card)",
+                padding: isMobile ? 18 : 22,
+                borderRadius: 24,
+                border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                background:
+                  "linear-gradient(145deg, color-mix(in srgb, var(--card) 96%, var(--bg) 4%), color-mix(in srgb, var(--card) 92%, var(--green) 3%))",
+                boxShadow: "0 14px 34px rgba(0,0,0,0.075)",
                 display: "grid",
-                gap: 12,
+                gap: 14,
               }}
             >
               <div style={{ display: "grid", gap: 4 }}>
@@ -1275,10 +1548,10 @@ export default function DestinationPage() {
                   <div
                     key={i}
                     style={{
-                      border: "1px solid var(--border)",
-                      borderRadius: 14,
-                      background: "var(--bg)",
-                      padding: "12px",
+                      border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                      borderRadius: 18,
+                      background: "color-mix(in srgb, var(--muted) 56%, transparent)",
+                      padding: "13px",
                       display: "flex",
                       gap: 10,
                       alignItems: "flex-start",
@@ -1289,8 +1562,8 @@ export default function DestinationPage() {
                         width: 28,
                         height: 28,
                         borderRadius: 999,
-                        border: "1px solid var(--border)",
-                        background: "var(--card)",
+                        border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                        background: "color-mix(in srgb, var(--card) 88%, var(--green) 4%)",
                         color: "var(--text)",
                         display: "inline-flex",
                         alignItems: "center",
@@ -1336,12 +1609,14 @@ export default function DestinationPage() {
           {info?.featuredRegions?.length ? (
             <div
               style={{
-                padding: isMobile ? 16 : 20,
-                borderRadius: 18,
-                border: "1px solid var(--border)",
-                background: "var(--card)",
+                padding: isMobile ? 18 : 22,
+                borderRadius: 24,
+                border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                background:
+                  "linear-gradient(145deg, color-mix(in srgb, var(--card) 96%, var(--bg) 4%), color-mix(in srgb, var(--card) 92%, var(--green) 3%))",
+                boxShadow: "0 14px 34px rgba(0,0,0,0.075)",
                 display: "grid",
-                gap: 12,
+                gap: 14,
               }}
             >
               <div style={{ display: "grid", gap: 4 }}>
@@ -1382,9 +1657,9 @@ export default function DestinationPage() {
                       setActiveTab("courses");
                     }}
                     style={{
-                      border: "1px solid var(--border)",
+                      border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
                       borderRadius: 999,
-                      background: "var(--bg)",
+                      background: "color-mix(in srgb, var(--muted) 62%, transparent)",
                       color: "var(--text)",
                       padding: "9px 12px",
                       fontSize: 13,
@@ -1402,10 +1677,12 @@ export default function DestinationPage() {
 
           <div
             style={{
-              padding: isMobile ? 16 : 20,
-              borderRadius: 18,
-              border: "1px solid var(--border)",
-              background: "var(--card)",
+              padding: isMobile ? 18 : 22,
+              borderRadius: 24,
+              border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+              background:
+                "linear-gradient(145deg, color-mix(in srgb, var(--card) 96%, var(--bg) 4%), color-mix(in srgb, var(--card) 92%, var(--green) 3%))",
+              boxShadow: "0 14px 34px rgba(0,0,0,0.075)",
               display: "grid",
               gap: 12,
             }}
@@ -1470,8 +1747,8 @@ export default function DestinationPage() {
                   type="button"
                   disabled
                   style={{
-                    border: "1px solid var(--border)",
-                    background: "var(--bg)",
+                    border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                    background: "color-mix(in srgb, var(--muted) 62%, transparent)",
                     color: "var(--sub)",
                     height: 40,
                     padding: "0 14px",
@@ -1502,10 +1779,10 @@ export default function DestinationPage() {
                   <div
                     key={tip.title}
                     style={{
-                      border: "1px solid var(--border)",
-                      borderRadius: 14,
-                      background: "var(--bg)",
-                      padding: "12px",
+                      border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                      borderRadius: 18,
+                      background: "color-mix(in srgb, var(--muted) 56%, transparent)",
+                      padding: "13px",
                       display: "grid",
                       gap: 9,
                       minWidth: 0,
@@ -1606,10 +1883,12 @@ export default function DestinationPage() {
 
           <div
             style={{
-              padding: isMobile ? 16 : 20,
-              borderRadius: 18,
-              border: "1px solid var(--border)",
-              background: "var(--card)",
+              padding: isMobile ? 18 : 22,
+              borderRadius: 24,
+              border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+              background:
+                "linear-gradient(145deg, color-mix(in srgb, var(--card) 96%, var(--bg) 4%), color-mix(in srgb, var(--card) 92%, var(--green) 3%))",
+              boxShadow: "0 14px 34px rgba(0,0,0,0.075)",
             }}
           >
             <div
@@ -1626,7 +1905,8 @@ export default function DestinationPage() {
                 <div
                   style={{
                     fontSize: isMobile ? 20 : 22,
-                    fontWeight: 800,
+                    fontWeight: 850,
+                    letterSpacing: "-0.02em",
                     color: "var(--text)",
                   }}
                 >
@@ -1648,14 +1928,14 @@ export default function DestinationPage() {
                 type="button"
                 onClick={openCoursesTab}
                 style={{
-                  border: "1px solid var(--border)",
-                  background: "transparent",
+                  border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                  background: "color-mix(in srgb, var(--muted) 58%, transparent)",
                   color: "var(--text)",
                   height: 42,
                   padding: "0 16px",
                   borderRadius: 999,
                   cursor: "pointer",
-                  fontWeight: 700,
+                  fontWeight: 850,
                   width: isMobile ? "100%" : "auto",
                 }}
               >
@@ -1667,9 +1947,9 @@ export default function DestinationPage() {
               <div
                 style={{
                   padding: 16,
-                  borderRadius: 14,
-                  border: "1px solid var(--border)",
-                  background: "var(--bg)",
+                  borderRadius: 18,
+                  border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                  background: "color-mix(in srgb, var(--muted) 58%, transparent)",
                   color: "var(--sub)",
                   fontSize: 14,
                 }}
@@ -1691,13 +1971,14 @@ export default function DestinationPage() {
                     style={{
                       minWidth: isMobile ? 260 : "auto",
                       flex: isMobile ? "0 0 auto" : "1 1 0",
-                      borderRadius: 18,
-                      border: "1px solid var(--border)",
-                      background: "var(--card)",
+                      borderRadius: 22,
+                      border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                      background:
+                        "linear-gradient(145deg, color-mix(in srgb, var(--card) 96%, var(--bg) 4%), color-mix(in srgb, var(--card) 92%, var(--green) 4%))",
                       cursor: "pointer",
                       overflow: "hidden",
                       transition: "transform 0.18s ease, box-shadow 0.18s ease",
-                      boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
+                      boxShadow: "0 12px 28px rgba(0,0,0,0.075)",
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = "translateY(-2px)";
@@ -1707,7 +1988,7 @@ export default function DestinationPage() {
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = "translateY(0)";
                       e.currentTarget.style.boxShadow =
-                        "0 4px 14px rgba(0,0,0,0.08)";
+                        "0 12px 28px rgba(0,0,0,0.075)";
                     }}
                     onMouseDown={(e) => {
                       e.currentTarget.style.transform = "scale(0.98)";
@@ -1720,7 +2001,7 @@ export default function DestinationPage() {
                       style={{
                         height: 46,
                         background:
-                          "linear-gradient(90deg, rgba(255,255,255,0.03) 0%, rgba(79,140,255,0.10) 45%, rgba(255,255,255,0.02) 100%)",
+                          "linear-gradient(90deg, color-mix(in srgb, var(--green) 10%, transparent) 0%, color-mix(in srgb, var(--sky) 10%, transparent) 60%, transparent 100%)",
                         display: "flex",
                         alignItems: "center",
                         padding: "0 12px",
@@ -1731,8 +2012,8 @@ export default function DestinationPage() {
                           fontSize: 11,
                           fontWeight: 800,
                           color: "var(--text)",
-                          background: "rgba(255,255,255,0.08)",
-                          border: "1px solid rgba(255,255,255,0.08)",
+                          background: "color-mix(in srgb, var(--muted) 70%, transparent)",
+                          border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
                           padding: "6px 10px",
                           borderRadius: 999,
                           letterSpacing: 0.2,
@@ -1742,7 +2023,7 @@ export default function DestinationPage() {
                       </div>
                     </div>
 
-                    <div style={{ padding: 14 }}>
+                    <div style={{ padding: 15 }}>
                       <div
                         style={{
                           fontWeight: 800,
@@ -1768,14 +2049,38 @@ export default function DestinationPage() {
                       <div
                         style={{
                           display: "flex",
-                          gap: 10,
+                          gap: 7,
                           flexWrap: "wrap",
                           fontSize: 12,
                           color: "var(--sub)",
                         }}
                       >
-                        {c.holes && <div>⛳ {c.holes}</div>}
-                        {c.access && <div>🌍 {c.access}</div>}
+                        {c.holes && (
+                          <div
+                            style={{
+                              border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                              background: "color-mix(in srgb, var(--muted) 62%, transparent)",
+                              borderRadius: 999,
+                              padding: "5px 8px",
+                              fontWeight: 750,
+                            }}
+                          >
+                            ? {c.holes}
+                          </div>
+                        )}
+                        {c.access && (
+                          <div
+                            style={{
+                              border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                              background: "color-mix(in srgb, var(--muted) 62%, transparent)",
+                              borderRadius: 999,
+                              padding: "5px 8px",
+                              fontWeight: 750,
+                            }}
+                          >
+                            ?? {c.access}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1786,10 +2091,12 @@ export default function DestinationPage() {
 
           <div
             style={{
-              padding: isMobile ? 16 : 20,
-              borderRadius: 18,
-              border: "1px solid var(--border)",
-              background: "var(--card)",
+              padding: isMobile ? 18 : 22,
+              borderRadius: 24,
+              border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+              background:
+                "linear-gradient(145deg, color-mix(in srgb, var(--card) 96%, var(--bg) 4%), color-mix(in srgb, var(--card) 92%, var(--green) 3%))",
+              boxShadow: "0 14px 34px rgba(0,0,0,0.075)",
             }}
           >
             <div
@@ -1806,7 +2113,8 @@ export default function DestinationPage() {
                 <div
                   style={{
                     fontSize: isMobile ? 20 : 22,
-                    fontWeight: 800,
+                    fontWeight: 850,
+                    letterSpacing: "-0.02em",
                     color: "var(--text)",
                   }}
                 >
@@ -1828,14 +2136,14 @@ export default function DestinationPage() {
                 type="button"
                 onClick={openPostsTab}
                 style={{
-                  border: "1px solid var(--border)",
-                  background: "transparent",
+                  border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                  background: "color-mix(in srgb, var(--muted) 58%, transparent)",
                   color: "var(--text)",
                   height: 42,
                   padding: "0 16px",
                   borderRadius: 999,
                   cursor: "pointer",
-                  fontWeight: 700,
+                  fontWeight: 850,
                   width: isMobile ? "100%" : "auto",
                 }}
               >
@@ -1847,9 +2155,9 @@ export default function DestinationPage() {
               <div
                 style={{
                   padding: 16,
-                  borderRadius: 14,
-                  border: "1px solid var(--border)",
-                  background: "var(--bg)",
+                  borderRadius: 18,
+                  border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                  background: "color-mix(in srgb, var(--muted) 58%, transparent)",
                   color: "var(--sub)",
                   fontSize: 14,
                 }}
@@ -1860,9 +2168,9 @@ export default function DestinationPage() {
               <div
                 style={{
                   padding: 16,
-                  borderRadius: 14,
-                  border: "1px solid var(--border)",
-                  background: "var(--bg)",
+                  borderRadius: 18,
+                  border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                  background: "color-mix(in srgb, var(--muted) 58%, transparent)",
                   color: "var(--sub)",
                   fontSize: 14,
                 }}
