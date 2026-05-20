@@ -1335,48 +1335,80 @@ export default function TopRail() {
           style={{
             position: "absolute",
             top: 60,
-            left: 0,
-            right: 0,
-            background: "var(--card)",
-            borderBottom: "1px solid var(--border)",
+            left: 8,
+            right: 8,
             zIndex: 2999,
             padding: 12,
             display: "grid",
-            gap: 10,
-            boxShadow: "0 10px 24px rgba(0,0,0,0.22)",
+            gap: 12,
+            borderRadius: 26,
+            border: "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
+            background:
+              "linear-gradient(145deg, color-mix(in srgb, var(--card) 94%, var(--green) 6%), color-mix(in srgb, var(--card) 98%, var(--bg)))",
+            boxShadow: "0 18px 46px rgba(0,0,0,0.28)",
+            overflow: "hidden",
           }}
         >
-          <input
-            autoFocus
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search golfers..."
+          <label
             style={{
-              width: "100%",
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: "1px solid var(--border)",
-              background: "var(--bg)",
-              color: "var(--text)",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              minHeight: 46,
+              padding: "0 14px",
+              borderRadius: 999,
+              border:
+                "1px solid color-mix(in srgb, var(--border) 52%, transparent)",
+              background: "color-mix(in srgb, var(--muted) 64%, transparent)",
               boxSizing: "border-box",
             }}
-          />
+          >
+            <span
+              style={{
+                color: "var(--sub)",
+                fontSize: 12,
+                fontWeight: 850,
+                flexShrink: 0,
+              }}
+            >
+              Search
+            </span>
+
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search golfers..."
+              style={{
+                width: "100%",
+                minWidth: 0,
+                border: "none",
+                outline: "none",
+                background: "transparent",
+                color: "var(--text)",
+                fontSize: 15,
+                fontWeight: 650,
+                boxSizing: "border-box",
+              }}
+            />
+          </label>
 
           {!query.trim() && suggestions.length > 0 ? (
             <div
               style={{
                 display: "grid",
-                gap: 6,
-                paddingBottom: 6,
-                borderBottom: "1px solid rgba(255,255,255,0.06)",
+                gap: 8,
+                paddingBottom: 10,
+                borderBottom:
+                  "1px solid color-mix(in srgb, var(--border) 38%, transparent)",
               }}
             >
               <div
                 style={{
                   fontSize: 12,
-                  fontWeight: 800,
+                  fontWeight: 850,
                   color: "var(--sub)",
-                  padding: "0 2px",
+                  padding: "0 4px",
                 }}
               >
                 {t("suggested_golfers")}
@@ -1395,8 +1427,11 @@ export default function TopRail() {
                     display: "flex",
                     alignItems: "center",
                     gap: 10,
-                    padding: "8px 10px",
-                    borderRadius: 10,
+                    padding: "10px 11px",
+                    borderRadius: 18,
+                    border:
+                      "1px solid color-mix(in srgb, var(--border) 42%, transparent)",
+                    background: "color-mix(in srgb, var(--muted) 52%, transparent)",
                     cursor: "pointer",
                   }}
                 >
@@ -1405,32 +1440,63 @@ export default function TopRail() {
                       src={fileUrl(u.avatarUrl)}
                       alt={u.handle}
                       style={{
-                        width: 28,
-                        height: 28,
+                        width: 34,
+                        height: 34,
+                        minWidth: 34,
                         borderRadius: "50%",
                         objectFit: "cover",
-                        border: "1px solid var(--border)",
+                        border:
+                          "2px solid color-mix(in srgb, var(--card) 88%, transparent)",
+                        boxShadow:
+                          "0 8px 18px rgba(0,0,0,0.12), 0 0 0 1px color-mix(in srgb, var(--border) 54%, transparent)",
                       }}
                     />
                   ) : (
                     <div
                       style={{
-                        width: 28,
-                        height: 28,
+                        width: 34,
+                        height: 34,
+                        minWidth: 34,
                         borderRadius: "50%",
-                        background: "rgba(39,196,107,0.18)",
+                        background:
+                          "linear-gradient(135deg, color-mix(in srgb, var(--green) 18%, var(--muted)), var(--muted))",
+                        border:
+                          "1px solid color-mix(in srgb, var(--green) 42%, var(--border))",
                         display: "grid",
                         placeItems: "center",
-                        fontWeight: 900,
+                        fontWeight: 850,
                         color: "var(--text)",
+                        boxShadow: "0 8px 18px rgba(0,0,0,0.12)",
                       }}
                     >
                       {(u.name || u.handle).slice(0, 1).toUpperCase()}
                     </div>
                   )}
 
-                  <div style={{ fontSize: 13, color: "var(--text)" }}>
-                    {u.name || u.handle}
+                  <div style={{ minWidth: 0, display: "grid", gap: 2 }}>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 850,
+                        color: "var(--text)",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {u.name || u.handle}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "var(--sub)",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      @{u.handle}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -1450,12 +1516,14 @@ export default function TopRail() {
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 10,
-                  padding: "10px 10px",
+                  gap: 11,
+                  padding: "12px",
                   cursor: "pointer",
-                  borderRadius: 12,
-                  border: "1px solid rgba(255,255,255,0.04)",
-                  background: "rgba(255,255,255,0.02)",
+                  borderRadius: 22,
+                  border:
+                    "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
+                  background: "color-mix(in srgb, var(--card) 96%, var(--bg))",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
                 }}
               >
                 {u.avatarUrl ? (
@@ -1463,37 +1531,46 @@ export default function TopRail() {
                     src={fileUrl(u.avatarUrl)}
                     alt={u.handle}
                     style={{
-                      width: 32,
-                      height: 32,
+                      width: 40,
+                      height: 40,
+                      minWidth: 40,
                       borderRadius: "50%",
                       objectFit: "cover",
-                      border: "1px solid var(--border)",
+                      border:
+                        "2px solid color-mix(in srgb, var(--card) 88%, transparent)",
+                      boxShadow:
+                        "0 8px 20px rgba(0,0,0,0.12), 0 0 0 1px color-mix(in srgb, var(--border) 54%, transparent)",
                       flexShrink: 0,
                     }}
                   />
                 ) : (
                   <div
                     style={{
-                      width: 32,
-                      height: 32,
+                      width: 40,
+                      height: 40,
+                      minWidth: 40,
                       borderRadius: "50%",
-                      background: "rgba(39,196,107,0.18)",
-                      border: "1px solid rgba(39,196,107,0.35)",
+                      background:
+                        "linear-gradient(135deg, color-mix(in srgb, var(--green) 18%, var(--muted)), var(--muted))",
+                      border:
+                        "1px solid color-mix(in srgb, var(--green) 42%, var(--border))",
                       display: "grid",
                       placeItems: "center",
-                      fontWeight: 900,
+                      fontWeight: 850,
                       color: "var(--text)",
                       flexShrink: 0,
+                      boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
                     }}
                   >
                     {(u.name || u.handle).slice(0, 1).toUpperCase()}
                   </div>
                 )}
 
-                <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ minWidth: 0, flex: 1, display: "grid", gap: 3 }}>
                   <div
                     style={{
-                      fontWeight: 700,
+                      fontWeight: 850,
+                      fontSize: 14,
                       color: "var(--text)",
                       whiteSpace: "nowrap",
                       overflow: "hidden",
@@ -1505,6 +1582,7 @@ export default function TopRail() {
                   <div
                     style={{
                       fontSize: 12,
+                      fontWeight: 650,
                       color: "var(--sub)",
                       whiteSpace: "nowrap",
                       overflow: "hidden",
@@ -1521,46 +1599,47 @@ export default function TopRail() {
                   disabled={u.followStatus === "SELF" || followBusyId === u.id}
                   style={{
                     minWidth: 86,
-                    height: 32,
+                    height: 34,
                     padding: "0 12px",
                     borderRadius: 999,
                     border:
                       u.followStatus === "ACCEPTED"
-                        ? "1px solid rgba(39,196,107,0.38)"
+                        ? "1px solid color-mix(in srgb, var(--green) 52%, var(--border))"
                         : u.followStatus === "PENDING"
-                          ? "1px solid rgba(255,255,255,0.14)"
+                          ? "1px solid color-mix(in srgb, var(--border) 54%, transparent)"
                           : u.followStatus === "SELF"
-                            ? "1px solid rgba(120,160,255,0.28)"
-                            : "1px solid var(--border)",
+                            ? "1px solid color-mix(in srgb, var(--border) 54%, transparent)"
+                            : "1px solid color-mix(in srgb, var(--green) 72%, var(--border))",
                     background:
                       u.followStatus === "ACCEPTED"
-                        ? "rgba(39,196,107,0.16)"
+                        ? "color-mix(in srgb, var(--green) 14%, var(--card))"
                         : u.followStatus === "PENDING"
-                          ? "rgba(255,255,255,0.05)"
+                          ? "color-mix(in srgb, var(--muted) 62%, transparent)"
                           : u.followStatus === "SELF"
-                            ? "rgba(120,160,255,0.12)"
-                            : "var(--bg)",
+                            ? "color-mix(in srgb, var(--muted) 52%, transparent)"
+                            : "var(--green)",
                     color:
-                      u.followStatus === "ACCEPTED"
-                        ? "rgb(120,235,165)"
-                        : u.followStatus === "PENDING"
-                          ? "var(--sub)"
-                          : u.followStatus === "SELF"
-                            ? "rgb(170,195,255)"
-                            : "var(--text)",
-                    fontWeight: 900,
+                      u.followStatus === "ACCEPTED" ||
+                      u.followStatus === "PENDING" ||
+                      u.followStatus === "SELF"
+                        ? "var(--text)"
+                        : "white",
+                    fontWeight: 850,
                     fontSize: 11,
-                    letterSpacing: 0.2,
                     cursor:
                       u.followStatus === "SELF" || followBusyId === u.id
                         ? "default"
                         : "pointer",
-                    opacity: followBusyId === u.id ? 0.6 : 1,
+                    opacity: followBusyId === u.id ? 0.62 : 1,
                     whiteSpace: "nowrap",
                     flexShrink: 0,
                     display: "inline-flex",
                     alignItems: "center",
                     justifyContent: "center",
+                    boxShadow:
+                      u.followStatus === "NONE" || !u.followStatus
+                        ? "0 10px 22px color-mix(in srgb, var(--green) 20%, transparent)"
+                        : "none",
                   }}
                 >
                   {followBusyId === u.id
@@ -1573,9 +1652,14 @@ export default function TopRail() {
             {!results.length && query.trim().length >= 2 ? (
               <div
                 style={{
-                  padding: "8px 10px",
+                  padding: "15px 14px",
+                  borderRadius: 20,
+                  border:
+                    "1px solid color-mix(in srgb, var(--border) 42%, transparent)",
+                  background: "color-mix(in srgb, var(--muted) 52%, transparent)",
                   color: "var(--sub)",
                   fontSize: 13,
+                  lineHeight: 1.4,
                 }}
               >
                 {t("no_users_found")}

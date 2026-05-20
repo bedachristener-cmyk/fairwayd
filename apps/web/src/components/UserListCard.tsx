@@ -47,11 +47,14 @@ function AvatarCircle({
           minHeight: size,
           maxWidth: size,
           maxHeight: size,
-          borderRadius: "50%",
-          objectFit: "cover",
-          display: "block",
-          flexShrink: 0,
-        }}
+        borderRadius: "50%",
+        objectFit: "cover",
+        display: "block",
+        flexShrink: 0,
+        border: "2px solid color-mix(in srgb, var(--card) 88%, transparent)",
+        boxShadow:
+          "0 8px 20px rgba(0,0,0,0.12), 0 0 0 1px color-mix(in srgb, var(--border) 54%, transparent)",
+      }}
       />
     );
   }
@@ -66,10 +69,13 @@ function AvatarCircle({
         display: "grid",
         placeItems: "center",
         flexShrink: 0,
-        background: "var(--border)",
+        background:
+          "linear-gradient(135deg, color-mix(in srgb, var(--green) 18%, var(--muted)), var(--muted))",
+        border: "1px solid color-mix(in srgb, var(--green) 42%, var(--border))",
         color: "var(--text)",
-        fontSize: 11,
-        fontWeight: 800,
+        fontSize: 12,
+        fontWeight: 850,
+        boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
       }}
     >
       {getInitials(user)}
@@ -88,10 +94,14 @@ export default function UserListCard({
   return (
     <section
       style={{
-        background: "var(--card)",
-        border: "1px solid var(--border)",
-        borderRadius: 18,
+        background:
+          "linear-gradient(145deg, color-mix(in srgb, var(--card) 94%, var(--green) 6%), color-mix(in srgb, var(--card) 98%, var(--bg)))",
+        border: "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
+        borderRadius: 26,
         padding: 16,
+        boxShadow: "0 14px 38px rgba(0,0,0,0.10)",
+        boxSizing: "border-box",
+        overflow: "hidden",
       }}
     >
       <div
@@ -100,35 +110,52 @@ export default function UserListCard({
           alignItems: "center",
           justifyContent: "space-between",
           gap: 12,
-          marginBottom: 12,
+          marginBottom: 14,
         }}
       >
         <div>
           <div
             style={{
               fontSize: 16,
-              fontWeight: 800,
+              fontWeight: 850,
               color: "var(--text)",
+              letterSpacing: -0.2,
             }}
           >
             {title}
           </div>
-          <div
-            style={{
-              marginTop: 4,
-              fontSize: 13,
-              color: "var(--sub)",
-            }}
-          >
-            {count} {count === 1 ? "user" : "users"}
-          </div>
         </div>
+
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            minWidth: 30,
+            height: 30,
+            padding: "0 10px",
+            borderRadius: 999,
+            border: "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
+            background: "color-mix(in srgb, var(--muted) 58%, transparent)",
+            color: "var(--sub)",
+            fontSize: 12,
+            fontWeight: 850,
+            flexShrink: 0,
+          }}
+        >
+          {count}
+        </span>
       </div>
 
       {users.length === 0 ? (
         <div
           style={{
-            fontSize: 14,
+            padding: "15px 14px",
+            borderRadius: 20,
+            border: "1px solid color-mix(in srgb, var(--border) 42%, transparent)",
+            background: "color-mix(in srgb, var(--muted) 54%, transparent)",
+            fontSize: 13,
+            lineHeight: 1.4,
             color: "var(--sub)",
           }}
         >
@@ -138,7 +165,7 @@ export default function UserListCard({
         <div
           style={{
             display: "grid",
-            gap: 8,
+            gap: 10,
           }}
         >
           {users.map((user) => (
@@ -148,11 +175,12 @@ export default function UserListCard({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                gap: 10,
-                padding: "8px 10px",
-                borderRadius: 14,
-                background: "var(--bg)",
-                border: "1px solid var(--border)",
+                gap: 11,
+                padding: "12px",
+                borderRadius: 22,
+                background: "color-mix(in srgb, var(--muted) 54%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
+                boxSizing: "border-box",
               }}
             >
               <button
@@ -165,7 +193,7 @@ export default function UserListCard({
                   margin: 0,
                   display: "flex",
                   alignItems: "center",
-                  gap: 10,
+                  gap: 11,
                   minWidth: 0,
                   flex: 1,
                   cursor: onUserClick ? "pointer" : "default",
@@ -178,14 +206,14 @@ export default function UserListCard({
                   style={{
                     minWidth: 0,
                     display: "grid",
-                    gap: 1,
+                    gap: 3,
                   }}
                 >
                   <div
                     style={{
                       color: "var(--text)",
-                      fontSize: 13,
-                      fontWeight: 800,
+                      fontSize: 14,
+                      fontWeight: 850,
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -198,6 +226,7 @@ export default function UserListCard({
                     style={{
                       color: "var(--sub)",
                       fontSize: 12,
+                      fontWeight: 650,
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",

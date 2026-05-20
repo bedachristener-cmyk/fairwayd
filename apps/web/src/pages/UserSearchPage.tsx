@@ -198,40 +198,155 @@ export default function UserSearchPage() {
 
   return (
     <div
+      className="fw-page-shell"
       style={{
-        padding: 12,
+        padding: "12px 14px calc(96px + env(safe-area-inset-bottom, 0px))",
         display: "grid",
-        gap: 12,
+        gap: 14,
         width: "100%",
         maxWidth: "100%",
         boxSizing: "border-box",
+        overflowX: "hidden",
       }}
     >
-      <div style={{ fontWeight: 900, fontSize: 18, color: "var(--text)" }}>
-        🔍 Find golfers
-      </div>
-
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search by name or handle..."
+      <section
         style={{
-          width: "100%",
-          padding: "10px 12px",
-          borderRadius: 10,
-          border: "1px solid var(--border)",
-          background: "var(--card)",
-          color: "var(--text)",
-          fontSize: 14,
-          boxSizing: "border-box",
+          position: "relative",
+          overflow: "hidden",
+          borderRadius: 26,
+          border: "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
+          background:
+            "linear-gradient(145deg, color-mix(in srgb, var(--card) 94%, var(--green) 6%), color-mix(in srgb, var(--card) 98%, var(--bg)))",
+          boxShadow: "0 14px 38px rgba(0,0,0,0.10)",
+          padding: 16,
         }}
-      />
+      >
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            pointerEvents: "none",
+            background:
+              "radial-gradient(circle at 16% 0%, color-mix(in srgb, var(--green) 18%, transparent), transparent 38%), radial-gradient(circle at 86% 8%, color-mix(in srgb, var(--muted) 72%, transparent), transparent 42%)",
+            opacity: 0.72,
+          }}
+        />
+
+        <div
+          style={{
+            position: "relative",
+            zIndex: 1,
+            display: "grid",
+            gap: 14,
+          }}
+        >
+          <div>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 7,
+                padding: "5px 10px",
+                borderRadius: 999,
+                border:
+                  "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
+                background: "color-mix(in srgb, var(--muted) 58%, transparent)",
+                color: "var(--sub)",
+                fontSize: 11,
+                fontWeight: 800,
+                marginBottom: 9,
+              }}
+            >
+              Social discovery
+            </div>
+
+            <div
+              style={{
+                fontWeight: 850,
+                fontSize: 26,
+                lineHeight: 1.08,
+                letterSpacing: -0.45,
+                color: "var(--text)",
+              }}
+            >
+              Find golfers
+            </div>
+
+            <div
+              style={{
+                marginTop: 5,
+                color: "var(--sub)",
+                fontSize: 13,
+                lineHeight: 1.4,
+              }}
+            >
+              Discover players, friends and golf travel companions.
+            </div>
+          </div>
+
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              minHeight: 48,
+              padding: "0 14px",
+              borderRadius: 999,
+              border:
+                "1px solid color-mix(in srgb, var(--border) 52%, transparent)",
+              background: "color-mix(in srgb, var(--muted) 64%, transparent)",
+              boxSizing: "border-box",
+            }}
+          >
+            <span
+              aria-hidden="true"
+              style={{
+                color: "var(--sub)",
+                fontSize: 15,
+                lineHeight: 1,
+              }}
+            >
+              Search
+            </span>
+
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by name or handle..."
+              style={{
+                width: "100%",
+                minWidth: 0,
+                border: "none",
+                outline: "none",
+                background: "transparent",
+                color: "var(--text)",
+                fontSize: 15,
+                fontWeight: 650,
+                boxSizing: "border-box",
+              }}
+            />
+          </label>
+        </div>
+      </section>
 
       {loading && (
-        <div style={{ fontSize: 13, color: "var(--sub)" }}>Searching...</div>
+        <div
+          style={{
+            padding: "13px 14px",
+            borderRadius: 20,
+            border: "1px solid color-mix(in srgb, var(--border) 42%, transparent)",
+            background: "color-mix(in srgb, var(--muted) 52%, transparent)",
+            color: "var(--sub)",
+            fontSize: 13,
+            fontWeight: 700,
+          }}
+        >
+          Searching for golfers...
+        </div>
       )}
 
-      <div style={{ display: "grid", gap: 8 }}>
+      <div style={{ display: "grid", gap: 10 }}>
         {results.map((u) => (
           <button
             key={u.id}
@@ -240,18 +355,19 @@ export default function UserSearchPage() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 10,
+              gap: 11,
               width: "100%",
               maxWidth: "100%",
-              padding: "10px 12px",
-              borderRadius: 12,
-              border: "1px solid var(--border)",
-              background: "var(--card)",
+              padding: "12px",
+              borderRadius: 22,
+              border: "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
+              background: "color-mix(in srgb, var(--card) 96%, var(--bg))",
               color: "var(--text)",
               cursor: "pointer",
               textAlign: "left",
               boxSizing: "border-box",
               overflow: "hidden",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
             }}
           >
             {u.avatarUrl ? (
@@ -259,15 +375,17 @@ export default function UserSearchPage() {
                 src={fileUrl(u.avatarUrl)}
                 alt={u.handle}
                 style={{
-                  width: 40,
-                  height: 40,
-                  minWidth: 40,
-                  minHeight: 40,
-                  maxWidth: 40,
-                  maxHeight: 40,
+                  width: 44,
+                  height: 44,
+                  minWidth: 44,
+                  minHeight: 44,
+                  maxWidth: 44,
+                  maxHeight: 44,
                   borderRadius: "50%",
                   objectFit: "cover",
-                  border: "1px solid var(--border)",
+                  border: "2px solid color-mix(in srgb, var(--card) 88%, transparent)",
+                  boxShadow:
+                    "0 8px 20px rgba(0,0,0,0.12), 0 0 0 1px color-mix(in srgb, var(--border) 54%, transparent)",
                   flexShrink: 0,
                   display: "block",
                 }}
@@ -275,20 +393,23 @@ export default function UserSearchPage() {
             ) : (
               <div
                 style={{
-                  width: 40,
-                  height: 40,
-                  minWidth: 40,
-                  minHeight: 40,
-                  maxWidth: 40,
-                  maxHeight: 40,
+                  width: 44,
+                  height: 44,
+                  minWidth: 44,
+                  minHeight: 44,
+                  maxWidth: 44,
+                  maxHeight: 44,
                   borderRadius: "50%",
-                  background: "rgba(39,196,107,0.18)",
-                  border: "1px solid rgba(39,196,107,0.35)",
+                  background:
+                    "linear-gradient(135deg, color-mix(in srgb, var(--green) 18%, var(--muted)), var(--muted))",
+                  border:
+                    "1px solid color-mix(in srgb, var(--green) 42%, var(--border))",
                   display: "grid",
                   placeItems: "center",
-                  fontWeight: 900,
+                  fontWeight: 850,
                   color: "var(--text)",
                   flexShrink: 0,
+                  boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
                 }}
               >
                 {(u.name || u.handle).slice(0, 1).toUpperCase()}
@@ -301,11 +422,13 @@ export default function UserSearchPage() {
                 flexDirection: "column",
                 minWidth: 0,
                 flex: 1,
+                gap: 3,
               }}
             >
               <span
                 style={{
-                  fontWeight: 700,
+                  fontWeight: 850,
+                  fontSize: 14,
                   color: "var(--text)",
                   whiteSpace: "nowrap",
                   overflow: "hidden",
@@ -318,6 +441,7 @@ export default function UserSearchPage() {
               <span
                 style={{
                   fontSize: 12,
+                  fontWeight: 650,
                   color: "var(--sub)",
                   whiteSpace: "nowrap",
                   overflow: "hidden",
@@ -334,28 +458,32 @@ export default function UserSearchPage() {
               disabled={u.followStatus === "SELF" || followBusyId === u.id}
               style={{
                 minWidth: 96,
-                minHeight: 32,
-                padding: "7px 12px",
+                minHeight: 36,
+                padding: "0 13px",
                 borderRadius: 999,
                 border:
                   u.followStatus === "ACCEPTED"
-                    ? "1px solid rgba(39,196,107,0.42)"
+                    ? "1px solid color-mix(in srgb, var(--green) 52%, var(--border))"
                     : u.followStatus === "PENDING"
-                      ? "1px solid rgba(255,255,255,0.12)"
+                      ? "1px solid color-mix(in srgb, var(--border) 54%, transparent)"
                       : u.followStatus === "SELF"
-                        ? "1px solid var(--border)"
-                        : "1px solid var(--border)",
+                        ? "1px solid color-mix(in srgb, var(--border) 54%, transparent)"
+                        : "1px solid color-mix(in srgb, var(--green) 72%, var(--border))",
                 background:
                   u.followStatus === "ACCEPTED"
-                    ? "rgba(39,196,107,0.18)"
+                    ? "color-mix(in srgb, var(--green) 14%, var(--card))"
                     : u.followStatus === "PENDING"
-                      ? "var(--card)"
+                      ? "color-mix(in srgb, var(--muted) 62%, transparent)"
                       : u.followStatus === "SELF"
-                        ? "rgba(255,255,255,0.04)"
-                        : "var(--bg)",
+                        ? "color-mix(in srgb, var(--muted) 52%, transparent)"
+                        : "var(--green)",
                 color:
-                  u.followStatus === "PENDING" ? "var(--sub)" : "var(--text)",
-                fontWeight: 800,
+                  u.followStatus === "ACCEPTED" ||
+                  u.followStatus === "PENDING" ||
+                  u.followStatus === "SELF"
+                    ? "var(--text)"
+                    : "white",
+                fontWeight: 850,
                 fontSize: 11,
                 lineHeight: 1,
                 display: "inline-flex",
@@ -365,12 +493,12 @@ export default function UserSearchPage() {
                   u.followStatus === "SELF" || followBusyId === u.id
                     ? "default"
                     : "pointer",
-                opacity: followBusyId === u.id ? 0.72 : 1,
+                opacity: followBusyId === u.id ? 0.62 : 1,
                 whiteSpace: "nowrap",
                 flexShrink: 0,
                 boxShadow:
-                  u.followStatus === "ACCEPTED"
-                    ? "0 0 0 1px rgba(39,196,107,0.10)"
+                  u.followStatus === "NONE" || !u.followStatus
+                    ? "0 10px 22px color-mix(in srgb, var(--green) 20%, transparent)"
                     : "none",
                 transition:
                   "background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease",
@@ -392,7 +520,19 @@ export default function UserSearchPage() {
       </div>
 
       {!loading && results.length === 0 && query.trim().length >= 2 && (
-        <div style={{ padding: 16, color: "var(--sub)" }}>No users found</div>
+        <div
+          style={{
+            padding: "18px 16px",
+            borderRadius: 22,
+            border: "1px solid color-mix(in srgb, var(--border) 42%, transparent)",
+            background: "color-mix(in srgb, var(--muted) 52%, transparent)",
+            color: "var(--sub)",
+            fontSize: 13,
+            lineHeight: 1.4,
+          }}
+        >
+          No golfers found for "{query.trim()}". Try a name or handle.
+        </div>
       )}
     </div>
   );
