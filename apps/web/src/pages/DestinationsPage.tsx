@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { API_BASE } from "../api/base";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
@@ -13,6 +13,8 @@ type CountryItem = {
   name?: string;
   slug?: string;
   followerCount?: number;
+  tipsCount?: number;
+  viewerIsFollowing?: boolean;
 };
 
 type DestinationApiItem = {
@@ -22,6 +24,26 @@ type DestinationApiItem = {
   slug: string;
   courseCount?: number;
   followerCount?: number;
+  tipsCount?: number;
+  viewerIsFollowing?: boolean;
+};
+
+type FreshTip = {
+  id: string;
+  text: string;
+  createdAt: string;
+  helpfulCount: number;
+  destination: {
+    slug: string;
+    name: string;
+    code: string;
+  };
+  user: {
+    id: string;
+    handle?: string | null;
+    name?: string | null;
+    avatarUrl?: string | null;
+  };
 };
 
 const COUNTRY_LABELS: Record<string, string> = {
@@ -41,6 +63,20 @@ function getCountryLabel(code: string) {
   return COUNTRY_LABELS[code] || code;
 }
 
+const metricPillStyle: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  minHeight: 24,
+  padding: "0 9px",
+  borderRadius: 999,
+  border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+  background: "color-mix(in srgb, var(--muted) 80%, transparent)",
+  color: "var(--sub)",
+  fontSize: 11,
+  fontWeight: 750,
+  whiteSpace: "nowrap",
+};
+
 export default function DestinationsPage() {
   const nav = useNavigate();
   const { token, logout } = useAuth();
@@ -53,13 +89,16 @@ export default function DestinationsPage() {
   const [destinationFollowBusySlug, setDestinationFollowBusySlug] = useState<
     string | null
   >(null);
+  const [freshTips, setFreshTips] = useState<FreshTip[]>([]);
 
   useEffect(() => {
     const run = async () => {
       try {
         setLoading(true);
         setErr(null);
-        const res = await fetch(`${API_BASE}/destinations`);
+        const res = await fetch(`${API_BASE}/destinations`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
 
         if (!res.ok) {
           const t = await res.text().catch(() => "");
@@ -84,95 +123,82 @@ export default function DestinationsPage() {
             country: item.slug,
             courseCount: item.courseCount || 0,
             followerCount: item.followerCount || 0,
+            tipsCount: item.tipsCount || 0,
+            viewerIsFollowing: Boolean(item.viewerIsFollowing),
           }),
         );
 
         console.log("destinations normalized", normalized);
         setItems(normalized);
+        setFollowedDestinationSlugs(
+          normalized
+            .filter((item) => item.viewerIsFollowing)
+            .map((item) => item.slug || item.country)
+            .filter((slug): slug is string => Boolean(slug)),
+        );
       } catch (e: any) {
         console.error("Failed to load destination countries", e);
         setErr(e?.message ?? "Failed to load destinations");
         setItems([]);
+        setFollowedDestinationSlugs([]);
       } finally {
         setLoading(false);
       }
     };
 
     run();
-  }, []);
+  }, [token]);
 
   useEffect(() => {
-    if (items.length === 0) return;
-
-    // Delay execution until next tick to ensure function is initialized
     const run = async () => {
-      await loadFollowedDestinations();
+      try {
+        const res = await fetch(`${API_BASE}/destinations/discovery/tips?take=6`);
+
+        if (!res.ok) {
+          throw new Error(`Failed to load fresh local notes: ${res.status}`);
+        }
+
+        const data = await res.json();
+        const source = Array.isArray(data?.items) ? data.items : [];
+
+        setFreshTips(
+          source
+            .filter(
+              (tip: any): tip is FreshTip =>
+                typeof tip?.id === "string" &&
+                typeof tip?.text === "string" &&
+                typeof tip?.destination?.slug === "string",
+            )
+            .map((tip: FreshTip) => ({
+              ...tip,
+              helpfulCount:
+                typeof tip.helpfulCount === "number" ? tip.helpfulCount : 0,
+              user: tip.user || { id: "", handle: null, name: null, avatarUrl: null },
+            })),
+        );
+      } catch (err) {
+        console.error("Failed to load fresh local notes", err);
+        setFreshTips([]);
+      }
     };
 
     run();
-  }, [items.length]);
+  }, []);
 
   const totalCourses = useMemo(() => {
     return items.reduce((sum, item) => sum + (item.courseCount || 0), 0);
   }, [items]);
 
-  const loadFollowedDestinations = useCallback(async () => {
-    if (!token) {
-      setFollowedDestinationSlugs([]);
-      return;
-    }
+  const popularDestinations = useMemo(() => {
+    return [...items]
+      .sort((a, b) => {
+        const followerDelta = (b.followerCount || 0) - (a.followerCount || 0);
+        if (followerDelta !== 0) return followerDelta;
+        return (b.courseCount || 0) - (a.courseCount || 0);
+      })
+      .slice(0, 6);
+  }, [items]);
 
-    try {
-      const results = await Promise.all(
-        items.map(async (item) => {
-          const slug = item.slug || item.country;
-
-          try {
-            const res = await fetch(
-              `${API_BASE}/destinations/${slug}/follow-status`,
-              {
-                headers: { Authorization: `Bearer ${token}` },
-              },
-            );
-
-            if (res.status === 401 || res.status === 403) {
-              logout();
-              return null;
-            }
-
-            if (!res.ok) {
-              return null;
-            }
-
-            const json = await res.json();
-
-            if (typeof json?.followerCount === "number") {
-              setItems((prev) =>
-                prev.map((entry) =>
-                  (entry.slug || entry.country) === slug
-                    ? { ...entry, followerCount: json.followerCount }
-                    : entry,
-                ),
-              );
-            }
-
-            return json?.following ? slug : null;
-          } catch {
-            return null;
-          }
-        }),
-      );
-
-      setFollowedDestinationSlugs(
-        results.filter(
-          (slug): slug is string => typeof slug === "string" && slug.length > 0,
-        ),
-      );
-    } catch (err) {
-      console.error("Failed to load followed destinations", err);
-      setFollowedDestinationSlugs([]);
-    }
-  }, [items, token, logout]);
   const handleToggleDestinationFollow = useCallback(
     async (item: CountryItem) => {
       const slug = item.slug || item.country;
@@ -476,6 +502,316 @@ export default function DestinationsPage() {
           </div>
         ) : null}
 
+        {!loading && !err && popularDestinations.length > 0 ? (
+          <section
+            style={{
+              display: "grid",
+              gap: 10,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "end",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              <div style={{ display: "grid", gap: 3 }}>
+                <div
+                  style={{
+                    color: "var(--text)",
+                    fontSize: 18,
+                    fontWeight: 850,
+                    letterSpacing: "-0.025em",
+                  }}
+                >
+                  Popular destinations
+                </div>
+                <div
+                  style={{
+                    color: "var(--sub)",
+                    fontSize: 13,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  Places golfers are following and exploring.
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                gap: 10,
+              }}
+            >
+              {popularDestinations.map((item) => {
+                const label =
+                  item.name || getCountryLabel(item.code || item.country);
+                const slug = item.slug || item.country;
+
+                return (
+                  <button
+                    key={`popular-${slug}`}
+                    type="button"
+                    onClick={() => nav(`/destinations/${slug}`)}
+                    style={{
+                      minWidth: 0,
+                      display: "grid",
+                      gap: 12,
+                      padding: 14,
+                      borderRadius: 24,
+                      border:
+                        "1px solid color-mix(in srgb, var(--border) 68%, transparent)",
+                      background:
+                        "linear-gradient(145deg, color-mix(in srgb, var(--card) 96%, var(--bg) 4%), color-mix(in srgb, var(--card) 91%, var(--green) 5%))",
+                      color: "var(--text)",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      boxShadow: "0 12px 28px rgba(0,0,0,0.075)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 10,
+                      }}
+                    >
+                      <img
+                        src={`https://flagcdn.com/w40/${(
+                          item.code ||
+                          item.country ||
+                          ""
+                        ).toLowerCase()}.png`}
+                        alt={item.code}
+                        style={{
+                          display: "block",
+                          width: 34,
+                          height: 24,
+                          objectFit: "cover",
+                          borderRadius: 7,
+                          boxShadow: "0 2px 7px rgba(0,0,0,0.18)",
+                        }}
+                      />
+                      <span
+                        style={{
+                          color: "var(--sub)",
+                          fontSize: 11,
+                          fontWeight: 850,
+                          letterSpacing: "0.08em",
+                        }}
+                      >
+                        {item.code}
+                      </span>
+                    </div>
+
+                    <div style={{ display: "grid", gap: 3, minWidth: 0 }}>
+                      <div
+                        style={{
+                          color: "var(--text)",
+                          fontSize: 16,
+                          fontWeight: 850,
+                          lineHeight: 1.15,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {label}
+                      </div>
+                      <div
+                        style={{
+                          color: "var(--sub)",
+                          fontSize: 12,
+                          lineHeight: 1.35,
+                        }}
+                      >
+                        Golf travel shortlist
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: 6,
+                      }}
+                    >
+                      <span style={metricPillStyle}>
+                        {item.courseCount || 0} {t("course_plural")}
+                      </span>
+                      <span style={metricPillStyle}>
+                        {item.followerCount || 0}{" "}
+                        {(item.followerCount || 0) === 1
+                          ? t("follower_singular")
+                          : t("follower_plural")}
+                      </span>
+                      {(item.tipsCount || 0) > 0 ? (
+                        <span style={metricPillStyle}>
+                          {item.tipsCount} tips
+                        </span>
+                      ) : null}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
+
+        {freshTips.length > 0 ? (
+          <section
+            style={{
+              display: "grid",
+              gap: 10,
+            }}
+          >
+            <div style={{ display: "grid", gap: 3 }}>
+              <div
+                style={{
+                  color: "var(--text)",
+                  fontSize: 18,
+                  fontWeight: 850,
+                  letterSpacing: "-0.025em",
+                }}
+              >
+                Fresh local notes
+              </div>
+              <div
+                style={{
+                  color: "var(--sub)",
+                  fontSize: 13,
+                  lineHeight: 1.4,
+                }}
+              >
+                Recent practical tips from golfers around the world.
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                gap: 10,
+              }}
+            >
+              {freshTips.map((tip) => {
+                const author =
+                  tip.user?.name ||
+                  (tip.user?.handle ? `@${tip.user.handle}` : "Fairwayd golfer");
+
+                return (
+                  <button
+                    key={tip.id}
+                    type="button"
+                    onClick={() => nav(`/destinations/${tip.destination.slug}`)}
+                    style={{
+                      display: "grid",
+                      gap: 11,
+                      padding: 14,
+                      borderRadius: 22,
+                      border:
+                        "1px solid color-mix(in srgb, var(--border) 64%, transparent)",
+                      background:
+                        "color-mix(in srgb, var(--muted) 54%, transparent)",
+                      color: "var(--text)",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      boxShadow: "0 10px 24px rgba(0,0,0,0.06)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 9,
+                      }}
+                    >
+                      <div
+                        style={{
+                          minWidth: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                        }}
+                      >
+                        <img
+                          src={`https://flagcdn.com/w40/${tip.destination.code.toLowerCase()}.png`}
+                          alt={tip.destination.code}
+                          style={{
+                            display: "block",
+                            width: 24,
+                            height: 17,
+                            objectFit: "cover",
+                            borderRadius: 5,
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.16)",
+                          }}
+                        />
+                        <div
+                          style={{
+                            minWidth: 0,
+                            color: "var(--text)",
+                            fontSize: 12,
+                            fontWeight: 850,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {tip.destination.name}
+                        </div>
+                      </div>
+                      <span
+                        style={{
+                          flexShrink: 0,
+                          color: "var(--sub)",
+                          fontSize: 11,
+                          fontWeight: 800,
+                        }}
+                      >
+                        Useful · {tip.helpfulCount || 0}
+                      </span>
+                    </div>
+
+                    <div
+                      style={{
+                        color: "color-mix(in srgb, var(--text) 88%, var(--sub))",
+                        fontSize: 14,
+                        lineHeight: 1.58,
+                        fontWeight: 500,
+                        display: "-webkit-box",
+                        WebkitLineClamp: 4,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {tip.text}
+                    </div>
+
+                    <div
+                      style={{
+                        color: "var(--sub)",
+                        fontSize: 12,
+                        fontWeight: 750,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {author}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
+
         {!loading && !err && items.length > 0 ? (
           <div
             style={{
@@ -634,6 +970,26 @@ export default function DestinationsPage() {
                           ? t("follower_singular")
                           : t("follower_plural")}
                       </span>
+
+                      {(item.tipsCount || 0) > 0 ? (
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            minHeight: 24,
+                            padding: "0 9px",
+                            borderRadius: 999,
+                            border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                            background: "color-mix(in srgb, var(--muted) 80%, transparent)",
+                            color: "var(--sub)",
+                            fontSize: 11,
+                            fontWeight: 750,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {item.tipsCount} tips
+                        </span>
+                      ) : null}
                     </div>
                   </div>
 

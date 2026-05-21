@@ -7,15 +7,15 @@ datasource db {
 }
 
 model User {
-  id                             String              @id @default(cuid())
-  email                          String?             @unique
+  id                             String                  @id @default(cuid())
+  email                          String?                 @unique
   password                       String?
-  handle                         String?             @unique
+  handle                         String?                 @unique
   name                           String?
   avatarUrl                      String?
-  privacy                        AccountPrivacy      @default(PRIVATE)
-  createdAt                      DateTime            @default(now())
-  updatedAt                      DateTime            @updatedAt
+  privacy                        AccountPrivacy          @default(PRIVATE)
+  createdAt                      DateTime                @default(now())
+  updatedAt                      DateTime                @updatedAt
   termsAcceptedAt                DateTime?
   termsVersion                   String?
   bio                            String?
@@ -23,11 +23,11 @@ model User {
   homeGolfClub                   String?
   golfSlogan                     String?
   favoriteGolfDestination        String?
-  bioPrivacy                     FieldPrivacy        @default(PUBLIC)
-  handicapPrivacy                FieldPrivacy        @default(PUBLIC)
-  homeGolfClubPrivacy            FieldPrivacy        @default(PUBLIC)
-  golfSloganPrivacy              FieldPrivacy        @default(PUBLIC)
-  favoriteGolfDestinationPrivacy FieldPrivacy        @default(PUBLIC)
+  bioPrivacy                     FieldPrivacy            @default(PUBLIC)
+  handicapPrivacy                FieldPrivacy            @default(PUBLIC)
+  homeGolfClubPrivacy            FieldPrivacy            @default(PUBLIC)
+  golfSloganPrivacy              FieldPrivacy            @default(PUBLIC)
+  favoriteGolfDestinationPrivacy FieldPrivacy            @default(PUBLIC)
   accounts                       AuthAccount[]
   comments                       Comment[]
   commentLikes                   CommentLike[]
@@ -35,14 +35,16 @@ model User {
   courseRatings                  CourseRating[]
   courseSubmissions              CourseSubmission[]
   destinationFollows             DestinationFollow[]
+  destinationTipHelpfulMarks     DestinationTipHelpful[]
+  destinationTips                DestinationTip[]
   feedbacks                      Feedback[]
-  following                      Follow[]            @relation("following")
-  followers                      Follow[]            @relation("followers")
+  following                      Follow[]                @relation("following")
+  followers                      Follow[]                @relation("followers")
   likes                          Like[]
   posts                          Post[]
   reviews                        Review[]
   tripActivities                 TripActivity[]
-  createdTrips                   Trip[]              @relation("TripCreator")
+  createdTrips                   Trip[]                  @relation("TripCreator")
   createdTripInvites             TripInvite[]
   uploadedTripDocuments          TripDocument[]
   tripMemberships                TripMember[]
@@ -100,10 +102,41 @@ model Destination {
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
   followers   DestinationFollow[]
+  tips        DestinationTip[]
 
   @@index([code])
   @@index([slug])
   @@index([isActive])
+}
+
+model DestinationTip {
+  id            String                  @id @default(cuid())
+  destinationId String
+  userId        String
+  text          String
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  destination   Destination             @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+  helpfulMarks  DestinationTipHelpful[]
+  user          User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([destinationId])
+  @@index([destinationId, createdAt])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model DestinationTipHelpful {
+  id        String         @id @default(cuid())
+  tipId     String
+  userId    String
+  createdAt DateTime       @default(now())
+  tip       DestinationTip @relation(fields: [tipId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tipId, userId])
+  @@index([tipId])
+  @@index([userId])
 }
 
 model Course {

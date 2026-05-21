@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Visibility } from '@prisma/client';
 
@@ -38,8 +38,9 @@ export class DestinationsService {
     );
   }
 
-  async findAll() {
+  async findAll(userId?: string) {
     await this.ensureDefaultDestinations();
+    const uid = userId?.trim();
 
     const destinations = await this.prisma.destination.findMany({
       where: {
@@ -53,25 +54,123 @@ export class DestinationsService {
         code: true,
         name: true,
         slug: true,
+        _count: {
+          select: {
+            followers: true,
+            tips: true,
+          },
+        },
       },
     });
 
-    const items = await Promise.all(
-      destinations.map(async (destination) => {
-        const courseCount = await this.prisma.course.count({
-          where: {
-            country: destination.code,
-          },
-        });
+    const courseCounts = await this.prisma.course.groupBy({
+      by: ['country'],
+      where: {
+        active: true,
+        country: {
+          in: destinations.map((destination) => destination.code),
+        },
+      },
+      _count: {
+        country: true,
+      },
+    });
 
-        return {
-          ...destination,
-          courseCount,
-        };
-      }),
+    const courseCountByCountry = new Map(
+      courseCounts.map((row) => [row.country, row._count.country]),
     );
 
+    let followedDestinationIds = new Set<string>();
+
+    if (uid) {
+      const follows = await this.prisma.destinationFollow.findMany({
+        where: {
+          userId: uid,
+          destinationId: {
+            in: destinations.map((destination) => destination.id),
+          },
+        },
+        select: {
+          destinationId: true,
+        },
+      });
+
+      followedDestinationIds = new Set(
+        follows.map((follow) => follow.destinationId),
+      );
+    }
+
+    const items = destinations.map((destination) => ({
+      id: destination.id,
+      code: destination.code,
+      name: destination.name,
+      slug: destination.slug,
+      courseCount: courseCountByCountry.get(destination.code) ?? 0,
+      followerCount: destination._count.followers,
+      tipsCount: destination._count.tips,
+      viewerIsFollowing: followedDestinationIds.has(destination.id),
+    }));
+
     return { items };
+  }
+
+  async getDiscoveryTips(takeInput?: unknown) {
+    await this.ensureDefaultDestinations();
+
+    const parsedTake =
+      typeof takeInput === 'string' ? Number.parseInt(takeInput, 10) : 6;
+    const take = Math.max(
+      1,
+      Math.min(12, Number.isFinite(parsedTake) ? parsedTake : 6),
+    );
+
+    const tips = await this.prisma.destinationTip.findMany({
+      where: {
+        destination: {
+          isActive: true,
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take,
+      select: {
+        id: true,
+        text: true,
+        createdAt: true,
+        destination: {
+          select: {
+            slug: true,
+            name: true,
+            code: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            handle: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+        _count: {
+          select: {
+            helpfulMarks: true,
+          },
+        },
+      },
+    });
+
+    return {
+      items: tips.map((tip) => ({
+        id: tip.id,
+        text: tip.text,
+        createdAt: tip.createdAt,
+        helpfulCount: tip._count.helpfulMarks,
+        destination: tip.destination,
+        user: tip.user,
+      })),
+    };
   }
 
   async findBySlug(slug: string) {
@@ -110,6 +209,244 @@ export class DestinationsService {
       ...destination,
       courseCount,
       followerCount,
+    };
+  }
+
+  async getTipsBySlug(slug: string, userId?: string) {
+    await this.ensureDefaultDestinations();
+    const uid = userId?.trim();
+
+    const destination = await this.prisma.destination.findFirst({
+      where: {
+        slug,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        slug: true,
+      },
+    });
+
+    if (!destination) {
+      throw new NotFoundException('Destination not found');
+    }
+
+    const items = await this.prisma.destinationTip.findMany({
+      where: {
+        destinationId: destination.id,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 20,
+      select: {
+        id: true,
+        text: true,
+        createdAt: true,
+        user: {
+          select: {
+            id: true,
+            handle: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+        helpfulMarks: uid
+          ? {
+              where: {
+                userId: uid,
+              },
+              select: {
+                id: true,
+              },
+              take: 1,
+            }
+          : false,
+        _count: {
+          select: {
+            helpfulMarks: true,
+          },
+        },
+      },
+    });
+
+    return {
+      destination,
+      items: items.map((tip) => ({
+        id: tip.id,
+        text: tip.text,
+        createdAt: tip.createdAt,
+        user: tip.user,
+        helpfulCount: tip._count.helpfulMarks,
+        viewerHasMarkedHelpful: uid ? tip.helpfulMarks.length > 0 : false,
+      })),
+    };
+  }
+
+  async createTip(slug: string, userId: string, text: string) {
+    await this.ensureDefaultDestinations();
+
+    const uid = userId?.trim();
+    const trimmedText = text?.trim();
+
+    if (!uid) {
+      throw new BadRequestException('Missing userId');
+    }
+
+    if (!trimmedText) {
+      throw new BadRequestException('Missing text');
+    }
+
+    if (trimmedText.length > 500) {
+      throw new BadRequestException('Tip text must be 500 characters or less');
+    }
+
+    const destination = await this.prisma.destination.findFirst({
+      where: {
+        slug,
+        isActive: true,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!destination) {
+      throw new NotFoundException('Destination not found');
+    }
+
+    const tip = await this.prisma.destinationTip.create({
+      data: {
+        destinationId: destination.id,
+        userId: uid,
+        text: trimmedText,
+      },
+      select: {
+        id: true,
+        text: true,
+        createdAt: true,
+        _count: {
+          select: {
+            helpfulMarks: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            handle: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    });
+
+    return {
+      id: tip.id,
+      text: tip.text,
+      createdAt: tip.createdAt,
+      user: tip.user,
+      helpfulCount: tip._count.helpfulMarks,
+      viewerHasMarkedHelpful: false,
+    };
+  }
+
+  private async findTipForDestination(slug: string, tipId: string) {
+    const cleanSlug = slug?.trim();
+    const cleanTipId = tipId?.trim();
+
+    if (!cleanSlug) {
+      throw new BadRequestException('Missing destination slug');
+    }
+
+    if (!cleanTipId) {
+      throw new BadRequestException('Missing tipId');
+    }
+
+    const tip = await this.prisma.destinationTip.findFirst({
+      where: {
+        id: cleanTipId,
+        destination: {
+          slug: cleanSlug,
+          isActive: true,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!tip) {
+      throw new NotFoundException('Destination tip not found');
+    }
+
+    return tip;
+  }
+
+  private async getTipHelpfulCount(tipId: string) {
+    return this.prisma.destinationTipHelpful.count({
+      where: {
+        tipId,
+      },
+    });
+  }
+
+  async markTipHelpful(slug: string, tipId: string, userId: string) {
+    const uid = userId?.trim();
+
+    if (!uid) {
+      throw new BadRequestException('Missing userId');
+    }
+
+    const tip = await this.findTipForDestination(slug, tipId);
+
+    await this.prisma.destinationTipHelpful.upsert({
+      where: {
+        tipId_userId: {
+          tipId: tip.id,
+          userId: uid,
+        },
+      },
+      update: {},
+      create: {
+        tipId: tip.id,
+        userId: uid,
+      },
+    });
+
+    const helpfulCount = await this.getTipHelpfulCount(tip.id);
+
+    return {
+      ok: true,
+      helpfulCount,
+      viewerHasMarkedHelpful: true,
+    };
+  }
+
+  async unmarkTipHelpful(slug: string, tipId: string, userId: string) {
+    const uid = userId?.trim();
+
+    if (!uid) {
+      throw new BadRequestException('Missing userId');
+    }
+
+    const tip = await this.findTipForDestination(slug, tipId);
+
+    await this.prisma.destinationTipHelpful.deleteMany({
+      where: {
+        tipId: tip.id,
+        userId: uid,
+      },
+    });
+
+    const helpfulCount = await this.getTipHelpfulCount(tip.id);
+
+    return {
+      ok: true,
+      helpfulCount,
+      viewerHasMarkedHelpful: false,
     };
   }
 
