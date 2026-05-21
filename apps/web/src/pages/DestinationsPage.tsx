@@ -63,18 +63,352 @@ function getCountryLabel(code: string) {
   return COUNTRY_LABELS[code] || code;
 }
 
-const metricPillStyle: CSSProperties = {
+type DestinationVisual = {
+  image: string;
+  subtitle: string;
+  mood: string;
+};
+
+const DESTINATION_VISUALS: Record<string, DestinationVisual> = {
+  thailand: {
+    image:
+      "https://images.unsplash.com/photo-1535131749006-b7f58c99034b?auto=format&fit=crop&w=1400&q=78",
+    subtitle: "Tropical fairways and golden sunsets",
+    mood: "Warm-weather golf escape",
+  },
+  vietnam: {
+    image:
+      "https://images.unsplash.com/photo-1592919505780-303950717480?auto=format&fit=crop&w=1400&q=78",
+    subtitle: "Coastal golf corridors and vibrant city bases",
+    mood: "Coast and culture",
+  },
+  portugal: {
+    image:
+      "https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?auto=format&fit=crop&w=1400&q=78",
+    subtitle: "Atlantic cliffs and endless golf days",
+    mood: "Ocean-side golf",
+  },
+  spain: {
+    image:
+      "https://images.unsplash.com/photo-1573052905904-34ad8c27f0cc?auto=format&fit=crop&w=1400&q=78",
+    subtitle: "Sunlit resort golf and late Spanish evenings",
+    mood: "Mediterranean rhythm",
+  },
+  turkey: {
+    image:
+      "https://images.unsplash.com/photo-1600607688969-a5bfcd646154?auto=format&fit=crop&w=1400&q=78",
+    subtitle: "Resort fairways between pines and sea",
+    mood: "Resort golf coast",
+  },
+  "united-arab-emirates": {
+    image:
+      "https://images.unsplash.com/photo-1593111774240-d529f12cf4bb?auto=format&fit=crop&w=1400&q=78",
+    subtitle: "Desert light, skyline golf, and immaculate greens",
+    mood: "Desert precision",
+  },
+  switzerland: {
+    image:
+      "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&w=1400&q=78",
+    subtitle: "Alpine mornings and dramatic fairways",
+    mood: "Mountain golf",
+  },
+  germany: {
+    image:
+      "https://images.unsplash.com/photo-1591491638850-6d0f4fd27a47?auto=format&fit=crop&w=1400&q=78",
+    subtitle: "Forest-lined courses and classic club culture",
+    mood: "Quiet parkland golf",
+  },
+  austria: {
+    image:
+      "https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?auto=format&fit=crop&w=1400&q=78",
+    subtitle: "Lakeside golf days below the Alps",
+    mood: "Alpine lake country",
+  },
+  france: {
+    image:
+      "https://images.unsplash.com/photo-1535131749006-b7f58c99034b?auto=format&fit=crop&w=1400&q=78",
+    subtitle: "Elegant escapes from coast to countryside",
+    mood: "Classic golf travel",
+  },
+  italy: {
+    image:
+      "https://images.unsplash.com/photo-1573052905904-34ad8c27f0cc?auto=format&fit=crop&w=1400&q=78",
+    subtitle: "Lake mornings, hill towns, and graceful golf",
+    mood: "Laid-back elegance",
+  },
+  japan: {
+    image:
+      "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&w=1400&q=78",
+    subtitle: "Mountain mornings and precision golf",
+    mood: "Precise and serene",
+  },
+  "united-states": {
+    image:
+      "https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?auto=format&fit=crop&w=1400&q=78",
+    subtitle: "Big landscapes and destination golf icons",
+    mood: "Open-road golf",
+  },
+};
+
+const DEFAULT_DESTINATION_VISUAL: DestinationVisual = {
+  image:
+    "https://images.unsplash.com/photo-1592919505780-303950717480?auto=format&fit=crop&w=1400&q=78",
+  subtitle: "A new golf journey waiting to be shaped",
+  mood: "Golf travel",
+};
+
+function getDestinationVisual(item: CountryItem): DestinationVisual {
+  const slug = item.slug || item.country;
+  return DESTINATION_VISUALS[slug] || DEFAULT_DESTINATION_VISUAL;
+}
+
+function getFlagUrl(code?: string) {
+  if (!code) return "";
+  return `https://flagcdn.com/w40/${code.toLowerCase()}.png`;
+}
+
+function DestinationHeroCard({
+  item,
+  featured = false,
+  isFollowing = false,
+  isBusy = false,
+  onOpen,
+  onFollow,
+}: {
+  item: CountryItem;
+  featured?: boolean;
+  isFollowing?: boolean;
+  isBusy?: boolean;
+  onOpen: () => void;
+  onFollow?: () => void;
+}) {
+  const label = item.name || getCountryLabel(item.code || item.country);
+  const visual = getDestinationVisual(item);
+
+  return (
+    <article
+      onClick={onOpen}
+      style={{
+        position: "relative",
+        minHeight: featured ? 224 : 198,
+        borderRadius: featured ? 26 : 24,
+        overflow: "hidden",
+        cursor: "pointer",
+        border: "1px solid color-mix(in srgb, var(--border) 56%, transparent)",
+        background: "var(--card)",
+        boxShadow: featured
+          ? "0 16px 38px rgba(0,0,0,0.14)"
+          : "0 12px 30px rgba(0,0,0,0.10)",
+      }}
+    >
+      <img
+        src={visual.image}
+        alt={`${label} golf travel inspiration`}
+        loading="lazy"
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          display: "block",
+          transform: "scale(1.01)",
+        }}
+      />
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          inset: 0,
+          background:
+            "linear-gradient(to top, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.34) 48%, rgba(0,0,0,0.08) 100%)",
+        }}
+      />
+
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          minHeight: featured ? 224 : 198,
+          padding: featured ? 14 : 13,
+          display: "grid",
+          alignContent: "space-between",
+          gap: 12,
+          boxSizing: "border-box",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: 12,
+          }}
+        >
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              minHeight: 30,
+              padding: "4px 8px 4px 5px",
+              borderRadius: 999,
+              border: "1px solid rgba(255,255,255,0.24)",
+              background: "rgba(0,0,0,0.28)",
+              color: "#fff",
+              backdropFilter: "blur(12px)",
+            }}
+          >
+            <span
+              style={{
+                width: 21,
+                height: 21,
+                borderRadius: 999,
+                display: "grid",
+                placeItems: "center",
+                overflow: "hidden",
+                background: "rgba(255,255,255,0.16)",
+                border: "1px solid rgba(255,255,255,0.28)",
+              }}
+            >
+              {item.code ? (
+                <img
+                  src={getFlagUrl(item.code)}
+                  alt={item.code}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    display: "block",
+                  }}
+                />
+              ) : null}
+            </span>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 850,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+              }}
+            >
+              {item.code || visual.mood}
+            </span>
+          </div>
+
+          {onFollow ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onFollow();
+              }}
+              disabled={isBusy}
+              style={{
+                minWidth: 78,
+                height: 31,
+                borderRadius: 999,
+                border: isFollowing
+                  ? "1px solid rgba(255,255,255,0.28)"
+                  : "1px solid color-mix(in srgb, var(--green) 70%, white)",
+                background: isFollowing
+                  ? "rgba(255,255,255,0.16)"
+                  : "var(--green)",
+                color: "#fff",
+                padding: "0 11px",
+                fontSize: 11,
+                fontWeight: 850,
+                cursor: isBusy ? "default" : "pointer",
+                opacity: isBusy ? 0.72 : 1,
+                backdropFilter: "blur(12px)",
+                boxShadow: isFollowing
+                  ? "none"
+                  : "0 10px 22px color-mix(in srgb, var(--green) 34%, transparent)",
+              }}
+            >
+              {isBusy ? "..." : isFollowing ? t("following") : t("follow")}
+            </button>
+          ) : null}
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gap: 9,
+            maxWidth: 560,
+          }}
+        >
+          <div style={{ display: "grid", gap: 5 }}>
+            <div
+              style={{
+                color: "rgba(255,255,255,0.80)",
+                fontSize: 10,
+                fontWeight: 800,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+              }}
+            >
+              {visual.mood}
+            </div>
+            <h2
+              style={{
+                margin: 0,
+                color: "#fff",
+                fontSize: featured ? 25 : 23,
+                lineHeight: 1.02,
+                fontWeight: 900,
+                letterSpacing: "-0.045em",
+              }}
+            >
+              {label}
+            </h2>
+            <div
+              style={{
+                color: "rgba(255,255,255,0.88)",
+                fontSize: featured ? 13 : 12,
+                lineHeight: 1.38,
+                fontWeight: 600,
+              }}
+            >
+              {visual.subtitle}
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 6,
+            }}
+          >
+            <span style={cinematicPillStyle}>
+              {item.courseCount || 0} {t("course_plural")}
+            </span>
+            <span style={cinematicPillStyle}>
+              {item.tipsCount || 0} local notes
+            </span>
+            <span style={cinematicPillStyle}>
+              {(item.followerCount || 0) > 0 ? "Trending" : "Emerging"}
+            </span>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+const cinematicPillStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
-  minHeight: 24,
-  padding: "0 9px",
+  minHeight: 23,
+  padding: "0 8px",
   borderRadius: 999,
-  border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-  background: "color-mix(in srgb, var(--muted) 80%, transparent)",
-  color: "var(--sub)",
-  fontSize: 11,
-  fontWeight: 750,
-  whiteSpace: "nowrap",
+  border: "1px solid rgba(255,255,255,0.18)",
+  background: "rgba(0,0,0,0.22)",
+  color: "rgba(255,255,255,0.84)",
+  fontSize: 10,
+  fontWeight: 800,
+  backdropFilter: "blur(12px)",
 };
 
 export default function DestinationsPage() {
@@ -311,8 +645,8 @@ export default function DestinationsPage() {
         className="fw-page-shell"
         style={{
           display: "grid",
-          gap: 14,
-          padding: "12px 12px 88px",
+          gap: 22,
+          padding: "12px 12px 96px",
           width: "100%",
           minWidth: 0,
           boxSizing: "border-box",
@@ -323,13 +657,13 @@ export default function DestinationsPage() {
           style={{
             position: "relative",
             display: "grid",
-            gap: 14,
-            padding: "20px 18px 18px",
-            borderRadius: 28,
-            border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+            gap: 18,
+            padding: "26px 20px 22px",
+            borderRadius: 32,
+            border: "1px solid color-mix(in srgb, var(--border) 54%, transparent)",
             background:
-              "linear-gradient(145deg, color-mix(in srgb, var(--card) 94%, var(--green) 6%), color-mix(in srgb, var(--card) 92%, var(--bg) 8%))",
-            boxShadow: "0 18px 44px rgba(0,0,0,0.10)",
+              "linear-gradient(145deg, color-mix(in srgb, var(--card) 96%, var(--green) 4%), color-mix(in srgb, var(--card) 88%, var(--bg) 12%))",
+            boxShadow: "0 22px 58px rgba(0,0,0,0.12)",
             overflow: "hidden",
           }}
         >
@@ -369,27 +703,28 @@ export default function DestinationsPage() {
             <h1
               style={{
                 margin: 0,
-                fontSize: 28,
+                fontSize: 34,
                 lineHeight: 1.05,
-                fontWeight: 850,
-                letterSpacing: "-0.045em",
+                fontWeight: 900,
+                letterSpacing: "-0.055em",
                 color: "var(--text)",
+                maxWidth: 620,
               }}
             >
-              Explore golf destinations
+              Discover your next golf destination
             </h1>
 
             <p
               style={{
                 margin: 0,
-                maxWidth: 520,
+                maxWidth: 590,
                 color: "var(--sub)",
-                fontSize: 14,
-                lineHeight: 1.55,
+                fontSize: 15,
+                lineHeight: 1.6,
               }}
             >
-              Find countries shaped by memorable courses, travel inspiration and
-              golf communities worth following.
+              Slow down, browse the world by mood, and find places shaped by
+              memorable courses, local notes, and travel-worthy fairways.
             </p>
           </div>
 
@@ -543,120 +878,20 @@ export default function DestinationsPage() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                gap: 10,
+                gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+                gap: 14,
               }}
             >
               {popularDestinations.map((item) => {
-                const label =
-                  item.name || getCountryLabel(item.code || item.country);
                 const slug = item.slug || item.country;
 
                 return (
-                  <button
+                  <DestinationHeroCard
                     key={`popular-${slug}`}
-                    type="button"
-                    onClick={() => nav(`/destinations/${slug}`)}
-                    style={{
-                      minWidth: 0,
-                      display: "grid",
-                      gap: 12,
-                      padding: 14,
-                      borderRadius: 24,
-                      border:
-                        "1px solid color-mix(in srgb, var(--border) 68%, transparent)",
-                      background:
-                        "linear-gradient(145deg, color-mix(in srgb, var(--card) 96%, var(--bg) 4%), color-mix(in srgb, var(--card) 91%, var(--green) 5%))",
-                      color: "var(--text)",
-                      textAlign: "left",
-                      cursor: "pointer",
-                      boxShadow: "0 12px 28px rgba(0,0,0,0.075)",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: 10,
-                      }}
-                    >
-                      <img
-                        src={`https://flagcdn.com/w40/${(
-                          item.code ||
-                          item.country ||
-                          ""
-                        ).toLowerCase()}.png`}
-                        alt={item.code}
-                        style={{
-                          display: "block",
-                          width: 34,
-                          height: 24,
-                          objectFit: "cover",
-                          borderRadius: 7,
-                          boxShadow: "0 2px 7px rgba(0,0,0,0.18)",
-                        }}
-                      />
-                      <span
-                        style={{
-                          color: "var(--sub)",
-                          fontSize: 11,
-                          fontWeight: 850,
-                          letterSpacing: "0.08em",
-                        }}
-                      >
-                        {item.code}
-                      </span>
-                    </div>
-
-                    <div style={{ display: "grid", gap: 3, minWidth: 0 }}>
-                      <div
-                        style={{
-                          color: "var(--text)",
-                          fontSize: 16,
-                          fontWeight: 850,
-                          lineHeight: 1.15,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {label}
-                      </div>
-                      <div
-                        style={{
-                          color: "var(--sub)",
-                          fontSize: 12,
-                          lineHeight: 1.35,
-                        }}
-                      >
-                        Golf travel shortlist
-                      </div>
-                    </div>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: 6,
-                      }}
-                    >
-                      <span style={metricPillStyle}>
-                        {item.courseCount || 0} {t("course_plural")}
-                      </span>
-                      <span style={metricPillStyle}>
-                        {item.followerCount || 0}{" "}
-                        {(item.followerCount || 0) === 1
-                          ? t("follower_singular")
-                          : t("follower_plural")}
-                      </span>
-                      {(item.tipsCount || 0) > 0 ? (
-                        <span style={metricPillStyle}>
-                          {item.tipsCount} tips
-                        </span>
-                      ) : null}
-                    </div>
-                  </button>
+                    item={item}
+                    featured
+                    onOpen={() => nav(`/destinations/${slug}`)}
+                  />
                 );
               })}
             </div>
@@ -816,216 +1051,23 @@ export default function DestinationsPage() {
           <div
             style={{
               display: "grid",
-              gap: 10,
+              gap: 14,
             }}
           >
             {items.map((item) => {
-              const label =
-                item.name || getCountryLabel(item.code || item.country);
               const slug = item.slug || item.country;
               const isFollowing = followedDestinationSlugs.includes(slug);
               const isBusy = destinationFollowBusySlug === slug;
 
               return (
-                <div
+                <DestinationHeroCard
                   key={item.country}
-                  onClick={() => {
-                    nav(`/destinations/${slug}`);
-                  }}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 13,
-                    width: "100%",
-                    minWidth: 0,
-                    padding: 14,
-                    borderRadius: 24,
-                    border: "1px solid color-mix(in srgb, var(--border) 70%, transparent)",
-                    background:
-                      "linear-gradient(135deg, color-mix(in srgb, var(--card) 96%, var(--bg) 4%), color-mix(in srgb, var(--card) 90%, var(--green) 4%))",
-                    color: "var(--text)",
-                    textAlign: "left",
-                    cursor: "pointer",
-                    boxSizing: "border-box",
-                    overflow: "hidden",
-                    boxShadow: "0 12px 28px rgba(0,0,0,0.075)",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "grid",
-                      placeItems: "center",
-                      width: 52,
-                      height: 52,
-                      minWidth: 52,
-                      borderRadius: 18,
-                      border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                      background: "color-mix(in srgb, var(--muted) 78%, transparent)",
-                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.20)",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <img
-                      src={`https://flagcdn.com/w40/${(
-                        item.code ||
-                        item.country ||
-                        ""
-                      ).toLowerCase()}.png`}
-                      alt={item.code}
-                      style={{
-                        display: "block",
-                        width: 34,
-                        height: 24,
-                        objectFit: "cover",
-                        borderRadius: 7,
-                        boxShadow: "0 2px 7px rgba(0,0,0,0.18)",
-                      }}
-                    />
-                  </div>
-
-                  <div
-                    style={{
-                      minWidth: 0,
-                      flex: "1 1 auto",
-                      display: "grid",
-                      gap: 7,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div style={{ display: "grid", gap: 3, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontWeight: 850,
-                          fontSize: 16,
-                          lineHeight: 1.15,
-                          letterSpacing: "-0.018em",
-                          color: "var(--text)",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {label}
-                      </div>
-
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: "var(--sub)",
-                          lineHeight: 1.35,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {t("destination_card_subtitle")}
-                      </div>
-                    </div>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: 6,
-                        lineHeight: 1.2,
-                      }}
-                    >
-                      {item.courseCount > 0 ? (
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            minHeight: 24,
-                            padding: "0 9px",
-                            borderRadius: 999,
-                            border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                            background: "color-mix(in srgb, var(--muted) 80%, transparent)",
-                            color: "var(--text)",
-                            fontSize: 11,
-                            fontWeight: 750,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {item.courseCount} {t("course_plural")}
-                        </span>
-                      ) : null}
-
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          minHeight: 24,
-                          padding: "0 9px",
-                          borderRadius: 999,
-                          border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                          background: "color-mix(in srgb, var(--muted) 80%, transparent)",
-                          color: "var(--sub)",
-                          fontSize: 11,
-                          fontWeight: 750,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {item.followerCount || 0}{" "}
-                        {(item.followerCount || 0) === 1
-                          ? t("follower_singular")
-                          : t("follower_plural")}
-                      </span>
-
-                      {(item.tipsCount || 0) > 0 ? (
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            minHeight: 24,
-                            padding: "0 9px",
-                            borderRadius: 999,
-                            border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                            background: "color-mix(in srgb, var(--muted) 80%, transparent)",
-                            color: "var(--sub)",
-                            fontSize: 11,
-                            fontWeight: 750,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {item.tipsCount} tips
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleToggleDestinationFollow(item);
-                    }}
-                    disabled={isBusy}
-                    style={{
-                      border: isFollowing
-                        ? "1px solid color-mix(in srgb, var(--green) 48%, var(--border))"
-                        : "1px solid color-mix(in srgb, var(--green) 72%, var(--border))",
-                      background: isFollowing
-                        ? "color-mix(in srgb, var(--green) 13%, var(--muted))"
-                        : "var(--green)",
-                      color: isFollowing ? "var(--text)" : "#fff",
-                      minWidth: 86,
-                      height: 36,
-                      padding: "0 14px",
-                      borderRadius: 999,
-                      cursor: isBusy ? "default" : "pointer",
-                      fontWeight: 850,
-                      fontSize: 12,
-                      flexShrink: 0,
-                      opacity: isBusy ? 0.72 : 1,
-                      whiteSpace: "nowrap",
-                      boxShadow: isFollowing
-                        ? "none"
-                        : "0 8px 18px color-mix(in srgb, var(--green) 30%, transparent)",
-                    }}
-                  >
-                    {isBusy ? "..." : isFollowing ? t("following") : t("follow")}
-                  </button>
-                </div>
+                  item={item}
+                  isFollowing={isFollowing}
+                  isBusy={isBusy}
+                  onOpen={() => nav(`/destinations/${slug}`)}
+                  onFollow={() => handleToggleDestinationFollow(item)}
+                />
               );
             })}
           </div>
