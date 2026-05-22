@@ -16,6 +16,48 @@ type OAuthProvider = 'GOOGLE' | 'APPLE' | 'FACEBOOK';
 
 const MIN_HANDLE_LENGTH = 3;
 
+function safePrefix(value: string | null | undefined) {
+  const normalized = String(value ?? '').trim();
+  return normalized ? `${normalized.slice(0, 12)}...` : null;
+}
+
+function uniqueStrings(values: Array<string | null | undefined>) {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const value of values) {
+    for (const item of String(value ?? '').split(',')) {
+      const normalized = item.trim();
+      if (!normalized || seen.has(normalized)) continue;
+      seen.add(normalized);
+      result.push(normalized);
+    }
+  }
+
+  return result;
+}
+
+function decodeGoogleTokenAudience(idToken: string) {
+  try {
+    const [, payloadPart] = idToken.split('.');
+    if (!payloadPart) return null;
+
+    const payload = JSON.parse(
+      Buffer.from(payloadPart, 'base64url').toString('utf8'),
+    );
+    const aud = payload?.aud;
+
+    return {
+      audPrefixes: Array.isArray(aud)
+        ? aud.map((item) => safePrefix(String(item)))
+        : [safePrefix(typeof aud === 'string' ? aud : null)].filter(Boolean),
+      azpPrefix: safePrefix(typeof payload?.azp === 'string' ? payload.azp : null),
+    };
+  } catch {
+    return null;
+  }
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -421,13 +463,31 @@ export class AuthService {
     return clientId;
   }
 
+  private getGoogleClientAudiences(): string[] {
+    const audiences = uniqueStrings([
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_IDS,
+      process.env.GOOGLE_WEB_CLIENT_ID,
+      process.env.GOOGLE_NATIVE_CLIENT_ID,
+      process.env.GOOGLE_ANDROID_CLIENT_ID,
+      process.env.GOOGLE_IOS_CLIENT_ID,
+    ]);
+
+    if (audiences.length === 0) {
+      throw new BadRequestException('GOOGLE_CLIENT_ID is not set');
+    }
+
+    return audiences;
+  }
+
   private async verifyGoogleIdToken(idToken: string) {
-    const audience = this.getGoogleClientId();
+    const audiences = this.getGoogleClientAudiences();
+    const decodedAudience = decodeGoogleTokenAudience(idToken);
 
     try {
       const ticket = await this.googleClient.verifyIdToken({
         idToken,
-        audience,
+        audience: audiences,
       });
 
       const payload = ticket.getPayload();
@@ -440,21 +500,25 @@ export class AuthService {
       const audAny: any = (payload as any).aud;
       const audOk =
         typeof audAny === 'string'
-          ? audAny === audience
+          ? audiences.includes(audAny)
           : Array.isArray(audAny)
-            ? audAny.includes(audience)
+            ? audAny.some((aud) => audiences.includes(aud))
             : false;
 
       if (!audOk) {
-        throw new Error(`Audience mismatch aud=${JSON.stringify(audAny)}`);
+        throw new Error(
+          `Audience mismatch audPrefix=${JSON.stringify(
+            decodedAudience?.audPrefixes ?? [],
+          )} expectedPrefixes=${JSON.stringify(audiences.map(safePrefix))}`,
+        );
       }
 
       if (this.isDebugEnabled()) {
         console.log('[OAuth] Google verify OK', {
           email: payload.email ?? null,
-          aud: audAny,
-          azp: (payload as any).azp,
-          expectedAudPrefix: audience.slice(0, 12) + '…',
+          audPrefixes: decodedAudience?.audPrefixes ?? [],
+          azpPrefix: decodedAudience?.azpPrefix ?? null,
+          expectedAudPrefixes: audiences.map(safePrefix),
           node: process.version,
         });
       }
@@ -471,7 +535,9 @@ export class AuthService {
         message: e?.message ?? String(e),
         name: e?.name,
         code: e?.code,
-        expectedAudPrefix: audience ? audience.slice(0, 12) + '…' : null,
+        tokenAudPrefixes: decodedAudience?.audPrefixes ?? [],
+        tokenAzpPrefix: decodedAudience?.azpPrefix ?? null,
+        expectedAudPrefixes: audiences.map(safePrefix),
         node: process.version,
       });
 
