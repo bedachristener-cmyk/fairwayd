@@ -24,6 +24,8 @@ export default function BottomTabs() {
           border: 0,
           background: "transparent",
           padding: "9px 4px 7px",
+          minHeight: 56,
+          boxSizing: "border-box",
           fontWeight: active ? 850 : 650,
           opacity: active ? 1 : 0.78,
           cursor: "pointer",
@@ -84,6 +86,8 @@ export default function BottomTabs() {
         borderTop: "1px solid var(--border)",
         display: "flex",
         paddingBottom: "var(--fw-safe-area-bottom)",
+        minHeight: "var(--fw-bottom-tabs-height)",
+        boxSizing: "border-box",
         zIndex: 2000,
       }}
     >

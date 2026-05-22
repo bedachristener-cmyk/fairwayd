@@ -47,14 +47,16 @@ function AvatarCircle({
           minHeight: size,
           maxWidth: size,
           maxHeight: size,
-        borderRadius: "50%",
-        objectFit: "cover",
-        display: "block",
-        flexShrink: 0,
-        border: "2px solid color-mix(in srgb, var(--card) 88%, transparent)",
-        boxShadow:
-          "0 8px 20px rgba(0,0,0,0.12), 0 0 0 1px color-mix(in srgb, var(--border) 54%, transparent)",
-      }}
+          aspectRatio: "1 / 1",
+          borderRadius: "50%",
+          objectFit: "cover",
+          display: "block",
+          flexShrink: 0,
+          boxSizing: "border-box",
+          border: "2px solid color-mix(in srgb, var(--card) 88%, transparent)",
+          boxShadow:
+            "0 8px 20px rgba(0,0,0,0.12), 0 0 0 1px color-mix(in srgb, var(--border) 54%, transparent)",
+        }}
       />
     );
   }
@@ -65,6 +67,11 @@ function AvatarCircle({
       style={{
         width: size,
         height: size,
+        minWidth: size,
+        minHeight: size,
+        maxWidth: size,
+        maxHeight: size,
+        aspectRatio: "1 / 1",
         borderRadius: "999px",
         display: "grid",
         placeItems: "center",

@@ -99,7 +99,7 @@ export default function StageFeedbackWidget() {
         style={{
           position: "fixed",
           right: 16,
-          bottom: 80,
+          bottom: "calc(88px + env(safe-area-inset-bottom, 0px))",
           zIndex: 9999,
           border: "1px solid var(--border)",
           background: "var(--card)",

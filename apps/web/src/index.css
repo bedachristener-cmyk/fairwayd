@@ -278,6 +278,8 @@ body,
 
 button {
   font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 body.is-pwa-standalone {
@@ -782,11 +784,24 @@ body.is-pwa-standalone {
 img.fw-avatar-img {
   width: 100% !important;
   height: 100% !important;
+  min-width: 100% !important;
+  min-height: 100% !important;
   max-width: 100% !important;
   max-height: 100% !important;
+  aspect-ratio: 1 / 1 !important;
   object-fit: cover !important;
   border-radius: 50% !important;
   display: block !important;
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.fw-avatar-wrap {
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
 }
 
 img.fw-post-img {
@@ -834,6 +849,21 @@ img.fw-post-img {
   .back-to-top-fab {
     right: 24px !important;
     bottom: 24px !important;
+  }
+}
+
+@media (max-width: 980px) {
+  .fw-bottom-tabs {
+    min-height: var(--fw-bottom-tabs-height);
+    box-sizing: border-box;
+    padding-top: 4px;
+    padding-left: max(4px, env(safe-area-inset-left, 0px));
+    padding-right: max(4px, env(safe-area-inset-right, 0px));
+  }
+
+  .fw-bottom-tab {
+    min-height: 56px;
+    box-sizing: border-box;
   }
 }
 
