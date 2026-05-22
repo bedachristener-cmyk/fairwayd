@@ -1,12 +1,4 @@
-import {
-  Bell,
-  ChevronRight,
-  Flag,
-  Lightbulb,
-  Plane,
-  Sparkles,
-  UserPlus,
-} from "lucide-react";
+import { Bell, ChevronRight, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../api/base";
@@ -17,6 +9,7 @@ import {
   markNotificationRead,
   type NotificationItem,
 } from "../api/notifications";
+import { NotificationRowsSkeleton } from "../components/PolishStates";
 
 type NotificationEntry = {
   id: string;
@@ -32,7 +25,7 @@ type ActivityPreviewItem = {
   title: string;
   subtitle: string;
   time: string;
-  icon: React.ReactNode;
+  icon: string;
   unread?: boolean;
 };
 
@@ -42,7 +35,7 @@ const activityPreviewItems: ActivityPreviewItem[] = [
     title: "Follow request updates will appear here",
     subtitle: "Requests, approvals, and network changes will stay clearly grouped.",
     time: "Preview",
-    icon: <UserPlus size={17} strokeWidth={2.2} />,
+    icon: "👥",
     unread: true,
   },
   {
@@ -50,7 +43,7 @@ const activityPreviewItems: ActivityPreviewItem[] = [
     title: "New local notes from followed destinations",
     subtitle: "Useful destination advice can surface without becoming a noisy feed.",
     time: "Soon",
-    icon: <Flag size={17} strokeWidth={2.2} />,
+    icon: "⛳",
     unread: true,
   },
   {
@@ -58,14 +51,14 @@ const activityPreviewItems: ActivityPreviewItem[] = [
     title: "Trip invite updates",
     subtitle: "Accepted invites and planning changes can land here.",
     time: "Soon",
-    icon: <Plane size={17} strokeWidth={2.2} />,
+    icon: "✈️",
   },
   {
     id: "useful-tip-reactions",
     title: "Useful reactions to your tips",
     subtitle: "Helpful community feedback can be shown without social noise.",
     time: "Soon",
-    icon: <Lightbulb size={17} strokeWidth={2.2} />,
+    icon: "💡",
     unread: true,
   },
   {
@@ -73,9 +66,25 @@ const activityPreviewItems: ActivityPreviewItem[] = [
     title: "New posts from destinations you follow",
     subtitle: "Destination activity can be summarized when this becomes live.",
     time: "Soon",
-    icon: <Sparkles size={17} strokeWidth={2.2} />,
+    icon: "📍",
   },
 ];
+
+function ActivityGlyph({ icon }: { icon: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        fontSize: 15,
+        lineHeight: 1,
+        filter: "saturate(0.82)",
+        transform: "translateY(0.5px)",
+      }}
+    >
+      {icon}
+    </span>
+  );
+}
 
 export default function NotificationsPage() {
   const nav = useNavigate();
@@ -231,22 +240,30 @@ export default function NotificationsPage() {
     const type = item.type.toLowerCase();
 
     if (type.includes("follow")) {
-      return <UserPlus size={17} strokeWidth={2.2} />;
+      return "👥";
     }
 
     if (type.includes("trip")) {
-      return <Plane size={17} strokeWidth={2.2} />;
+      return "✈️";
     }
 
-    if (type.includes("tip") || type.includes("useful")) {
-      return <Lightbulb size={17} strokeWidth={2.2} />;
+    if (type.includes("note")) {
+      return "⛳";
+    }
+
+    if (
+      type.includes("tip") ||
+      type.includes("useful") ||
+      type.includes("helpful")
+    ) {
+      return "💡";
     }
 
     if (type.includes("destination") || type.includes("post")) {
-      return <Flag size={17} strokeWidth={2.2} />;
+      return "📍";
     }
 
-    return <Bell size={17} strokeWidth={2.2} />;
+    return "🔔";
   }
 
   function getNotificationTime(createdAt: string) {
@@ -648,7 +665,7 @@ export default function NotificationsPage() {
                       flexShrink: 0,
                     }}
                   >
-                    {getNotificationIcon(item)}
+                    <ActivityGlyph icon={getNotificationIcon(item)} />
                   </div>
 
                   <div
@@ -753,7 +770,11 @@ export default function NotificationsPage() {
               display: "grid",
             }}
           >
-            {activityPreviewItems.map((item, index) => (
+            {notificationsLoading && auth?.token ? (
+              <NotificationRowsSkeleton count={3} />
+            ) : null}
+
+            {!notificationsLoading || !auth?.token ? activityPreviewItems.map((item, index) => (
               <div
                 key={item.id}
                 style={{
@@ -785,7 +806,7 @@ export default function NotificationsPage() {
                     flexShrink: 0,
                   }}
                 >
-                  {item.icon}
+                  <ActivityGlyph icon={item.icon} />
                 </div>
 
                 <div
@@ -859,7 +880,7 @@ export default function NotificationsPage() {
                   {item.time}
                 </div>
               </div>
-            ))}
+            )) : null}
           </div>
         </section>
       ) : null}

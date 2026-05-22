@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../api/base";
 import { fileUrl } from "../api/fileUrl";
 import { useAuth } from "../auth/AuthContext";
+import { EmptyState, TripCardsSkeleton } from "../components/PolishStates";
 
 type TripItem = {
   type?: string | null;
@@ -488,7 +489,7 @@ export default function TripsPage() {
       ) : null}
 
       {loading && trips.length === 0 ? (
-        <div style={{ color: "var(--sub)", fontSize: 13, fontWeight: 750, marginBottom: 10 }}>Loading...</div>
+        <TripCardsSkeleton count={3} />
       ) : null}
 
       {err ? (
@@ -507,24 +508,11 @@ export default function TripsPage() {
       ) : null}
 
       {!loading && !err && trips.length === 0 ? (
-        <div
-          style={{
-            padding: 18,
-            ...pageCardStyle,
-            color: "var(--text)",
-            display: "grid",
-            gap: 5,
-            marginBottom: 10,
-          }}
-        >
-          <div style={{ fontSize: 16, lineHeight: 1.2, fontWeight: 900 }}>
-            No trips yet
-          </div>
-          <div style={pageSubtitleStyle}>
-            Start with a destination and add tee times, hotels and flights as
-            the plan takes shape.
-          </div>
-        </div>
+        <EmptyState
+          title="Your next golf journey starts here."
+          body="Start with a destination and add tee times, hotels and flights as the plan takes shape."
+          style={{ marginBottom: 10 }}
+        />
       ) : null}
 
       {trips.length > 0 ? (

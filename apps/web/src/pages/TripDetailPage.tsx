@@ -23,6 +23,7 @@ import {
 import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
 import { fileUrl } from "../api/fileUrl";
+import { TripCardsSkeleton } from "../components/PolishStates";
 
 type TripItem = {
   id: string;
@@ -5580,7 +5581,7 @@ export default function TripDetailPage() {
       </section>
 
       {loading && !trip ? (
-        <div style={{ color: "var(--sub)", fontSize: 13 }}>Loading...</div>
+        <TripCardsSkeleton count={2} />
       ) : null}
 
       {err ? (

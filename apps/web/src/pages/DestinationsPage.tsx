@@ -3,6 +3,7 @@ import { API_BASE } from "../api/base";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import BackToTopButton from "../components/BackToTopButton";
+import { DestinationRowsSkeleton, EmptyState } from "../components/PolishStates";
 import { t } from "../i18n/strings";
 
 type CountryItem = {
@@ -880,47 +881,14 @@ export default function DestinationsPage() {
         ) : null}
 
         {loading ? (
-          <div
-            style={{
-              display: "grid",
-              gap: 6,
-              padding: 18,
-              borderRadius: 24,
-              border: "1px solid color-mix(in srgb, var(--border) 76%, transparent)",
-              background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
-              color: "var(--text)",
-              boxShadow: "0 12px 30px rgba(0,0,0,0.08)",
-            }}
-          >
-            <div style={{ fontSize: 14, fontWeight: 850 }}>
-              {t("loading_destinations")}
-            </div>
-            <div style={{ color: "var(--sub)", fontSize: 13, lineHeight: 1.45 }}>
-              Preparing your next golf travel shortlist.
-            </div>
-          </div>
+          <DestinationRowsSkeleton count={4} />
         ) : null}
 
         {!loading && !err && items.length === 0 ? (
-          <div
-            style={{
-              display: "grid",
-              gap: 6,
-              padding: 18,
-              borderRadius: 24,
-              border: "1px solid color-mix(in srgb, var(--border) 76%, transparent)",
-              background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
-              color: "var(--text)",
-              boxShadow: "0 12px 30px rgba(0,0,0,0.08)",
-            }}
-          >
-            <div style={{ fontSize: 14, fontWeight: 850 }}>
-              No destinations yet
-            </div>
-            <div style={{ color: "var(--sub)", fontSize: 13, lineHeight: 1.45 }}>
-              New golf destinations will appear here once they are available.
-            </div>
-          </div>
+          <EmptyState
+            title="No destinations yet"
+            body="New golf destinations will appear here once they are available."
+          />
         ) : null}
 
         {!loading && !err && popularDestinations.length > 0 ? (

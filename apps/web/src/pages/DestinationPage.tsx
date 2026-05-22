@@ -8,6 +8,7 @@ import PostCard from "../components/PostCard";
 import CommentModal from "../components/CommentModal";
 import BackToTopButton from "../components/BackToTopButton";
 import ImageLightbox from "../components/ImageLightbox";
+import { DestinationRowsSkeleton, EmptyState } from "../components/PolishStates";
 import { DESTINATION_INFO } from "../data/destinationInfo";
 import { t } from "../i18n/strings";
 
@@ -735,8 +736,24 @@ export default function DestinationPage() {
   const activeCommentPost =
     posts.find((p) => p.id === activeCommentPostId) ?? null;
 
-  if (loading) return <div style={{ padding: 20 }}>{t("loading")}</div>;
-  if (!data) return <div style={{ padding: 20 }}>{t("no_data")}</div>;
+  if (loading) {
+    return (
+      <div style={{ padding: 14, display: "grid", gap: 12 }}>
+        <DestinationRowsSkeleton count={3} />
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div style={{ padding: 14 }}>
+        <EmptyState
+          title="Destination unavailable"
+          body="This golf destination could not be loaded right now."
+        />
+      </div>
+    );
+  }
 
   const filteredItems = (data.items || []).filter((c: Course) => {
     const q = search.toLowerCase();

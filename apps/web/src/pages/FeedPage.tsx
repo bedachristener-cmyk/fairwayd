@@ -9,6 +9,7 @@ import CourseDropdown, { type CourseLite } from "../components/CourseDropdown";
 import PostCard from "../components/PostCard";
 import CommentModal from "../components/CommentModal";
 import BackToTopButton from "../components/BackToTopButton";
+import { EmptyState, FeedCardsSkeleton } from "../components/PolishStates";
 import { useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
@@ -241,6 +242,7 @@ export default function FeedPage() {
   const [applyingEdit, setApplyingEdit] = useState(false);
 
   const [err, setErr] = useState<string | null>(null);
+  const [feedLoading, setFeedLoading] = useState(true);
   const [posting, setPosting] = useState(false);
   const [composerHint, setComposerHint] = useState<string | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
@@ -326,9 +328,13 @@ export default function FeedPage() {
   }, [editorOpen]);
 
   const loadFeed = useCallback(async () => {
-    if (!token) return;
+    if (!token) {
+      setFeedLoading(false);
+      return;
+    }
 
     try {
+      setFeedLoading(true);
       setErr(null);
 
       const res = await fetch(`${API_BASE}/posts/feed`, {
@@ -371,6 +377,8 @@ export default function FeedPage() {
       );
     } catch (e: any) {
       setErr(e?.message ?? "Failed to load feed");
+    } finally {
+      setFeedLoading(false);
     }
   }, [token, logout]);
 
@@ -951,7 +959,21 @@ export default function FeedPage() {
     boxShadow: "none",
   };
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div
+        style={{
+          display: "grid",
+          gap: 12,
+          paddingBottom: isMobile
+            ? "calc(64px + env(safe-area-inset-bottom, 0px))"
+            : 0,
+        }}
+      >
+        <FeedCardsSkeleton count={2} />
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
@@ -2225,52 +2247,36 @@ export default function FeedPage() {
               })}
             </div>
 
-            {filteredPosts.length === 0 ? (
-              <div
-                style={{
-                  color: "var(--sub)",
-                  fontSize: 13,
-                  padding: 16,
-                  border: "1px solid var(--border)",
-                  borderRadius: 14,
-                  background: "var(--card)",
-                  textAlign: "center",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 18,
-                    marginBottom: 8,
-                    color: "var(--text)",
-                  }}
-                >
-                  {t("feed_empty_title")} 👀
-                </div>
+            {feedLoading && posts.length === 0 ? (
+              <FeedCardsSkeleton count={2} />
+            ) : null}
 
-                <div style={{ opacity: 0.85, lineHeight: 1.5 }}>
-                  {t("feed_empty_text")}
-                </div>
-
-                <div style={{ marginTop: 12 }}>
+            {!feedLoading && filteredPosts.length === 0 ? (
+              <EmptyState
+                title="No golf moments yet."
+                body={t("feed_empty_text")}
+                action={
                   <button
                     type="button"
                     onClick={() => nav("/map")}
                     style={{
                       padding: "8px 14px",
-                      borderRadius: 10,
+                      borderRadius: 999,
                       border: "1px solid var(--border)",
                       background: "var(--bg)",
                       color: "var(--text)",
                       cursor: "pointer",
+                      fontSize: 13,
+                      fontWeight: 800,
                     }}
                   >
                     {t("discover_courses")}
                   </button>
-                </div>
-              </div>
+                }
+              />
             ) : null}
 
-            {filteredPosts.map((p) => {
+            {!feedLoading && filteredPosts.map((p) => {
               const lat = Number(p.course.lat);
               const lon = Number(p.course.lon);
               const canSelectCourse =
