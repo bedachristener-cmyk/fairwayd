@@ -21,6 +21,7 @@ import {
   useMap,
 } from "react-leaflet";
 import { API_BASE } from "../api/base";
+import { friendlyApiErrorMessage } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { fileUrl } from "../api/fileUrl";
 import { TripCardsSkeleton } from "../components/PolishStates";
@@ -2369,7 +2370,7 @@ function MemberAvatar({
 export default function TripDetailPage() {
   const { tripId } = useParams();
   const nav = useNavigate();
-  const { token, user } = useAuth();
+  const { token, user, logout } = useAuth();
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
   const teeTimesSectionRef = useRef<HTMLElement | null>(null);
@@ -2529,6 +2530,10 @@ export default function TripDetailPage() {
       );
 
       if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          logout();
+          throw new Error("Your session has expired. Please login again.");
+        }
         const text = await res.text().catch(() => "");
         throw new Error(`HTTP ${res.status} ${res.statusText} ${text}`.trim());
       }
@@ -2563,7 +2568,7 @@ export default function TripDetailPage() {
 
       setShowingCachedTrip(false);
       setCachedTripAt(null);
-      setErr(e?.message ?? "Failed to load trip");
+      setErr(friendlyApiErrorMessage(e, "Failed to load trip."));
       setTrip(null);
     } finally {
       setLoading(false);

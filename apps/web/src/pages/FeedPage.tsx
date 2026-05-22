@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import ReactCrop, { type Crop, type PixelCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { API_BASE } from "../api/base";
+import { friendlyApiErrorMessage } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { useMe } from "../auth/useMe";
 import CourseDropdown, { type CourseLite } from "../components/CourseDropdown";
@@ -376,7 +377,7 @@ export default function FeedPage() {
         })),
       );
     } catch (e: any) {
-      setErr(e?.message ?? "Failed to load feed");
+      setErr(friendlyApiErrorMessage(e, "Failed to load feed."));
     } finally {
       setFeedLoading(false);
     }

@@ -13,6 +13,43 @@ export class ApiError extends Error {
   }
 }
 
+export function friendlyApiErrorMessage(
+  error: unknown,
+  fallback = "Something went wrong. Please try again.",
+) {
+  if (error instanceof ApiError) {
+    if (error.status === 401 || error.status === 403) {
+      return "Your session has expired. Please login again.";
+    }
+
+    if (error.status >= 500) {
+      return "Fairwayd is temporarily unavailable. Please try again shortly.";
+    }
+
+    return error.message || fallback;
+  }
+
+  if (error instanceof TypeError) {
+    return "Network connection failed. Please check your connection and try again.";
+  }
+
+  if (error instanceof Error) {
+    if (/^HTTP\s+\d{3}/i.test(error.message)) {
+      if (/^HTTP\s+(401|403)/i.test(error.message)) {
+        return "Your session has expired. Please login again.";
+      }
+      if (/^HTTP\s+5\d\d/i.test(error.message)) {
+        return "Fairwayd is temporarily unavailable. Please try again shortly.";
+      }
+      return fallback;
+    }
+
+    return error.message || fallback;
+  }
+
+  return fallback;
+}
+
 async function parseJsonSafe(res: Response) {
   try {
     return await res.json();
@@ -57,6 +94,12 @@ export async function apiRequest<T>(
     method,
     headers,
     body: opts?.body !== undefined ? JSON.stringify(opts.body) : undefined,
+  }).catch((error) => {
+    throw new ApiError(
+      "Network connection failed. Please check your connection and try again.",
+      0,
+      { cause: error },
+    );
   });
 
   if (!res.ok) {

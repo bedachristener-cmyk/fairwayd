@@ -1,4 +1,5 @@
 import { API_BASE } from "./base";
+import { friendlyApiErrorMessage } from "./client";
 
 export type FollowRequestItem = {
   followerId: string;
@@ -27,8 +28,22 @@ function authHeaders(token: string): HeadersInit {
 
 async function readError(res: Response) {
   const text = await res.text().catch(() => "");
+  if (res.status === 401 || res.status === 403) {
+    return "Your session has expired. Please login again.";
+  }
+  if (res.status >= 500) {
+    return "Follow requests are temporarily unavailable. Please try again shortly.";
+  }
   const msg = text?.trim() ? text.trim() : `${res.status} ${res.statusText}`;
-  return msg;
+  return msg.length > 180 ? "Could not update follow requests." : msg;
+}
+
+async function safeFetch(input: RequestInfo | URL, init?: RequestInit) {
+  try {
+    return await fetch(input, init);
+  } catch (error) {
+    throw new Error(friendlyApiErrorMessage(error, "Network connection failed."));
+  }
 }
 
 /** GET /users/me/follow-requests */
@@ -38,7 +53,7 @@ export async function fetchFollowRequests(
 ) {
   const t = requireToken(token);
 
-  const res = await fetch(`${API_BASE}/users/me/follow-requests`, {
+  const res = await safeFetch(`${API_BASE}/users/me/follow-requests`, {
     headers: authHeaders(t),
     signal: opts?.signal,
   });
@@ -61,7 +76,7 @@ export async function acceptFollowRequest(
 ) {
   const t = requireToken(token);
 
-  const res = await fetch(
+  const res = await safeFetch(
     `${API_BASE}/users/me/follow-requests/${encodeURIComponent(followerId)}/accept`,
     { method: "POST", headers: authHeaders(t) },
   );
@@ -82,7 +97,7 @@ export async function rejectFollowRequest(
 ) {
   const t = requireToken(token);
 
-  const res = await fetch(
+  const res = await safeFetch(
     `${API_BASE}/users/me/follow-requests/${encodeURIComponent(followerId)}/reject`,
     { method: "POST", headers: authHeaders(t) },
   );

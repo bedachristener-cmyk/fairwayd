@@ -8,6 +8,7 @@ import {
   type FollowRequestItem,
 } from "../api/followRequests";
 import { fileUrl } from "../api/fileUrl";
+import { friendlyApiErrorMessage } from "../api/client";
 
 function Avatar({
   url,
@@ -108,6 +109,13 @@ export default function FollowRequestsPage() {
   );
 
   const load = useCallback(async () => {
+    if (!token) {
+      setItems([]);
+      setErr("Your session has expired. Please login again.");
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setErr(null);
 
@@ -121,7 +129,7 @@ export default function FollowRequestsPage() {
 
       setItems(list);
     } catch (e: any) {
-      setErr(e?.message ?? String(e));
+      setErr(friendlyApiErrorMessage(e, "Could not load follow requests."));
     } finally {
       setLoading(false);
     }
@@ -148,7 +156,7 @@ export default function FollowRequestsPage() {
         setSelectedRequestId(null);
         window.dispatchEvent(new Event("followRequestsUpdated"));
       } catch (e: any) {
-        setErr(e?.message ?? String(e));
+        setErr(friendlyApiErrorMessage(e, "Could not accept this request."));
       } finally {
         setBusyId(null);
       }
@@ -167,7 +175,7 @@ export default function FollowRequestsPage() {
         setSelectedRequestId(null);
         window.dispatchEvent(new Event("followRequestsUpdated"));
       } catch (e: any) {
-        setErr(e?.message ?? String(e));
+        setErr(friendlyApiErrorMessage(e, "Could not reject this request."));
       } finally {
         setBusyId(null);
       }
@@ -229,6 +237,7 @@ export default function FollowRequestsPage() {
         <button
           type="button"
           onClick={load}
+          disabled={loading}
           style={{
             height: 34,
             padding: "0 12px",
@@ -238,7 +247,8 @@ export default function FollowRequestsPage() {
             color: "var(--text)",
             fontWeight: 800,
             fontSize: 12,
-            cursor: "pointer",
+            cursor: loading ? "default" : "pointer",
+            opacity: loading ? 0.68 : 1,
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
@@ -247,7 +257,7 @@ export default function FollowRequestsPage() {
           }}
         >
           <RefreshCw size={14} strokeWidth={2.2} />
-          Refresh
+          {loading ? "Refreshing..." : "Refresh"}
         </button>
       </div>
 

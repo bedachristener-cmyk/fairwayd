@@ -195,9 +195,16 @@ function AvatarCircle({
           display: "block",
           width: "100%",
           height: "100%",
+          minWidth: "100%",
+          minHeight: "100%",
+          maxWidth: "100%",
+          maxHeight: "100%",
+          aspectRatio: "1 / 1",
           borderRadius: "50%",
           objectFit: "cover",
           border: "1px solid var(--border)",
+          boxSizing: "border-box",
+          flexShrink: 0,
         }}
       />
     );
@@ -208,6 +215,11 @@ function AvatarCircle({
       style={{
         width: "100%",
         height: "100%",
+        minWidth: "100%",
+        minHeight: "100%",
+        maxWidth: "100%",
+        maxHeight: "100%",
+        aspectRatio: "1 / 1",
         borderRadius: "50%",
         background: "rgba(0,0,0,.18)",
         border: "1px solid var(--border)",
@@ -215,6 +227,8 @@ function AvatarCircle({
         placeItems: "center",
         fontWeight: 900,
         color: "var(--text)",
+        boxSizing: "border-box",
+        flexShrink: 0,
       }}
       title={t("avatar_placeholder")}
     >
@@ -2206,6 +2220,8 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                           maxHeight: 40,
                           flexShrink: 0,
                           borderRadius: 999,
+                          overflow: "hidden",
+                          aspectRatio: "1 / 1",
                           boxShadow:
                             "0 8px 20px rgba(0,0,0,0.12), 0 0 0 1px color-mix(in srgb, var(--border) 54%, transparent)",
                         }}
@@ -2439,6 +2455,8 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                           maxHeight: 40,
                           flexShrink: 0,
                           borderRadius: 999,
+                          overflow: "hidden",
+                          aspectRatio: "1 / 1",
                           boxShadow:
                             "0 8px 20px rgba(0,0,0,0.12), 0 0 0 1px color-mix(in srgb, var(--border) 54%, transparent)",
                         }}

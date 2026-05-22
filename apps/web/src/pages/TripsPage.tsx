@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../api/base";
+import { friendlyApiErrorMessage } from "../api/client";
 import { fileUrl } from "../api/fileUrl";
 import { useAuth } from "../auth/AuthContext";
 import { EmptyState, TripCardsSkeleton } from "../components/PolishStates";
@@ -293,7 +294,7 @@ async function preloadTripDetails(
 
 export default function TripsPage() {
   const nav = useNavigate();
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -316,6 +317,10 @@ export default function TripsPage() {
       });
 
       if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          logout();
+          throw new Error("Your session has expired. Please login again.");
+        }
         const text = await res.text().catch(() => "");
         throw new Error(`HTTP ${res.status} ${res.statusText} ${text}`.trim());
       }
@@ -352,7 +357,7 @@ export default function TripsPage() {
         return;
       }
 
-      setErr(e?.message ?? "Failed to load trips");
+      setErr(friendlyApiErrorMessage(e, "Failed to load trips."));
       setTrips([]);
       setCachedTripsAt(null);
       setShowingCachedTrips(false);

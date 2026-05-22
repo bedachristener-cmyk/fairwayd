@@ -58,6 +58,22 @@ type UserSearchItem = {
   followStatus?: "NONE" | "PENDING" | "ACCEPTED" | "SELF" | "UNKNOWN";
 };
 
+function userSearchHeaders(token?: string | null): HeadersInit | undefined {
+  const t = String(token ?? "").trim();
+  return t ? { Authorization: `Bearer ${t}` } : undefined;
+}
+
+async function readUserSearchItems(res: Response): Promise<UserSearchItem[]> {
+  const text = await res.text();
+  if (!text.trim()) return [];
+
+  const data = JSON.parse(text);
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.users)) return data.users;
+  return [];
+}
+
 type MainMenuItem = {
   key: string;
   label: string;
@@ -85,6 +101,8 @@ export default function TopRail() {
   const [results, setResults] = useState<UserSearchItem[]>([]);
   const [suggestions, setSuggestions] = useState<UserSearchItem[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [completedSearchQuery, setCompletedSearchQuery] = useState("");
   const [followBusyId, setFollowBusyId] = useState<string | null>(null);
   const [theme, setTheme] = useState<ThemeName>(() => getInitialTheme());
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 980);
@@ -158,6 +176,8 @@ export default function TopRail() {
     if (!query.trim()) {
       setResults([]);
       setSearchLoading(false);
+      setSearchError(null);
+      setCompletedSearchQuery("");
       return;
     }
 
@@ -166,37 +186,49 @@ export default function TopRail() {
     const t = setTimeout(async () => {
       try {
         setSearchLoading(true);
+        setSearchError(null);
 
         const res = await fetch(
-          `${API_BASE}/users/search?q=${encodeURIComponent(query)}`,
+          `${API_BASE}/users/search?q=${encodeURIComponent(query.trim())}`,
           {
-            headers: { Authorization: `Bearer ${auth?.token}` },
+            headers: userSearchHeaders(auth?.token),
           },
         );
 
         if (!res.ok) {
-          if (!cancelled) setResults([]);
+          if (!cancelled) {
+            setResults([]);
+            setCompletedSearchQuery(query.trim());
+            setSearchError(
+              res.status === 401 || res.status === 403
+                ? "Your session has expired. Please login again."
+                : "Search is unavailable right now. Please try again.",
+            );
+          }
           return;
         }
 
-        const data = await res.json();
-        const baseItems: UserSearchItem[] = Array.isArray(data)
-          ? data
-          : Array.isArray(data?.items)
-            ? data.items
-            : [];
+        const baseItems = await readUserSearchItems(res);
 
         if (!cancelled) {
           setResults(baseItems);
+          setCompletedSearchQuery(query.trim());
         }
 
         const itemsWithStatus: UserSearchItem[] = await Promise.all(
           baseItems.map(async (item): Promise<UserSearchItem> => {
+            if (!item.id) {
+              return {
+                ...item,
+                followStatus: "UNKNOWN",
+              };
+            }
+
             try {
               const statusRes = await fetch(
                 `${API_BASE}/users/id/${item.id}/following-status`,
                 {
-                  headers: { Authorization: `Bearer ${auth?.token}` },
+                  headers: userSearchHeaders(auth?.token),
                 },
               );
 
@@ -246,6 +278,12 @@ export default function TopRail() {
         console.error("Search failed", err);
         if (!cancelled) {
           setResults([]);
+          setCompletedSearchQuery(query.trim());
+          setSearchError(
+            err instanceof TypeError
+              ? "Search is unavailable right now. Please check your connection."
+              : "Search is unavailable right now. Please try again.",
+          );
         }
       } finally {
         if (!cancelled) {
@@ -275,14 +313,13 @@ export default function TopRail() {
           const res = await fetch(
             `${API_BASE}/users/search?q=${encodeURIComponent(q)}`,
             {
-              headers: { Authorization: `Bearer ${auth?.token}` },
+              headers: userSearchHeaders(auth?.token),
             },
           );
 
           if (!res.ok) continue;
 
-          const data = await res.json();
-          const baseItems = Array.isArray(data) ? data : [];
+          const baseItems = await readUserSearchItems(res);
 
           const filtered = baseItems.filter((u: any) => u.id !== me?.id);
 
@@ -396,6 +433,7 @@ export default function TopRail() {
     const isActive = current === "ACCEPTED" || current === "PENDING";
 
     setFollowBusyId(user.id);
+    setSearchError(null);
 
     setResults((prev) =>
       prev.map((item) =>
@@ -415,7 +453,11 @@ export default function TopRail() {
       });
 
       if (!res.ok) {
-        throw new Error(`Follow request failed: ${res.status}`);
+        throw new Error(
+          res.status === 401 || res.status === 403
+            ? "Your session has expired. Please login again."
+            : "Could not update this follow request. Please try again.",
+        );
       }
 
       if (!isActive) {
@@ -451,6 +493,11 @@ export default function TopRail() {
       }
     } catch (err) {
       console.error("Follow toggle failed", err);
+      setSearchError(
+        err instanceof Error
+          ? err.message
+          : "Could not update this follow request. Please try again.",
+      );
 
       setResults((prev) =>
         prev.map((item) =>
@@ -1539,6 +1586,23 @@ export default function TopRail() {
               </div>
             ) : null}
 
+            {searchError ? (
+              <div
+                style={{
+                  padding: "15px 14px",
+                  borderRadius: 20,
+                  border:
+                    "1px solid color-mix(in srgb, #ef4444 28%, var(--border))",
+                  background: "color-mix(in srgb, #ef4444 8%, var(--muted))",
+                  color: "var(--text)",
+                  fontSize: 13,
+                  lineHeight: 1.4,
+                }}
+              >
+                {searchError}
+              </div>
+            ) : null}
+
             {results.map((u) => (
               <div
                 key={u.id}
@@ -1684,7 +1748,11 @@ export default function TopRail() {
               </div>
             ))}
 
-            {!searchLoading && !results.length && query.trim().length >= 2 ? (
+            {!searchLoading &&
+            !searchError &&
+            !results.length &&
+            completedSearchQuery === query.trim() &&
+            query.trim().length >= 2 ? (
               <div
                 style={{
                   padding: "15px 14px",
