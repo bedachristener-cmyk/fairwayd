@@ -3,15 +3,29 @@ import { Resend } from 'resend';
 
 @Injectable()
 export class MailService {
-  private resend = new Resend(process.env.RESEND_API_KEY);
-
   async sendMagicLink(email: string, link: string) {
+    const apiKey = process.env.RESEND_API_KEY?.trim();
+
+    if (!apiKey) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('RESEND_API_KEY is not set');
+      }
+
+      console.warn('[EmailLogin] RESEND_API_KEY is not set; magic link:', {
+        email,
+        link,
+      });
+
+      return { mode: 'logged' as const };
+    }
+
+    const resend = new Resend(apiKey);
     const from =
       process.env.EMAIL_FROM?.trim() ||
       process.env.SMTP_FROM?.trim() ||
       'Fairwayd <noreply@fairwayd.ch>';
 
-    const result = await this.resend.emails.send({
+    const result = await resend.emails.send({
       from,
       to: email,
       subject: 'Your Fairwayd login link',
@@ -66,6 +80,12 @@ export class MailService {
 `,
     });
 
-    return result;
+    if (result.error) {
+      throw new Error(
+        `Resend send failed: ${result.error.message || result.error.name || 'unknown error'}`,
+      );
+    }
+
+    return { mode: 'sent' as const, id: result.data?.id ?? null };
   }
 }

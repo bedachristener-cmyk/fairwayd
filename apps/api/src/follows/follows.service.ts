@@ -6,10 +6,14 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { FollowStatus } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class FollowsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async countPendingRequests(userId: string) {
     return this.prisma.follow.count({
@@ -47,7 +51,7 @@ export class FollowsService {
 
     if (existing) return existing;
 
-    return this.prisma.follow.create({
+    const row = await this.prisma.follow.create({
       data: {
         followerId,
         followingId,
@@ -55,6 +59,18 @@ export class FollowsService {
       },
       select: { id: true, status: true },
     });
+
+    if (row.status === FollowStatus.PENDING) {
+      await this.notifications.createNotification({
+        userId: followingId,
+        type: 'follow_request',
+        title: 'New follow request',
+        body: 'Someone wants to connect with you.',
+        link: '/follow-requests',
+      });
+    }
+
+    return row;
   }
 
   async unfollow(followerId: string, followingId: string) {
@@ -69,7 +85,7 @@ export class FollowsService {
   async acceptRequest(myUserId: string, followId: string) {
     const row = await this.prisma.follow.findUnique({
       where: { id: followId },
-      select: { id: true, followingId: true, status: true },
+      select: { id: true, followerId: true, followingId: true, status: true },
     });
 
     if (!row) throw new NotFoundException('Request not found');
@@ -77,11 +93,21 @@ export class FollowsService {
       throw new ForbiddenException('Not allowed');
     if (row.status !== FollowStatus.PENDING) return row;
 
-    return this.prisma.follow.update({
+    const updated = await this.prisma.follow.update({
       where: { id: followId },
       data: { status: FollowStatus.ACCEPTED, decidedAt: new Date() },
       select: { id: true, status: true },
     });
+
+    await this.notifications.createNotification({
+      userId: row.followerId,
+      type: 'follow_request_accepted',
+      title: 'Follow request accepted',
+      body: 'Your follow request was accepted.',
+      link: '/profile',
+    });
+
+    return updated;
   }
 
   async declineRequest(myUserId: string, followId: string) {

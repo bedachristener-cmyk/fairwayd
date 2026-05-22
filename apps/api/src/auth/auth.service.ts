@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   ConflictException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -165,16 +166,30 @@ export class AuthService {
     const frontendUrl = this.getFrontendUrl();
     const link = `${frontendUrl}/auth/email/callback?token=${encodeURIComponent(rawToken)}`;
 
+    let delivery: Awaited<ReturnType<MailService['sendMagicLink']>>;
+
     try {
-      await this.mail.sendMagicLink(email, link);
+      delivery = await this.mail.sendMagicLink(email, link);
     } catch (err) {
-      console.error('Mail send failed', err);
+      const safeDetail = err instanceof Error ? err.message : String(err);
+
+      console.error('Mail send failed', {
+        message: safeDetail,
+      });
+
       if (process.env.NODE_ENV === 'production') {
-        throw err;
+        throw new ServiceUnavailableException(
+          'Could not send login link. Please try again later.',
+        );
       }
+
+      throw new ServiceUnavailableException({
+        message: 'Could not send login link',
+        detail: safeDetail,
+      });
     }
 
-    return { ok: true };
+    return { ok: true, delivery: delivery.mode };
   }
 
   async verifyEmailLogin(rawToken: string) {

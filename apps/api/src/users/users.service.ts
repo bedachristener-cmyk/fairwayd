@@ -11,6 +11,7 @@ import {
   FollowStatus,
   Prisma,
 } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const MIN_HANDLE_LENGTH = 3;
 const PROFILE_TEXT_LIMIT = 240;
@@ -88,7 +89,10 @@ const userProfileSelect = {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   // =========================================================
   // Me + profile basics
@@ -211,6 +215,9 @@ export class UsersService {
 
     const items = await this.prisma.user.findMany({
       where: {
+        handle: {
+          not: null,
+        },
         OR: [
           {
             handle: {
@@ -220,6 +227,12 @@ export class UsersService {
           },
           {
             name: {
+              contains: query,
+              mode: 'insensitive',
+            },
+          },
+          {
+            email: {
               contains: query,
               mode: 'insensitive',
             },
@@ -487,6 +500,13 @@ export class UsersService {
         ? FollowStatus.ACCEPTED
         : FollowStatus.PENDING;
 
+    const existing = await this.prisma.follow.findUnique({
+      where: {
+        followerId_followingId: { followerId: meId, followingId: targetUserId },
+      },
+      select: { status: true },
+    });
+
     const row = await this.prisma.follow.upsert({
       where: {
         followerId_followingId: { followerId: meId, followingId: targetUserId },
@@ -503,6 +523,16 @@ export class UsersService {
       },
       select: { status: true },
     });
+
+    if (!existing && row.status === FollowStatus.PENDING) {
+      await this.notifications.createNotification({
+        userId: targetUserId,
+        type: 'follow_request',
+        title: 'New follow request',
+        body: 'Someone wants to connect with you.',
+        link: '/follow-requests',
+      });
+    }
 
     return { status: row.status };
   }
@@ -632,7 +662,19 @@ export class UsersService {
       },
     });
 
-    return res.count > 0;
+    const changed = res.count > 0;
+
+    if (changed) {
+      await this.notifications.createNotification({
+        userId: followerId,
+        type: 'follow_request_accepted',
+        title: 'Follow request accepted',
+        body: 'Your follow request was accepted.',
+        link: '/profile',
+      });
+    }
+
+    return changed;
   }
 
   async rejectFollowRequest(meId: string, followerId: string) {

@@ -58,12 +58,31 @@ export default function LoginPanel() {
       });
 
       if (!res.ok) {
-        throw new Error("Email login request failed");
+        const data = await res.json().catch(() => null);
+        const message = Array.isArray(data?.message)
+          ? data.message.join(", ")
+          : typeof data?.message === "string"
+            ? data.message
+            : "Could not send login link. Please try again.";
+        const detail =
+          typeof data?.detail === "string" && data.detail.trim()
+            ? data.detail.trim()
+            : "";
+
+        if (detail && import.meta.env.DEV) {
+          throw new Error(`${message}: ${detail}`);
+        }
+
+        throw new Error(message);
       }
 
       setEmailSuccess(true);
-    } catch {
-      setMsg("Could not send login link. Please try again.");
+    } catch (err) {
+      setMsg(
+        err instanceof Error
+          ? err.message
+          : "Could not send login link. Please try again.",
+      );
     } finally {
       setEmailBusy(false);
     }

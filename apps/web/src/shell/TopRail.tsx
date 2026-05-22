@@ -38,6 +38,7 @@ import {
 } from "../theme/theme";
 import { fileUrl } from "../api/fileUrl";
 import { t } from "../i18n/strings";
+import { fetchNotificationUnreadCount } from "../api/notifications";
 
 function initialsFromHandle(handle: string) {
   const h = (handle || "").trim();
@@ -83,6 +84,7 @@ export default function TopRail() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<UserSearchItem[]>([]);
   const [suggestions, setSuggestions] = useState<UserSearchItem[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [followBusyId, setFollowBusyId] = useState<string | null>(null);
   const [theme, setTheme] = useState<ThemeName>(() => getInitialTheme());
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 980);
@@ -129,23 +131,8 @@ export default function TopRail() {
     }
 
     try {
-      const res = await fetch(`${API_BASE}/users/me/follow-requests`, {
-        headers: { Authorization: `Bearer ${auth?.token}` },
-      });
-
-      if (!res.ok) {
-        setNotificationBadgeCount(0);
-        return;
-      }
-
-      const data = await res.json();
-      const items = Array.isArray(data)
-        ? data
-        : Array.isArray(data?.items)
-          ? data.items
-          : [];
-
-      setNotificationBadgeCount(items.length);
+      const data = await fetchNotificationUnreadCount(auth?.token);
+      setNotificationBadgeCount(data.count);
     } catch (err) {
       console.error("Notification badge load failed", err);
       setNotificationBadgeCount(0);
@@ -161,8 +148,8 @@ export default function TopRail() {
       void loadNotificationBadgeCount();
     };
 
-    window.addEventListener("followRequestsUpdated", handler);
-    return () => window.removeEventListener("followRequestsUpdated", handler);
+    window.addEventListener("notificationsUpdated", handler);
+    return () => window.removeEventListener("notificationsUpdated", handler);
   }, [loadNotificationBadgeCount]);
 
   useEffect(() => {
@@ -170,11 +157,16 @@ export default function TopRail() {
 
     if (!query.trim()) {
       setResults([]);
+      setSearchLoading(false);
       return;
     }
 
+    let cancelled = false;
+
     const t = setTimeout(async () => {
       try {
+        setSearchLoading(true);
+
         const res = await fetch(
           `${API_BASE}/users/search?q=${encodeURIComponent(query)}`,
           {
@@ -183,12 +175,20 @@ export default function TopRail() {
         );
 
         if (!res.ok) {
-          setResults([]);
+          if (!cancelled) setResults([]);
           return;
         }
 
         const data = await res.json();
-        const baseItems = Array.isArray(data) ? data : [];
+        const baseItems: UserSearchItem[] = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.items)
+            ? data.items
+            : [];
+
+        if (!cancelled) {
+          setResults(baseItems);
+        }
 
         const itemsWithStatus: UserSearchItem[] = await Promise.all(
           baseItems.map(async (item): Promise<UserSearchItem> => {
@@ -232,14 +232,32 @@ export default function TopRail() {
           }),
         );
 
-        setResults(itemsWithStatus);
+        if (!cancelled) {
+          setResults((prev) =>
+            prev.map((item) => {
+              const withStatus = itemsWithStatus.find(
+                (updated) => updated.id === item.id,
+              );
+              return withStatus ?? item;
+            }),
+          );
+        }
       } catch (err) {
         console.error("Search failed", err);
-        setResults([]);
+        if (!cancelled) {
+          setResults([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setSearchLoading(false);
+        }
       }
     }, 250);
 
-    return () => clearTimeout(t);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
   }, [query, searchOpen, auth?.token]);
 
   useEffect(() => {
@@ -1504,6 +1522,23 @@ export default function TopRail() {
           ) : null}
 
           <div style={{ display: "grid", gap: 10 }}>
+            {searchLoading && query.trim().length >= 2 ? (
+              <div
+                style={{
+                  padding: "15px 14px",
+                  borderRadius: 20,
+                  border:
+                    "1px solid color-mix(in srgb, var(--border) 42%, transparent)",
+                  background: "color-mix(in srgb, var(--muted) 52%, transparent)",
+                  color: "var(--sub)",
+                  fontSize: 13,
+                  lineHeight: 1.4,
+                }}
+              >
+                Searching...
+              </div>
+            ) : null}
+
             {results.map((u) => (
               <div
                 key={u.id}
@@ -1649,7 +1684,7 @@ export default function TopRail() {
               </div>
             ))}
 
-            {!results.length && query.trim().length >= 2 ? (
+            {!searchLoading && !results.length && query.trim().length >= 2 ? (
               <div
                 style={{
                   padding: "15px 14px",

@@ -41,6 +41,7 @@ model User {
   following                      Follow[]                @relation("following")
   followers                      Follow[]                @relation("followers")
   likes                          Like[]
+  notifications                  Notification[]
   posts                          Post[]
   reviews                        Review[]
   tripActivities                 TripActivity[]
@@ -137,6 +138,21 @@ model DestinationTipHelpful {
   @@unique([tipId, userId])
   @@index([tipId])
   @@index([userId])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String?
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
 }
 
 model Course {

@@ -95,8 +95,8 @@ const DESTINATION_VISUALS: Record<string, DestinationVisual> = {
   spain: {
     image:
       "https://images.pexels.com/photos/35918456/pexels-photo-35918456.jpeg?auto=compress&cs=tinysrgb&w=1400",
-    subtitle: "Warm coastal rounds and late Mediterranean light",
-    mood: "Mediterranean rhythm",
+    subtitle: "Mediterranean fairways under warm coastal evening light",
+    mood: "Spanish coast golf",
     fallback: "linear-gradient(135deg, #80652f, #dbb768)",
   },
   turkey: {
@@ -115,7 +115,7 @@ const DESTINATION_VISUALS: Record<string, DestinationVisual> = {
   },
   switzerland: {
     image:
-      "https://images.pexels.com/photos/6573871/pexels-photo-6573871.jpeg?auto=compress&cs=tinysrgb&w=1400",
+      "/destinations/switzerland-crans-montana-card.jpg",
     subtitle: "Morning alpine fairways under quiet mountain light",
     mood: "Alpine golf morning",
     fallback: "linear-gradient(135deg, #244f68, #9fb7a6)",
@@ -123,8 +123,8 @@ const DESTINATION_VISUALS: Record<string, DestinationVisual> = {
   germany: {
     image:
       "https://images.pexels.com/photos/31803613/pexels-photo-31803613.jpeg?auto=compress&cs=tinysrgb&w=1400",
-    subtitle: "Parkland fairways, clubhouse calm, and deep green corridors",
-    mood: "Clubhouse parkland",
+    subtitle: "Parkland fairways, forest edges, and clubhouse calm",
+    mood: "German parkland golf",
     fallback: "linear-gradient(135deg, #244a32, #7f9b72)",
   },
   austria: {
@@ -150,24 +150,31 @@ const DESTINATION_VISUALS: Record<string, DestinationVisual> = {
   },
   japan: {
     image:
-      "https://images.pexels.com/photos/35320850/pexels-photo-35320850.jpeg?auto=compress&cs=tinysrgb&w=1400",
-    subtitle: "Quiet fairways, mountain air, and precise morning rhythm",
-    mood: "Serene Japanese golf",
+      "https://images.pexels.com/photos/31388903/pexels-photo-31388903.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    subtitle: "Fuji-side golf travel with quiet mountain rhythm",
+    mood: "Mount Fuji golf",
     fallback: "linear-gradient(135deg, #425f57, #c9b6a8)",
   },
   "united-states": {
     image:
       "https://images.pexels.com/photos/36739253/pexels-photo-36739253.jpeg?auto=compress&cs=tinysrgb&w=1400",
-    subtitle: "Pacific sunset golf and big-course landscapes",
+    subtitle: "Big-course landscapes with Pacific and desert light",
     mood: "Coastal destination golf",
     fallback: "linear-gradient(135deg, #315d3c, #b88945)",
   },
   philippines: {
     image:
       "https://images.pexels.com/photos/4226146/pexels-photo-4226146.jpeg?auto=compress&cs=tinysrgb&w=1400",
-    subtitle: "Lush island fairways with ocean air and jungle light",
+    subtitle: "Island fairways with palms, ocean air, and lush light",
     mood: "Island golf",
     fallback: "linear-gradient(135deg, #1f6d55, #6fb6a6)",
+  },
+  "south-africa": {
+    image:
+      "https://images.unsplash.com/photo-1580060839134-75a5edca2e99?auto=format&fit=crop&w=1400&q=78",
+    subtitle: "Cape fairways with Table Mountain coastal mood",
+    mood: "Cape golf",
+    fallback: "linear-gradient(135deg, #315d3c, #b8864f)",
   },
 };
 
@@ -268,13 +275,16 @@ function DestinationHeroCard({
             top: 8,
             display: "grid",
             placeItems: "center",
-            width: 31,
-            height: 23,
-            borderRadius: 7,
+            width: 32,
+            height: 32,
+            borderRadius: 999,
             overflow: "hidden",
-            background: "rgba(255,255,255,0.20)",
-            border: "1px solid rgba(255,255,255,0.36)",
-            boxShadow: "0 3px 10px rgba(0,0,0,0.18)",
+            background:
+              "color-mix(in srgb, var(--card) 88%, var(--green) 4%)",
+            border:
+              "1px solid color-mix(in srgb, var(--border) 72%, rgba(255,255,255,0.28))",
+            boxShadow:
+              "0 7px 16px rgba(0,0,0,0.18), 0 2px 6px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.18)",
             backdropFilter: "blur(10px)",
           }}
         >
@@ -283,12 +293,10 @@ function DestinationHeroCard({
               src={getFlagUrl(item.code)}
               alt={item.code}
               style={{
-                width: 25,
-                height: 17,
+                width: "100%",
+                height: "100%",
                 objectFit: "cover",
                 display: "block",
-                borderRadius: 4,
-                boxShadow: "0 1px 5px rgba(0,0,0,0.18)",
               }}
             />
           ) : null}
