@@ -67,95 +67,120 @@ type DestinationVisual = {
   image: string;
   subtitle: string;
   mood: string;
+  fallback: string;
 };
 
 const DESTINATION_VISUALS: Record<string, DestinationVisual> = {
   thailand: {
     image:
-      "https://images.unsplash.com/photo-1535131749006-b7f58c99034b?auto=format&fit=crop&w=1400&q=78",
-    subtitle: "Tropical fairways and golden sunsets",
-    mood: "Warm-weather golf escape",
+      "https://images.pexels.com/photos/8334036/pexels-photo-8334036.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    subtitle: "Golden resort fairways framed by palms and tropical air",
+    mood: "Tropical resort golf",
+    fallback: "linear-gradient(135deg, #1f7a58, #d8a340)",
   },
   vietnam: {
     image:
-      "https://images.unsplash.com/photo-1592919505780-303950717480?auto=format&fit=crop&w=1400&q=78",
-    subtitle: "Coastal golf corridors and vibrant city bases",
-    mood: "Coast and culture",
+      "https://images.pexels.com/photos/4226150/pexels-photo-4226150.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    subtitle: "Lush coastal fairways and warm resort mornings",
+    mood: "Coastal golf corridor",
+    fallback: "linear-gradient(135deg, #266f5d, #83a7a1)",
   },
   portugal: {
     image:
-      "https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?auto=format&fit=crop&w=1400&q=78",
-    subtitle: "Atlantic cliffs and endless golf days",
-    mood: "Ocean-side golf",
+      "https://images.pexels.com/photos/32335407/pexels-photo-32335407.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    subtitle: "Coastal greens, Atlantic cliffs, and warm ocean light",
+    mood: "Atlantic cliff golf",
+    fallback: "linear-gradient(135deg, #1c5f73, #d0b16e)",
   },
   spain: {
     image:
-      "https://images.unsplash.com/photo-1573052905904-34ad8c27f0cc?auto=format&fit=crop&w=1400&q=78",
-    subtitle: "Sunlit resort golf and late Spanish evenings",
+      "https://images.pexels.com/photos/35918456/pexels-photo-35918456.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    subtitle: "Warm coastal rounds and late Mediterranean light",
     mood: "Mediterranean rhythm",
+    fallback: "linear-gradient(135deg, #80652f, #dbb768)",
   },
   turkey: {
     image:
-      "https://images.unsplash.com/photo-1600607688969-a5bfcd646154?auto=format&fit=crop&w=1400&q=78",
-    subtitle: "Resort fairways between pines and sea",
+      "https://images.pexels.com/photos/28104344/pexels-photo-28104344.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    subtitle: "Resort fairways, palms, water, and quiet morning air",
     mood: "Resort golf coast",
+    fallback: "linear-gradient(135deg, #174d3f, #5f9c89)",
   },
   "united-arab-emirates": {
     image:
-      "https://images.unsplash.com/photo-1593111774240-d529f12cf4bb?auto=format&fit=crop&w=1400&q=78",
-    subtitle: "Desert light, skyline golf, and immaculate greens",
+      "https://images.pexels.com/photos/17383426/pexels-photo-17383426.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    subtitle: "Manicured fairways under bright destination light",
     mood: "Desert precision",
+    fallback: "linear-gradient(135deg, #7c6740, #253f35)",
   },
   switzerland: {
     image:
-      "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&w=1400&q=78",
-    subtitle: "Alpine mornings and dramatic fairways",
-    mood: "Mountain golf",
+      "https://images.pexels.com/photos/6573871/pexels-photo-6573871.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    subtitle: "Morning alpine fairways under quiet mountain light",
+    mood: "Alpine golf morning",
+    fallback: "linear-gradient(135deg, #244f68, #9fb7a6)",
   },
   germany: {
     image:
-      "https://images.unsplash.com/photo-1591491638850-6d0f4fd27a47?auto=format&fit=crop&w=1400&q=78",
-    subtitle: "Forest-lined courses and classic club culture",
-    mood: "Quiet parkland golf",
+      "https://images.pexels.com/photos/31803613/pexels-photo-31803613.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    subtitle: "Parkland fairways, clubhouse calm, and deep green corridors",
+    mood: "Clubhouse parkland",
+    fallback: "linear-gradient(135deg, #244a32, #7f9b72)",
   },
   austria: {
     image:
-      "https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?auto=format&fit=crop&w=1400&q=78",
-    subtitle: "Lakeside golf days below the Alps",
-    mood: "Alpine lake country",
+      "https://images.pexels.com/photos/14946030/pexels-photo-14946030.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    subtitle: "Lake-side fairways and Austrian mountain horizons",
+    mood: "Alpine lake golf",
+    fallback: "linear-gradient(135deg, #315c4c, #b0c0a2)",
   },
   france: {
     image:
-      "https://images.unsplash.com/photo-1535131749006-b7f58c99034b?auto=format&fit=crop&w=1400&q=78",
-    subtitle: "Elegant escapes from coast to countryside",
-    mood: "Classic golf travel",
+      "https://images.pexels.com/photos/34794888/pexels-photo-34794888.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    subtitle: "Refined countryside fairways with tree-lined quiet",
+    mood: "Countryside golf",
+    fallback: "linear-gradient(135deg, #4d6f46, #b29b69)",
   },
   italy: {
     image:
-      "https://images.unsplash.com/photo-1573052905904-34ad8c27f0cc?auto=format&fit=crop&w=1400&q=78",
-    subtitle: "Lake mornings, hill towns, and graceful golf",
+      "https://images.pexels.com/photos/32988401/pexels-photo-32988401.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    subtitle: "Rolling fairways and quiet mountain-side golf",
     mood: "Laid-back elegance",
+    fallback: "linear-gradient(135deg, #506d45, #c4a569)",
   },
   japan: {
     image:
-      "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&w=1400&q=78",
-    subtitle: "Mountain mornings and precision golf",
-    mood: "Precise and serene",
+      "https://images.pexels.com/photos/35320850/pexels-photo-35320850.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    subtitle: "Quiet fairways, mountain air, and precise morning rhythm",
+    mood: "Serene Japanese golf",
+    fallback: "linear-gradient(135deg, #425f57, #c9b6a8)",
   },
   "united-states": {
     image:
-      "https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?auto=format&fit=crop&w=1400&q=78",
-    subtitle: "Big landscapes and destination golf icons",
-    mood: "Open-road golf",
+      "https://images.pexels.com/photos/36739253/pexels-photo-36739253.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    subtitle: "Pacific sunset golf and big-course landscapes",
+    mood: "Coastal destination golf",
+    fallback: "linear-gradient(135deg, #315d3c, #b88945)",
+  },
+  philippines: {
+    image:
+      "https://images.pexels.com/photos/4226146/pexels-photo-4226146.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    subtitle: "Lush island fairways with ocean air and jungle light",
+    mood: "Island golf",
+    fallback: "linear-gradient(135deg, #1f6d55, #6fb6a6)",
   },
 };
 
 const DEFAULT_DESTINATION_VISUAL: DestinationVisual = {
   image:
-    "https://images.unsplash.com/photo-1592919505780-303950717480?auto=format&fit=crop&w=1400&q=78",
+    "https://images.pexels.com/photos/17383426/pexels-photo-17383426.jpeg?auto=compress&cs=tinysrgb&w=1400",
   subtitle: "A new golf journey waiting to be shaped",
   mood: "Golf travel",
+  fallback: "linear-gradient(135deg, var(--green), color-mix(in srgb, var(--card) 75%, var(--bg)))",
 };
+
+const EXPLORE_HERO_IMAGE =
+  "https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?auto=format&fit=crop&w=1200&q=78";
 
 function getDestinationVisual(item: CountryItem): DestinationVisual {
   const slug = item.slug || item.country;
@@ -190,50 +215,94 @@ function DestinationHeroCard({
       onClick={onOpen}
       style={{
         position: "relative",
-        minHeight: featured ? 224 : 198,
-        borderRadius: featured ? 26 : 24,
+        height: featured ? 104 : 98,
+        borderRadius: featured ? 22 : 20,
         overflow: "hidden",
         cursor: "pointer",
-        border: "1px solid color-mix(in srgb, var(--border) 56%, transparent)",
-        background: "var(--card)",
+        border: "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
+        background:
+          "linear-gradient(135deg, color-mix(in srgb, var(--card) 95%, var(--bg) 5%), color-mix(in srgb, var(--card) 90%, var(--green) 5%))",
         boxShadow: featured
-          ? "0 16px 38px rgba(0,0,0,0.14)"
-          : "0 12px 30px rgba(0,0,0,0.10)",
+          ? "0 12px 28px rgba(0,0,0,0.11)"
+          : "0 9px 22px rgba(0,0,0,0.085)",
+        display: "grid",
+        gridTemplateColumns: "38% 1fr",
       }}
     >
-      <img
-        src={visual.image}
-        alt={`${label} golf travel inspiration`}
-        loading="lazy"
-        style={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          display: "block",
-          transform: "scale(1.01)",
-        }}
-      />
       <div
-        aria-hidden="true"
         style={{
-          position: "absolute",
-          inset: 0,
-          background:
-            "linear-gradient(to top, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.34) 48%, rgba(0,0,0,0.08) 100%)",
+          position: "relative",
+          overflow: "hidden",
+          background: visual.fallback,
         }}
-      />
+      >
+        <img
+          src={visual.image}
+          alt={`${label} golf travel inspiration`}
+          loading="lazy"
+          onError={(event) => {
+            event.currentTarget.style.display = "none";
+          }}
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(90deg, rgba(0,0,0,0.08), rgba(0,0,0,0.22))",
+          }}
+        />
+        <span
+          style={{
+            position: "absolute",
+            left: 8,
+            top: 8,
+            display: "grid",
+            placeItems: "center",
+            width: 31,
+            height: 23,
+            borderRadius: 7,
+            overflow: "hidden",
+            background: "rgba(255,255,255,0.20)",
+            border: "1px solid rgba(255,255,255,0.36)",
+            boxShadow: "0 3px 10px rgba(0,0,0,0.18)",
+            backdropFilter: "blur(10px)",
+          }}
+        >
+          {item.code ? (
+            <img
+              src={getFlagUrl(item.code)}
+              alt={item.code}
+              style={{
+                width: 25,
+                height: 17,
+                objectFit: "cover",
+                display: "block",
+                borderRadius: 4,
+                boxShadow: "0 1px 5px rgba(0,0,0,0.18)",
+              }}
+            />
+          ) : null}
+        </span>
+      </div>
 
       <div
         style={{
           position: "relative",
-          zIndex: 1,
-          minHeight: featured ? 224 : 198,
-          padding: featured ? 14 : 13,
+          minWidth: 0,
+          padding: featured ? "10px 11px 9px" : "9px 10px 8px",
           display: "grid",
           alignContent: "space-between",
-          gap: 12,
+          gap: 6,
           boxSizing: "border-box",
         }}
       >
@@ -242,58 +311,46 @@ function DestinationHeroCard({
             display: "flex",
             justifyContent: "space-between",
             alignItems: "flex-start",
-            gap: 12,
+            gap: 8,
+            minWidth: 0,
           }}
         >
           <div
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              minHeight: 30,
-              padding: "4px 8px 4px 5px",
-              borderRadius: 999,
-              border: "1px solid rgba(255,255,255,0.24)",
-              background: "rgba(0,0,0,0.28)",
-              color: "#fff",
-              backdropFilter: "blur(12px)",
+              minWidth: 0,
+              display: "grid",
+              gap: 2,
             }}
           >
-            <span
+            <div
               style={{
-                width: 21,
-                height: 21,
-                borderRadius: 999,
-                display: "grid",
-                placeItems: "center",
-                overflow: "hidden",
-                background: "rgba(255,255,255,0.16)",
-                border: "1px solid rgba(255,255,255,0.28)",
-              }}
-            >
-              {item.code ? (
-                <img
-                  src={getFlagUrl(item.code)}
-                  alt={item.code}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    display: "block",
-                  }}
-                />
-              ) : null}
-            </span>
-            <span
-              style={{
-                fontSize: 10,
+                color: "var(--sub)",
+                fontSize: 9,
                 fontWeight: 850,
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
               }}
             >
-              {item.code || visual.mood}
-            </span>
+              {visual.mood}
+            </div>
+            <h2
+              style={{
+                margin: 0,
+                color: "var(--text)",
+                fontSize: featured ? 18 : 17,
+                lineHeight: 1.05,
+                fontWeight: 900,
+                letterSpacing: "-0.035em",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {label}
+            </h2>
           </div>
 
           {onFollow ? (
@@ -305,25 +362,25 @@ function DestinationHeroCard({
               }}
               disabled={isBusy}
               style={{
-                minWidth: 78,
-                height: 31,
+                minWidth: 64,
+                height: 27,
                 borderRadius: 999,
                 border: isFollowing
-                  ? "1px solid rgba(255,255,255,0.28)"
-                  : "1px solid color-mix(in srgb, var(--green) 70%, white)",
+                  ? "1px solid color-mix(in srgb, var(--green) 45%, var(--border))"
+                  : "1px solid color-mix(in srgb, var(--green) 68%, var(--border))",
                 background: isFollowing
-                  ? "rgba(255,255,255,0.16)"
+                  ? "color-mix(in srgb, var(--green) 13%, var(--muted))"
                   : "var(--green)",
-                color: "#fff",
-                padding: "0 11px",
-                fontSize: 11,
+                color: isFollowing ? "var(--text)" : "#fff",
+                padding: "0 9px",
+                fontSize: 10,
                 fontWeight: 850,
                 cursor: isBusy ? "default" : "pointer",
                 opacity: isBusy ? 0.72 : 1,
-                backdropFilter: "blur(12px)",
+                flexShrink: 0,
                 boxShadow: isFollowing
                   ? "none"
-                  : "0 10px 22px color-mix(in srgb, var(--green) 34%, transparent)",
+                  : "0 6px 14px color-mix(in srgb, var(--green) 26%, transparent)",
               }}
             >
               {isBusy ? "..." : isFollowing ? t("following") : t("follow")}
@@ -334,51 +391,30 @@ function DestinationHeroCard({
         <div
           style={{
             display: "grid",
-            gap: 9,
-            maxWidth: 560,
+            gap: 7,
+            minWidth: 0,
           }}
         >
-          <div style={{ display: "grid", gap: 5 }}>
-            <div
-              style={{
-                color: "rgba(255,255,255,0.80)",
-                fontSize: 10,
-                fontWeight: 800,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-              }}
-            >
-              {visual.mood}
-            </div>
-            <h2
-              style={{
-                margin: 0,
-                color: "#fff",
-                fontSize: featured ? 25 : 23,
-                lineHeight: 1.02,
-                fontWeight: 900,
-                letterSpacing: "-0.045em",
-              }}
-            >
-              {label}
-            </h2>
-            <div
-              style={{
-                color: "rgba(255,255,255,0.88)",
-                fontSize: featured ? 13 : 12,
-                lineHeight: 1.38,
-                fontWeight: 600,
-              }}
-            >
-              {visual.subtitle}
-            </div>
+          <div
+            style={{
+              color: "var(--sub)",
+              fontSize: 11,
+              lineHeight: 1.28,
+              fontWeight: 650,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {visual.subtitle}
           </div>
 
           <div
             style={{
               display: "flex",
               flexWrap: "wrap",
-              gap: 6,
+              gap: 5,
+              minWidth: 0,
             }}
           >
             <span style={cinematicPillStyle}>
@@ -400,15 +436,15 @@ function DestinationHeroCard({
 const cinematicPillStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
-  minHeight: 23,
-  padding: "0 8px",
+  minHeight: 19,
+  padding: "0 6px",
   borderRadius: 999,
-  border: "1px solid rgba(255,255,255,0.18)",
-  background: "rgba(0,0,0,0.22)",
-  color: "rgba(255,255,255,0.84)",
-  fontSize: 10,
+  border: "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
+  background: "color-mix(in srgb, var(--muted) 68%, transparent)",
+  color: "var(--sub)",
+  fontSize: 9,
   fontWeight: 800,
-  backdropFilter: "blur(12px)",
+  whiteSpace: "nowrap",
 };
 
 export default function DestinationsPage() {
@@ -530,7 +566,7 @@ export default function DestinationsPage() {
         if (followerDelta !== 0) return followerDelta;
         return (b.courseCount || 0) - (a.courseCount || 0);
       })
-      .slice(0, 6);
+      .slice(0, 4);
   }, [items]);
 
   const handleToggleDestinationFollow = useCallback(
@@ -657,13 +693,14 @@ export default function DestinationsPage() {
           style={{
             position: "relative",
             display: "grid",
-            gap: 18,
-            padding: "26px 20px 22px",
-            borderRadius: 32,
-            border: "1px solid color-mix(in srgb, var(--border) 54%, transparent)",
+            gap: 14,
+            minHeight: 190,
+            padding: "22px 18px 18px",
+            borderRadius: 30,
+            border: "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
             background:
-              "linear-gradient(145deg, color-mix(in srgb, var(--card) 96%, var(--green) 4%), color-mix(in srgb, var(--card) 88%, var(--bg) 12%))",
-            boxShadow: "0 22px 58px rgba(0,0,0,0.12)",
+              "linear-gradient(145deg, color-mix(in srgb, var(--card) 98%, white 10%), color-mix(in srgb, var(--card) 92%, var(--bg) 8%))",
+            boxShadow: "0 18px 44px rgba(0,0,0,0.10)",
             overflow: "hidden",
           }}
         >
@@ -671,27 +708,65 @@ export default function DestinationsPage() {
             aria-hidden="true"
             style={{
               position: "absolute",
-              right: -44,
-              top: -56,
-              width: 150,
-              height: 150,
-              borderRadius: 999,
+              inset: 0,
               background:
-                "radial-gradient(circle, color-mix(in srgb, var(--green) 24%, transparent), transparent 68%)",
+                "linear-gradient(90deg, color-mix(in srgb, var(--card) 99%, white 12%) 0%, color-mix(in srgb, var(--card) 97%, transparent) 48%, transparent 100%)",
               pointerEvents: "none",
+              zIndex: 2,
             }}
           />
+          <div
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              inset: "0 0 0 auto",
+              width: "48%",
+              minWidth: 150,
+              background:
+                "linear-gradient(135deg, #9fbf9d, #d5c292)",
+              pointerEvents: "none",
+            }}
+          >
+            <img
+              src={EXPLORE_HERO_IMAGE}
+              alt=""
+              loading="lazy"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: "block",
+                opacity: 0.78,
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background:
+                  "linear-gradient(90deg, color-mix(in srgb, var(--card) 96%, transparent) 0%, rgba(255,255,255,0.18) 38%, rgba(255,255,255,0.02) 100%)",
+              }}
+            />
+          </div>
 
-          <div style={{ position: "relative", display: "grid", gap: 7 }}>
+          <div
+            style={{
+              position: "relative",
+              zIndex: 3,
+              display: "grid",
+              gap: 8,
+              maxWidth: "min(100%, 560px)",
+            }}
+          >
             <div
               style={{
                 width: "fit-content",
-                padding: "6px 10px",
+                padding: "5px 10px",
                 borderRadius: 999,
                 border: "1px solid color-mix(in srgb, var(--border) 70%, transparent)",
-                background: "color-mix(in srgb, var(--muted) 82%, transparent)",
+                background: "color-mix(in srgb, var(--muted) 76%, transparent)",
                 color: "var(--sub)",
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: 850,
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
@@ -703,28 +778,28 @@ export default function DestinationsPage() {
             <h1
               style={{
                 margin: 0,
-                fontSize: 34,
+                fontSize: 31,
                 lineHeight: 1.05,
                 fontWeight: 900,
-                letterSpacing: "-0.055em",
+                letterSpacing: "-0.052em",
                 color: "var(--text)",
-                maxWidth: 620,
+                maxWidth: 430,
               }}
             >
-              Discover your next golf destination
+              Explore golf destinations
             </h1>
 
             <p
               style={{
                 margin: 0,
-                maxWidth: 590,
+                maxWidth: 390,
                 color: "var(--sub)",
-                fontSize: 15,
-                lineHeight: 1.6,
+                fontSize: 13,
+                lineHeight: 1.5,
               }}
             >
-              Slow down, browse the world by mood, and find places shaped by
-              memorable courses, local notes, and travel-worthy fairways.
+              Browse countries shaped by memorable courses, local notes, and
+              travel-worthy fairways.
             </p>
           </div>
 
@@ -732,6 +807,7 @@ export default function DestinationsPage() {
             <div
               style={{
                 position: "relative",
+                zIndex: 3,
                 display: "flex",
                 flexWrap: "wrap",
                 gap: 8,
@@ -741,14 +817,15 @@ export default function DestinationsPage() {
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
-                  minHeight: 30,
+                  minHeight: 42,
                   padding: "0 12px",
-                  borderRadius: 999,
-                  border: "1px solid color-mix(in srgb, var(--border) 78%, transparent)",
-                  background: "color-mix(in srgb, var(--muted) 78%, transparent)",
+                  borderRadius: 16,
+                  border: "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
+                  background: "color-mix(in srgb, var(--card) 88%, white 8%)",
                   color: "var(--text)",
                   fontSize: 12,
                   fontWeight: 800,
+                  boxShadow: "0 8px 18px rgba(0,0,0,0.055)",
                 }}
               >
                 {items.length} {items.length === 1 ? t("country_singular") : t("country_plural")}
@@ -759,14 +836,15 @@ export default function DestinationsPage() {
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
-                    minHeight: 30,
+                    minHeight: 42,
                     padding: "0 12px",
-                    borderRadius: 999,
-                    border: "1px solid color-mix(in srgb, var(--green) 34%, var(--border))",
-                    background: "color-mix(in srgb, var(--green) 12%, var(--muted))",
+                    borderRadius: 16,
+                    border: "1px solid color-mix(in srgb, var(--green) 28%, var(--border))",
+                    background: "color-mix(in srgb, var(--green) 10%, var(--card))",
                     color: "var(--text)",
                     fontSize: 12,
                     fontWeight: 800,
+                    boxShadow: "0 8px 18px rgba(0,0,0,0.055)",
                   }}
                 >
                   {totalCourses} {t("course_plural")}
@@ -878,8 +956,7 @@ export default function DestinationsPage() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-                gap: 14,
+                gap: 9,
               }}
             >
               {popularDestinations.map((item) => {
@@ -975,30 +1052,59 @@ export default function DestinationsPage() {
                           gap: 8,
                         }}
                       >
-                        <img
-                          src={`https://flagcdn.com/w40/${tip.destination.code.toLowerCase()}.png`}
-                          alt={tip.destination.code}
-                          style={{
-                            display: "block",
-                            width: 24,
-                            height: 17,
-                            objectFit: "cover",
-                            borderRadius: 5,
-                            boxShadow: "0 2px 6px rgba(0,0,0,0.16)",
-                          }}
-                        />
                         <div
                           style={{
-                            minWidth: 0,
-                            color: "var(--text)",
-                            fontSize: 12,
-                            fontWeight: 850,
+                            width: 32,
+                            height: 32,
+                            borderRadius: 999,
+                            display: "grid",
+                            placeItems: "center",
+                            flexShrink: 0,
                             overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
+                            background:
+                              "color-mix(in srgb, var(--card) 88%, var(--green) 4%)",
+                            border:
+                              "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                            boxShadow:
+                              "0 4px 10px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.16)",
                           }}
                         >
-                          {tip.destination.name}
+                          <img
+                            src={`https://flagcdn.com/w40/${tip.destination.code.toLowerCase()}.png`}
+                            alt={tip.destination.code}
+                            style={{
+                              display: "block",
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                            }}
+                          />
+                        </div>
+                        <div style={{ minWidth: 0, display: "grid", gap: 1 }}>
+                          <div
+                            style={{
+                              minWidth: 0,
+                              color: "var(--text)",
+                              fontSize: 12,
+                              fontWeight: 850,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {tip.destination.name}
+                          </div>
+                          <div
+                            style={{
+                              color: "var(--sub)",
+                              fontSize: 10,
+                              fontWeight: 850,
+                              letterSpacing: "0.08em",
+                              lineHeight: 1,
+                            }}
+                          >
+                            {tip.destination.code}
+                          </div>
                         </div>
                       </div>
                       <span
@@ -1051,7 +1157,7 @@ export default function DestinationsPage() {
           <div
             style={{
               display: "grid",
-              gap: 14,
+              gap: 9,
             }}
           >
             {items.map((item) => {
