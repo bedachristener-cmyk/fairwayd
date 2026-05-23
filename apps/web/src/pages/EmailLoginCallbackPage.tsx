@@ -4,18 +4,57 @@ import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
 
 const POST_LOGIN_NEXT_KEY = "fairwayd_post_login_next";
+const emailVerifyRequests = new Map<string, Promise<string>>();
+
+function verifyEmailTokenOnce(token: string) {
+  const existing = emailVerifyRequests.get(token);
+  if (existing) return existing;
+
+  const request = fetch(`${API_BASE}/auth/email/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  })
+    .then(async (res) => {
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        const message = Array.isArray(data?.message)
+          ? data.message.join(", ")
+          : typeof data?.message === "string"
+            ? data.message
+            : "Invalid or expired login link";
+        throw new Error(message);
+      }
+
+      const data = await res.json();
+      const jwt = String(data?.token ?? "").trim();
+      if (!jwt) throw new Error("Login response did not include a token");
+      return jwt;
+    })
+    .catch((error) => {
+      emailVerifyRequests.delete(token);
+      throw error;
+    });
+
+  emailVerifyRequests.set(token, request);
+  return request;
+}
 
 export default function EmailLoginCallbackPage() {
   const [params] = useSearchParams();
   const nav = useNavigate();
   const { login } = useAuth();
-  const [status, setStatus] = useState("Signing you in...");
+  const [status, setStatus] = useState<"loading" | "success" | "error">(
+    "loading",
+  );
+  const [message, setMessage] = useState("Signing you in...");
 
   useEffect(() => {
     const token = params.get("token") ?? "";
 
     if (!token.trim()) {
-      setStatus("This login link is missing a token.");
+      setStatus("error");
+      setMessage("This login link is missing a token.");
       return;
     }
 
@@ -23,28 +62,29 @@ export default function EmailLoginCallbackPage() {
 
     async function verify() {
       try {
-        const res = await fetch(`${API_BASE}/auth/email/verify`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token }),
-        });
-
-        if (!res.ok) {
-          throw new Error("Invalid or expired login link");
-        }
-
-        const data = await res.json();
-        const jwt = String(data?.token ?? "").trim();
-        if (!jwt) throw new Error("Login response did not include a token");
-
+        const jwt = await verifyEmailTokenOnce(token);
         if (cancelled) return;
-        login(jwt, true);
+
+        setStatus("success");
+        setStatus("success");
+        setMessage("Login confirmed. Opening Fairwayd...");
+
         const next = localStorage.getItem(POST_LOGIN_NEXT_KEY);
         if (next) localStorage.removeItem(POST_LOGIN_NEXT_KEY);
-        nav(next && next.startsWith("/") ? next : "/feed", { replace: true });
-      } catch {
+
+        login(jwt, true);
+
+        setTimeout(() => {
+          nav(next && next.startsWith("/") ? next : "/feed", { replace: true });
+        }, 0);
+      } catch (err) {
         if (!cancelled) {
-          setStatus("This login link is invalid or expired.");
+          setStatus("error");
+          setMessage(
+            err instanceof Error && err.message
+              ? err.message
+              : "This login link is invalid or expired.",
+          );
         }
       }
     }
@@ -82,9 +122,9 @@ export default function EmailLoginCallbackPage() {
       >
         <div style={{ fontSize: 18, fontWeight: 900 }}>Email login</div>
         <div style={{ color: "var(--sub)", fontSize: 13, lineHeight: 1.45 }}>
-          {status}
+          {message}
         </div>
-        {status !== "Signing you in..." ? (
+        {status === "error" ? (
           <button
             type="button"
             onClick={() => nav("/", { replace: true })}
