@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { Resend } from 'resend';
 
+function emailDomain(value: string) {
+  const match = String(value ?? '').match(/@([^>\s]+)/);
+  return match?.[1]?.trim().toLowerCase() || null;
+}
+
 @Injectable()
 export class MailService {
   async sendMagicLink(email: string, link: string) {
@@ -81,6 +86,13 @@ export class MailService {
     });
 
     if (result.error) {
+      console.error('[EmailLogin] Resend send failed', {
+        message: result.error.message || result.error.name || 'unknown error',
+        name: result.error.name,
+        recipientDomain: emailDomain(email),
+        fromDomain: emailDomain(from),
+      });
+
       throw new Error(
         `Resend send failed: ${result.error.message || result.error.name || 'unknown error'}`,
       );
