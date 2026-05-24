@@ -1,9 +1,18 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+} from "react";
 import { API_BASE } from "../api/base";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import BackToTopButton from "../components/BackToTopButton";
-import { DestinationRowsSkeleton, EmptyState } from "../components/PolishStates";
+import {
+  DestinationRowsSkeleton,
+  EmptyState,
+} from "../components/PolishStates";
 import { t } from "../i18n/strings";
 
 type CountryItem = {
@@ -66,6 +75,7 @@ function getCountryLabel(code: string) {
 
 type DestinationVisual = {
   image: string;
+  objectPosition?: string;
   subtitle: string;
   mood: string;
   fallback: string;
@@ -102,7 +112,8 @@ const DESTINATION_VISUALS: Record<string, DestinationVisual> = {
   },
   turkey: {
     image:
-      "https://images.pexels.com/photos/28104344/pexels-photo-28104344.jpeg?auto=compress&cs=tinysrgb&w=1400",
+      "https://images.unsplash.com/photo-1635774161119-59741f4934c1?auto=format&fit=crop&w=1400&q=78",
+    objectPosition: "center 70%",
     subtitle: "Resort fairways, palms, water, and quiet morning air",
     mood: "Resort golf coast",
     fallback: "linear-gradient(135deg, #174d3f, #5f9c89)",
@@ -115,8 +126,7 @@ const DESTINATION_VISUALS: Record<string, DestinationVisual> = {
     fallback: "linear-gradient(135deg, #7c6740, #253f35)",
   },
   switzerland: {
-    image:
-      "/destinations/switzerland-crans-montana-card.jpg",
+    image: "/destinations/switzerland-crans-montana.jpg",
     subtitle: "Morning alpine fairways under quiet mountain light",
     mood: "Alpine golf morning",
     fallback: "linear-gradient(135deg, #244f68, #9fb7a6)",
@@ -151,7 +161,8 @@ const DESTINATION_VISUALS: Record<string, DestinationVisual> = {
   },
   japan: {
     image:
-      "https://images.pexels.com/photos/31388903/pexels-photo-31388903.jpeg?auto=compress&cs=tinysrgb&w=1400",
+      "https://images.pexels.com/photos/1108701/pexels-photo-1108701.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    objectPosition: "center 58%",
     subtitle: "Fuji-side golf travel with quiet mountain rhythm",
     mood: "Mount Fuji golf",
     fallback: "linear-gradient(135deg, #425f57, #c9b6a8)",
@@ -184,7 +195,8 @@ const DEFAULT_DESTINATION_VISUAL: DestinationVisual = {
     "https://images.pexels.com/photos/17383426/pexels-photo-17383426.jpeg?auto=compress&cs=tinysrgb&w=1400",
   subtitle: "A new golf journey waiting to be shaped",
   mood: "Golf travel",
-  fallback: "linear-gradient(135deg, var(--green), color-mix(in srgb, var(--card) 75%, var(--bg)))",
+  fallback:
+    "linear-gradient(135deg, var(--green), color-mix(in srgb, var(--card) 75%, var(--bg)))",
 };
 
 const EXPLORE_HERO_IMAGE =
@@ -257,6 +269,7 @@ function DestinationHeroCard({
             width: "100%",
             height: "100%",
             objectFit: "cover",
+            objectPosition: visual.objectPosition ?? "center",
             display: "block",
           }}
         />
@@ -280,8 +293,7 @@ function DestinationHeroCard({
             height: 32,
             borderRadius: 999,
             overflow: "hidden",
-            background:
-              "color-mix(in srgb, var(--card) 88%, var(--green) 4%)",
+            background: "color-mix(in srgb, var(--card) 88%, var(--green) 4%)",
             border:
               "1px solid color-mix(in srgb, var(--border) 72%, rgba(255,255,255,0.28))",
             boxShadow:
@@ -531,7 +543,9 @@ export default function DestinationsPage() {
   useEffect(() => {
     const run = async () => {
       try {
-        const res = await fetch(`${API_BASE}/destinations/discovery/tips?take=6`);
+        const res = await fetch(
+          `${API_BASE}/destinations/discovery/tips?take=6`,
+        );
 
         if (!res.ok) {
           throw new Error(`Failed to load fresh local notes: ${res.status}`);
@@ -552,7 +566,12 @@ export default function DestinationsPage() {
               ...tip,
               helpfulCount:
                 typeof tip.helpfulCount === "number" ? tip.helpfulCount : 0,
-              user: tip.user || { id: "", handle: null, name: null, avatarUrl: null },
+              user: tip.user || {
+                id: "",
+                handle: null,
+                name: null,
+                avatarUrl: null,
+              },
             })),
         );
       } catch (err) {
@@ -706,7 +725,8 @@ export default function DestinationsPage() {
             minHeight: 190,
             padding: "22px 18px 18px",
             borderRadius: 30,
-            border: "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
+            border:
+              "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
             background:
               "linear-gradient(145deg, color-mix(in srgb, var(--card) 98%, white 10%), color-mix(in srgb, var(--card) 92%, var(--bg) 8%))",
             boxShadow: "0 18px 44px rgba(0,0,0,0.10)",
@@ -731,8 +751,7 @@ export default function DestinationsPage() {
               inset: "0 0 0 auto",
               width: "48%",
               minWidth: 150,
-              background:
-                "linear-gradient(135deg, #9fbf9d, #d5c292)",
+              background: "linear-gradient(135deg, #9fbf9d, #d5c292)",
               pointerEvents: "none",
             }}
           >
@@ -772,7 +791,8 @@ export default function DestinationsPage() {
                 width: "fit-content",
                 padding: "5px 10px",
                 borderRadius: 999,
-                border: "1px solid color-mix(in srgb, var(--border) 70%, transparent)",
+                border:
+                  "1px solid color-mix(in srgb, var(--border) 70%, transparent)",
                 background: "color-mix(in srgb, var(--muted) 76%, transparent)",
                 color: "var(--sub)",
                 fontSize: 10,
@@ -829,7 +849,8 @@ export default function DestinationsPage() {
                   minHeight: 42,
                   padding: "0 12px",
                   borderRadius: 16,
-                  border: "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
+                  border:
+                    "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
                   background: "color-mix(in srgb, var(--card) 88%, white 8%)",
                   color: "var(--text)",
                   fontSize: 12,
@@ -837,7 +858,10 @@ export default function DestinationsPage() {
                   boxShadow: "0 8px 18px rgba(0,0,0,0.055)",
                 }}
               >
-                {items.length} {items.length === 1 ? t("country_singular") : t("country_plural")}
+                {items.length}{" "}
+                {items.length === 1
+                  ? t("country_singular")
+                  : t("country_plural")}
               </span>
 
               {totalCourses > 0 ? (
@@ -848,8 +872,10 @@ export default function DestinationsPage() {
                     minHeight: 42,
                     padding: "0 12px",
                     borderRadius: 16,
-                    border: "1px solid color-mix(in srgb, var(--green) 28%, var(--border))",
-                    background: "color-mix(in srgb, var(--green) 10%, var(--card))",
+                    border:
+                      "1px solid color-mix(in srgb, var(--green) 28%, var(--border))",
+                    background:
+                      "color-mix(in srgb, var(--green) 10%, var(--card))",
                     color: "var(--text)",
                     fontSize: 12,
                     fontWeight: 800,
@@ -868,7 +894,8 @@ export default function DestinationsPage() {
             style={{
               padding: 16,
               borderRadius: 22,
-              border: "1px solid color-mix(in srgb, #ef4444 32%, var(--border))",
+              border:
+                "1px solid color-mix(in srgb, #ef4444 32%, var(--border))",
               background: "color-mix(in srgb, #ef4444 9%, var(--card))",
               color: "var(--text)",
               fontSize: 13,
@@ -880,9 +907,7 @@ export default function DestinationsPage() {
           </div>
         ) : null}
 
-        {loading ? (
-          <DestinationRowsSkeleton count={4} />
-        ) : null}
+        {loading ? <DestinationRowsSkeleton count={4} /> : null}
 
         {!loading && !err && items.length === 0 ? (
           <EmptyState
@@ -990,7 +1015,9 @@ export default function DestinationsPage() {
               {freshTips.map((tip) => {
                 const author =
                   tip.user?.name ||
-                  (tip.user?.handle ? `@${tip.user.handle}` : "Fairwayd golfer");
+                  (tip.user?.handle
+                    ? `@${tip.user.handle}`
+                    : "Fairwayd golfer");
 
                 return (
                   <button
@@ -1097,7 +1124,8 @@ export default function DestinationsPage() {
 
                     <div
                       style={{
-                        color: "color-mix(in srgb, var(--text) 88%, var(--sub))",
+                        color:
+                          "color-mix(in srgb, var(--text) 88%, var(--sub))",
                         fontSize: 14,
                         lineHeight: 1.58,
                         fontWeight: 500,

@@ -508,20 +508,22 @@ export default function PostCard({
   }
 
   const actionButtonStyle: React.CSSProperties = {
-    background: "var(--muted)",
-    border: "1px solid var(--border)",
+    background: "var(--card)",
+    border: "1px solid color-mix(in srgb, var(--border) 78%, transparent)",
     borderRadius: 999,
     cursor: "pointer",
     color: "var(--sub)",
-    fontWeight: 800,
+    fontWeight: 620,
     minWidth: "auto",
     textAlign: "center",
-    padding: isMobile ? "8px 12px" : "8px 12px",
+    minHeight: isMobile ? 28 : 32,
+    padding: isMobile ? "4px 8px" : "7px 11px",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: isMobile ? 4 : 6,
     lineHeight: 1,
+    fontSize: isMobile ? 12 : 12.5,
   };
 
   const copyText = async (text: string) => {
@@ -576,38 +578,38 @@ export default function PostCard({
       ref={rootRef}
       onClick={handleOpenPost}
       style={{
-        padding: isMobile ? "14px 0" : 14,
+        padding: isMobile ? "12px 0" : 14,
         width: "100%",
         maxWidth: "100%",
         minWidth: 0,
         boxSizing: "border-box",
         overflowX: "hidden",
-        borderRadius: isMobile ? 22 : 22,
+        borderRadius: isMobile ? 18 : 20,
         background: isMobile
-          ? "color-mix(in srgb, var(--card) 98%, var(--bg))"
+          ? "var(--card)"
           : isCommentTarget
-            ? "rgba(0, 200, 100, 0.08)"
-            : "color-mix(in srgb, var(--card) 98%, var(--bg))",
+            ? "color-mix(in srgb, var(--green) 5%, var(--card))"
+            : "var(--card)",
         border: isMobile
-          ? "1px solid color-mix(in srgb, var(--border) 74%, transparent)"
+          ? "1px solid color-mix(in srgb, var(--border) 82%, transparent)"
           : isCommentTarget
-            ? "1px solid var(--green)"
-            : "1px solid color-mix(in srgb, var(--border) 74%, transparent)",
+            ? "1px solid color-mix(in srgb, var(--green) 42%, var(--border))"
+            : "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
         borderBottom: isMobile
-          ? "1px solid color-mix(in srgb, var(--border) 74%, transparent)"
+          ? "1px solid color-mix(in srgb, var(--border) 82%, transparent)"
           : undefined,
         boxShadow: isCommentTarget
-          ? "0 0 0 2px rgba(0, 200, 100, 0.25)"
+          ? "0 0 0 2px color-mix(in srgb, var(--green) 16%, transparent)"
           : isMobile
-            ? "0 8px 24px rgba(0,0,0,0.10)"
-            : "0 12px 30px rgba(0,0,0,0.10)",
+            ? "0 4px 14px rgba(15, 23, 20, 0.05)"
+            : "0 10px 24px rgba(15, 23, 20, 0.06)",
         color: "var(--text)",
         cursor: onOpenPost && !isEditing && !isMenuOpen ? "pointer" : "default",
       }}
     >
       <div
         style={{
-          padding: "0 12px",
+          padding: isMobile ? "0 11px" : "0 12px",
           width: "100%",
           maxWidth: "100%",
           minWidth: 0,
@@ -643,9 +645,10 @@ export default function PostCard({
                   maxHeight: 40,
                   borderRadius: "50%",
                   overflow: "hidden",
-                  border: "1px solid color-mix(in srgb, var(--border) 78%, var(--green))",
+                  border:
+                    "1px solid color-mix(in srgb, var(--border) 86%, transparent)",
                   flexShrink: 0,
-                  background: "var(--muted)",
+                  background: "var(--card)",
                 }}
               >
                 <img
@@ -678,14 +681,15 @@ export default function PostCard({
                   maxHeight: 40,
                   borderRadius: "50%",
                   overflow: "hidden",
-                  border: "1px solid color-mix(in srgb, var(--border) 78%, var(--green))",
-                  background: "var(--muted)",
+                  border:
+                    "1px solid color-mix(in srgb, var(--border) 86%, transparent)",
+                  background: "var(--card)",
                   color: "var(--text)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontSize: 12,
-                  fontWeight: 900,
+                  fontWeight: 800,
                   flexShrink: 0,
                 }}
               >
@@ -710,7 +714,7 @@ export default function PostCard({
                   textAlign: "left",
                   display: "block",
                   fontSize: 14,
-                  fontWeight: 850,
+                  fontWeight: 800,
                   lineHeight: 1.18,
                   maxWidth: "100%",
                 }}
@@ -739,7 +743,7 @@ export default function PostCard({
                   alignItems: "center",
                   gap: 8,
                   flexWrap: "wrap",
-                  marginTop: 9,
+                  marginTop: 8,
                   minWidth: 0,
                 }}
               >
@@ -756,7 +760,7 @@ export default function PostCard({
                     border: "none",
                     padding: 0,
                     margin: 0,
-                    fontWeight: 850,
+                    fontWeight: 760,
                     fontSize: 13,
                     color: "var(--text)",
                     cursor: onSelectCourse ? "pointer" : "default",
@@ -768,65 +772,17 @@ export default function PostCard({
                 </button>
                   <div
                     style={{
-                      display: "flex",
-                      flexDirection: "column",
+                      display: "inline-flex",
+                      flexDirection: "row",
                       alignItems: "flex-start",
-                      gap: 6,
-                      padding: "8px 10px",
-                      borderRadius: 16,
-                      background: "var(--muted)",
-                      border: "1px solid var(--border)",
+                      gap: 0,
+                      padding: 0,
+                      borderRadius: 999,
+                      background: "transparent",
+                      border: "none",
                       minWidth: 0,
                     }}
                   >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    {courseRating && courseRating.count > 0 ? (
-                      <div
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 8,
-                          padding: "3px 8px",
-                          borderRadius: 999,
-                          border: "1px solid var(--border)",
-                          background: "var(--card)",
-                          fontSize: 12,
-                          fontWeight: 700,
-                          color: "var(--text)",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        <span aria-hidden="true">⭐</span>
-                        <span>
-                          {courseRating.overall.toFixed(1)} •{" "}
-                          {courseRating.count}
-                        </span>
-
-                        {myRating ? (
-                          <span
-                            style={{
-                              marginLeft: 6,
-                              padding: "2px 6px",
-                              borderRadius: 999,
-                              background: "rgba(0,0,0,0.06)",
-                              fontSize: 11,
-                              fontWeight: 800,
-                            }}
-                          >
-                            {t("your_rating")}: {myRating.overall.toFixed(1)}
-                          </span>
-                        ) : null}
-                      </div>
-                    ) : null}
-                  </div>
-
                   <button
                     type="button"
                     onClick={(e) => {
@@ -847,25 +803,47 @@ export default function PostCard({
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
-                      gap: 4,
-                      padding: 0,
+                      gap: 0,
+                      flexWrap: "nowrap",
+                      minHeight: 28,
+                      maxWidth: "100%",
+                      padding: "4px 9px",
                       margin: 0,
-                      border: "none",
-                      background: "transparent",
-                      color: "var(--sub)",
-                      fontSize: 11,
-                      fontWeight: 700,
+                      border:
+                        "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
+                      borderRadius: 14,
+                      background: "var(--card)",
+                      color: "color-mix(in srgb, var(--text) 82%, var(--sub))",
+                      fontSize: 11.5,
+                      fontWeight: 520,
+                      letterSpacing: 0,
+                      lineHeight: 1.2,
                       textAlign: "left",
                       cursor: "pointer",
                       width: "fit-content",
-                      textDecoration: "none",
-                      whiteSpace: "nowrap",
+                      minWidth: 0,
+                      overflow: "hidden",
                       position: "relative",
                       zIndex: 2,
                       pointerEvents: "auto",
                     }}
                   >
-                    {myRating ? t("edit_your_rating") : t("rate_this_course")}
+                    <span
+                      style={{
+                        minWidth: 0,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {courseRating && courseRating.count > 0
+                        ? `\u2B50 ${courseRating.overall.toFixed(1)} \u2022 ${
+                            courseRating.count
+                          } ${
+                            courseRating.count === 1 ? "rating" : "ratings"
+                          } \u2022 Rate course`
+                        : "No course rating yet \u2022 Be the first"}
+                    </span>
                   </button>
                 </div>
               </div>
@@ -915,17 +893,17 @@ export default function PostCard({
                 }}
                 disabled={courseFollowBusy}
                 style={{
-                  marginTop: 6,
+                  marginTop: 5,
                   border: courseFollowed
-                    ? "1px solid var(--green)"
-                    : "1px solid var(--border)",
+                    ? "1px solid color-mix(in srgb, var(--green) 38%, var(--border))"
+                    : "1px solid color-mix(in srgb, var(--border) 78%, transparent)",
                   background: courseFollowed
-                    ? "color-mix(in srgb, var(--green) 14%, var(--muted))"
-                    : "var(--muted)",
+                    ? "color-mix(in srgb, var(--green) 8%, var(--card))"
+                    : "var(--card)",
                   color: courseFollowed ? "var(--text)" : "var(--sub)",
-                  padding: "3px 10px",
+                  padding: "3px 9px",
                   borderRadius: 999,
-                  fontWeight: 700,
+                  fontWeight: 620,
                   fontSize: 11,
                   lineHeight: 1,
                   cursor: courseFollowBusy ? "default" : "pointer",
@@ -963,7 +941,7 @@ export default function PostCard({
                   style={{
                     border: "none",
                     background: isMenuOpen
-                      ? "rgba(255,255,255,0.08)"
+                      ? "color-mix(in srgb, var(--muted) 52%, transparent)"
                       : "transparent",
                     padding: 0,
                     margin: 0,
@@ -991,9 +969,10 @@ export default function PostCard({
                       right: 0,
                       minWidth: isMobile ? 170 : 156,
                       background: "var(--card)",
-                      border: "1px solid var(--line, rgba(255,255,255,0.08))",
-                      borderRadius: 18,
-                      boxShadow: "0 18px 40px rgba(0,0,0,0.24)",
+                      border:
+                        "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
+                      borderRadius: 14,
+                      boxShadow: "0 14px 32px rgba(15, 23, 20, 0.14)",
                       padding: 8,
                       display: "flex",
                       flexDirection: "column",
@@ -1013,11 +992,11 @@ export default function PostCard({
                       }}
                       style={{
                         border: "none",
-                        background: "rgba(255,255,255,0.03)",
+                        background: "var(--card)",
                         color: "var(--text)",
                         textAlign: "left",
                         padding: isMobile ? "11px 12px" : "10px 12px",
-                        borderRadius: 14,
+                        borderRadius: 10,
                         cursor: "pointer",
                         fontSize: 14,
                         display: "flex",
@@ -1178,9 +1157,9 @@ export default function PostCard({
         ) : (
           <div
             style={{
-              marginTop: 8,
+              marginTop: 7,
               whiteSpace: "pre-wrap",
-              lineHeight: 1.58,
+              lineHeight: 1.54,
               wordBreak: "break-word",
               fontSize: 14,
               color: "var(--text)",
@@ -1229,7 +1208,7 @@ export default function PostCard({
           style={{
             display: "grid",
             gap: 10,
-            marginTop: 14,
+            marginTop: 12,
             width: "100%",
             maxWidth: "100%",
             minWidth: 0,
@@ -1258,7 +1237,7 @@ export default function PostCard({
                     position: "relative",
                     overflow: "hidden",
                     borderRadius: 0,
-                    background: "var(--muted)",
+                    background: "var(--bg)",
                     minHeight: 60,
                     border: "none",
                     boxShadow: "none",
@@ -1432,12 +1411,12 @@ export default function PostCard({
       <div
         style={{
           display: "flex",
-          gap: isMobile ? 8 : 12,
+          gap: isMobile ? 7 : 10,
           alignItems: "center",
-          marginTop: 14,
+          marginTop: 12,
           fontSize: 13,
           flexWrap: "wrap",
-          padding: "0 12px",
+          padding: isMobile ? "0 11px" : "0 12px",
           color: "var(--sub)",
         }}
       >
@@ -1451,10 +1430,10 @@ export default function PostCard({
             ...actionButtonStyle,
             flexShrink: 0,
             cursor: likeBusy ? "default" : "pointer",
-            color: liked ? "#ff4d6d" : "var(--text)",
+            color: liked ? "#e54867" : "var(--sub)",
             background: liked
-              ? "color-mix(in srgb, #ff4d6d 12%, var(--muted))"
-              : "var(--muted)",
+              ? "color-mix(in srgb, #ff4d6d 8%, var(--card))"
+              : "var(--card)",
             opacity: likeBusy ? 0.7 : 1,
           }}
         >
@@ -1469,7 +1448,7 @@ export default function PostCard({
             onCommentClick?.(post.id);
           }}
         >
-          💬 {t("comments")} {commentCount}
+          {isMobile ? `💬 ${commentCount}` : `💬 ${t("comments")} ${commentCount}`}
         </button>
 
         <button
@@ -1481,9 +1460,10 @@ export default function PostCard({
           }}
           title={t("copy_post_link")}
         >
-          🔗 {shareCopied ? t("copied") : t("share")}
+          {isMobile ? (shareCopied ? "✓" : "🔗") : `🔗 ${shareCopied ? t("copied") : t("share")}`}
         </button>
       </div>
     </div>
   );
 }
+

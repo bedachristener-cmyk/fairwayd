@@ -73,6 +73,14 @@ type CourseRatingMap = Record<string, RatingSummary | null>;
 
 type FeedFilter = "following" | "courses" | "destinations" | "trending";
 const MAX_POST_IMAGES = 5;
+const VISIBILITY_OPTIONS: {
+  value: "PUBLIC" | "FOLLOWERS" | "PRIVATE";
+  label: string;
+}[] = [
+  { value: "PUBLIC", label: "Public" },
+  { value: "FOLLOWERS", label: "Followers" },
+  { value: "PRIVATE", label: "Private" },
+];
 
 const FEED_FILTERS: { value: FeedFilter; label: string }[] = [
   { value: "following", label: "👥 Following" },
@@ -130,7 +138,7 @@ function Card({
   return (
     <div
       style={{
-        background: "color-mix(in srgb, var(--card) 96%, var(--bg))",
+        background: "var(--bg)",
         borderRadius: isMobile ? 0 : 16,
         border: "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
         padding: isMobile ? "0 0 12px" : 12,
@@ -335,6 +343,17 @@ export default function FeedPage() {
       document.body.style.overflow = previousOverflow;
     };
   }, [editorOpen]);
+
+  useEffect(() => {
+    if (!composerOpen || !isMobile) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [composerOpen, isMobile]);
 
   const loadFeed = useCallback(async () => {
     if (!token) {
@@ -618,18 +637,6 @@ export default function FeedPage() {
 
   const selectedHoles = selectedCourseFull?.holes ?? null;
   const selectedWebsite = selectedCourseFull?.website ?? null;
-
-  const selectedVisibilityRaw =
-    selectedCourseFull?.visibility ?? selectedCourseFull?.access ?? null;
-
-  const selectedIsPrivate =
-    typeof selectedCourseFull?.isPrivate === "boolean"
-      ? selectedCourseFull.isPrivate
-      : typeof selectedCourseFull?.private === "boolean"
-        ? selectedCourseFull.private
-        : typeof selectedVisibilityRaw === "string"
-          ? selectedVisibilityRaw.toLowerCase() === "private"
-          : null;
 
   const selectedCity = selectedCourseFull?.city ?? null;
   const selectedRegion = selectedCourseFull?.region ?? null;
@@ -956,15 +963,29 @@ export default function FeedPage() {
     .toUpperCase();
 
   const composerBoxStyle: React.CSSProperties = {
-    padding: isMobile ? 10 : 12,
-    borderRadius: isMobile ? 22 : 24,
-    background: "color-mix(in srgb, var(--card) 88%, transparent)",
-    border: "1px solid color-mix(in srgb, var(--border) 42%, transparent)",
+    position: composerOpen && isMobile ? "fixed" : undefined,
+    inset: composerOpen && isMobile ? 0 : undefined,
+    zIndex: composerOpen && isMobile ? 1600 : undefined,
+    padding:
+      composerOpen && isMobile
+        ? "12px 14px calc(14px + env(safe-area-inset-bottom, 0px))"
+        : isMobile
+          ? 10
+          : 12,
+    borderRadius: composerOpen && isMobile ? 0 : isMobile ? 22 : 24,
+    background:
+      composerOpen && isMobile
+        ? "color-mix(in srgb, var(--card) 97%, var(--bg))"
+        : "var(--card)",
+    border: "1px solid color-mix(in srgb, var(--border) 62%, transparent)",
+    borderWidth: composerOpen && isMobile ? 0 : 1,
     width: "100%",
+    height: composerOpen && isMobile ? "100dvh" : undefined,
     maxWidth: "100%",
     minWidth: 0,
     boxSizing: "border-box",
     overflowX: "hidden",
+    overflowY: composerOpen && isMobile ? "auto" : undefined,
     boxShadow: "none",
   };
 
@@ -1006,15 +1027,14 @@ export default function FeedPage() {
 
   return (
     <>
-      <div className="fw-page">
-        <div className="fw-page-atmosphere" aria-hidden="true">
-          <div className="fw-page-atmosphere-overlay" />
-        </div>
+      <div className="fw-page" style={{ background: "var(--bg)" }}>
         <div
           className="fw-page-shell"
           style={{
             display: "grid",
             gap: 12,
+            background: "var(--bg)",
+            borderInlineColor: "transparent",
             width: "100%",
             maxWidth: "100%",
             minWidth: 0,
@@ -1130,7 +1150,65 @@ export default function FeedPage() {
               {composerOpen ? (
                 <div
                   style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
                     marginTop: 12,
+                    paddingTop: composerOpen && isMobile ? 2 : 0,
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 850,
+                        color: "var(--text)",
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      Create post
+                    </div>
+                    <div
+                      style={{
+                        marginTop: 3,
+                        fontSize: 12,
+                        color: "var(--sub)",
+                        lineHeight: 1.35,
+                      }}
+                    >
+                      Course / Visibility / Moment / Actions
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setComposerOpen(false)}
+                    disabled={posting}
+                    style={{
+                      minWidth: 38,
+                      minHeight: 38,
+                      borderRadius: 999,
+                      border:
+                        "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                      background: "var(--card)",
+                      color: "var(--text)",
+                      fontSize: 18,
+                      lineHeight: 1,
+                      cursor: posting ? "default" : "pointer",
+                      opacity: posting ? 0.6 : 1,
+                    }}
+                    aria-label="Close composer"
+                  >
+                    x
+                  </button>
+                </div>
+              ) : null}
+
+              {composerOpen ? (
+                <div
+                  style={{
+                    marginTop: 10,
                     width: "100%",
                     maxWidth: "100%",
                     minWidth: 0,
@@ -1141,7 +1219,7 @@ export default function FeedPage() {
                   <div
                     style={{
                       display: "flex",
-                      gap: 10,
+                      gap: 9,
                       alignItems: isMobile ? "stretch" : "flex-start",
                       flexWrap: "wrap",
                     }}
@@ -1150,11 +1228,23 @@ export default function FeedPage() {
                       style={{
                         display: "flex",
                         flexDirection: "column",
-                        gap: 8,
+                        gap: 7,
                         flex: 1,
                         minWidth: isMobile ? "100%" : 260,
                       }}
                     >
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 750,
+                          color: "var(--sub)",
+                          textTransform: "uppercase",
+                          letterSpacing: 0.5,
+                        }}
+                      >
+                        Course
+                      </div>
+
                       <CourseDropdown
                         courses={coursesLite}
                         selectedCourseId={selectedCourse?.id ?? null}
@@ -1189,14 +1279,14 @@ export default function FeedPage() {
                             display: "flex",
                             alignItems: isMobile ? "stretch" : "center",
                             justifyContent: "space-between",
-                            gap: 12,
+                            gap: 10,
                             flexWrap: isMobile ? "wrap" : "nowrap",
-                            padding: isMobile ? "12px" : "12px 14px",
-                            borderRadius: 20,
+                            padding: isMobile ? "10px 11px" : "11px 13px",
+                            borderRadius: 16,
                             border:
-                              "1px solid color-mix(in srgb, var(--border) 56%, transparent)",
+                              "1px solid color-mix(in srgb, var(--border) 74%, transparent)",
                             background:
-                              "color-mix(in srgb, var(--muted) 68%, transparent)",
+                              "color-mix(in srgb, var(--card) 96%, var(--bg))",
                             boxShadow: "none",
                           }}
                         >
@@ -1205,14 +1295,14 @@ export default function FeedPage() {
                               minWidth: 0,
                               display: "flex",
                               flexDirection: "column",
-                              gap: 4,
+                              gap: 3,
                               flex: 1,
                             }}
                           >
                             <div
                               style={{
                                 fontSize: 11,
-                                fontWeight: 800,
+                                fontWeight: 750,
                                 color: "var(--sub)",
                                 textTransform: "uppercase",
                                 letterSpacing: 0.5,
@@ -1234,7 +1324,7 @@ export default function FeedPage() {
                                 background: "transparent",
                                 color: "var(--text)",
                                 fontSize: isMobile ? 15 : 16,
-                                fontWeight: 900,
+                                fontWeight: 820,
                                 textAlign: "left",
                                 cursor: selectedCourseId
                                   ? "pointer"
@@ -1257,14 +1347,13 @@ export default function FeedPage() {
 
                             {(selectedLocationLabel ||
                               selectedHoles !== null ||
-                              selectedIsPrivate !== null ||
                               normalizedSelectedWebsite) && (
                               <div
                                 style={{
                                   display: "flex",
                                   flexWrap: "wrap",
                                   gap: 8,
-                                  marginTop: 4,
+                                  marginTop: 2,
                                 }}
                               >
                                 {selectedLocationLabel ? (
@@ -1276,8 +1365,7 @@ export default function FeedPage() {
                                       borderRadius: 999,
                                       border:
                                         "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
-                                      background:
-                                        "color-mix(in srgb, var(--card) 72%, transparent)",
+                                      background: "var(--card)",
                                     }}
                                   >
                                     📍 {selectedLocationLabel}
@@ -1293,32 +1381,13 @@ export default function FeedPage() {
                                       borderRadius: 999,
                                       border:
                                         "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
-                                      background:
-                                        "color-mix(in srgb, var(--card) 72%, transparent)",
+                                      background: "var(--card)",
                                     }}
                                   >
                                     ⛳ {selectedHoles} {t("holes")}
                                   </span>
                                 ) : null}
 
-                                {selectedIsPrivate !== null ? (
-                                  <span
-                                    style={{
-                                      fontSize: 12,
-                                      color: "var(--sub)",
-                                      padding: "6px 10px",
-                                      borderRadius: 999,
-                                      border:
-                                        "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
-                                      background:
-                                        "color-mix(in srgb, var(--card) 72%, transparent)",
-                                    }}
-                                  >
-                                    {selectedIsPrivate
-                                      ? `🔒 ${t("visibility_private")}`
-                                      : `🌍 ${t("visibility_public")}`}
-                                  </span>
-                                ) : null}
 
                                 {normalizedSelectedWebsite ? (
                                   <a
@@ -1332,8 +1401,7 @@ export default function FeedPage() {
                                       borderRadius: 999,
                                       border:
                                         "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
-                                      background:
-                                        "color-mix(in srgb, var(--card) 72%, transparent)",
+                                      background: "var(--card)",
                                       textDecoration: "none",
                                       fontWeight: 700,
                                     }}
@@ -1360,20 +1428,20 @@ export default function FeedPage() {
                               !selectedCourseId || isSelectedCourseFollowBusy
                             }
                             style={{
-                              alignSelf: isMobile ? "stretch" : "center",
-                              minWidth: isMobile ? "100%" : 132,
-                              minHeight: 42,
-                              padding: "10px 14px",
+                              alignSelf: isMobile ? "flex-start" : "center",
+                              minWidth: isMobile ? "auto" : 118,
+                              minHeight: 32,
+                              padding: "6px 10px",
                               borderRadius: 999,
                               border: isSelectedCourseFollowed
                                 ? "1px solid rgba(39,196,107,0.45)"
                                 : "1px solid var(--border)",
                               background: isSelectedCourseFollowed
-                                ? "rgba(39,196,107,0.18)"
-                                : "var(--bg)",
+                                ? "color-mix(in srgb, var(--green) 10%, var(--card))"
+                                : "var(--card)",
                               color: "var(--text)",
-                              fontWeight: 800,
-                              fontSize: 13,
+                              fontWeight: 720,
+                              fontSize: 12,
                               cursor:
                                 !selectedCourseId || isSelectedCourseFollowBusy
                                   ? "default"
@@ -1402,73 +1470,66 @@ export default function FeedPage() {
 
                     <div
                       style={{
-                        marginLeft: isMobile ? 0 : "auto",
-                        minWidth: isMobile ? "100%" : "auto",
-                        background: "var(--card)",
-                        border:
-                          "1px solid color-mix(in srgb, var(--border) 54%, transparent)",
-                        borderRadius: 999,
-                        paddingRight: 10,
-                        display: "flex",
-                        alignItems: "center",
-                        boxShadow: "none",
+                        display: "grid",
+                        gap: 7,
+                        width: "100%",
                       }}
                     >
-                      <select
-                        value={visibility}
-                        onChange={(e) =>
-                          setVisibility(
-                            e.target.value as
-                              | "PUBLIC"
-                              | "FOLLOWERS"
-                              | "PRIVATE",
-                          )
-                        }
+                      <div
                         style={{
-                          padding: "10px 12px",
-                          border: "none",
-                          outline: "none",
-                          background: "transparent",
-                          color: "var(--text)",
-                          fontWeight: 800,
-                          fontSize: 13,
-                          appearance: "none",
-                          WebkitAppearance: "none",
-                          MozAppearance: "none",
-                          borderRadius: 999,
-                          cursor: posting ? "default" : "pointer",
-                          width: isMobile ? "100%" : "auto",
+                          fontSize: 11,
+                          fontWeight: 750,
+                          color: "var(--sub)",
+                          textTransform: "uppercase",
+                          letterSpacing: 0.5,
                         }}
-                        disabled={posting}
                       >
-                        <option
-                          value="PUBLIC"
-                          style={{
-                            background: "var(--card)",
-                            color: "var(--text)",
-                          }}
-                        >
-                          🌍 {t("visibility_public")}
-                        </option>
-                        <option
-                          value="FOLLOWERS"
-                          style={{
-                            background: "var(--card)",
-                            color: "var(--text)",
-                          }}
-                        >
-                          👥 {t("visibility_followers")}
-                        </option>
-                        <option
-                          value="PRIVATE"
-                          style={{
-                            background: "var(--card)",
-                            color: "var(--text)",
-                          }}
-                        >
-                          🔒 {t("visibility_private")}
-                        </option>
-                      </select>
+                        Visibility
+                      </div>
+
+                      <div
+                        role="radiogroup"
+                        aria-label="Post visibility"
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                          gap: 7,
+                        }}
+                      >
+                        {VISIBILITY_OPTIONS.map((option) => {
+                          const active = visibility === option.value;
+
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              role="radio"
+                              aria-checked={active}
+                              onClick={() => setVisibility(option.value)}
+                              disabled={posting}
+                              style={{
+                                minHeight: 32,
+                                padding: "0 8px",
+                                borderRadius: 999,
+                                border: active
+                                  ? "1px solid color-mix(in srgb, var(--green) 72%, var(--border))"
+                                  : "1px solid var(--border)",
+                                background: active
+                                  ? "color-mix(in srgb, var(--green) 9%, var(--card))"
+                                  : "var(--card)",
+                                color: active ? "var(--text)" : "var(--sub)",
+                                fontSize: 12,
+                                fontWeight: active ? 780 : 620,
+                                cursor: posting ? "default" : "pointer",
+                                opacity: posting ? 0.65 : 1,
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {option.label}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
 
@@ -1476,24 +1537,24 @@ export default function FeedPage() {
                     style={{
                       display: "flex",
                       alignItems: "flex-start",
-                      gap: 11,
-                      marginTop: 12,
-                      padding: "2px 0",
+                      gap: 10,
+                      marginTop: 10,
+                      padding: "0",
                     }}
                   >
                     <div
                       style={{
-                        width: 38,
-                        height: 38,
-                        minWidth: 38,
+                        width: 36,
+                        height: 36,
+                        minWidth: 36,
                         borderRadius: "50%",
                         border: "1px solid var(--border)",
-                        background: "var(--muted)",
+                        background: "var(--card)",
                         color: "var(--text)",
                         display: "grid",
                         placeItems: "center",
                         fontSize: 13,
-                        fontWeight: 900,
+                        fontWeight: 850,
                         overflow: "hidden",
                         flexShrink: 0,
                       }}
@@ -1514,40 +1575,61 @@ export default function FeedPage() {
                       )}
                     </div>
 
-                    <textarea
-                      ref={draftRef}
-                      value={draft}
-                      onChange={(e) => {
-                        setDraft(e.target.value);
-                        if (err) setErr(null);
-                        if (composerHint) setComposerHint(null);
-                      }}
-                      placeholder={t("composer_moment_placeholder")}
-                      rows={4}
+                    <div
                       style={{
-                        width: "100%",
-                        boxSizing: "border-box",
-                        borderRadius: 0,
-                        border: "none",
-                        padding: "6px 0 8px",
-                        background: "transparent",
-                        color: "var(--text)",
-                        fontSize: 16,
-                        lineHeight: 1.45,
-                        outline: "none",
-                        resize: "none",
-                        minHeight: 118,
+                        display: "grid",
+                        gap: 5,
+                        flex: 1,
+                        minWidth: 0,
                       }}
-                      disabled={posting}
-                    />
+                    >
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 750,
+                          color: "var(--sub)",
+                          textTransform: "uppercase",
+                          letterSpacing: 0.5,
+                        }}
+                      >
+                        Moment
+                      </div>
+
+                      <textarea
+                        ref={draftRef}
+                        value={draft}
+                        onChange={(e) => {
+                          setDraft(e.target.value);
+                          if (err) setErr(null);
+                          if (composerHint) setComposerHint(null);
+                        }}
+                        placeholder={t("composer_moment_placeholder")}
+                        rows={4}
+                        style={{
+                          width: "100%",
+                          boxSizing: "border-box",
+                          borderRadius: 0,
+                          border: "none",
+                          padding: "2px 0 6px",
+                          background: "transparent",
+                          color: "var(--text)",
+                          fontSize: 16,
+                          lineHeight: 1.42,
+                          outline: "none",
+                          resize: "none",
+                          minHeight: isMobile ? 96 : 108,
+                        }}
+                        disabled={posting}
+                      />
+                    </div>
                   </div>
                   <div
                     style={{
                       display: "flex",
                       gap: 10,
                       alignItems: "center",
-                      marginTop: 12,
-                      padding: "12px 0 0",
+                      marginTop: 8,
+                      padding: "10px 0 0",
                       flexWrap: "wrap",
                       rowGap: 10,
                       justifyContent: "space-between",
