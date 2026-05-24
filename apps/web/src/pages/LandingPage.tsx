@@ -4,6 +4,7 @@ import { useAuth } from "../auth/AuthContext";
 import LoginPanel from "../components/LoginPanel";
 import DevLogin from "../components/DevLogin";
 import logo from "../assets/logo.png";
+import { validPostLoginNext } from "../auth/postLoginNext";
 
 export default function LandingPage() {
   const nav = useNavigate();
@@ -18,8 +19,8 @@ export default function LandingPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      const next = new URLSearchParams(loc.search).get("next");
-      nav(next && next.startsWith("/") ? next : "/feed", { replace: true });
+      const next = validPostLoginNext(new URLSearchParams(loc.search).get("next"));
+      nav(next ?? "/feed", { replace: true });
     }
   }, [isAuthenticated, loc.search, nav]);
 

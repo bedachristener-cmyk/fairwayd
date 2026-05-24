@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
-
-const POST_LOGIN_NEXT_KEY = "fairwayd_post_login_next";
+import { consumeStoredPostLoginNext } from "../auth/postLoginNext";
 const emailVerifyRequests = new Map<string, Promise<string>>();
 
 function verifyEmailTokenOnce(token: string) {
@@ -69,13 +68,12 @@ export default function EmailLoginCallbackPage() {
         setStatus("success");
         setMessage("Login confirmed. Opening Fairwayd...");
 
-        const next = localStorage.getItem(POST_LOGIN_NEXT_KEY);
-        if (next) localStorage.removeItem(POST_LOGIN_NEXT_KEY);
+        const next = consumeStoredPostLoginNext();
 
         login(jwt, true);
 
         setTimeout(() => {
-          nav(next && next.startsWith("/") ? next : "/feed", { replace: true });
+          nav(next ?? "/feed", { replace: true });
         }, 0);
       } catch (err) {
         if (!cancelled) {

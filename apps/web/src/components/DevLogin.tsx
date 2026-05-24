@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { validPostLoginNext } from "../auth/postLoginNext";
 
 type DevLoginProps = {
   onLoggedIn?: (token: string) => void;
@@ -83,8 +84,8 @@ export default function DevLogin({ onLoggedIn }: DevLoginProps) {
       onLoggedIn?.(token);
 
       const params = new URLSearchParams(window.location.search);
-      const next = params.get("next");
-      nav(next || "/feed");
+      const next = validPostLoginNext(params.get("next"));
+      nav(next ?? "/feed", { replace: true });
     } catch (e: unknown) {
       const m = e instanceof Error ? e.message : String(e);
       setMsg(m);
