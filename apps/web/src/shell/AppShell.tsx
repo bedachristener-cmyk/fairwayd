@@ -6,6 +6,7 @@ import BottomTabs from "./BottomTabs";
 import TopRail from "./TopRail";
 import InstallAppPrompt from "../pwa/InstallAppPrompt";
 import { useStandaloneMode } from "../pwa/useStandaloneMode";
+import NotificationPermissionPrompt from "../components/NotificationPermissionPrompt";
 
 export default function AppShell() {
   const location = useLocation();
@@ -29,6 +30,7 @@ export default function AppShell() {
     <div className="fw-shell">
       <TopRail />
       {isMobile && !isStandalone ? <InstallAppPrompt /> : null}
+      <NotificationPermissionPrompt />
 
       {isMap && isMobile ? (
         <>
