@@ -874,6 +874,7 @@ export default function DestinationPage() {
           >
             <div>
               <div
+                className="fw-atmosphere-card"
                 style={{
                   position: "relative",
                   overflow: "hidden",
@@ -1518,6 +1519,7 @@ export default function DestinationPage() {
 
             {info?.bestTime ? (
               <div
+                className="fw-atmosphere-card"
                 style={{
                   padding: isMobile ? 18 : 22,
                   borderRadius: 24,
@@ -1589,6 +1591,7 @@ export default function DestinationPage() {
 
             {info?.highlights?.length ? (
               <div
+                className="fw-atmosphere-card"
                 style={{
                   padding: isMobile ? 16 : 20,
                   borderRadius: 24,
@@ -1670,6 +1673,7 @@ export default function DestinationPage() {
 
             {info?.travelTips?.length ? (
               <div
+                className="fw-atmosphere-card"
                 style={{
                   padding: isMobile ? 16 : 20,
                   borderRadius: 24,
@@ -1778,6 +1782,7 @@ export default function DestinationPage() {
 
             {info?.localKnowledge?.length ? (
               <div
+                className="fw-atmosphere-card"
                 style={{
                   padding: isMobile ? 18 : 22,
                   borderRadius: 24,
@@ -1891,6 +1896,7 @@ export default function DestinationPage() {
 
             {info?.featuredRegions?.length ? (
               <div
+                className="fw-atmosphere-card"
                 style={{
                   padding: isMobile ? 18 : 22,
                   borderRadius: 24,
@@ -1962,6 +1968,7 @@ export default function DestinationPage() {
             ) : null}
 
             <div
+              className="fw-atmosphere-card"
               style={{
                 padding: isMobile ? 18 : 22,
                 borderRadius: 24,
@@ -2487,6 +2494,7 @@ export default function DestinationPage() {
             </div>
 
             <div
+              className="fw-atmosphere-card"
               style={{
                 padding: isMobile ? 18 : 22,
                 borderRadius: 24,
@@ -2583,6 +2591,7 @@ export default function DestinationPage() {
 
                     return (
                       <div
+                        className="fw-atmosphere-card"
                         key={c.id}
                         onClick={() => navigate(`/courses/${c.id}`)}
                         style={{
@@ -2667,54 +2676,49 @@ export default function DestinationPage() {
                         <div
                           style={{
                             display: "flex",
-                            flexDirection: isMobile ? "column" : "row",
+                            flexWrap: "wrap",
                             gap: 8,
+                            alignItems: "center",
                           }}
                         >
                           <button
                             type="button"
+                            className="fw-pill fw-pill--cta"
                             onClick={(event) => {
                               event.stopPropagation();
                               navigate(`/courses/${c.id}`);
                             }}
                             style={{
-                              border:
-                                "1px solid color-mix(in srgb, var(--green) 62%, var(--border))",
-                              background: "var(--green)",
-                              color: "#fff",
                               height: 38,
                               padding: "0 14px",
-                              borderRadius: 999,
                               fontSize: 13,
-                              fontWeight: 850,
                               cursor: "pointer",
-                              flex: 1,
+                              flex: isMobile ? "1 1 124px" : "0 0 auto",
+                              minWidth: 0,
                             }}
                           >
                             Open Course
                           </button>
                           <button
                             type="button"
+                            className={`fw-pill ${
+                              isCourseFollowed
+                                ? "fw-pill--active"
+                                : "fw-pill--action"
+                            }`}
                             onClick={(event) => {
                               event.stopPropagation();
                               handleToggleCourseFollow(c.id);
                             }}
                             disabled={isCourseBusy}
                             style={{
-                              border:
-                                "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                              background: isCourseFollowed
-                                ? "color-mix(in srgb, var(--green) 14%, var(--muted))"
-                                : "color-mix(in srgb, var(--muted) 62%, transparent)",
-                              color: "var(--text)",
                               height: 38,
                               padding: "0 14px",
-                              borderRadius: 999,
                               fontSize: 13,
-                              fontWeight: 850,
                               cursor: isCourseBusy ? "default" : "pointer",
                               opacity: isCourseBusy ? 0.68 : 1,
-                              flex: 1,
+                              flex: isMobile ? "1 1 124px" : "0 0 auto",
+                              minWidth: 0,
                             }}
                           >
                             {isCourseBusy
@@ -2731,6 +2735,7 @@ export default function DestinationPage() {
               )}
             </div>
             <div
+              className="fw-atmosphere-card"
               style={{
                 padding: isMobile ? 18 : 22,
                 borderRadius: 24,
@@ -2893,6 +2898,7 @@ export default function DestinationPage() {
           >
             {filteredItems.length === 0 ? (
               <div
+                className="fw-atmosphere-card"
                 style={{
                   display: "grid",
                   gap: 6,
@@ -2926,6 +2932,7 @@ export default function DestinationPage() {
 
                 return (
                   <div
+                    className="fw-atmosphere-card"
                     key={c.id}
                     onClick={() => navigate(`/courses/${c.id}`)}
                     style={{
@@ -3055,29 +3062,25 @@ export default function DestinationPage() {
                       <div
                         style={{
                           display: "flex",
-                          flexDirection: isMobile ? "column" : "row",
+                          flexWrap: "wrap",
                           gap: 8,
-                          alignItems: isMobile ? "stretch" : "center",
+                          alignItems: "center",
                         }}
                       >
                         <button
                           type="button"
+                          className="fw-pill fw-pill--cta"
                           onClick={(event) => {
                             event.stopPropagation();
                             navigate(`/courses/${c.id}`);
                           }}
                           style={{
-                            border:
-                              "1px solid color-mix(in srgb, var(--green) 62%, var(--border))",
-                            background: "var(--green)",
-                            color: "#fff",
                             height: 38,
                             padding: "0 14px",
-                            borderRadius: 999,
                             fontSize: 13,
-                            fontWeight: 850,
                             cursor: "pointer",
-                            flex: isMobile ? "1 1 auto" : "0 0 auto",
+                            flex: isMobile ? "1 1 124px" : "0 0 auto",
+                            minWidth: 0,
                           }}
                         >
                           Open Course
@@ -3085,26 +3088,24 @@ export default function DestinationPage() {
 
                         <button
                           type="button"
+                          className={`fw-pill ${
+                            isCourseFollowed
+                              ? "fw-pill--active"
+                              : "fw-pill--action"
+                          }`}
                           onClick={(event) => {
                             event.stopPropagation();
                             handleToggleCourseFollow(c.id);
                           }}
                           disabled={isCourseBusy}
                           style={{
-                            border:
-                              "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                            background: isCourseFollowed
-                              ? "color-mix(in srgb, var(--green) 14%, var(--muted))"
-                              : "color-mix(in srgb, var(--muted) 62%, transparent)",
-                            color: "var(--text)",
                             height: 38,
                             padding: "0 14px",
-                            borderRadius: 999,
                             fontSize: 13,
-                            fontWeight: 850,
                             cursor: isCourseBusy ? "default" : "pointer",
                             opacity: isCourseBusy ? 0.68 : 1,
-                            flex: isMobile ? "1 1 auto" : "0 0 auto",
+                            flex: isMobile ? "1 1 124px" : "0 0 auto",
+                            minWidth: 0,
                           }}
                         >
                           {isCourseBusy

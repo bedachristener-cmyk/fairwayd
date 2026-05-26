@@ -76,6 +76,7 @@ html[data-theme="dark"] {
   --fw-pill-cta-text: #ffffff;
   --fw-pill-radius: 999px;
   --fw-pill-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+  --fw-atmosphere-card-glow: rgba(150, 188, 181, 0.1);
 }
 
 /* LIGHT */
@@ -156,6 +157,7 @@ html[data-theme="light"] {
   --fw-pill-cta-text: #ffffff;
   --fw-pill-radius: 999px;
   --fw-pill-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+  --fw-atmosphere-card-glow: rgba(180, 210, 205, 0.14);
 }
 
 /* FORREST */
@@ -430,6 +432,30 @@ body.is-pwa-standalone {
   background: color-mix(in srgb, var(--card) 88%, var(--bg));
 }
 
+.fw-atmosphere-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.fw-atmosphere-card::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at right center,
+    var(--fw-atmosphere-card-glow, rgba(180, 210, 205, 0.12)),
+    transparent 42%
+  );
+}
+
+.fw-atmosphere-card > * {
+  position: relative;
+  z-index: 1;
+}
+
 .fw-pill {
   display: inline-flex;
   align-items: center;
@@ -473,6 +499,12 @@ body.is-pwa-standalone {
   background: var(--fw-pill-inactive-bg);
   border-color: var(--fw-pill-action-border);
   color: var(--fw-pill-action-text);
+}
+
+.fw-pill--soft-cta {
+  background: var(--fw-pill-active-bg);
+  border-color: transparent;
+  color: var(--text);
 }
 
 .fw-pill--cta,

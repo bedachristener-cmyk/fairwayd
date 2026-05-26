@@ -123,6 +123,7 @@ export default function CourseRatingSummary({
   if (!rating) {
     return (
       <section
+        className="fw-atmosphere-card"
         style={{
           padding: 16,
           borderRadius: 22,
@@ -176,6 +177,7 @@ export default function CourseRatingSummary({
 
   return (
     <section
+      className="fw-atmosphere-card"
       style={{
         padding: 18,
         borderRadius: 24,

@@ -589,6 +589,7 @@ export default function CoursePage() {
 
       {/* ===== HEADER ===== */}
       <div
+        className="fw-atmosphere-card"
         style={{
           margin: isMobile ? "0 12px" : 0,
           padding: isMobile ? 16 : 22,
@@ -628,37 +629,69 @@ export default function CoursePage() {
           ) : null}
         </div>
 
-        {metadataPills.length > 0 ? (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            flexWrap: "wrap",
+            marginTop: -2,
+            width: "100%",
+            boxSizing: "border-box",
+            minWidth: 0,
+          }}
+        >
           <div
             style={{
               display: "flex",
               gap: 8,
               flexWrap: "wrap",
-              marginTop: -2,
+              flex: "0 1 auto",
+              minWidth: 0,
             }}
           >
             {metadataPills.map((label) => (
               <span
                 key={label}
+                className="fw-pill fw-pill--meta fw-pill--info"
                 style={{
-                  minHeight: 28,
-                  padding: "0 11px",
-                  borderRadius: 999,
-                  background: "var(--muted)",
-                  border: "1px solid var(--border)",
-                  color: "var(--text)",
-                  fontSize: 12,
-                  fontWeight: 800,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  textTransform: label === course?.access?.replaceAll("_", " ") ? "capitalize" : undefined,
+                  textTransform:
+                    label === course?.access?.replaceAll("_", " ")
+                      ? "capitalize"
+                      : undefined,
                 }}
               >
                 {label}
               </span>
             ))}
           </div>
-        ) : null}
+
+          <button
+            type="button"
+            className="fw-pill fw-pill--soft-cta"
+            onClick={() => {
+              if (!course) return;
+
+              nav("/feed", {
+                state: {
+                  focusCourse: {
+                    id: course.id,
+                    name: course.name,
+                    lat: course.lat,
+                    lon: course.lon,
+                  },
+                },
+              });
+            }}
+            style={{
+              cursor: "pointer",
+              flex: "0 0 auto",
+              maxWidth: "100%",
+            }}
+          >
+            Post here
+          </button>
+        </div>
 
         <div
           style={{
@@ -735,29 +768,6 @@ export default function CoursePage() {
             </a>
           ) : null}
 
-          <button
-            type="button"
-            className="fw-pill fw-pill--action"
-            onClick={() => {
-              if (!course) return;
-
-              nav("/feed", {
-                state: {
-                  focusCourse: {
-                    id: course.id,
-                    name: course.name,
-                    lat: course.lat,
-                    lon: course.lon,
-                  },
-                },
-              });
-            }}
-            style={{
-              cursor: "pointer",
-            }}
-          >
-            Post here
-          </button>
         </div>
 
         {!token ? (
@@ -869,6 +879,7 @@ export default function CoursePage() {
 
       {showRatingPanel && !!token && (
         <section
+          className="fw-atmosphere-card"
           ref={ratingPanelRef}
           style={{
             padding: 16,

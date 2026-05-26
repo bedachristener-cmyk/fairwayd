@@ -930,6 +930,29 @@ function calendarDateParts(key: string) {
   };
 }
 
+function eventDateBlockParts(key: string) {
+  if (key === "unscheduled") {
+    return { weekday: "Tee", date: "--.--" };
+  }
+
+  const date = new Date(`${key}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) {
+    return { weekday: "Tee", date: "--.--" };
+  }
+
+  const weekday = new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+  }).format(date);
+  const parts = new Intl.DateTimeFormat(undefined, {
+    day: "2-digit",
+    month: "2-digit",
+  }).formatToParts(date);
+  const day = parts.find((part) => part.type === "day")?.value ?? "--";
+  const month = parts.find((part) => part.type === "month")?.value ?? "--";
+
+  return { weekday, date: `${day}.${month}` };
+}
+
 function formatItemDate(value?: string | null) {
   if (!value) return "";
 
@@ -4318,118 +4341,262 @@ export default function TripDetailPage() {
               const mapUrl = mapUrlForItem(item);
               const directionsUrl = directionsUrlForItem(item);
               const participants = participantSummary(item, trip?.members ?? []);
-              const dateTime = tripItemDateTimeLabel(item);
-              const location = [item.locationName, item.address]
-                .filter(Boolean)
-                .join(" - ");
+              const courseId = item.course?.id ?? item.courseId;
+              const title = tripItemTitle(item);
+              const dateBlock = eventDateBlockParts(dateKey(item));
+              const teeTime = formatTime(item) || "--:--";
+              const meetTime = "--:--";
+              const endTime = item.endTime?.trim() || "--:--";
+              const hasMetaActions = Boolean(participants || mapUrl || directionsUrl);
 
               return (
                 <article
                   key={`tee-${item.id}`}
                   style={{
                     display: "grid",
-                    gap: 8,
-                    padding: 10,
+                    gap: 0,
                     ...sectionInnerCardStyle,
+                    overflow: "hidden",
                     minWidth: 0,
                   }}
                 >
-                  <div
-                    style={{
-                      display: "grid",
-                      gap: 8,
-                    }}
-                  >
-                    <div style={{ minWidth: 0, display: "grid", gap: 3 }}>
+                  {courseId ? (
+                    <button
+                      type="button"
+                      onClick={() => nav(`/courses/${courseId}`)}
+                      style={{
+                        appearance: "none",
+                        WebkitAppearance: "none",
+                        width: "100%",
+                        border: 0,
+                        borderBottom: "1px solid color-mix(in srgb, var(--atmosphere-golf) 18%, var(--border))",
+                        background:
+                          "linear-gradient(135deg, color-mix(in srgb, var(--fw-pill-active-bg) 78%, var(--card)), color-mix(in srgb, var(--atmosphere-golf-soft) 70%, var(--card)))",
+                        color: "inherit",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        padding: 12,
+                        display: "grid",
+                        gridTemplateColumns: "58px minmax(0, 1fr) 24px",
+                        alignItems: "center",
+                        gap: 10,
+                      }}
+                    >
                       <div
-                        style={{ ...compactLabelTextStyle, overflowWrap: "anywhere" }}
+                        aria-hidden="true"
+                        style={{
+                          width: 52,
+                          minHeight: 48,
+                          borderRadius: 14,
+                          background: "color-mix(in srgb, var(--card) 76%, transparent)",
+                          border: "1px solid color-mix(in srgb, var(--border) 62%, transparent)",
+                          display: "grid",
+                          placeItems: "center",
+                          padding: "6px 4px",
+                          boxSizing: "border-box",
+                        }}
                       >
-                        {tripItemTitle(item)}
+                        <span
+                          style={{
+                            color: "var(--sub)",
+                            fontSize: 10,
+                            lineHeight: 1,
+                            fontWeight: 950,
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          {dateBlock.weekday}
+                        </span>
+                        <span
+                          style={{
+                            color: "var(--text)",
+                            fontSize: 15,
+                            lineHeight: 1,
+                            fontWeight: 950,
+                          }}
+                        >
+                          {dateBlock.date}
+                        </span>
                       </div>
-                      {dateTime ? (
-                        <div style={compactMetaTextStyle}>
-                          {dateTime}
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  {participants || location ? (
+                      <div
+                        style={{
+                          ...compactLabelTextStyle,
+                          minWidth: 0,
+                          fontSize: 15,
+                          lineHeight: 1.18,
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {title}
+                      </div>
+                      <ChevronRight
+                        aria-hidden="true"
+                        size={18}
+                        strokeWidth={2.6}
+                        style={{ color: "var(--sub)" }}
+                      />
+                    </button>
+                  ) : (
                     <div
                       style={{
+                        borderBottom: "1px solid color-mix(in srgb, var(--atmosphere-golf) 18%, var(--border))",
+                        background:
+                          "linear-gradient(135deg, color-mix(in srgb, var(--fw-pill-active-bg) 78%, var(--card)), color-mix(in srgb, var(--atmosphere-golf-soft) 70%, var(--card)))",
+                        padding: 12,
                         display: "grid",
-                        gap: 2,
-                        color: "var(--sub)",
-                        fontSize: 12,
-                        lineHeight: 1.35,
+                        gridTemplateColumns: "58px minmax(0, 1fr) 24px",
+                        alignItems: "center",
+                        gap: 10,
+                      }}
+                    >
+                      <div
+                        aria-hidden="true"
+                        style={{
+                          width: 52,
+                          minHeight: 48,
+                          borderRadius: 14,
+                          background: "color-mix(in srgb, var(--card) 76%, transparent)",
+                          border: "1px solid color-mix(in srgb, var(--border) 62%, transparent)",
+                          display: "grid",
+                          placeItems: "center",
+                          padding: "6px 4px",
+                          boxSizing: "border-box",
+                        }}
+                      >
+                        <span
+                          style={{
+                            color: "var(--sub)",
+                            fontSize: 10,
+                            lineHeight: 1,
+                            fontWeight: 950,
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          {dateBlock.weekday}
+                        </span>
+                        <span
+                          style={{
+                            color: "var(--text)",
+                            fontSize: 15,
+                            lineHeight: 1,
+                            fontWeight: 950,
+                          }}
+                        >
+                          {dateBlock.date}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          ...compactLabelTextStyle,
+                          minWidth: 0,
+                          fontSize: 15,
+                          lineHeight: 1.18,
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {title}
+                      </div>
+                      <ChevronRight
+                        aria-hidden="true"
+                        size={18}
+                        strokeWidth={2.6}
+                        style={{ color: "transparent" }}
+                      />
+                    </div>
+                  )}
+
+                  <div
+                    style={{
+                      padding: "13px 12px 12px",
+                      display: "grid",
+                      gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                      gap: 8,
+                      background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
+                    }}
+                  >
+                    {[
+                      ["Tee time", teeTime],
+                      ["Meet", meetTime],
+                      ["End", endTime],
+                    ].map(([label, value]) => (
+                      <div
+                        key={label}
+                        style={{
+                          minWidth: 0,
+                          display: "grid",
+                          gap: 3,
+                          padding: "9px 8px",
+                          borderRadius: 12,
+                          background: "color-mix(in srgb, var(--bg) 56%, var(--card))",
+                          border: "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            color: "var(--text)",
+                            fontSize: 15,
+                            lineHeight: 1.1,
+                            fontWeight: 950,
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {value}
+                        </div>
+                        <div style={compactMetaTextStyle}>{label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {hasMetaActions ? (
+                    <div
+                      style={{
+                        ...wrappingActionRowStyle,
+                        gap: 6,
+                        padding: "0 12px 12px",
+                        background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
                       }}
                     >
                       {participants ? (
-                        <div style={{ overflowWrap: "anywhere" }}>
+                        <span
+                          className="fw-pill fw-pill--meta fw-pill--info"
+                          style={{
+                            maxWidth: "100%",
+                            overflowWrap: "anywhere",
+                          }}
+                        >
                           {participants}
-                        </div>
+                        </span>
                       ) : null}
-                      {location ? (
-                        <div style={{ overflowWrap: "anywhere" }}>
-                          {location}
-                        </div>
+                      {mapUrl ? (
+                        <a
+                          className="fw-pill fw-pill--meta fw-pill--info"
+                          href={mapUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            textDecoration: "none",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          Map
+                        </a>
+                      ) : null}
+                      {directionsUrl ? (
+                        <a
+                          className="fw-pill fw-pill--meta fw-pill--action"
+                          href={directionsUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            textDecoration: "none",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          Directions
+                        </a>
                       ) : null}
                     </div>
                   ) : null}
-
-                  <div
-                    style={{
-                      ...wrappingActionRowStyle,
-                      gap: 7,
-                    }}
-                  >
-                    {mapUrl ? (
-                      <a
-                        className="fw-button-secondary"
-                        href={mapUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{
-                          height: 28,
-                          padding: "0 9px",
-                          borderRadius: 999,
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          textDecoration: "none",
-                          fontWeight: 900,
-                          fontSize: 11,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        Open map
-                      </a>
-                    ) : null}
-                    {directionsUrl ? (
-                      <a
-                        href={directionsUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{
-                          height: 28,
-                          padding: "0 9px",
-                          borderRadius: 999,
-                          border: "1px solid var(--border)",
-                          background: "var(--accent)",
-                          color: "#f8fbf6",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          textDecoration: "none",
-                          fontWeight: 900,
-                          fontSize: 11,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        Get me there
-                      </a>
-                    ) : null}
-                  </div>
                 </article>
               );
             })}
