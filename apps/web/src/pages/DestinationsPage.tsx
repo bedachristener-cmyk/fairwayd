@@ -387,10 +387,10 @@ function DestinationHeroCard({
                 height: 27,
                 borderRadius: 999,
                 border: isFollowing
-                  ? "1px solid color-mix(in srgb, var(--green) 45%, var(--border))"
+                  ? "1px solid var(--fw-pill-active-bg)"
                   : "1px solid color-mix(in srgb, var(--green) 68%, var(--border))",
                 background: isFollowing
-                  ? "color-mix(in srgb, var(--green) 13%, var(--muted))"
+                  ? "var(--fw-pill-active-bg)"
                   : "var(--green)",
                 color: isFollowing ? "var(--text)" : "#fff",
                 padding: "0 9px",
@@ -404,7 +404,7 @@ function DestinationHeroCard({
                   : "0 6px 14px color-mix(in srgb, var(--green) 26%, transparent)",
               }}
             >
-              {isBusy ? "..." : isFollowing ? t("following") : t("follow")}
+              {isBusy ? "..." : isFollowing ? `✓ ${t("following")}` : t("follow")}
             </button>
           ) : null}
         </div>

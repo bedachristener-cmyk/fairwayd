@@ -670,6 +670,9 @@ export default function CoursePage() {
         >
           <button
             type="button"
+            className={`fw-pill ${
+              following ? "fw-pill--active" : "fw-pill--action"
+            }`}
             onClick={async () => {
               if (!courseId || !token || followBusy) return;
 
@@ -697,23 +700,11 @@ export default function CoursePage() {
             }}
             disabled={followBusy}
             style={{
-              minHeight: 40,
-              padding: "0 14px",
-              borderRadius: 16,
-              border: following
-                ? "1px solid var(--green)"
-                : "1px solid var(--border)",
-              background: following
-                ? "var(--green)"
-                : "var(--muted)",
-              color: following ? "white" : "var(--text)",
-              fontWeight: 850,
-              fontSize: 13,
               cursor: followBusy ? "default" : "pointer",
               opacity: followBusy ? 0.72 : 1,
             }}
           >
-            {followBusy ? "Saving..." : following ? "Following" : "Follow"}
+            {followBusy ? "Saving..." : following ? "✓ Following" : "Follow"}
           </button>
 
           {websiteUrl ? (
@@ -721,18 +712,9 @@ export default function CoursePage() {
               href={websiteUrl}
               target="_blank"
               rel="noreferrer"
+              className="fw-pill fw-pill--action"
               style={{
-                minHeight: 40,
-                padding: "0 14px",
-                borderRadius: 16,
-                border: "1px solid var(--border)",
-                background: "var(--muted)",
-                color: "var(--text)",
-                fontWeight: 850,
-                fontSize: 13,
                 textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center",
               }}
             >
               Website
@@ -744,18 +726,9 @@ export default function CoursePage() {
               href={directionsUrl}
               target="_blank"
               rel="noreferrer"
+              className="fw-pill fw-pill--cta"
               style={{
-                minHeight: 40,
-                padding: "0 14px",
-                borderRadius: 16,
-                border: "1px solid var(--green)",
-                background: "var(--green)",
-                color: "white",
-                fontWeight: 900,
-                fontSize: 13,
                 textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center",
               }}
             >
               Directions
@@ -764,6 +737,7 @@ export default function CoursePage() {
 
           <button
             type="button"
+            className="fw-pill fw-pill--action"
             onClick={() => {
               if (!course) return;
 
@@ -779,14 +753,6 @@ export default function CoursePage() {
               });
             }}
             style={{
-              minHeight: 40,
-              padding: "0 14px",
-              borderRadius: 16,
-              border: "1px solid var(--border)",
-              background: "color-mix(in srgb, var(--card) 72%, transparent)",
-              color: "var(--text)",
-              fontWeight: 850,
-              fontSize: 13,
               cursor: "pointer",
             }}
           >

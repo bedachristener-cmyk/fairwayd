@@ -802,22 +802,7 @@ export default function DestinationPage() {
             zIndex: 5,
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              gap: 4,
-              padding: 5,
-              borderRadius: 999,
-              background: "color-mix(in srgb, var(--card) 88%, transparent)",
-              border:
-                "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-              boxShadow: "0 10px 26px rgba(0,0,0,0.10)",
-              backdropFilter: "blur(16px)",
-              maxWidth: "100%",
-              overflowX: "auto",
-              boxSizing: "border-box",
-            }}
-          >
+          <div className="fw-segmented">
             {[
               { key: "overview", label: t("overview") },
               { key: "courses", label: t("courses") },
@@ -829,27 +814,12 @@ export default function DestinationPage() {
                 <button
                   key={tab.key}
                   type="button"
+                  className={`fw-segmented__item${
+                    isActive ? " fw-segmented__item--active" : ""
+                  }`}
                   onClick={() =>
                     setActiveTab(tab.key as "overview" | "courses" | "posts")
                   }
-                  style={{
-                    border: "0",
-                    background: isActive
-                      ? "color-mix(in srgb, var(--green) 18%, var(--card))"
-                      : "transparent",
-                    color: isActive ? "var(--text)" : "var(--sub)",
-                    fontWeight: isActive ? 850 : 750,
-                    fontSize: 13,
-                    padding: "9px 15px",
-                    borderRadius: 999,
-                    cursor: "pointer",
-                    whiteSpace: "nowrap",
-                    transition: "all 0.15s ease",
-                    opacity: isActive ? 1 : 0.95,
-                    boxShadow: isActive
-                      ? "inset 0 0 0 1px color-mix(in srgb, var(--green) 32%, transparent)"
-                      : "none",
-                  }}
                 >
                   {tab.label}
                 </button>
@@ -1135,14 +1105,17 @@ export default function DestinationPage() {
                   >
                     <button
                       type="button"
+                      className={destinationFollowing ? "fw-pill fw-pill--active" : undefined}
                       onClick={handleToggleDestinationFollow}
                       disabled={destinationFollowBusy}
                       style={{
-                        border: "1px solid rgba(255,255,255,0.32)",
+                        border: destinationFollowing
+                          ? "1px solid var(--fw-pill-active-bg)"
+                          : "1px solid rgba(255,255,255,0.32)",
                         background: destinationFollowing
-                          ? "rgba(0,0,0,0.38)"
+                          ? "var(--fw-pill-active-bg)"
                           : "var(--accent)",
-                        color: destinationFollowing ? "#fff" : "#f8fbf6",
+                        color: destinationFollowing ? "var(--text)" : "#f8fbf6",
                         height: 44,
                         padding: "0 18px",
                         borderRadius: 999,
@@ -1157,7 +1130,7 @@ export default function DestinationPage() {
                       {destinationFollowBusy
                         ? t("please_wait")
                         : destinationFollowing
-                          ? t("following_destination")
+                          ? `✓ ${t("following_destination")}`
                           : t("follow_destination")}
                     </button>
                   </div>

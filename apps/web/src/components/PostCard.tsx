@@ -785,6 +785,7 @@ export default function PostCard({
                   >
                   <button
                     type="button"
+                    className="fw-pill fw-pill--meta fw-pill--info"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -895,10 +896,10 @@ export default function PostCard({
                 style={{
                   marginTop: 5,
                   border: courseFollowed
-                    ? "1px solid color-mix(in srgb, var(--green) 38%, var(--border))"
+                    ? "1px solid var(--fw-pill-active-bg)"
                     : "1px solid color-mix(in srgb, var(--border) 78%, transparent)",
                   background: courseFollowed
-                    ? "color-mix(in srgb, var(--green) 8%, var(--card))"
+                    ? "var(--fw-pill-active-bg)"
                     : "var(--card)",
                   color: courseFollowed ? "var(--text)" : "var(--sub)",
                   padding: "3px 9px",
@@ -1421,6 +1422,7 @@ export default function PostCard({
         }}
       >
         <button
+          className="fw-pill fw-pill--meta"
           onClick={(e) => {
             e.stopPropagation();
             handleLikeClick();
@@ -1442,6 +1444,7 @@ export default function PostCard({
 
         <button
           type="button"
+          className="fw-pill fw-pill--meta fw-pill--info"
           style={actionButtonStyle}
           onClick={(e) => {
             e.stopPropagation();
@@ -1453,6 +1456,7 @@ export default function PostCard({
 
         <button
           type="button"
+          className="fw-pill fw-pill--meta fw-pill--info"
           style={actionButtonStyle}
           onClick={(e) => {
             e.stopPropagation();

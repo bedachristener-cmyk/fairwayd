@@ -1434,10 +1434,10 @@ export default function FeedPage() {
                               padding: "6px 10px",
                               borderRadius: 999,
                               border: isSelectedCourseFollowed
-                                ? "1px solid rgba(39,196,107,0.45)"
+                                ? "1px solid var(--fw-pill-active-bg)"
                                 : "1px solid var(--border)",
                               background: isSelectedCourseFollowed
-                                ? "color-mix(in srgb, var(--green) 10%, var(--card))"
+                                ? "var(--fw-pill-active-bg)"
                                 : "var(--card)",
                               color: "var(--text)",
                               fontWeight: 720,
@@ -1452,7 +1452,7 @@ export default function FeedPage() {
                                   : 1,
                               whiteSpace: "nowrap",
                               boxShadow: isSelectedCourseFollowed
-                                ? "0 0 0 1px rgba(39,196,107,0.12)"
+                                ? "none"
                                 : "none",
                               transition:
                                 "background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease",
@@ -1461,7 +1461,7 @@ export default function FeedPage() {
                             {isSelectedCourseFollowBusy
                               ? t("updating")
                               : isSelectedCourseFollowed
-                                ? t("following")
+                                ? `✓ ${t("following")}`
                                 : t("follow")}
                           </button>
                         </div>
@@ -1503,26 +1503,17 @@ export default function FeedPage() {
                             <button
                               key={option.value}
                               type="button"
+                              className={`fw-pill ${
+                                active ? "fw-pill--active" : "fw-pill--inactive"
+                              }`}
                               role="radio"
                               aria-checked={active}
                               onClick={() => setVisibility(option.value)}
                               disabled={posting}
                               style={{
-                                minHeight: 32,
-                                padding: "0 8px",
-                                borderRadius: 999,
-                                border: active
-                                  ? "1px solid color-mix(in srgb, var(--green) 72%, var(--border))"
-                                  : "1px solid var(--border)",
-                                background: active
-                                  ? "color-mix(in srgb, var(--green) 9%, var(--card))"
-                                  : "var(--card)",
-                                color: active ? "var(--text)" : "var(--sub)",
-                                fontSize: 12,
-                                fontWeight: active ? 780 : 620,
+                                width: "100%",
                                 cursor: posting ? "default" : "pointer",
                                 opacity: posting ? 0.65 : 1,
-                                whiteSpace: "nowrap",
                               }}
                             >
                               {option.label}
