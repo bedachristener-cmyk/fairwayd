@@ -165,6 +165,19 @@ export default function AddTripItemPage() {
     (includeCaddyFeeInSplit ? amountValue(caddyFee) : 0) +
     (includeCartFeeInSplit ? amountValue(cartFee) : 0);
 
+  function updateDate(nextDate: string) {
+    setDate(nextDate);
+    setEndDate((currentEndDate) =>
+      currentEndDate && nextDate && currentEndDate < nextDate
+        ? nextDate
+        : currentEndDate,
+    );
+  }
+
+  function updateEndDate(nextEndDate: string) {
+    setEndDate(nextEndDate && date && nextEndDate < date ? date : nextEndDate);
+  }
+
   useEffect(() => {
     let cancelled = false;
 
@@ -267,6 +280,8 @@ export default function AddTripItemPage() {
       setSaving(true);
       setErr(null);
 
+      const normalizedEndDate =
+        !isGolfRound && endDate && date && endDate < date ? date : endDate;
       const payload = {
         type,
         title: isGolfRound
@@ -275,7 +290,7 @@ export default function AddTripItemPage() {
             ? flightTitle(flightNumber)
             : title.trim(),
         date,
-        endDate: isGolfRound ? undefined : optionalText(endDate),
+        endDate: isGolfRound ? undefined : optionalText(normalizedEndDate),
         startTime: isHotel ? undefined : optionalText(startTime),
         endTime: isHotel ? undefined : optionalText(endTime),
         provider: optionalText(provider),
@@ -607,7 +622,7 @@ export default function AddTripItemPage() {
             <input
               type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(e) => updateDate(e.target.value)}
               required
               style={fieldStyle}
             />
@@ -619,7 +634,8 @@ export default function AddTripItemPage() {
               <input
                 type="date"
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                min={date || undefined}
+                onChange={(e) => updateEndDate(e.target.value)}
                 style={fieldStyle}
               />
               {dateRangeTypes.has(type) ? (
