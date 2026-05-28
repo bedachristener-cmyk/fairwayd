@@ -56,7 +56,10 @@ type TripItem = {
   latitude?: number | string | null;
   longitude?: number | string | null;
   courseId?: string | null;
+  createdByUserId?: string | null;
+  visibility?: TripItemVisibility | null;
   participants?: TripItemParticipant[];
+  visibilityMembers?: TripItemVisibilityMember[];
   course?: {
     id: string;
     name?: string | null;
@@ -78,6 +81,8 @@ type Trip = {
 
 type TripRole = "OWNER" | "ADMIN" | "MEMBER";
 
+type TripItemVisibility = "GROUP" | "SELECTED" | "PRIVATE";
+
 type TripMember = {
   id: string;
   userId?: string | null;
@@ -93,6 +98,12 @@ type TripMember = {
 };
 
 type TripItemParticipant = {
+  id: string;
+  tripMemberId: string;
+  tripMember?: TripMember | null;
+};
+
+type TripItemVisibilityMember = {
   id: string;
   tripMemberId: string;
   tripMember?: TripMember | null;
@@ -134,6 +145,8 @@ type EditDraft = {
   bookingRef: string;
   paidByMemberId: string;
   participantMemberIds: string[];
+  visibility: TripItemVisibility;
+  visibleToMemberIds: string[];
 };
 
 type TripView =
@@ -330,6 +343,15 @@ const itemTypeOptions = [
   { value: "flight", label: "Flight" },
   { value: "free_day", label: "Free day" },
   { value: "note", label: "Note" },
+];
+
+const tripItemVisibilityOptions: {
+  value: TripItemVisibility;
+  label: string;
+}[] = [
+  { value: "GROUP", label: "Group" },
+  { value: "SELECTED", label: "Selected members" },
+  { value: "PRIVATE", label: "Private" },
 ];
 
 const memberRoleOptions: TripRole[] = ["MEMBER", "ADMIN", "OWNER"];
@@ -2972,6 +2994,10 @@ export default function TripDetailPage() {
       item.participants && item.participants.length > 0
         ? item.participants.map((participant) => participant.tripMemberId)
         : (trip?.members ?? []).map((member) => member.id);
+    const visibleToMemberIds =
+      item.visibilityMembers && item.visibilityMembers.length > 0
+        ? item.visibilityMembers.map((visibilityMember) => visibilityMember.tripMemberId)
+        : (trip?.members ?? []).map((member) => member.id);
     setEditDraft({
       type: item.type || "note",
       title: item.title || "",
@@ -2995,6 +3021,8 @@ export default function TripDetailPage() {
       bookingRef: item.bookingRef || "",
       paidByMemberId: item.paidByMemberId || item.paidByMember?.id || "",
       participantMemberIds,
+      visibility: item.visibility || "GROUP",
+      visibleToMemberIds,
     });
   }
 
@@ -3632,6 +3660,11 @@ export default function TripDetailPage() {
             address: isFlightEdit ? optionalText(editDraft.address) : undefined,
             paidByMemberId: isFlightEdit ? undefined : optionalText(editDraft.paidByMemberId),
             participantMemberIds: editDraft.participantMemberIds,
+            visibility: editDraft.visibility,
+            visibleToMemberIds:
+              editDraft.visibility === "SELECTED"
+                ? editDraft.visibleToMemberIds
+                : undefined,
           }),
         },
       );
@@ -6436,6 +6469,94 @@ export default function TripDetailPage() {
                               </div>
                             </div>
                           ) : null}
+
+                          <div
+                            style={{
+                              display: "grid",
+                              gap: 8,
+                              padding: 10,
+                              borderRadius: 12,
+                              border: "1px solid var(--border)",
+                              background: "var(--bg)",
+                            }}
+                          >
+                            <label
+                              style={{
+                                display: "grid",
+                                gap: 6,
+                                color: "var(--text)",
+                                fontSize: 12,
+                                fontWeight: 950,
+                              }}
+                            >
+                              Visibility
+                              <select
+                                value={editDraft.visibility}
+                                onChange={(e) =>
+                                  setEditDraft({
+                                    ...editDraft,
+                                    visibility: e.target
+                                      .value as TripItemVisibility,
+                                  })
+                                }
+                                style={editFieldStyle}
+                              >
+                                {tripItemVisibilityOptions.map((option) => (
+                                  <option
+                                    key={option.value}
+                                    value={option.value}
+                                  >
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+
+                            {editDraft.visibility === "SELECTED" &&
+                            (trip?.members ?? []).length > 0 ? (
+                              <div style={{ display: "grid", gap: 6 }}>
+                                {(trip?.members ?? []).map((member) => {
+                                  const checked =
+                                    editDraft.visibleToMemberIds.includes(
+                                      member.id,
+                                    );
+                                  return (
+                                    <label
+                                      key={member.id}
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 8,
+                                        color: "var(--text)",
+                                        fontSize: 12,
+                                        fontWeight: 850,
+                                      }}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={(e) => {
+                                          setEditDraft({
+                                            ...editDraft,
+                                            visibleToMemberIds: e.target
+                                              .checked
+                                              ? [
+                                                  ...editDraft.visibleToMemberIds,
+                                                  member.id,
+                                                ]
+                                              : editDraft.visibleToMemberIds.filter(
+                                                  (id) => id !== member.id,
+                                                ),
+                                          });
+                                        }}
+                                      />
+                                      <span>{memberDisplayName(member)}</span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            ) : null}
+                          </div>
 
                           <select
                             value={editDraft.type}

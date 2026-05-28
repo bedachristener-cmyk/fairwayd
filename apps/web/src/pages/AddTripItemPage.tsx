@@ -13,6 +13,8 @@ type TripItemType =
   | "free_day"
   | "note";
 
+type TripItemVisibility = "GROUP" | "SELECTED" | "PRIVATE";
+
 const typeOptions: { value: TripItemType; label: string }[] = [
   { value: "golf_round", label: "Golf round" },
   { value: "hotel", label: "Hotel" },
@@ -21,6 +23,12 @@ const typeOptions: { value: TripItemType; label: string }[] = [
   { value: "flight", label: "Flight" },
   { value: "free_day", label: "Free day" },
   { value: "note", label: "Note" },
+];
+
+const visibilityOptions: { value: TripItemVisibility; label: string }[] = [
+  { value: "GROUP", label: "Group" },
+  { value: "SELECTED", label: "Selected members" },
+  { value: "PRIVATE", label: "Private" },
 ];
 
 const currencyOptions = [
@@ -152,6 +160,8 @@ export default function AddTripItemPage() {
     useState<CourseSearchResult | null>(null);
   const [trip, setTrip] = useState<Trip | null>(null);
   const [participantMemberIds, setParticipantMemberIds] = useState<string[]>([]);
+  const [visibility, setVisibility] = useState<TripItemVisibility>("GROUP");
+  const [visibleToMemberIds, setVisibleToMemberIds] = useState<string[]>([]);
   const [paidByMemberId, setPaidByMemberId] = useState("");
   const [courseLoading, setCourseLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -200,6 +210,7 @@ export default function AddTripItemPage() {
         const members = Array.isArray(data?.members) ? data.members : [];
         setTrip({ members });
         setParticipantMemberIds(members.map((member: TripMember) => member.id));
+        setVisibleToMemberIds(members.map((member: TripMember) => member.id));
       } catch {
         if (!cancelled) setTrip(null);
       }
@@ -316,6 +327,9 @@ export default function AddTripItemPage() {
         courseId: type === "golf_round" ? selectedCourse?.id : undefined,
         paidByMemberId: isFlight ? undefined : optionalText(paidByMemberId),
         participantMemberIds,
+        visibility,
+        visibleToMemberIds:
+          visibility === "SELECTED" ? visibleToMemberIds : undefined,
       };
 
       const res = await fetch(
@@ -931,6 +945,68 @@ export default function AddTripItemPage() {
             </div>
           </div>
         ) : null}
+
+        <div
+          style={{
+            display: "grid",
+            gap: 8,
+            padding: 10,
+            borderRadius: 12,
+            border: "1px solid var(--border)",
+            background: "var(--bg)",
+          }}
+        >
+          <label style={labelStyle}>
+            Visibility
+            <select
+              value={visibility}
+              onChange={(e) =>
+                setVisibility(e.target.value as TripItemVisibility)
+              }
+              style={fieldStyle}
+            >
+              {visibilityOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {visibility === "SELECTED" && (trip?.members ?? []).length > 0 ? (
+            <div style={{ display: "grid", gap: 6 }}>
+              {(trip?.members ?? []).map((member) => {
+                const checked = visibleToMemberIds.includes(member.id);
+                return (
+                  <label
+                    key={member.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      color: "var(--text)",
+                      fontSize: 13,
+                      fontWeight: 800,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        setVisibleToMemberIds((current) =>
+                          e.target.checked
+                            ? [...current, member.id]
+                            : current.filter((id) => id !== member.id),
+                        );
+                      }}
+                    />
+                    <span>{memberDisplayName(member)}</span>
+                  </label>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
 
         <label style={labelStyle}>
           Notes
