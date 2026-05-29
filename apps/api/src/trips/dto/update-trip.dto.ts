@@ -16,5 +16,9 @@ export class UpdateTripDto {
 
   @IsOptional()
   @IsString()
+  baseCurrency?: string;
+
+  @IsOptional()
+  @IsString()
   coverImageUrl?: string;
 }

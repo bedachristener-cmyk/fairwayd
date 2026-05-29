@@ -36,6 +36,9 @@ type TripItem = {
   startsAt?: string | null;
   startTime?: string | null;
   endTime?: string | null;
+  departureFromHotelTime?: string | null;
+  roundDurationMinutes?: number | null;
+  returnToHotel?: string | null;
   provider?: string | null;
   bookingRef?: string | null;
   greenFee?: number | null;
@@ -1178,8 +1181,20 @@ function formatTimeRange(item: TripItem) {
   const start = formatTime(item);
   const end = item.endTime?.trim() || "";
 
+  if (isGolfItem(item)) return start || end;
   if (start && end) return `${start} - ${end}`;
   return start || end;
+}
+
+function formatDurationMinutes(value?: number | null) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return "";
+  }
+
+  const hours = Math.floor(value / 60);
+  const minutes = value % 60;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
 }
 
 function timeSortValue(item: TripItem) {
@@ -1543,6 +1558,38 @@ function relatedDocumentForItem(item: TripItem, documents: TripDocument[]) {
 function timelineDetails(item: TripItem) {
   const details: TimelineDetail[] = [];
   const isFlight = isFlightItem(item);
+  const isGolf = isGolfItem(item);
+
+  if (isGolf) {
+    if (item.departureFromHotelTime?.trim()) {
+      details.push({
+        label: "Departure from hotel",
+        value: item.departureFromHotelTime.trim(),
+      });
+    }
+
+    const duration = formatDurationMinutes(item.roundDurationMinutes);
+    if (duration) {
+      details.push({
+        label: "Duration",
+        value: duration,
+      });
+    }
+
+    if (item.endTime?.trim()) {
+      details.push({
+        label: "Expected end",
+        value: item.endTime.trim(),
+      });
+    }
+
+    if (item.returnToHotel?.trim()) {
+      details.push({
+        label: "Return to hotel",
+        value: item.returnToHotel.trim(),
+      });
+    }
+  }
 
   if (item.provider?.trim()) {
     details.push({
@@ -4651,8 +4698,10 @@ export default function TripDetailPage() {
               const title = tripItemTitle(item);
               const dateBlock = eventDateBlockParts(dateKey(item));
               const teeTime = formatTime(item) || "--:--";
-              const meetTime = "--:--";
-              const endTime = item.endTime?.trim() || "--:--";
+              const departureTime = item.departureFromHotelTime?.trim() || "--:--";
+              const duration = formatDurationMinutes(item.roundDurationMinutes) || "--";
+              const expectedEnd = item.endTime?.trim() || "--:--";
+              const returnToHotel = item.returnToHotel?.trim() || "--";
               const hasMetaActions = Boolean(participants || mapUrl || directionsUrl);
               const accent = calendarItemAccent(item);
 
@@ -4825,16 +4874,17 @@ export default function TripDetailPage() {
                     style={{
                       padding: "13px 12px 12px",
                       display: "grid",
-                      gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(96px, 1fr))",
                       gap: 8,
                       background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
                     }}
                   >
-                    {/* TODO: Rename Meet/End to Depart/Return, with localized Abfahrt/Rueckfahrt copy, when trip transport timing is modeled. */}
                     {[
                       ["Tee time", teeTime],
-                      ["Meet", meetTime],
-                      ["End", endTime],
+                      ["Depart hotel", departureTime],
+                      ["Duration", duration],
+                      ["Expected end", expectedEnd],
+                      ["Return hotel", returnToHotel],
                     ].map(([label, value]) => (
                       <div
                         key={label}

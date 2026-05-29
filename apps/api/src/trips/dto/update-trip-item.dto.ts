@@ -4,6 +4,7 @@ import {
   IsBoolean,
   IsDateString,
   IsEnum,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
@@ -40,6 +41,19 @@ export class UpdateTripItemDto {
   @IsOptional()
   @IsString()
   endTime?: string;
+
+  @IsOptional()
+  @IsString()
+  departureFromHotelTime?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  roundDurationMinutes?: number;
+
+  @IsOptional()
+  @IsString()
+  returnToHotel?: string;
 
   @IsOptional()
   @IsString()
@@ -94,8 +108,23 @@ export class UpdateTripItemDto {
   providerPrice?: number;
 
   @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  amount?: number;
+
+  @IsOptional()
   @IsString()
   currency?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  exchangeRate?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  baseAmount?: number;
 
   @IsOptional()
   @IsString()

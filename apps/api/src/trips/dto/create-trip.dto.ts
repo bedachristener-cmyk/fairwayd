@@ -12,4 +12,8 @@ export class CreateTripDto {
   @IsOptional()
   @IsString()
   destination?: string;
+
+  @IsOptional()
+  @IsString()
+  baseCurrency?: string;
 }

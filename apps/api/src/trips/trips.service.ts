@@ -224,6 +224,7 @@ export class TripsService {
         title: dto.title.trim(),
         destination: dto.destination?.trim() || null,
         description: dto.description?.trim() || null,
+        baseCurrency: dto.baseCurrency?.trim() || 'CHF',
         createdById: userId,
         members: {
           create: {
@@ -443,6 +444,10 @@ export class TripsService {
           dto.description === undefined
             ? undefined
             : dto.description.trim() || null,
+        baseCurrency:
+          dto.baseCurrency === undefined
+            ? undefined
+            : dto.baseCurrency.trim() || 'CHF',
         coverImageUrl:
           dto.coverImageUrl === undefined
             ? undefined
@@ -773,6 +778,9 @@ export class TripsService {
         endDate: dateFromDto(dto.endDate),
         startTime: dto.startTime?.trim() || null,
         endTime: dto.endTime?.trim() || null,
+        departureFromHotelTime: dto.departureFromHotelTime?.trim() || null,
+        roundDurationMinutes: dto.roundDurationMinutes ?? null,
+        returnToHotel: dto.returnToHotel?.trim() || null,
         startsAt: startsAtFromDto(dto.date, dto.startTime),
         courseId: dto.courseId?.trim() || null,
         provider: dto.provider?.trim() || null,
@@ -785,7 +793,10 @@ export class TripsService {
         caddyFee: dto.caddyFee ?? null,
         cartFee: dto.cartFee ?? null,
         providerPrice: dto.providerPrice ?? null,
+        amount: dto.amount ?? null,
         currency: dto.currency?.trim() || null,
+        exchangeRate: dto.exchangeRate ?? null,
+        baseAmount: dto.baseAmount ?? null,
         locationName: dto.locationName?.trim() || null,
         address: dto.address?.trim() || null,
         paidByMemberId,
@@ -876,6 +887,15 @@ export class TripsService {
           dto.startTime === undefined ? undefined : dto.startTime.trim() || null,
         endTime:
           dto.endTime === undefined ? undefined : dto.endTime.trim() || null,
+        departureFromHotelTime:
+          dto.departureFromHotelTime === undefined
+            ? undefined
+            : dto.departureFromHotelTime.trim() || null,
+        roundDurationMinutes: dto.roundDurationMinutes,
+        returnToHotel:
+          dto.returnToHotel === undefined
+            ? undefined
+            : dto.returnToHotel.trim() || null,
         startsAt:
           dto.date === undefined
             ? undefined
@@ -896,8 +916,11 @@ export class TripsService {
         caddyFee: dto.caddyFee,
         cartFee: dto.cartFee,
         providerPrice: dto.providerPrice,
+        amount: dto.amount,
         currency:
           dto.currency === undefined ? undefined : dto.currency.trim() || null,
+        exchangeRate: dto.exchangeRate,
+        baseAmount: dto.baseAmount,
         locationName:
           dto.locationName === undefined
             ? undefined

@@ -384,6 +384,7 @@ model Trip {
   updatedAt     DateTime       @updatedAt
   title         String
   destination   String?
+  baseCurrency  String         @default("CHF")
   coverImageUrl String?
   activities    TripActivity[]
   createdBy     User           @relation("TripCreator", fields: [createdById], references: [id], onDelete: Cascade)
@@ -483,6 +484,8 @@ model TripItem {
   createdAt              DateTime                   @default(now())
   updatedAt              DateTime                   @updatedAt
   address                String?
+  amount                 Float?
+  baseAmount             Float?
   bookingRef             String?
   caddyFee               Float?
   cartFee                Float?
@@ -491,6 +494,8 @@ model TripItem {
   directPrice            Float?
   endDate                DateTime?
   endTime                String?
+  exchangeRate           Float?
+  departureFromHotelTime String?
   greenFee               Float?
   includeCaddyFeeInSplit Boolean                    @default(true)
   includeCartFeeInSplit  Boolean                    @default(true)
@@ -499,6 +504,8 @@ model TripItem {
   paidByMemberId         String?
   provider               String?
   providerPrice          Float?
+  returnToHotel          String?
+  roundDurationMinutes   Int?
   startTime              String?
   createdByUserId        String
   visibility             TripItemVisibility         @default(GROUP)
