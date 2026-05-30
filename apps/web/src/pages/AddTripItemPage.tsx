@@ -114,12 +114,12 @@ const sectionCardStyle: CSSProperties = {
   maxWidth: "100%",
   boxSizing: "border-box",
   display: "grid",
-  gap: 10,
-  padding: 13,
+  gap: 9,
+  padding: 12,
   borderRadius: 17,
   border: "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
   background: "var(--card)",
-  boxShadow: "0 8px 22px rgba(0,0,0,0.055)",
+  boxShadow: "0 7px 18px rgba(0,0,0,0.05)",
 };
 
 const sectionIntroStyle: CSSProperties = {
@@ -649,9 +649,9 @@ export default function AddTripItemPage() {
     <div
       style={{
         display: "flex",
-        gap: 8,
+        gap: 7,
         overflowX: "auto",
-        padding: "1px 2px 6px",
+        padding: "1px 2px 4px",
         margin: "0 -2px",
       }}
     >
@@ -666,10 +666,11 @@ export default function AddTripItemPage() {
             type="button"
             onClick={() => setType(option.value)}
             style={{
-              flex: "0 0 122px",
-              minHeight: 74,
-              padding: 10,
-              borderRadius: 16,
+              flex: "0 0 auto",
+              minWidth: 108,
+              minHeight: 58,
+              padding: "8px 11px",
+              borderRadius: 18,
               border: selected
                 ? `2px solid ${optionTheme.color}`
                 : "1px solid var(--border)",
@@ -677,16 +678,20 @@ export default function AddTripItemPage() {
               color: "var(--text)",
               cursor: "pointer",
               textAlign: "left",
-              display: "grid",
-              gap: 7,
-              alignContent: "space-between",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
               boxShadow: selected
-                ? "0 8px 20px rgba(0,0,0,0.09)"
-                : "0 5px 14px rgba(0,0,0,0.045)",
+                ? "0 6px 16px rgba(0,0,0,0.08)"
+                : "0 4px 12px rgba(0,0,0,0.04)",
             }}
           >
-            <Icon size={19} strokeWidth={2.3} style={{ color: optionTheme.color }} />
-            <span style={{ fontSize: 13, fontWeight: 950, lineHeight: 1.12 }}>
+            <Icon
+              size={18}
+              strokeWidth={2.35}
+              style={{ color: optionTheme.color, flex: "0 0 auto" }}
+            />
+            <span style={{ fontSize: 13, fontWeight: 950, lineHeight: 1.1 }}>
               {option.label}
             </span>
           </button>
@@ -1219,21 +1224,21 @@ export default function AddTripItemPage() {
     <section
       style={{
         display: "grid",
-        gap: 10,
-        padding: 14,
-        borderRadius: 20,
+        gap: 9,
+        padding: 12,
+        borderRadius: 18,
         border: `1px solid color-mix(in srgb, ${theme.color} 42%, var(--border))`,
         background: `linear-gradient(135deg, ${theme.soft}, transparent 72%), var(--card)`,
-        boxShadow: "0 10px 28px rgba(0,0,0,0.08)",
+        boxShadow: "0 8px 22px rgba(0,0,0,0.07)",
       }}
     >
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 11 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
         <div
           aria-hidden="true"
           style={{
-            width: 46,
-            height: 46,
-            borderRadius: 16,
+            width: 42,
+            height: 42,
+            borderRadius: 15,
             background: theme.soft,
             color: theme.color,
             display: "grid",
@@ -1241,7 +1246,7 @@ export default function AddTripItemPage() {
             flex: "0 0 auto",
           }}
         >
-          <HeroIcon size={25} strokeWidth={2.25} />
+          <HeroIcon size={23} strokeWidth={2.25} />
         </div>
         <div style={{ display: "grid", gap: isGolfRound && selectedCourse ? 5 : 3, minWidth: 0 }}>
           {isGolfRound && !selectedCourse ? (
@@ -1249,7 +1254,7 @@ export default function AddTripItemPage() {
               <div
                 style={{
                   color: "var(--text)",
-                  fontSize: 21,
+                  fontSize: 20,
                   lineHeight: 1.08,
                   fontWeight: 950,
                 }}
@@ -1274,7 +1279,7 @@ export default function AddTripItemPage() {
               <div
                 style={{
                   color: "var(--text)",
-                  fontSize: 21,
+                  fontSize: 20,
                   lineHeight: 1.08,
                   fontWeight: 950,
                   overflowWrap: "anywhere",
@@ -1335,14 +1340,14 @@ export default function AddTripItemPage() {
         margin: "0 auto",
         boxSizing: "border-box",
         overflowX: "hidden",
-        padding: "12px 14px calc(92px + env(safe-area-inset-bottom, 0px))",
+        padding: "10px 14px calc(88px + env(safe-area-inset-bottom, 0px))",
         display: "grid",
-        gap: 12,
+        gap: 10,
         background:
           "linear-gradient(180deg, color-mix(in srgb, var(--card) 92%, transparent), transparent 180px)",
       }}
     >
-      <div style={{ display: "grid", gap: 8 }}>
+      <div style={{ display: "grid", gap: 6 }}>
         <div
           style={{
             display: "flex",
@@ -1376,11 +1381,11 @@ export default function AddTripItemPage() {
             {step} / 2
           </div>
         </div>
-        <div style={{ display: "grid", gap: 3 }}>
+        <div style={{ display: "grid", gap: 2 }}>
           <div style={{ color: theme.color, fontSize: 12, fontWeight: 950 }}>
             {step === 1 ? "Plan your round" : "Travel & costs"}
           </div>
-          <div style={{ fontSize: 24, lineHeight: 1.05, fontWeight: 950 }}>
+          <div style={{ fontSize: 23, lineHeight: 1.05, fontWeight: 950 }}>
             {pageTitle}
           </div>
           <div style={{ color: "var(--sub)", fontSize: 13, lineHeight: 1.4 }}>
@@ -1407,10 +1412,10 @@ export default function AddTripItemPage() {
         </div>
       ) : null}
 
-      <form onSubmit={submit} style={{ display: "grid", gap: 11 }}>
+      <form onSubmit={submit} style={{ display: "grid", gap: 9 }}>
         {step === 1 ? (
           <>
-            <SectionHeader title="Item Type" subtitle="Choose the kind of plan you are adding." />
+            <SectionHeader title="Item Type" />
             {renderTypeSelector}
             {renderPlanningHero}
             {isGolfRound ? null : (
