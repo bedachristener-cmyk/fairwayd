@@ -494,6 +494,7 @@ model TripItem {
   directPrice            Float?
   endDate                DateTime?
   endTime                String?
+  expenseType            TripItemExpenseType        @default(SHARED)
   exchangeRate           Float?
   departureFromHotelTime String?
   greenFee               Float?
@@ -631,6 +632,11 @@ enum TripItemVisibility {
   PRIVATE
   SELECTED
   GROUP
+}
+
+enum TripItemExpenseType {
+  PERSONAL
+  SHARED
 }
 
 enum TripActivityType {

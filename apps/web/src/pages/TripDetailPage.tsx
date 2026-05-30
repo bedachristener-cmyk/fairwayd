@@ -54,6 +54,7 @@ type TripItem = {
   address?: string | null;
   paidByMemberId?: string | null;
   paidByMember?: TripMember | null;
+  expenseType?: ExpenseType | null;
   lat?: number | string | null;
   lon?: number | string | null;
   latitude?: number | string | null;
@@ -85,6 +86,7 @@ type Trip = {
 type TripRole = "OWNER" | "ADMIN" | "MEMBER";
 
 type TripItemVisibility = "GROUP" | "SELECTED" | "PRIVATE";
+type ExpenseType = "PERSONAL" | "SHARED";
 
 type TripMember = {
   id: string;
@@ -147,6 +149,7 @@ type EditDraft = {
   address: string;
   bookingRef: string;
   paidByMemberId: string;
+  expenseType: ExpenseType;
   participantMemberIds: string[];
   visibility: TripItemVisibility;
   visibleToMemberIds: string[];
@@ -1770,6 +1773,14 @@ function memberDisplayName(member?: TripMember | null) {
 }
 
 function effectiveParticipants(item: TripItem, members: TripMember[]) {
+  if (item.expenseType === "PERSONAL") {
+    const payerId = item.paidByMemberId || item.paidByMember?.id;
+    const payer = payerId
+      ? members.find((member) => member.id === payerId)
+      : item.paidByMember;
+    return payer ? [payer] : [];
+  }
+
   if (item.participants && item.participants.length > 0) {
     return item.participants
       .map((participant) => participant.tripMember)
@@ -1794,6 +1805,10 @@ function participantSummary(item: TripItem, members: TripMember[]) {
 function payerSummary(item: TripItem) {
   if (!item.paidByMember) return "";
   return memberDisplayName(item.paidByMember);
+}
+
+function expenseTypeLabel(item: TripItem) {
+  return item.expenseType === "PERSONAL" ? "Personal" : "Shared";
 }
 
 function toFiniteNumber(value: unknown) {
@@ -2648,7 +2663,7 @@ function TripCalendarView({
 
                       {isGolf ? <GolfTimingChips item={item} /> : null}
 
-                      {item.provider || item.bookingRef || participants || payer || prices.length > 0 ? (
+                      {item.provider || item.bookingRef || participants || payer || item.expenseType || prices.length > 0 ? (
                         <div
                           style={{
                             display: "flex",
@@ -2677,6 +2692,9 @@ function TripCalendarView({
                               Paid by {payer}
                             </span>
                           ) : null}
+                          <span className="fw-pill fw-pill--meta fw-pill--info">
+                            {expenseTypeLabel(item)}
+                          </span>
                           {prices.map((price) => (
                             <span key={price} className="fw-pill fw-pill--meta fw-pill--info">
                               {price}
@@ -3168,6 +3186,7 @@ export default function TripDetailPage() {
       address: item.address || "",
       bookingRef: item.bookingRef || "",
       paidByMemberId: item.paidByMemberId || item.paidByMember?.id || "",
+      expenseType: item.expenseType || "SHARED",
       participantMemberIds,
       visibility: item.visibility || "GROUP",
       visibleToMemberIds,
@@ -3807,7 +3826,11 @@ export default function TripDetailPage() {
             locationName: isFlightEdit ? optionalText(editDraft.locationName) : undefined,
             address: isFlightEdit ? optionalText(editDraft.address) : undefined,
             paidByMemberId: isFlightEdit ? undefined : optionalText(editDraft.paidByMemberId),
-            participantMemberIds: editDraft.participantMemberIds,
+            expenseType: isFlightEdit ? undefined : editDraft.expenseType,
+            participantMemberIds:
+              isFlightEdit || editDraft.expenseType === "PERSONAL"
+                ? undefined
+                : editDraft.participantMemberIds,
             visibility: editDraft.visibility,
             visibleToMemberIds:
               editDraft.visibility === "SELECTED"
@@ -4798,7 +4821,9 @@ export default function TripDetailPage() {
               const courseId = item.course?.id ?? item.courseId;
               const title = tripItemTitle(item);
               const dateBlock = eventDateBlockParts(dateKey(item));
-              const hasMetaActions = Boolean(participants || mapUrl || directionsUrl);
+              const hasMetaActions = Boolean(
+                participants || mapUrl || directionsUrl || item.expenseType,
+              );
               const accent = calendarItemAccent(item);
 
               return (
@@ -4999,6 +5024,12 @@ export default function TripDetailPage() {
                           {participants}
                         </span>
                       ) : null}
+                      <span
+                        className="fw-pill fw-pill--meta fw-pill--info"
+                        style={{ width: "fit-content" }}
+                      >
+                        {expenseTypeLabel(item)}
+                      </span>
                       {mapUrl || directionsUrl ? (
                         <div
                           style={{
@@ -6520,7 +6551,8 @@ export default function TripDetailPage() {
                             </div>
                           ) : null}
 
-                          {(trip?.members ?? []).length > 0 ? (
+                          {(trip?.members ?? []).length > 0 &&
+                          editDraft.expenseType === "SHARED" ? (
                             <div
                               style={{
                                 display: "grid",
@@ -7165,34 +7197,61 @@ export default function TripDetailPage() {
                           ) : null}
 
                           {(trip?.members ?? []).length > 0 && !editIsFlight ? (
-                            <label
-                              style={{
-                                display: "grid",
-                                gap: 6,
-                                color: "var(--text)",
-                                fontSize: 12,
-                                fontWeight: 900,
-                              }}
-                            >
-                              Paid by
-                              <select
-                                value={editDraft.paidByMemberId}
-                                onChange={(e) =>
-                                  setEditDraft({
-                                    ...editDraft,
-                                    paidByMemberId: e.target.value,
-                                  })
-                                }
-                                style={editFieldStyle}
+                            <>
+                              <label
+                                style={{
+                                  display: "grid",
+                                  gap: 6,
+                                  color: "var(--text)",
+                                  fontSize: 12,
+                                  fontWeight: 900,
+                                }}
                               >
-                                <option value="">Not specified</option>
-                                {(trip?.members ?? []).map((member) => (
-                                  <option key={member.id} value={member.id}>
-                                    {memberDisplayName(member)}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
+                                Paid by
+                                <select
+                                  value={editDraft.paidByMemberId}
+                                  onChange={(e) =>
+                                    setEditDraft({
+                                      ...editDraft,
+                                      paidByMemberId: e.target.value,
+                                    })
+                                  }
+                                  style={editFieldStyle}
+                                >
+                                  <option value="">Not specified</option>
+                                  {(trip?.members ?? []).map((member) => (
+                                    <option key={member.id} value={member.id}>
+                                      {memberDisplayName(member)}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+
+                              <label
+                                style={{
+                                  display: "grid",
+                                  gap: 6,
+                                  color: "var(--text)",
+                                  fontSize: 12,
+                                  fontWeight: 900,
+                                }}
+                              >
+                                Expense type
+                                <select
+                                  value={editDraft.expenseType}
+                                  onChange={(e) =>
+                                    setEditDraft({
+                                      ...editDraft,
+                                      expenseType: e.target.value as ExpenseType,
+                                    })
+                                  }
+                                  style={editFieldStyle}
+                                >
+                                  <option value="SHARED">Shared</option>
+                                  <option value="PERSONAL">Personal</option>
+                                </select>
+                              </label>
+                            </>
                           ) : null}
 
                           <textarea
@@ -7361,7 +7420,7 @@ export default function TripDetailPage() {
                               ))}
                             </div>
 
-                            {prices.length > 0 || participantText || payerText ? (
+                            {prices.length > 0 || participantText || payerText || item.expenseType ? (
                               <div
                                 style={{
                                   display: "flex",
@@ -7388,6 +7447,9 @@ export default function TripDetailPage() {
                                     Paid by {payerText}
                                   </span>
                                 ) : null}
+                                <span className="fw-pill fw-pill--meta">
+                                  {expenseTypeLabel(item)}
+                                </span>
                               </div>
                             ) : null}
 

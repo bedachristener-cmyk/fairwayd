@@ -22,6 +22,7 @@ type TripItemType =
 
 type TripItemVisibility = "GROUP" | "SELECTED" | "PRIVATE";
 type ReturnToHotelMode = "" | "after_round" | "custom" | "own_transport";
+type ExpenseType = "PERSONAL" | "SHARED";
 
 type FormStep = 1 | 2;
 
@@ -74,9 +75,11 @@ type CourseSearchResult = {
 
 type TripMember = {
   id: string;
+  userId?: string | null;
   displayName?: string | null;
   isGuest?: boolean;
   user?: {
+    id?: string | null;
     name?: string | null;
     handle?: string | null;
   } | null;
@@ -316,7 +319,7 @@ function memberDisplayName(member: TripMember) {
 export default function AddTripItemPage() {
   const { tripId } = useParams();
   const nav = useNavigate();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
   const [step, setStep] = useState<FormStep>(1);
   const [type, setType] = useState<TripItemType>("golf_round");
@@ -355,6 +358,7 @@ export default function AddTripItemPage() {
   const [visibility, setVisibility] = useState<TripItemVisibility>("GROUP");
   const [visibleToMemberIds, setVisibleToMemberIds] = useState<string[]>([]);
   const [paidByMemberId, setPaidByMemberId] = useState("");
+  const [expenseType, setExpenseType] = useState<ExpenseType>("SHARED");
   const [courseLoading, setCourseLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -464,6 +468,11 @@ export default function AddTripItemPage() {
         setTrip({ members });
         setParticipantMemberIds(members.map((member: TripMember) => member.id));
         setVisibleToMemberIds(members.map((member: TripMember) => member.id));
+        const currentMember = members.find(
+          (member: TripMember) =>
+            member.userId === user?.id || member.user?.id === user?.id,
+        );
+        if (currentMember) setPaidByMemberId(currentMember.id);
       } catch {
         if (!cancelled) setTrip(null);
       }
@@ -474,7 +483,7 @@ export default function AddTripItemPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, tripId]);
+  }, [token, tripId, user?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -590,7 +599,11 @@ export default function AddTripItemPage() {
         address: isFlight ? optionalText(toAirport) : undefined,
         courseId: type === "golf_round" ? selectedCourse?.id : undefined,
         paidByMemberId: isFlight ? undefined : optionalText(paidByMemberId),
-        participantMemberIds,
+        expenseType: isFlight ? undefined : expenseType,
+        participantMemberIds:
+          isFlight || expenseType === "PERSONAL"
+            ? undefined
+            : participantMemberIds,
         visibility,
         visibleToMemberIds:
           visibility === "SELECTED" ? visibleToMemberIds : undefined,
@@ -1096,25 +1109,104 @@ export default function AddTripItemPage() {
         </label>
       ) : null}
 
-      {(trip?.members ?? []).length > 0 && !isFlight ? (
-        <label style={labelStyle}>
-          Paid by
-          <select
-            value={paidByMemberId}
-            onChange={(e) => setPaidByMemberId(e.target.value)}
-            style={fieldStyle}
-          >
-            <option value="">Not specified</option>
-            {(trip?.members ?? []).map((member) => (
-              <option key={member.id} value={member.id}>
-                {memberDisplayName(member)}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : null}
     </Card>
   );
+
+  const renderBudget = (trip?.members ?? []).length > 0 && !isFlight ? (
+    <Card title="Budget" subtitle="Set who paid and who shares this cost.">
+      <label style={labelStyle}>
+        Paid by
+        <select
+          value={paidByMemberId}
+          onChange={(e) => setPaidByMemberId(e.target.value)}
+          style={fieldStyle}
+        >
+          <option value="">Not specified</option>
+          {(trip?.members ?? []).map((member) => (
+            <option key={member.id} value={member.id}>
+              {memberDisplayName(member)}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <div style={{ display: "grid", gap: 8 }}>
+        <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 900 }}>
+          Expense type
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {[
+            { value: "SHARED", label: "Shared" },
+            { value: "PERSONAL", label: "Personal" },
+          ].map((option) => {
+            const selected = expenseType === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setExpenseType(option.value as ExpenseType)}
+                style={{
+                  minHeight: 40,
+                  padding: "0 13px",
+                  borderRadius: 999,
+                  border: selected
+                    ? `1px solid ${theme.color}`
+                    : "1px solid var(--border)",
+                  background: selected ? theme.soft : "transparent",
+                  color: selected ? "var(--text)" : "var(--sub)",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 900,
+                }}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {expenseType === "SHARED" ? (
+        <div style={{ display: "grid", gap: 8 }}>
+          <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 900 }}>
+            Shared with
+          </div>
+          <div style={{ display: "grid", gap: 6 }}>
+            {(trip?.members ?? []).map((member) => {
+              const checked = participantMemberIds.includes(member.id);
+              return (
+                <label
+                  key={member.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    minHeight: 34,
+                    gap: 8,
+                    color: "var(--text)",
+                    fontSize: 13,
+                    fontWeight: 800,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(e) => {
+                      setParticipantMemberIds((current) =>
+                        e.target.checked
+                          ? [...current, member.id]
+                          : current.filter((id) => id !== member.id),
+                      );
+                    }}
+                  />
+                  <span>{memberDisplayName(member)}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </Card>
+  ) : null;
 
   const renderVisibility = (
     <Card title="Visibility" subtitle="Choose who can see this item.">
@@ -1182,43 +1274,6 @@ export default function AddTripItemPage() {
       ) : null}
     </Card>
   );
-
-  const renderParticipants = (trip?.members ?? []).length > 0 ? (
-    <Card title="Participants" subtitle="Choose who is part of this item.">
-      <div style={{ display: "grid", gap: 6 }}>
-        {(trip?.members ?? []).map((member) => {
-          const checked = participantMemberIds.includes(member.id);
-          return (
-            <label
-              key={member.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                minHeight: 34,
-                gap: 8,
-                color: "var(--text)",
-                fontSize: 13,
-                fontWeight: 800,
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={checked}
-                onChange={(e) => {
-                  setParticipantMemberIds((current) =>
-                    e.target.checked
-                      ? [...current, member.id]
-                      : current.filter((id) => id !== member.id),
-                  );
-                }}
-              />
-              <span>{memberDisplayName(member)}</span>
-            </label>
-          );
-        })}
-      </div>
-    </Card>
-  ) : null;
 
   const renderPlanningHero = (
     <section
@@ -1534,7 +1589,7 @@ export default function AddTripItemPage() {
 
             {renderTransportTiming}
             {renderDetails}
-            {renderParticipants}
+            {renderBudget}
             {renderVisibility}
             {renderCosts}
 

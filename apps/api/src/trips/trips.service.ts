@@ -10,6 +10,7 @@ import {
   TripActivityType,
   TripDocumentCategory,
   TripDocumentVisibility,
+  TripItemExpenseType,
   TripItemVisibility,
   TripRole,
 } from '@prisma/client';
@@ -751,14 +752,19 @@ export class TripsService {
   }
 
   async createItem(tripId: string, userId: string, dto: CreateTripItemDto) {
-    await this.assertCanModifyTrip(tripId, userId);
-    const participantMemberIds = await this.resolveParticipantMemberIds(
-      tripId,
-      dto,
-    );
+    const membership = await this.assertCanModifyTrip(tripId, userId);
     const paidByMemberId = await this.resolveOptionalTripMemberId(
       tripId,
       dto.paidByMemberId,
+    );
+    const expenseType = dto.expenseType ?? TripItemExpenseType.SHARED;
+    const participantMemberIds = await this.resolveExpenseParticipantMemberIds(
+      tripId,
+      dto,
+      expenseType,
+      paidByMemberId,
+      membership.id,
+      true,
     );
     const visibility = cleanTripItemVisibility(dto.visibility);
     const visibleToMemberIds =
@@ -800,6 +806,7 @@ export class TripsService {
         locationName: dto.locationName?.trim() || null,
         address: dto.address?.trim() || null,
         paidByMemberId,
+        expenseType,
         participants:
           participantMemberIds === undefined
             ? undefined
@@ -844,14 +851,24 @@ export class TripsService {
       itemId,
       userId,
     );
-    const participantMemberIds = await this.resolveParticipantMemberIds(
-      tripId,
-      dto,
-    );
+    const membership = await this.assertIsTripMember(tripId, userId);
     const paidByMemberId =
       dto.paidByMemberId === undefined
         ? undefined
         : await this.resolveOptionalTripMemberId(tripId, dto.paidByMemberId);
+    const expenseType = dto.expenseType ?? existingItem.expenseType;
+    const effectivePaidByMemberId =
+      paidByMemberId === undefined
+        ? existingItem.paidByMemberId
+        : paidByMemberId;
+    const participantMemberIds = await this.resolveExpenseParticipantMemberIds(
+      tripId,
+      dto,
+      expenseType,
+      effectivePaidByMemberId,
+      membership.id,
+      dto.expenseType !== undefined,
+    );
     const visibility =
       dto.visibility === undefined
         ? undefined
@@ -928,6 +945,7 @@ export class TripsService {
         address:
           dto.address === undefined ? undefined : dto.address.trim() || null,
         paidByMemberId,
+        expenseType: dto.expenseType,
         participants:
           participantMemberIds === undefined
             ? undefined
@@ -1135,6 +1153,7 @@ export class TripsService {
         },
       },
       select: {
+        id: true,
         role: true,
       },
     });
@@ -1298,6 +1317,41 @@ export class TripsService {
     return [...new Set(members.map((member) => member.id))];
   }
 
+  private async resolveExpenseParticipantMemberIds(
+    tripId: string,
+    dto: {
+      participantMemberIds?: string[];
+      participantUserIds?: string[];
+    },
+    expenseType: TripItemExpenseType,
+    paidByMemberId: string | null | undefined,
+    currentMemberId: string,
+    shouldDefault: boolean,
+  ) {
+    const participantMemberIds = await this.resolveParticipantMemberIds(
+      tripId,
+      dto,
+    );
+
+    if (participantMemberIds !== undefined) {
+      return participantMemberIds;
+    }
+
+    if (!shouldDefault) return undefined;
+
+    if (expenseType === TripItemExpenseType.PERSONAL) {
+      return [paidByMemberId || currentMemberId];
+    }
+
+    const members = await this.prisma.tripMember.findMany({
+      where: { tripId },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true },
+    });
+
+    return members.map((member) => member.id);
+  }
+
 
   private async resolveVisibilityMemberIds(
     tripId: string,
@@ -1371,6 +1425,8 @@ export class TripsService {
         title: true,
         type: true,
         date: true,
+        paidByMemberId: true,
+        expenseType: true,
         visibility: true,
         createdByUserId: true,
       },

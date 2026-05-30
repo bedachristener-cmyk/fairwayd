@@ -10,7 +10,11 @@ import {
   IsString,
   MinLength,
 } from 'class-validator';
-import { TripItemType, TripItemVisibility } from '@prisma/client';
+import {
+  TripItemExpenseType,
+  TripItemType,
+  TripItemVisibility,
+} from '@prisma/client';
 
 export class UpdateTripItemDto {
   @IsOptional()
@@ -137,6 +141,10 @@ export class UpdateTripItemDto {
   @IsOptional()
   @IsString()
   paidByMemberId?: string;
+
+  @IsOptional()
+  @IsEnum(TripItemExpenseType)
+  expenseType?: TripItemExpenseType;
 
   @IsOptional()
   @IsArray()
