@@ -1197,6 +1197,105 @@ function formatDurationMinutes(value?: number | null) {
   return `${hours}h ${minutes}m`;
 }
 
+function timeToMinutes(value?: string | null) {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+
+  const match = /^(\d{2}):(\d{2})$/.exec(trimmed);
+  if (!match) return null;
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours > 23 || minutes > 59) return null;
+
+  return hours * 60 + minutes;
+}
+
+function minutesToTime(value: number) {
+  const normalized = ((value % 1440) + 1440) % 1440;
+  const hours = Math.floor(normalized / 60);
+  const minutes = normalized % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+function expectedGolfEndTime(item: TripItem) {
+  const end = item.endTime?.trim();
+  if (end) return end;
+
+  const start = timeToMinutes(formatTime(item));
+  const duration = item.roundDurationMinutes;
+  if (
+    start == null ||
+    typeof duration !== "number" ||
+    !Number.isFinite(duration) ||
+    duration <= 0
+  ) {
+    return "";
+  }
+
+  return minutesToTime(start + duration);
+}
+
+function golfTimingParts(item: TripItem) {
+  if (!isGolfItem(item)) return [];
+
+  return [
+    { label: "Tee time", value: formatTime(item) },
+    { label: "Depart", value: item.departureFromHotelTime?.trim() || "" },
+    { label: "End", value: expectedGolfEndTime(item) },
+    { label: "Return", value: item.returnToHotel?.trim() || "" },
+  ].filter((part) => part.value);
+}
+
+function GolfTimingChips({ item }: { item: TripItem }) {
+  const parts = golfTimingParts(item);
+  if (parts.length === 0) return null;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 6,
+        alignItems: "center",
+      }}
+    >
+      {parts.map((part, index) => {
+        const primary = index === 0;
+        return (
+          <span
+            key={`${part.label}-${part.value}`}
+            style={{
+              display: "inline-flex",
+              alignItems: "baseline",
+              gap: 5,
+              minHeight: primary ? 28 : 26,
+              padding: primary ? "5px 9px" : "4px 8px",
+              borderRadius: 999,
+              border: primary
+                ? "1px solid color-mix(in srgb, var(--accent) 58%, var(--border))"
+                : "1px solid var(--border)",
+              background: primary
+                ? "color-mix(in srgb, var(--accent-soft) 62%, var(--card))"
+                : "color-mix(in srgb, var(--bg) 54%, var(--card))",
+              color: "var(--text)",
+              fontSize: primary ? 12 : 11,
+              lineHeight: 1.15,
+              fontWeight: 900,
+              whiteSpace: "nowrap",
+            }}
+          >
+            <span style={{ color: "var(--sub)", fontWeight: 850 }}>
+              {part.label}
+            </span>
+            <span>{part.value}</span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 function timeSortValue(item: TripItem) {
   return formatTime(item) || "99:99";
 }
@@ -2546,6 +2645,8 @@ function TripCalendarView({
                           ) : null}
                         </div>
                       ) : null}
+
+                      {isGolf ? <GolfTimingChips item={item} /> : null}
 
                       {item.provider || item.bookingRef || participants || payer || prices.length > 0 ? (
                         <div
@@ -4697,11 +4798,6 @@ export default function TripDetailPage() {
               const courseId = item.course?.id ?? item.courseId;
               const title = tripItemTitle(item);
               const dateBlock = eventDateBlockParts(dateKey(item));
-              const teeTime = formatTime(item) || "--:--";
-              const departureTime = item.departureFromHotelTime?.trim() || "--:--";
-              const duration = formatDurationMinutes(item.roundDurationMinutes) || "--";
-              const expectedEnd = item.endTime?.trim() || "--:--";
-              const returnToHotel = item.returnToHotel?.trim() || "--";
               const hasMetaActions = Boolean(participants || mapUrl || directionsUrl);
               const accent = calendarItemAccent(item);
 
@@ -4872,45 +4968,13 @@ export default function TripDetailPage() {
 
                   <div
                     style={{
-                      padding: "13px 12px 12px",
+                      padding: "11px 12px 10px",
                       display: "grid",
-                      gridTemplateColumns: "repeat(auto-fit, minmax(96px, 1fr))",
-                      gap: 8,
+                      gap: 7,
                       background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
                     }}
                   >
-                    {[
-                      ["Tee time", teeTime],
-                      ["Depart hotel", departureTime],
-                      ["Duration", duration],
-                      ["Expected end", expectedEnd],
-                      ["Return hotel", returnToHotel],
-                    ].map(([label, value]) => (
-                      <div
-                        key={label}
-                        style={{
-                          minWidth: 0,
-                          display: "grid",
-                          gap: 3,
-                          padding: "9px 8px",
-                          borderRadius: 12,
-                          background: "color-mix(in srgb, var(--bg) 56%, var(--card))",
-                        }}
-                      >
-                        <div
-                          style={{
-                            color: "var(--text)",
-                            fontSize: 15,
-                            lineHeight: 1.1,
-                            fontWeight: 950,
-                            overflowWrap: "anywhere",
-                          }}
-                        >
-                          {value}
-                        </div>
-                        <div style={compactMetaTextStyle}>{label}</div>
-                      </div>
-                    ))}
+                    <GolfTimingChips item={item} />
                   </div>
 
                   {hasMetaActions ? (

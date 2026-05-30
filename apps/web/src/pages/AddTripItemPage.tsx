@@ -90,12 +90,12 @@ const fieldStyle: CSSProperties = {
   width: "100%",
   maxWidth: "100%",
   boxSizing: "border-box",
-  minHeight: 44,
-  borderRadius: 12,
+  minHeight: 42,
+  borderRadius: 11,
   border: "1px solid var(--border)",
   background: "var(--bg)",
   color: "var(--text)",
-  padding: "10px 12px",
+  padding: "9px 11px",
   font: "inherit",
   appearance: "none",
   WebkitAppearance: "none",
@@ -103,7 +103,7 @@ const fieldStyle: CSSProperties = {
 
 const labelStyle: CSSProperties = {
   display: "grid",
-  gap: 6,
+  gap: 5,
   fontSize: 13,
   fontWeight: 900,
   color: "var(--text)",
@@ -114,12 +114,12 @@ const sectionCardStyle: CSSProperties = {
   maxWidth: "100%",
   boxSizing: "border-box",
   display: "grid",
-  gap: 13,
-  padding: 16,
-  borderRadius: 20,
+  gap: 10,
+  padding: 13,
+  borderRadius: 17,
   border: "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
   background: "var(--card)",
-  boxShadow: "0 12px 30px rgba(0,0,0,0.07)",
+  boxShadow: "0 8px 22px rgba(0,0,0,0.055)",
 };
 
 const sectionIntroStyle: CSSProperties = {
@@ -135,7 +135,7 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }
       <div
         style={{
           color: "var(--text)",
-          fontSize: 15,
+          fontSize: 14,
           lineHeight: 1.2,
           fontWeight: 950,
         }}
@@ -144,6 +144,28 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }
       </div>
       {subtitle ? <div style={sectionIntroStyle}>{subtitle}</div> : null}
     </div>
+  );
+}
+
+function Card({
+  children,
+  title,
+  subtitle,
+}: {
+  children: ReactNode;
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <section
+      style={{
+        ...sectionCardStyle,
+        borderLeft: "4px solid var(--accent-strong)",
+      }}
+    >
+      <SectionHeader title={title} subtitle={subtitle} />
+      {children}
+    </section>
   );
 }
 
@@ -599,29 +621,9 @@ export default function AddTripItemPage() {
     }
   }
 
-  const Card = ({
-    children,
-    title,
-    subtitle,
-  }: {
-    children: ReactNode;
-    title: string;
-    subtitle?: string;
-  }) => (
-    <section
-      style={{
-        ...sectionCardStyle,
-        borderLeft: `4px solid ${theme.color}`,
-      }}
-    >
-      <SectionHeader title={title} subtitle={subtitle} />
-      {children}
-    </section>
-  );
-
   const actionButtonStyle: CSSProperties = {
     width: "100%",
-    minHeight: 50,
+    minHeight: 46,
     borderRadius: 999,
     border: `1px solid ${theme.color}`,
     background: "var(--text)",
@@ -632,8 +634,8 @@ export default function AddTripItemPage() {
   };
 
   const secondaryButtonStyle: CSSProperties = {
-    minHeight: 42,
-    padding: "0 13px",
+    minHeight: 38,
+    padding: "0 12px",
     borderRadius: 999,
     border: "1px solid var(--border)",
     background: "transparent",
@@ -647,9 +649,9 @@ export default function AddTripItemPage() {
     <div
       style={{
         display: "flex",
-        gap: 10,
+        gap: 8,
         overflowX: "auto",
-        padding: "2px 2px 8px",
+        padding: "1px 2px 6px",
         margin: "0 -2px",
       }}
     >
@@ -664,10 +666,10 @@ export default function AddTripItemPage() {
             type="button"
             onClick={() => setType(option.value)}
             style={{
-              flex: "0 0 154px",
-              minHeight: 106,
-              padding: 14,
-              borderRadius: 22,
+              flex: "0 0 122px",
+              minHeight: 74,
+              padding: 10,
+              borderRadius: 16,
               border: selected
                 ? `2px solid ${optionTheme.color}`
                 : "1px solid var(--border)",
@@ -676,15 +678,15 @@ export default function AddTripItemPage() {
               cursor: "pointer",
               textAlign: "left",
               display: "grid",
-              gap: 12,
+              gap: 7,
               alignContent: "space-between",
               boxShadow: selected
-                ? "0 14px 30px rgba(0,0,0,0.11)"
-                : "0 8px 20px rgba(0,0,0,0.05)",
+                ? "0 8px 20px rgba(0,0,0,0.09)"
+                : "0 5px 14px rgba(0,0,0,0.045)",
             }}
           >
-            <Icon size={24} strokeWidth={2.3} style={{ color: optionTheme.color }} />
-            <span style={{ fontSize: 15, fontWeight: 950, lineHeight: 1.12 }}>
+            <Icon size={19} strokeWidth={2.3} style={{ color: optionTheme.color }} />
+            <span style={{ fontSize: 13, fontWeight: 950, lineHeight: 1.12 }}>
               {option.label}
             </span>
           </button>
@@ -694,7 +696,7 @@ export default function AddTripItemPage() {
   );
 
   const renderCourseSearch = isGolfRound ? (
-    <div style={{ display: "grid", gap: 10, minWidth: 0 }}>
+    <div style={{ display: "grid", gap: 8, minWidth: 0 }}>
       <label style={labelStyle}>
         Course
         <input
@@ -748,7 +750,7 @@ export default function AddTripItemPage() {
   ) : null;
 
   const renderDateFields = (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
       <label style={{ ...labelStyle, flex: "1 1 160px", minWidth: 0 }}>
         {isFlight ? "Departure date" : isHotel ? "Check-in" : "Date"}
         <input
@@ -790,15 +792,15 @@ export default function AddTripItemPage() {
           onChange={(e) => updateGolfTeeTime(e.target.value)}
           style={{
             ...fieldStyle,
-            minHeight: 58,
-            fontSize: 24,
+            minHeight: 50,
+            fontSize: 21,
             fontWeight: 950,
             borderColor: theme.color,
             background: "var(--card)",
           }}
         />
       </label>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         <label style={{ ...labelStyle, flex: "1 1 140px", minWidth: 0 }}>
           Duration
           <select
@@ -827,7 +829,7 @@ export default function AddTripItemPage() {
   );
 
   const renderNonGolfTimeFields = !isHotel ? (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
       <label style={{ ...labelStyle, flex: "1 1 150px", minWidth: 0 }}>
         {isFlight ? "Departure time" : "Start time"}
         <input
@@ -867,7 +869,7 @@ export default function AddTripItemPage() {
         <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 900 }}>
           Return to hotel
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
           {[
             { mode: "after_round", label: "After round" },
             { mode: "custom", label: "Custom time" },
@@ -882,8 +884,8 @@ export default function AddTripItemPage() {
                   updateReturnToHotelMode(option.mode as ReturnToHotelMode)
                 }
                 style={{
-                  minHeight: 40,
-                  padding: "0 13px",
+                  minHeight: 38,
+                  padding: "0 11px",
                   borderRadius: 999,
                   border: selected ? `1px solid ${theme.color}` : "1px solid var(--border)",
                   background: selected ? theme.soft : "transparent",
@@ -1217,21 +1219,21 @@ export default function AddTripItemPage() {
     <section
       style={{
         display: "grid",
-        gap: 14,
-        padding: 20,
-        borderRadius: 26,
+        gap: 10,
+        padding: 14,
+        borderRadius: 20,
         border: `1px solid color-mix(in srgb, ${theme.color} 42%, var(--border))`,
         background: `linear-gradient(135deg, ${theme.soft}, transparent 72%), var(--card)`,
-        boxShadow: "0 16px 40px rgba(0,0,0,0.1)",
+        boxShadow: "0 10px 28px rgba(0,0,0,0.08)",
       }}
     >
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 15 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 11 }}>
         <div
           aria-hidden="true"
           style={{
-            width: 62,
-            height: 62,
-            borderRadius: 22,
+            width: 46,
+            height: 46,
+            borderRadius: 16,
             background: theme.soft,
             color: theme.color,
             display: "grid",
@@ -1239,15 +1241,15 @@ export default function AddTripItemPage() {
             flex: "0 0 auto",
           }}
         >
-          <HeroIcon size={34} strokeWidth={2.25} />
+          <HeroIcon size={25} strokeWidth={2.25} />
         </div>
-        <div style={{ display: "grid", gap: isGolfRound && selectedCourse ? 8 : 5, minWidth: 0 }}>
+        <div style={{ display: "grid", gap: isGolfRound && selectedCourse ? 5 : 3, minWidth: 0 }}>
           {isGolfRound && !selectedCourse ? (
             <>
               <div
                 style={{
                   color: "var(--text)",
-                  fontSize: 25,
+                  fontSize: 21,
                   lineHeight: 1.08,
                   fontWeight: 950,
                 }}
@@ -1272,7 +1274,7 @@ export default function AddTripItemPage() {
               <div
                 style={{
                   color: "var(--text)",
-                  fontSize: 24,
+                  fontSize: 21,
                   lineHeight: 1.08,
                   fontWeight: 950,
                   overflowWrap: "anywhere",
@@ -1283,7 +1285,7 @@ export default function AddTripItemPage() {
             </>
           )}
           {isGolfRound && selectedCourseLocation ? (
-            <div style={{ color: "var(--sub)", fontSize: 14, fontWeight: 850 }}>
+            <div style={{ color: "var(--sub)", fontSize: 13, fontWeight: 850 }}>
               {selectedCourseLocation}
             </div>
           ) : null}
@@ -1292,9 +1294,8 @@ export default function AddTripItemPage() {
               style={{
                 display: "grid",
                 gap: 3,
-                marginTop: 2,
                 color: "var(--sub)",
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: 900,
               }}
             >
@@ -1306,9 +1307,9 @@ export default function AddTripItemPage() {
               style={{
                 display: "flex",
                 flexWrap: "wrap",
-                gap: 10,
+                gap: 8,
                 color: "var(--sub)",
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: 900,
               }}
             >
@@ -1319,7 +1320,7 @@ export default function AddTripItemPage() {
         </div>
       </div>
       {isGolfRound ? (
-        <div style={{ paddingTop: 4 }}>
+        <div>
           {renderCourseSearch}
         </div>
       ) : null}
@@ -1334,20 +1335,20 @@ export default function AddTripItemPage() {
         margin: "0 auto",
         boxSizing: "border-box",
         overflowX: "hidden",
-        padding: "16px 16px calc(104px + env(safe-area-inset-bottom, 0px))",
+        padding: "12px 14px calc(92px + env(safe-area-inset-bottom, 0px))",
         display: "grid",
-        gap: 16,
+        gap: 12,
         background:
           "linear-gradient(180deg, color-mix(in srgb, var(--card) 92%, transparent), transparent 180px)",
       }}
     >
-      <div style={{ display: "grid", gap: 10 }}>
+      <div style={{ display: "grid", gap: 8 }}>
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            gap: 10,
+            gap: 8,
           }}
         >
           <button
@@ -1360,7 +1361,7 @@ export default function AddTripItemPage() {
           <div
             style={{
               minHeight: 32,
-              padding: "0 12px",
+              padding: "0 10px",
               borderRadius: 999,
               border: `1px solid ${theme.color}`,
               background: theme.soft,
@@ -1375,11 +1376,11 @@ export default function AddTripItemPage() {
             {step} / 2
           </div>
         </div>
-        <div style={{ display: "grid", gap: 5 }}>
+        <div style={{ display: "grid", gap: 3 }}>
           <div style={{ color: theme.color, fontSize: 12, fontWeight: 950 }}>
             {step === 1 ? "Plan your round" : "Travel & costs"}
           </div>
-          <div style={{ fontSize: 28, lineHeight: 1.05, fontWeight: 950 }}>
+          <div style={{ fontSize: 24, lineHeight: 1.05, fontWeight: 950 }}>
             {pageTitle}
           </div>
           <div style={{ color: "var(--sub)", fontSize: 13, lineHeight: 1.4 }}>
@@ -1406,7 +1407,7 @@ export default function AddTripItemPage() {
         </div>
       ) : null}
 
-      <form onSubmit={submit} style={{ display: "grid", gap: 14 }}>
+      <form onSubmit={submit} style={{ display: "grid", gap: 11 }}>
         {step === 1 ? (
           <>
             <SectionHeader title="Item Type" subtitle="Choose the kind of plan you are adding." />
@@ -1471,7 +1472,7 @@ export default function AddTripItemPage() {
 
             <Card
               title={isGolfRound ? "Date & Tee Time" : "Date & Time"}
-              subtitle={isGolfRound ? "Tee time is the anchor for the round." : "Set the trip timeline."}
+              subtitle={isGolfRound ? "Tee time anchors the round." : "Set the trip timeline."}
             >
               {renderDateFields}
               {isGolfRound ? (
@@ -1483,8 +1484,8 @@ export default function AddTripItemPage() {
                     onChange={(e) => updateGolfTeeTime(e.target.value)}
                     style={{
                       ...fieldStyle,
-                      minHeight: 58,
-                      fontSize: 24,
+                      minHeight: 50,
+                      fontSize: 21,
                       fontWeight: 950,
                       borderColor: theme.color,
                       background: "var(--card)",
@@ -1500,8 +1501,8 @@ export default function AddTripItemPage() {
               style={{
                 position: "sticky",
                 bottom: "calc(10px + env(safe-area-inset-bottom, 0px))",
-                padding: 10,
-                borderRadius: 20,
+                padding: 8,
+                borderRadius: 18,
                 border: "1px solid var(--border)",
                 background: "color-mix(in srgb, var(--card) 94%, transparent)",
                 boxShadow: "0 12px 34px rgba(0,0,0,0.18)",
@@ -1536,11 +1537,11 @@ export default function AddTripItemPage() {
               style={{
                 display: "flex",
                 flexWrap: "wrap",
-                gap: 10,
+                gap: 8,
                 position: "sticky",
                 bottom: "calc(10px + env(safe-area-inset-bottom, 0px))",
-                padding: 10,
-                borderRadius: 20,
+                padding: 8,
+                borderRadius: 18,
                 border: "1px solid var(--border)",
                 background: "color-mix(in srgb, var(--card) 94%, transparent)",
                 boxShadow: "0 12px 34px rgba(0,0,0,0.18)",
@@ -1553,7 +1554,7 @@ export default function AddTripItemPage() {
                 style={{
                   ...secondaryButtonStyle,
                   flex: "1 1 120px",
-                  minHeight: 50,
+                  minHeight: 46,
                   color: "var(--text)",
                 }}
               >
