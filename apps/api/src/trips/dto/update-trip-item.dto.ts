@@ -11,6 +11,7 @@ import {
   MinLength,
 } from 'class-validator';
 import {
+  TripItemCostMode,
   TripItemExpenseType,
   TripItemType,
   TripItemVisibility,
@@ -115,6 +116,10 @@ export class UpdateTripItemDto {
   @Type(() => Number)
   @IsNumber()
   amount?: number;
+
+  @IsOptional()
+  @IsEnum(TripItemCostMode)
+  costMode?: TripItemCostMode;
 
   @IsOptional()
   @IsString()

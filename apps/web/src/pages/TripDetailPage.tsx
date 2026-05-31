@@ -41,6 +41,8 @@ type TripItem = {
   returnToHotel?: string | null;
   provider?: string | null;
   bookingRef?: string | null;
+  amount?: number | null;
+  baseAmount?: number | null;
   greenFee?: number | null;
   includeGreenFeeInSplit?: boolean | null;
   includeCaddyFeeInSplit?: boolean | null;
@@ -55,6 +57,7 @@ type TripItem = {
   paidByMemberId?: string | null;
   paidByMember?: TripMember | null;
   expenseType?: ExpenseType | null;
+  costMode?: CostMode | null;
   lat?: number | string | null;
   lon?: number | string | null;
   latitude?: number | string | null;
@@ -87,6 +90,7 @@ type TripRole = "OWNER" | "ADMIN" | "MEMBER";
 
 type TripItemVisibility = "GROUP" | "SELECTED" | "PRIVATE";
 type ExpenseType = "PERSONAL" | "SHARED";
+type CostMode = "PER_PERSON" | "TOTAL";
 
 type TripMember = {
   id: string;
@@ -190,7 +194,10 @@ type BudgetCategory = "Golf" | "Hotel" | "Transfer" | "Activity" | "Other";
 type BudgetSummary = {
   mixedCurrencies: boolean;
   currency: string;
+  currencies: string[];
   total: number;
+  sharedTotal: number;
+  personalTotal: number;
   perPerson: number;
   greenTotal: number;
   directTotal: number;
@@ -1468,6 +1475,15 @@ function settlementItemAmount(item: TripItem) {
   return green + direct + provider + caddy + cart;
 }
 
+function itemBudgetAmount(item: TripItem) {
+  if (isFlightItem(item)) return 0;
+  const amount = finiteAmount(item.amount);
+  if (amount > 0) return amount;
+  const baseAmount = finiteAmount(item.baseAmount);
+  if (baseAmount > 0) return baseAmount;
+  return settlementItemAmount(item);
+}
+
 function pricingParts(item: TripItem) {
   if (isFlightItem(item)) return [];
 
@@ -1811,6 +1827,10 @@ function expenseTypeLabel(item: TripItem) {
   return item.expenseType === "PERSONAL" ? "Personal" : "Shared";
 }
 
+function costModeLabel(item: TripItem) {
+  return item.costMode === "PER_PERSON" ? "Per person" : "Total";
+}
+
 function toFiniteNumber(value: unknown) {
   const n = typeof value === "number" ? value : Number(value);
   return Number.isFinite(n) ? n : null;
@@ -2138,6 +2158,8 @@ function TripCalendarView({
   onSelectDay,
   canEditTrip,
   onAddItem,
+  canEditItem,
+  onEditItem,
   onOpenCourse,
 }: {
   days: CalendarDay[];
@@ -2146,7 +2168,9 @@ function TripCalendarView({
   selectedDay: string;
   onSelectDay: (key: string) => void;
   canEditTrip: boolean;
-  onAddItem: () => void;
+  onAddItem: (date?: string) => void;
+  canEditItem: (item: TripItem) => boolean;
+  onEditItem: (item: TripItem) => void;
   onOpenCourse: (courseId: string) => void;
 }) {
   const selected = days.find((day) => day.key === selectedDay) ?? days[0];
@@ -2206,7 +2230,7 @@ function TripCalendarView({
           {canEditTrip ? (
             <button
               type="button"
-              onClick={onAddItem}
+              onClick={() => onAddItem()}
               style={{
                 width: "fit-content",
                 height: 34,
@@ -2385,8 +2409,37 @@ function TripCalendarView({
       </div>
 
       <div style={{ display: "grid", gap: 10, paddingTop: 2, minWidth: 0 }}>
-        <div style={{ color: "var(--text)", fontSize: 16, fontWeight: 950 }}>
-          {selected.label} - Day activity
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+          }}
+        >
+          <div style={{ color: "var(--text)", fontSize: 16, fontWeight: 950 }}>
+            {selected.label} - Day activity
+          </div>
+          {canEditTrip && selected.key !== "unscheduled" ? (
+            <button
+              type="button"
+              onClick={() => onAddItem(selected.key)}
+              style={{
+                flex: "0 0 auto",
+                height: 28,
+                padding: "0 10px",
+                borderRadius: 999,
+                border: "1px solid var(--border)",
+                background: "var(--card)",
+                color: "var(--text)",
+                cursor: "pointer",
+                fontSize: 12,
+                fontWeight: 900,
+              }}
+            >
+              + Add item
+            </button>
+          ) : null}
         </div>
 
         {sections.map(([section, items]) => (
@@ -2409,6 +2462,7 @@ function TripCalendarView({
                 const prices = pricingParts(item);
                 const participants = participantSummary(item, members);
                 const payer = payerSummary(item);
+                const canEditCurrentItem = canEditItem(item);
                 const title =
                   (isGolf && courseName) ||
                   item.title ||
@@ -2695,6 +2749,11 @@ function TripCalendarView({
                           <span className="fw-pill fw-pill--meta fw-pill--info">
                             {expenseTypeLabel(item)}
                           </span>
+                          {prices.length > 0 ? (
+                            <span className="fw-pill fw-pill--meta fw-pill--info">
+                              {costModeLabel(item)}
+                            </span>
+                          ) : null}
                           {prices.map((price) => (
                             <span key={price} className="fw-pill fw-pill--meta fw-pill--info">
                               {price}
@@ -2727,6 +2786,19 @@ function TripCalendarView({
                           }}
                         >
                           Open course
+                        </button>
+                      ) : null}
+                      {canEditCurrentItem ? (
+                        <button
+                          type="button"
+                          className="fw-pill fw-pill--meta fw-pill--action"
+                          onClick={() => onEditItem(item)}
+                          style={{
+                            width: "fit-content",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Edit
                         </button>
                       ) : null}
                     </div>
@@ -2878,6 +2950,15 @@ export default function TripDetailPage() {
     myMembership?.role === "OWNER" || myMembership?.role === "ADMIN";
   const canUploadTripDocuments = Boolean(myMembership);
 
+  function canEditTripItem(item: TripItem) {
+    if (canEditTrip) return true;
+    if (!user?.id) return false;
+    if (item.visibility === "PRIVATE" && item.createdByUserId !== user.id) {
+      return false;
+    }
+    return item.createdByUserId === user.id;
+  }
+
   function moveSubview(direction: 1 | -1) {
     if (activeView === "overview") return;
 
@@ -2947,6 +3028,13 @@ export default function TripDetailPage() {
     window.setTimeout(() => {
       window.scrollTo({ top: 0, behavior: "auto" });
     }, 0);
+  }
+
+  function addItemPath(date?: string) {
+    const base = `/trips/${tripId}/add-item`;
+    return date && date !== "unscheduled"
+      ? `${base}?date=${encodeURIComponent(date)}`
+      : base;
   }
 
   async function loadTrip() {
@@ -4122,10 +4210,13 @@ export default function TripDetailPage() {
     let providerTotal = 0;
     let caddyTotal = 0;
     let cartTotal = 0;
+    let sharedTotal = 0;
+    let personalTotal = 0;
 
     for (const item of trip?.items ?? []) {
       if (isFlightItem(item)) continue;
 
+      const itemTotal = itemBudgetAmount(item);
       const golf = isGolfItem(item);
       const green =
         golf && item.includeGreenFeeInSplit !== false
@@ -4144,7 +4235,6 @@ export default function TripDetailPage() {
         !golf || item.includeCartFeeInSplit !== false
           ? finiteAmount(item.cartFee)
           : 0;
-      const itemTotal = green + direct + provider + caddy + cart;
 
       if (itemTotal > 0) {
         currencies.add(item.currency?.trim() || "CHF");
@@ -4156,16 +4246,25 @@ export default function TripDetailPage() {
       caddyTotal += caddy;
       cartTotal += cart;
       categories[budgetCategory(item.type)] += itemTotal;
+      if (item.expenseType === "PERSONAL") {
+        personalTotal += itemTotal;
+      } else {
+        sharedTotal += itemTotal;
+      }
     }
 
-    const total = greenTotal + directTotal + providerTotal + caddyTotal + cartTotal;
+    const total = sharedTotal + personalTotal;
     const people = trip?.members?.length ?? 0;
-    const currency = Array.from(currencies)[0] || "CHF";
+    const currencyList = Array.from(currencies).sort();
+    const currency = currencyList[0] || "CHF";
 
     return {
       mixedCurrencies: currencies.size > 1,
       currency,
+      currencies: currencyList,
       total,
+      sharedTotal,
+      personalTotal,
       perPerson: people > 0 ? total / people : total,
       greenTotal,
       directTotal,
@@ -4349,13 +4448,9 @@ export default function TripDetailPage() {
     checkedChecklistIds.has(item.id),
   ).length;
   const checklistTotal = defaultTravelChecklistItems.length;
-  const budgetCards = [
-    { label: "Total budget", value: budgetSummary.total },
-    { label: "Golf cost", value: budgetSummary.categories.Golf },
-    { label: "Hotel cost", value: budgetSummary.categories.Hotel },
-    { label: "Transport cost", value: budgetSummary.categories.Transfer },
-    { label: "Estimated per person", value: budgetSummary.perPerson },
-  ];
+  const budgetItems = (trip?.items ?? [])
+    .map((item) => ({ item, amount: itemBudgetAmount(item) }))
+    .filter(({ amount }) => amount > 0);
   const budgetFieldTotals = [
     { label: "Greenfee", value: budgetSummary.greenTotal },
     { label: "Direct", value: budgetSummary.directTotal },
@@ -4369,6 +4464,11 @@ export default function TripDetailPage() {
     { label: "Transfer", value: budgetSummary.categories.Transfer },
     { label: "Activity", value: budgetSummary.categories.Activity },
     { label: "Other", value: budgetSummary.categories.Other },
+  ];
+  const budgetCards = [
+    { label: "Total recorded costs", value: budgetSummary.total },
+    { label: "Group/shared costs", value: budgetSummary.sharedTotal },
+    { label: "Personal costs", value: budgetSummary.personalTotal },
   ];
 
   const filteredDocuments = useMemo(() => {
@@ -4821,8 +4921,13 @@ export default function TripDetailPage() {
               const courseId = item.course?.id ?? item.courseId;
               const title = tripItemTitle(item);
               const dateBlock = eventDateBlockParts(dateKey(item));
+              const canEditCurrentItem = canEditTripItem(item);
               const hasMetaActions = Boolean(
-                participants || mapUrl || directionsUrl || item.expenseType,
+                participants ||
+                  mapUrl ||
+                  directionsUrl ||
+                  item.expenseType ||
+                  canEditCurrentItem,
               );
               const accent = calendarItemAccent(item);
 
@@ -5030,7 +5135,7 @@ export default function TripDetailPage() {
                       >
                         {expenseTypeLabel(item)}
                       </span>
-                      {mapUrl || directionsUrl ? (
+                      {mapUrl || directionsUrl || canEditCurrentItem ? (
                         <div
                           style={{
                             display: "flex",
@@ -5066,6 +5171,19 @@ export default function TripDetailPage() {
                             >
                               Directions
                             </a>
+                          ) : null}
+                          {canEditCurrentItem ? (
+                            <button
+                              type="button"
+                              onClick={() => startEdit(item)}
+                              className="fw-pill fw-pill--meta"
+                              style={{
+                                height: 30,
+                                cursor: "pointer",
+                              }}
+                            >
+                              Edit
+                            </button>
                           ) : null}
                         </div>
                       ) : null}
@@ -6221,7 +6339,7 @@ export default function TripDetailPage() {
               <button
                 type="button"
                 onClick={() => {
-                  if (tripId) nav(`/trips/${tripId}/add-item`);
+                  if (tripId) nav(addItemPath());
                 }}
                 style={{
                   width: "fit-content",
@@ -6254,13 +6372,44 @@ export default function TripDetailPage() {
           >
             <div
               style={{
-                color: "var(--text)",
-                fontSize: 13,
-                fontWeight: 950,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 8,
                 padding: "0 2px",
               }}
             >
-              {formatDateLabel(key)}
+              <div
+                style={{
+                  color: "var(--text)",
+                  fontSize: 13,
+                  fontWeight: 950,
+                }}
+              >
+                {formatDateLabel(key)}
+              </div>
+              {canEditTrip && key !== "unscheduled" ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (tripId) nav(addItemPath(key));
+                  }}
+                  style={{
+                    flex: "0 0 auto",
+                    height: 26,
+                    padding: "0 9px",
+                    borderRadius: 999,
+                    border: "1px solid var(--border)",
+                    background: "var(--card)",
+                    color: "var(--text)",
+                    cursor: "pointer",
+                    fontSize: 11,
+                    fontWeight: 900,
+                  }}
+                >
+                  + Add item
+                </button>
+              ) : null}
             </div>
 
             <div style={{ display: "grid", gap: 10 }}>
@@ -6305,6 +6454,7 @@ export default function TripDetailPage() {
                       : 0)
                   : 0;
                 const isMoving = movingItemId === item.id;
+                const canEditCurrentItem = canEditTripItem(item);
                 const canMoveUp =
                   canEditTrip && itemIndex > 0 && !isMoving;
                 const canMoveDown =
@@ -7450,6 +7600,11 @@ export default function TripDetailPage() {
                                 <span className="fw-pill fw-pill--meta">
                                   {expenseTypeLabel(item)}
                                 </span>
+                                {prices.length > 0 ? (
+                                  <span className="fw-pill fw-pill--meta">
+                                    {costModeLabel(item)}
+                                  </span>
+                                ) : null}
                               </div>
                             ) : null}
 
@@ -7517,41 +7672,41 @@ export default function TripDetailPage() {
                                   Open course
                                 </button>
                               ) : null}
+                              {canEditCurrentItem ? (
+                                <button
+                                  type="button"
+                                  onClick={() => startEdit(item)}
+                                  disabled={deletingItemId === item.id}
+                                  className="fw-pill fw-pill--meta"
+                                  style={{
+                                    height: 30,
+                                    cursor:
+                                      deletingItemId === item.id
+                                        ? "default"
+                                        : "pointer",
+                                  }}
+                                >
+                                  Edit
+                                </button>
+                              ) : null}
                               {canEditTrip ? (
-                                <>
-                                  <button
-                                    type="button"
-                                    onClick={() => startEdit(item)}
-                                    disabled={deletingItemId === item.id}
-                                    className="fw-pill fw-pill--meta"
-                                    style={{
-                                      height: 30,
-                                      cursor:
-                                        deletingItemId === item.id
-                                          ? "default"
-                                          : "pointer",
-                                    }}
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => deleteItem(item.id)}
-                                    disabled={deletingItemId === item.id}
-                                    className="fw-pill fw-pill--meta"
-                                    style={{
-                                      height: 30,
-                                      cursor:
-                                        deletingItemId === item.id
-                                          ? "default"
-                                          : "pointer",
-                                    }}
-                                  >
-                                    {deletingItemId === item.id
-                                      ? "Deleting..."
-                                      : "Delete"}
-                                  </button>
-                                </>
+                                <button
+                                  type="button"
+                                  onClick={() => deleteItem(item.id)}
+                                  disabled={deletingItemId === item.id}
+                                  className="fw-pill fw-pill--meta"
+                                  style={{
+                                    height: 30,
+                                    cursor:
+                                      deletingItemId === item.id
+                                        ? "default"
+                                        : "pointer",
+                                  }}
+                                >
+                                  {deletingItemId === item.id
+                                    ? "Deleting..."
+                                    : "Delete"}
+                                </button>
                               ) : null}
                             </div>
                           </div>
@@ -7573,9 +7728,11 @@ export default function TripDetailPage() {
           selectedDay={selectedCalendarDay}
           onSelectDay={setSelectedCalendarDay}
           canEditTrip={canEditTrip}
-          onAddItem={() => {
-            if (tripId) nav(`/trips/${tripId}/add-item`);
+          onAddItem={(date) => {
+            if (tripId) nav(addItemPath(date));
           }}
+          canEditItem={canEditTripItem}
+          onEditItem={startEdit}
           onOpenCourse={(courseId) => nav(`/courses/${courseId}`)}
         />
       ) : activeView === "documents" ? (
@@ -8124,6 +8281,130 @@ export default function TripDetailPage() {
             ))}
           </div>
 
+          {budgetSummary.mixedCurrencies ? (
+            <div
+              style={{
+                padding: 12,
+                color: "var(--sub)",
+                fontSize: 12,
+                lineHeight: 1.4,
+                ...sectionMutedCardStyle,
+              }}
+            >
+              Settlement is disabled until exchange rates are available for all
+              currencies.
+            </div>
+          ) : null}
+
+          <div
+            style={{
+              ...sectionCardStyle,
+              background: "var(--bg)",
+              boxShadow: "none",
+            }}
+          >
+            <div style={{ display: "grid", gap: 2 }}>
+              <div style={sectionTitleTextStyle}>Cost list by item</div>
+              <div style={sectionSubtitleTextStyle}>
+                Recorded costs only. Settlements are not calculated here.
+              </div>
+            </div>
+
+            {budgetItems.length === 0 ? (
+              <div
+                style={{
+                  padding: 10,
+                  color: "var(--sub)",
+                  fontSize: 12,
+                  lineHeight: 1.35,
+                  ...sectionMutedCardStyle,
+                }}
+              >
+                No priced items yet.
+              </div>
+            ) : (
+              <div style={{ display: "grid", gap: 8 }}>
+                {budgetItems.map(({ item, amount }) => {
+                  const participants = effectiveParticipants(item, trip?.members ?? []);
+                  const shared = item.expenseType !== "PERSONAL";
+                  const payer = payerSummary(item) || "Not set";
+
+                  return (
+                    <div
+                      key={`budget-${item.id}`}
+                      style={{
+                        display: "grid",
+                        gap: 7,
+                        padding: 10,
+                        ...sectionMutedCardStyle,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          justifyContent: "space-between",
+                          gap: 10,
+                        }}
+                      >
+                        <div
+                          style={{
+                            color: "var(--text)",
+                            fontSize: 13,
+                            lineHeight: 1.25,
+                            fontWeight: 900,
+                            overflowWrap: "anywhere",
+                            minWidth: 0,
+                          }}
+                        >
+                          {tripItemTitle(item)}
+                        </div>
+                        <div
+                          style={{
+                            color: "var(--text)",
+                            fontSize: 13,
+                            lineHeight: 1.25,
+                            fontWeight: 950,
+                            textAlign: "right",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {formatMoney(amount, item.currency)}
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: 6,
+                          alignItems: "center",
+                        }}
+                      >
+                        <span className="fw-pill fw-pill--meta">
+                          Paid by {payer}
+                        </span>
+                        <span className="fw-pill fw-pill--meta">
+                          {expenseTypeLabel(item)}
+                        </span>
+                        <span className="fw-pill fw-pill--meta">
+                          {costModeLabel(item)}
+                        </span>
+                        {shared ? (
+                          <span className="fw-pill fw-pill--meta">
+                            {participants.length} participant
+                            {participants.length === 1 ? "" : "s"}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {false ? (
+          <>
           <div
             style={{
               ...safeSectionStyle,
@@ -8523,6 +8804,8 @@ export default function TripDetailPage() {
               </div>
             ) : null}
           </div>
+          </>
+          ) : null}
         </section>
       ) : activeView === "map" ? (
         <TripMapView

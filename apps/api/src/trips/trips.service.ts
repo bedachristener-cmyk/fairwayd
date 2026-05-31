@@ -10,6 +10,7 @@ import {
   TripActivityType,
   TripDocumentCategory,
   TripDocumentVisibility,
+  TripItemCostMode,
   TripItemExpenseType,
   TripItemVisibility,
   TripRole,
@@ -102,6 +103,15 @@ function cleanTripItemVisibility(visibility?: TripItemVisibility) {
   }
   return visibility;
 }
+
+function defaultTripItemCostMode(type: string | null | undefined) {
+  if (type === 'golf_round' || type === 'flight') {
+    return TripItemCostMode.PER_PERSON;
+  }
+
+  return TripItemCostMode.TOTAL;
+}
+
 const tripUserSelect = {
   id: true,
   handle: true,
@@ -800,6 +810,7 @@ export class TripsService {
         cartFee: dto.cartFee ?? null,
         providerPrice: dto.providerPrice ?? null,
         amount: dto.amount ?? null,
+        costMode: dto.costMode ?? defaultTripItemCostMode(dto.type),
         currency: dto.currency?.trim() || null,
         exchangeRate: dto.exchangeRate ?? null,
         baseAmount: dto.baseAmount ?? null,
@@ -934,6 +945,7 @@ export class TripsService {
         cartFee: dto.cartFee,
         providerPrice: dto.providerPrice,
         amount: dto.amount,
+        costMode: dto.costMode,
         currency:
           dto.currency === undefined ? undefined : dto.currency.trim() || null,
         exchangeRate: dto.exchangeRate,
@@ -1426,6 +1438,7 @@ export class TripsService {
         type: true,
         date: true,
         paidByMemberId: true,
+        costMode: true,
         expenseType: true,
         visibility: true,
         createdByUserId: true,

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { CSSProperties, FormEvent, ReactNode } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   BedDouble,
   Car,
@@ -9,6 +9,7 @@ import {
   StickyNote,
 } from "lucide-react";
 import { API_BASE } from "../api/base";
+import { friendlyApiErrorMessage } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 
 type TripItemType =
@@ -23,6 +24,8 @@ type TripItemType =
 type TripItemVisibility = "GROUP" | "SELECTED" | "PRIVATE";
 type ReturnToHotelMode = "" | "after_round" | "custom" | "own_transport";
 type ExpenseType = "PERSONAL" | "SHARED";
+type CostMode = "PER_PERSON" | "TOTAL";
+type GolfCostInputMode = "package" | "breakdown";
 
 type FormStep = 1 | 2;
 
@@ -260,6 +263,40 @@ function amountValue(value: string) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function validDateParam(value: string | null) {
+  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
+}
+
+function defaultCostModeForType(type: TripItemType): CostMode {
+  if (type === "golf_round" || type === "flight") return "PER_PERSON";
+  return "TOTAL";
+}
+
+async function tripItemSaveError(res: Response) {
+  const text = await res.text().catch(() => "");
+  let data: any = null;
+
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { message: text };
+    }
+  }
+
+  const serverMessage = data?.message;
+  const detail = Array.isArray(serverMessage)
+    ? serverMessage.join(" ")
+    : typeof serverMessage === "string"
+      ? serverMessage
+      : text;
+  const message = detail || `Save failed (${res.status} ${res.statusText})`;
+  const error = new Error(message);
+  (error as Error & { status?: number; data?: unknown }).status = res.status;
+  (error as Error & { status?: number; data?: unknown }).data = data;
+  return error;
+}
+
 function timeToMinutes(value: string) {
   const match = /^(\d{2}):(\d{2})$/.exec(value.trim());
   if (!match) return null;
@@ -319,6 +356,7 @@ function memberDisplayName(member: TripMember) {
 export default function AddTripItemPage() {
   const { tripId } = useParams();
   const nav = useNavigate();
+  const location = useLocation();
   const { token, user } = useAuth();
 
   const [step, setStep] = useState<FormStep>(1);
@@ -339,12 +377,12 @@ export default function AddTripItemPage() {
   const [bookingRef, setBookingRef] = useState("");
   const [provider, setProvider] = useState("");
   const [notes, setNotes] = useState("");
+  const [golfCostInputMode, setGolfCostInputMode] =
+    useState<GolfCostInputMode>("package");
+  const [packagePrice, setPackagePrice] = useState("");
   const [greenFee, setGreenFee] = useState("");
   const [caddyFee, setCaddyFee] = useState("");
   const [cartFee, setCartFee] = useState("");
-  const [includeGreenFeeInSplit, setIncludeGreenFeeInSplit] = useState(true);
-  const [includeCaddyFeeInSplit, setIncludeCaddyFeeInSplit] = useState(true);
-  const [includeCartFeeInSplit, setIncludeCartFeeInSplit] = useState(true);
   const [directPrice, setDirectPrice] = useState("");
   const [providerPrice, setProviderPrice] = useState("");
   const [amount, setAmount] = useState("");
@@ -359,6 +397,9 @@ export default function AddTripItemPage() {
   const [visibleToMemberIds, setVisibleToMemberIds] = useState<string[]>([]);
   const [paidByMemberId, setPaidByMemberId] = useState("");
   const [expenseType, setExpenseType] = useState<ExpenseType>("SHARED");
+  const [costMode, setCostMode] = useState<CostMode>(
+    defaultCostModeForType("golf_round"),
+  );
   const [courseLoading, setCourseLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -377,10 +418,8 @@ export default function AddTripItemPage() {
     : isFlight
       ? flightTitle(flightNumber)
       : title.trim() || itemNoun(type);
-  const organizerTotal =
-    (includeGreenFeeInSplit ? amountValue(greenFee) : 0) +
-    (includeCaddyFeeInSplit ? amountValue(caddyFee) : 0) +
-    (includeCartFeeInSplit ? amountValue(cartFee) : 0);
+  const golfBreakdownTotal =
+    amountValue(greenFee) + amountValue(caddyFee) + amountValue(cartFee);
   const visibleGolfDurationOptions =
     roundDurationMinutes &&
     !golfDurationOptions.some((option) => option.value === roundDurationMinutes)
@@ -404,6 +443,11 @@ export default function AddTripItemPage() {
 
   function updateEndDate(nextEndDate: string) {
     setEndDate(nextEndDate && date && nextEndDate < date ? date : nextEndDate);
+  }
+
+  function updateType(nextType: TripItemType) {
+    setType(nextType);
+    setCostMode(defaultCostModeForType(nextType));
   }
 
   function updateGolfTeeTime(nextTime: string) {
@@ -486,6 +530,11 @@ export default function AddTripItemPage() {
   }, [token, tripId, user?.id]);
 
   useEffect(() => {
+    const dateParam = validDateParam(new URLSearchParams(location.search).get("date"));
+    if (dateParam) updateDate(dateParam);
+  }, [location.search]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function searchCourses() {
@@ -555,7 +604,15 @@ export default function AddTripItemPage() {
 
       const normalizedEndDate =
         !isGolfRound && endDate && date && endDate < date ? date : endDate;
-      const itemAmount = optionalNumber(amount);
+      const itemAmount = isGolfRound
+        ? golfCostInputMode === "package"
+          ? optionalNumber(packagePrice)
+          : golfBreakdownTotal
+        : optionalNumber(amount);
+      const sharedParticipantMemberIds =
+        expenseType === "SHARED" && participantMemberIds.length > 0
+          ? participantMemberIds
+          : undefined;
       const payload = {
         type,
         title: isGolfRound
@@ -577,16 +634,26 @@ export default function AddTripItemPage() {
         provider: optionalText(provider),
         bookingRef: isFlight ? optionalText(bookingRef) : undefined,
         notes: optionalText(notes),
-        greenFee: type === "golf_round" ? optionalNumber(greenFee) : undefined,
-        caddyFee: type === "golf_round" ? optionalNumber(caddyFee) : undefined,
-        cartFee: type === "golf_round" ? optionalNumber(cartFee) : undefined,
+        greenFee:
+          isGolfRound && golfCostInputMode === "breakdown"
+            ? optionalNumber(greenFee)
+            : undefined,
+        caddyFee:
+          isGolfRound && golfCostInputMode === "breakdown"
+            ? optionalNumber(caddyFee)
+            : undefined,
+        cartFee:
+          isGolfRound && golfCostInputMode === "breakdown"
+            ? optionalNumber(cartFee)
+            : undefined,
         includeGreenFeeInSplit:
-          type === "golf_round" ? includeGreenFeeInSplit : undefined,
+          isGolfRound && golfCostInputMode === "breakdown" ? true : undefined,
         includeCaddyFeeInSplit:
-          type === "golf_round" ? includeCaddyFeeInSplit : undefined,
+          isGolfRound && golfCostInputMode === "breakdown" ? true : undefined,
         includeCartFeeInSplit:
-          type === "golf_round" ? includeCartFeeInSplit : undefined,
-        directPrice: isFlight ? undefined : optionalNumber(directPrice),
+          isGolfRound && golfCostInputMode === "breakdown" ? true : undefined,
+        directPrice:
+          isFlight || isGolfRound ? undefined : optionalNumber(directPrice),
         providerPrice:
           isGolfRound || isHotel || isFlight
             ? undefined
@@ -600,14 +667,22 @@ export default function AddTripItemPage() {
         courseId: type === "golf_round" ? selectedCourse?.id : undefined,
         paidByMemberId: isFlight ? undefined : optionalText(paidByMemberId),
         expenseType: isFlight ? undefined : expenseType,
+        costMode,
         participantMemberIds:
           isFlight || expenseType === "PERSONAL"
             ? undefined
-            : participantMemberIds,
+            : sharedParticipantMemberIds,
         visibility,
         visibleToMemberIds:
           visibility === "SELECTED" ? visibleToMemberIds : undefined,
       };
+
+      console.info("Submitting trip item", {
+        tripId,
+        type,
+        payload,
+        selectedCourseId: selectedCourse?.id,
+      });
 
       const res = await fetch(
         `${API_BASE}/trips/${encodeURIComponent(tripId)}/items`,
@@ -622,13 +697,23 @@ export default function AddTripItemPage() {
       );
 
       if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(`HTTP ${res.status} ${res.statusText} ${text}`.trim());
+        throw await tripItemSaveError(res);
       }
 
       nav(`/trips/${tripId}`);
     } catch (e: any) {
-      setErr(e?.message ?? "Failed to add trip item");
+      console.error("Failed to save trip item", {
+        status: e?.status,
+        data: e?.data,
+        message: e?.message,
+        selectedCourseId: selectedCourse?.id,
+      });
+      setErr(
+        friendlyApiErrorMessage(
+          e,
+          e?.message || "Failed to add trip item. Please check the form and try again.",
+        ),
+      );
     } finally {
       setSaving(false);
     }
@@ -677,7 +762,7 @@ export default function AddTripItemPage() {
           <button
             key={option.value}
             type="button"
-            onClick={() => setType(option.value)}
+            onClick={() => updateType(option.value)}
             style={{
               flex: "0 0 auto",
               minWidth: 108,
@@ -980,7 +1065,7 @@ export default function AddTripItemPage() {
 
   const renderCosts = (
     <Card title="Costs" subtitle="Keep shared costs simple.">
-      {!isFlight ? (
+      {!isFlight && !isGolfRound ? (
         <label style={labelStyle}>
           Amount
           <input
@@ -994,75 +1079,97 @@ export default function AddTripItemPage() {
       ) : null}
 
       {isGolfRound ? (
-        <>
-          {[
-            {
-              label: "Greenfee",
-              value: greenFee,
-              onAmountChange: setGreenFee,
-              checked: includeGreenFeeInSplit,
-              onCheckedChange: setIncludeGreenFeeInSplit,
-            },
-            {
-              label: "Caddyfee",
-              value: caddyFee,
-              onAmountChange: setCaddyFee,
-              checked: includeCaddyFeeInSplit,
-              onCheckedChange: setIncludeCaddyFeeInSplit,
-            },
-            {
-              label: "Cartfee",
-              value: cartFee,
-              onAmountChange: setCartFee,
-              checked: includeCartFeeInSplit,
-              onCheckedChange: setIncludeCartFeeInSplit,
-            },
-          ].map((cost) => (
-            <div key={cost.label} style={{ display: "grid", gap: 6 }}>
-              <label style={labelStyle}>
-                {cost.label}
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={cost.value}
-                  onChange={(e) => cost.onAmountChange(e.target.value)}
-                  style={fieldStyle}
-                />
-              </label>
-              <label
+        <div style={{ display: "grid", gap: 10 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {[
+              { value: "package", label: "Package price" },
+              { value: "breakdown", label: "Breakdown" },
+            ].map((option) => {
+              const selected = golfCostInputMode === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() =>
+                    setGolfCostInputMode(option.value as GolfCostInputMode)
+                  }
+                  style={{
+                    minHeight: 40,
+                    padding: "0 13px",
+                    borderRadius: 999,
+                    border: selected
+                      ? `1px solid ${theme.color}`
+                      : "1px solid var(--border)",
+                    background: selected ? theme.soft : "transparent",
+                    color: selected ? "var(--text)" : "var(--sub)",
+                    cursor: "pointer",
+                    fontSize: 12,
+                    fontWeight: 900,
+                  }}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {golfCostInputMode === "package" ? (
+            <label style={labelStyle}>
+              Package price per person
+              <input
+                type="number"
+                inputMode="decimal"
+                value={packagePrice}
+                onChange={(e) => setPackagePrice(e.target.value)}
+                style={fieldStyle}
+              />
+            </label>
+          ) : (
+            <>
+              {[
+                {
+                  label: "Greenfee",
+                  value: greenFee,
+                  onAmountChange: setGreenFee,
+                },
+                {
+                  label: "Caddy fee",
+                  value: caddyFee,
+                  onAmountChange: setCaddyFee,
+                },
+                {
+                  label: "Cart fee",
+                  value: cartFee,
+                  onAmountChange: setCartFee,
+                },
+              ].map((cost) => (
+                <label key={cost.label} style={labelStyle}>
+                  {cost.label}
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={cost.value}
+                    onChange={(e) => cost.onAmountChange(e.target.value)}
+                    style={fieldStyle}
+                  />
+                </label>
+              ))}
+              <div
                 style={{
                   display: "flex",
-                  alignItems: "center",
-                  minHeight: 38,
-                  gap: 8,
-                  color: "var(--sub)",
-                  fontSize: 12,
-                  fontWeight: 850,
+                  justifyContent: "space-between",
+                  gap: 10,
+                  color: "var(--text)",
+                  fontSize: 13,
+                  fontWeight: 950,
                 }}
               >
-                <input
-                  type="checkbox"
-                  checked={cost.checked}
-                  onChange={(e) => cost.onCheckedChange(e.target.checked)}
-                />
-                Include in group total
-              </label>
-            </div>
-          ))}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: 10,
-              color: "var(--text)",
-              fontSize: 13,
-              fontWeight: 950,
-            }}
-          >
-            <span>Organizer total</span>
-            <span>{organizerTotal.toLocaleString()}</span>
-          </div>
-        </>
+                <span>Total per person</span>
+                <span>{golfBreakdownTotal.toLocaleString()}</span>
+              </div>
+            </>
+          )}
+        </div>
       ) : !isFlight ? (
         <>
           <label style={labelStyle}>
@@ -1132,7 +1239,7 @@ export default function AddTripItemPage() {
 
       <div style={{ display: "grid", gap: 8 }}>
         <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 900 }}>
-          Expense type
+          Cost applies to
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {[
@@ -1168,8 +1275,13 @@ export default function AddTripItemPage() {
 
       {expenseType === "SHARED" ? (
         <div style={{ display: "grid", gap: 8 }}>
-          <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 900 }}>
-            Shared with
+          <div style={{ display: "grid", gap: 2 }}>
+            <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 900 }}>
+              Shared with
+            </div>
+            <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 750 }}>
+              These people are included in this cost.
+            </div>
           </div>
           <div style={{ display: "grid", gap: 6 }}>
             {(trip?.members ?? []).map((member) => {
@@ -1205,6 +1317,57 @@ export default function AddTripItemPage() {
           </div>
         </div>
       ) : null}
+
+      <div style={{ display: "grid", gap: 8 }}>
+        <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 900 }}>
+          Cost basis
+        </div>
+        <div style={{ display: "grid", gap: 7 }}>
+          {[
+            {
+              value: "PER_PERSON",
+              label: "Per person",
+              helper: "Amount is charged once for each selected participant.",
+            },
+            {
+              value: "TOTAL",
+              label: "Total for selected people",
+              helper: "Amount is split across selected participants.",
+            },
+          ].map((option) => {
+            const selected = costMode === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setCostMode(option.value as CostMode)}
+                style={{
+                  width: "100%",
+                  minHeight: 54,
+                  padding: "9px 12px",
+                  borderRadius: 14,
+                  border: selected
+                    ? `1px solid ${theme.color}`
+                    : "1px solid var(--border)",
+                  background: selected ? theme.soft : "transparent",
+                  color: "var(--text)",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  display: "grid",
+                  gap: 3,
+                }}
+              >
+                <span style={{ fontSize: 13, fontWeight: 950 }}>
+                  {option.label}
+                </span>
+                <span style={{ color: "var(--sub)", fontSize: 12, fontWeight: 750 }}>
+                  {option.helper}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </Card>
   ) : null;
 
@@ -1589,9 +1752,10 @@ export default function AddTripItemPage() {
 
             {renderTransportTiming}
             {renderDetails}
-            {renderBudget}
+            {isGolfRound ? renderCosts : renderBudget}
+            {isGolfRound ? renderBudget : null}
             {renderVisibility}
-            {renderCosts}
+            {isGolfRound ? null : renderCosts}
 
             <div
               style={{
