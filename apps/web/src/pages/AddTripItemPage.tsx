@@ -3,6 +3,7 @@ import type { CSSProperties, FormEvent, ReactNode } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   BedDouble,
+  Bus,
   Car,
   Flag,
   Plane,
@@ -201,17 +202,21 @@ function itemTheme(type: TripItemType) {
     };
   }
   if (type === "hotel") return { color: "#e66a5c", soft: "rgba(230, 106, 92, 0.08)" };
-  if (type === "transfer" || type === "car_rental") {
-    return { color: "#b9852f", soft: "rgba(185, 133, 47, 0.09)" };
+  if (type === "transfer") {
+    return { color: "#b86f16", soft: "rgba(184, 111, 22, 0.09)" };
   }
-  if (type === "flight") return { color: "#4f86d9", soft: "rgba(79, 134, 217, 0.08)" };
+  if (type === "car_rental") {
+    return { color: "#2f6fb9", soft: "rgba(47, 111, 185, 0.09)" };
+  }
+  if (type === "flight") return { color: "#2f91d8", soft: "rgba(47, 145, 216, 0.08)" };
   return { color: "#7467b8", soft: "rgba(116, 103, 184, 0.08)" };
 }
 
 function itemTitle(type: TripItemType) {
   if (type === "golf_round") return "Add Golf Round";
   if (type === "hotel") return "Add Hotel";
-  if (type === "transfer" || type === "car_rental") return "Add Transport";
+  if (type === "transfer") return "Add Transfer";
+  if (type === "car_rental") return "Add Car Rental";
   if (type === "flight") return "Add Flight";
   if (type === "free_day") return "Add Activity";
   return "Add Note";
@@ -220,16 +225,24 @@ function itemTitle(type: TripItemType) {
 function itemNoun(type: TripItemType) {
   if (type === "golf_round") return "Golf Round";
   if (type === "hotel") return "Hotel";
-  if (type === "transfer" || type === "car_rental") return "Transport";
+  if (type === "transfer") return "Transfer";
+  if (type === "car_rental") return "Car rental";
   if (type === "flight") return "Flight";
   if (type === "free_day") return "Activity";
   return "Note";
 }
 
+function itemSubtitle(type: TripItemType) {
+  if (type === "transfer") return "Airport, hotel or golf transport";
+  if (type === "car_rental") return "Vehicle, minibus or driver";
+  return "";
+}
+
 function itemCta(type: TripItemType) {
   if (type === "golf_round") return "Add Golf Round";
   if (type === "hotel") return "Add Hotel";
-  if (type === "transfer" || type === "car_rental") return "Add Transport";
+  if (type === "transfer") return "Add Transfer";
+  if (type === "car_rental") return "Add Car Rental";
   if (type === "flight") return "Add Flight";
   if (type === "free_day") return "Add Activity";
   return "Add Note";
@@ -238,7 +251,8 @@ function itemCta(type: TripItemType) {
 function itemIcon(type: TripItemType) {
   if (type === "golf_round") return Flag;
   if (type === "hotel") return BedDouble;
-  if (type === "transfer" || type === "car_rental") return Car;
+  if (type === "transfer") return Bus;
+  if (type === "car_rental") return Car;
   if (type === "flight") return Plane;
   return StickyNote;
 }
@@ -1936,6 +1950,11 @@ export default function AddTripItemPage() {
               >
                 {summaryTitle}
               </div>
+              {itemSubtitle(type) ? (
+                <div style={{ color: "var(--sub)", fontSize: 13, fontWeight: 850 }}>
+                  {itemSubtitle(type)}
+                </div>
+              ) : null}
             </>
           )}
           {isGolfRound && selectedCourseLocation ? (

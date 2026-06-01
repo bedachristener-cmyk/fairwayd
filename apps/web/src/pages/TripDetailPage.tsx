@@ -331,7 +331,13 @@ type TimelineDetail = {
   value: string;
 };
 
-type CalendarIndicator = "Golf" | "Hotel" | "Transfer" | "Flight" | "Other";
+type CalendarIndicator =
+  | "Golf"
+  | "Hotel"
+  | "Transfer"
+  | "Car rental"
+  | "Flight"
+  | "Other";
 
 type CalendarSection = "Golf" | "Hotel" | "Transfers / Car" | "Flights" | "Other";
 
@@ -852,7 +858,8 @@ function calendarIndicator(type?: string | null): CalendarIndicator {
 
   if (value === "golf_round" || value === "course") return "Golf";
   if (value === "hotel") return "Hotel";
-  if (value === "transfer" || value === "car_rental") return "Transfer";
+  if (value === "transfer") return "Transfer";
+  if (value === "car_rental") return "Car rental";
   if (value === "flight" || value === "flights") return "Flight";
   return "Other";
 }
@@ -872,9 +879,9 @@ function calendarItemAccent(item: TripItem) {
 
   if (value === "flight" || value === "flights") {
     return {
-      border: "color-mix(in srgb, #2f7fc6 72%, var(--border))",
-      header: "#2f7fc6",
-      rail: "color-mix(in srgb, #2f7fc6 94%, var(--border))",
+      border: "color-mix(in srgb, #2f91d8 72%, var(--border))",
+      header: "#2f91d8",
+      rail: "color-mix(in srgb, #2f91d8 94%, var(--border))",
       headerText: "#fff",
       headerSubText: "rgba(255,255,255,0.78)",
       pill: "Flight",
@@ -903,7 +910,7 @@ function calendarItemAccent(item: TripItem) {
     };
   }
 
-  if (value === "transfer" || value === "car_rental") {
+  if (value === "transfer") {
     return {
       border: "color-mix(in srgb, #b86f16 74%, var(--border))",
       header: "#b86f16",
@@ -911,6 +918,17 @@ function calendarItemAccent(item: TripItem) {
       headerText: "#fff",
       headerSubText: "rgba(255,255,255,0.78)",
       pill: "Transfer",
+    };
+  }
+
+  if (value === "car_rental") {
+    return {
+      border: "color-mix(in srgb, #2f6fb9 74%, var(--border))",
+      header: "#2f6fb9",
+      rail: "color-mix(in srgb, #2f6fb9 96%, var(--border))",
+      headerText: "#fff",
+      headerSubText: "rgba(255,255,255,0.78)",
+      pill: "Car rental",
     };
   }
 
@@ -4224,6 +4242,7 @@ export default function TripDetailPage() {
           Golf: 0,
           Hotel: 0,
           Transfer: 0,
+          "Car rental": 0,
           Flight: 0,
           Other: 0,
         };
@@ -4775,7 +4794,7 @@ export default function TripDetailPage() {
                 position: "absolute",
                 inset: 0,
                 background:
-                  "linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.78))",
+                  "linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.18))",
               }}
             />
           </div>
