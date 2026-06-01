@@ -3002,6 +3002,11 @@ export default function TripDetailPage() {
   const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(
     null,
   );
+  const [itemDocumentUploadFile, setItemDocumentUploadFile] = useState<File | null>(null);
+  const [itemDocumentUploadState, setItemDocumentUploadState] = useState<
+    "idle" | "uploading" | "uploaded" | "failed"
+  >("idle");
+  const [itemDocumentUploadMessage, setItemDocumentUploadMessage] = useState("");
   const [activity, setActivity] = useState<TripActivity[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityErr, setActivityErr] = useState<string | null>(null);
@@ -3351,6 +3356,9 @@ export default function TripDetailPage() {
     event?.preventDefault();
     event?.stopPropagation();
     startEdit(item);
+    setItemDocumentUploadFile(null);
+    setItemDocumentUploadState("idle");
+    setItemDocumentUploadMessage("");
     setActiveView("timeline");
   }
 
@@ -3659,8 +3667,50 @@ export default function TripDetailPage() {
     }
   }
 
+  async function uploadTripDocument(params: {
+    title: string;
+    note?: string;
+    category: TripDocumentCategory;
+    visibility: TripDocumentVisibility;
+    file: File;
+  }) {
+    if (!tripId || !token) throw new Error("Trip is not ready.");
+
+    const form = new FormData();
+    form.append("title", params.title);
+    form.append("category", params.category);
+    form.append("visibility", params.visibility);
+    form.append("note", params.note?.trim() ?? "");
+    form.append("file", params.file);
+
+    const res = await fetch(
+      `${API_BASE}/trips/${encodeURIComponent(tripId)}/documents`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: form,
+      },
+    );
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(
+        tripErrorMessageForResponse(
+          res.status,
+          `HTTP ${res.status} ${res.statusText} ${text}`.trim(),
+        ),
+      );
+    }
+
+    const created = (await res.json()) as TripDocument;
+    setDocuments((current) => [created, ...current]);
+    return created;
+  }
+
   async function uploadDocument() {
-    if (!tripId || !token || !canUploadTripDocuments || uploadingDocument) return;
+    if (!canUploadTripDocuments || uploadingDocument) return;
 
     const title = documentDraft.title.trim();
     if (!title) {
@@ -3677,36 +3727,13 @@ export default function TripDetailPage() {
       setUploadingDocument(true);
       setDocumentsErr(null);
 
-      const form = new FormData();
-      form.append("title", title);
-      form.append("category", documentDraft.category);
-      form.append("visibility", documentDraft.visibility);
-      form.append("note", documentDraft.note.trim());
-      form.append("file", documentDraft.file);
-
-      const res = await fetch(
-        `${API_BASE}/trips/${encodeURIComponent(tripId)}/documents`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: form,
-        },
-      );
-
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(
-          tripErrorMessageForResponse(
-            res.status,
-            `HTTP ${res.status} ${res.statusText} ${text}`.trim(),
-          ),
-        );
-      }
-
-      const created = await res.json();
-      setDocuments((current) => [created, ...current]);
+      await uploadTripDocument({
+        title,
+        note: documentDraft.note,
+        category: documentDraft.category,
+        visibility: documentDraft.visibility,
+        file: documentDraft.file,
+      });
       setDocumentDraft({
         title: "",
         note: "",
@@ -3720,6 +3747,71 @@ export default function TripDetailPage() {
       setDocumentsErr(e?.message ?? "Failed to upload document");
     } finally {
       setUploadingDocument(false);
+    }
+  }
+
+  function documentCategoryForEditItem(): TripDocumentCategory {
+    if (!editDraft) return "GENERAL";
+    const type = String(editDraft.type ?? "").toLowerCase();
+    if (type === "golf_round" || type === "course") return "GOLF";
+    if (type === "hotel") return "HOTEL";
+    if (type === "transfer" || type === "car_rental") return "TRANSFER";
+    if (type === "flight") return "FLIGHT";
+    return "GENERAL";
+  }
+
+  function documentVisibilityForEditItem(): TripDocumentVisibility {
+    return editDraft?.visibility === "PRIVATE" ? "PRIVATE" : "SHARED";
+  }
+
+  async function uploadAndLinkItemDocument(itemId: string) {
+    if (!tripId || !token || !editDraft || !itemDocumentUploadFile) return;
+
+    try {
+      setItemDocumentUploadState("uploading");
+      setItemDocumentUploadMessage("Uploading...");
+      const created = await uploadTripDocument({
+        title: itemDocumentUploadFile.name,
+        note: "Uploaded from trip item",
+        category: documentCategoryForEditItem(),
+        visibility: documentVisibilityForEditItem(),
+        file: itemDocumentUploadFile,
+      });
+      const nextDocumentIds = editDraft.documentIds.includes(created.id)
+        ? editDraft.documentIds
+        : [...editDraft.documentIds, created.id];
+
+      const res = await fetch(
+        `${API_BASE}/trips/${encodeURIComponent(tripId)}/items/${encodeURIComponent(itemId)}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ documentIds: nextDocumentIds }),
+        },
+      );
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(
+          errorMessageForResponse(
+            res.status,
+            `HTTP ${res.status} ${res.statusText} ${text}`.trim(),
+          ),
+        );
+      }
+
+      setEditDraft({ ...editDraft, documentIds: nextDocumentIds });
+      setItemDocumentUploadFile(null);
+      setItemDocumentUploadState("uploaded");
+      setItemDocumentUploadMessage("Uploaded and linked.");
+      await loadTrip();
+      await loadActivity();
+    } catch (e: any) {
+      setItemDocumentUploadState("failed");
+      setItemDocumentUploadMessage(e?.message ?? "Upload failed.");
     }
   }
 
@@ -7509,7 +7601,7 @@ export default function TripDetailPage() {
                             </div>
                             {documents.length === 0 ? (
                               <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
-                                No trip documents yet.
+                                No documents yet. Upload a booking confirmation, voucher or screenshot.
                               </div>
                             ) : (
                               <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
@@ -7567,6 +7659,74 @@ export default function TripDetailPage() {
                                 })}
                               </div>
                             )}
+                            <input
+                              type="file"
+                              accept="application/pdf,image/jpeg,image/png,image/webp"
+                              onChange={(event) => {
+                                setItemDocumentUploadFile(event.target.files?.[0] ?? null);
+                                setItemDocumentUploadState("idle");
+                                setItemDocumentUploadMessage("");
+                              }}
+                              style={{
+                                ...editFieldStyle,
+                                minHeight: 36,
+                                fontSize: 12,
+                                padding: "7px 10px",
+                              }}
+                            />
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                              <button
+                                type="button"
+                                onClick={() => uploadAndLinkItemDocument(item.id)}
+                                disabled={
+                                  !itemDocumentUploadFile ||
+                                  itemDocumentUploadState === "uploading"
+                                }
+                                style={{
+                                  height: 32,
+                                  padding: "0 11px",
+                                  borderRadius: 999,
+                                  border: "1px solid var(--border)",
+                                  background: "transparent",
+                                  color: "var(--text)",
+                                  cursor:
+                                    !itemDocumentUploadFile ||
+                                    itemDocumentUploadState === "uploading"
+                                      ? "default"
+                                      : "pointer",
+                                  opacity:
+                                    !itemDocumentUploadFile ||
+                                    itemDocumentUploadState === "uploading"
+                                      ? 0.65
+                                      : 1,
+                                  fontWeight: 900,
+                                  fontSize: 12,
+                                }}
+                              >
+                                {itemDocumentUploadState === "uploading"
+                                  ? "Uploading..."
+                                  : "Upload document"}
+                              </button>
+                              {itemDocumentUploadMessage ? (
+                                <span
+                                  style={{
+                                    color:
+                                      itemDocumentUploadState === "failed"
+                                        ? "var(--danger)"
+                                        : "var(--sub)",
+                                    fontSize: 12,
+                                    fontWeight: 800,
+                                  }}
+                                >
+                                  {itemDocumentUploadMessage}
+                                </span>
+                              ) : null}
+                            </div>
+                            {editDraft.visibility === "SELECTED" ? (
+                              <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+                                Selected-item document visibility uses shared trip document visibility.
+                              </div>
+                            ) : null}
                           </div>
 
                           <textarea

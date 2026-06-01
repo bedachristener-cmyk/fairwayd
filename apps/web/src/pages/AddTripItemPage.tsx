@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, FormEvent, ReactNode } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
@@ -91,8 +91,17 @@ type TripMember = {
 
 type TripDocument = {
   id: string;
+  tripId?: string;
   title: string;
+  note?: string | null;
+  category?: string;
   fileName: string;
+  fileUrl?: string;
+  mimeType?: string;
+  sizeBytes?: number;
+  uploadedByUserId?: string;
+  createdAt?: string;
+  updatedAt?: string;
   visibility?: "SHARED" | "PRIVATE";
 };
 
@@ -403,6 +412,7 @@ export default function AddTripItemPage() {
   const nav = useNavigate();
   const location = useLocation();
   const { token, user } = useAuth();
+  const documentInputRef = useRef<HTMLInputElement | null>(null);
 
   const [step, setStep] = useState<FormStep>(1);
   const [type, setType] = useState<TripItemType>("golf_round");
@@ -439,6 +449,11 @@ export default function AddTripItemPage() {
     useState<CourseSearchResult | null>(null);
   const [trip, setTrip] = useState<Trip | null>(null);
   const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
+  const [documentUploadFile, setDocumentUploadFile] = useState<File | null>(null);
+  const [documentUploadState, setDocumentUploadState] = useState<
+    "idle" | "uploading" | "uploaded" | "failed"
+  >("idle");
+  const [documentUploadMessage, setDocumentUploadMessage] = useState("");
   const [participantMemberIds, setParticipantMemberIds] = useState<string[]>([]);
   const [budgetParticipantMode, setBudgetParticipantMode] =
     useState<BudgetParticipantMode>("ALL");
@@ -607,6 +622,66 @@ export default function AddTripItemPage() {
     if (nextMode === "own_transport") setReturnToHotel("Own transport");
     if (nextMode === "custom") setReturnToHotel("");
     if (nextMode === "") setReturnToHotel("");
+  }
+
+  function documentCategoryForType(): string {
+    if (type === "golf_round") return "GOLF";
+    if (type === "hotel") return "HOTEL";
+    if (type === "transfer" || type === "car_rental") return "TRANSFER";
+    if (type === "flight") return "FLIGHT";
+    return "GENERAL";
+  }
+
+  function documentVisibilityForItem() {
+    return visibility === "PRIVATE" ? "PRIVATE" : "SHARED";
+  }
+
+  async function uploadRelatedDocument() {
+    if (!tripId || !token || !documentUploadFile || documentUploadState === "uploading") {
+      return;
+    }
+
+    try {
+      setDocumentUploadState("uploading");
+      setDocumentUploadMessage("Uploading...");
+
+      const form = new FormData();
+      form.append("title", documentUploadFile.name);
+      form.append("category", documentCategoryForType());
+      form.append("visibility", documentVisibilityForItem());
+      form.append("note", "Uploaded from trip item");
+      form.append("file", documentUploadFile);
+
+      const res = await fetch(
+        `${API_BASE}/trips/${encodeURIComponent(tripId)}/documents`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: form,
+        },
+      );
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`Upload failed (${res.status} ${res.statusText}) ${text}`.trim());
+      }
+
+      const document = (await res.json()) as TripDocument;
+      setTrip((current) => ({
+        ...(current ?? {}),
+        documents: [document, ...(current?.documents ?? [])],
+      }));
+      setSelectedDocumentIds((current) =>
+        current.includes(document.id) ? current : [...current, document.id],
+      );
+      setDocumentUploadFile(null);
+      if (documentInputRef.current) documentInputRef.current.value = "";
+      setDocumentUploadState("uploaded");
+      setDocumentUploadMessage("Uploaded and linked.");
+    } catch (e: any) {
+      setDocumentUploadState("failed");
+      setDocumentUploadMessage(e?.message || "Upload failed.");
+    }
   }
 
   useEffect(() => {
@@ -1619,7 +1694,7 @@ export default function AddTripItemPage() {
     <Card title="Related documents" subtitle="Attach an existing trip document to this item.">
       {(trip?.documents ?? []).length === 0 ? (
         <div style={sectionIntroStyle}>
-          No trip documents yet. Upload documents from the trip Documents tab first.
+          No documents yet. Upload a booking confirmation, voucher or screenshot.
         </div>
       ) : (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
@@ -1672,6 +1747,58 @@ export default function AddTripItemPage() {
           })}
         </div>
       )}
+      <div style={{ display: "grid", gap: 7 }}>
+        <input
+          ref={documentInputRef}
+          type="file"
+          accept="application/pdf,image/jpeg,image/png,image/webp"
+          onChange={(event) => {
+            setDocumentUploadFile(event.target.files?.[0] ?? null);
+            setDocumentUploadState("idle");
+            setDocumentUploadMessage("");
+          }}
+          style={{
+            ...fieldStyle,
+            minHeight: 38,
+            fontSize: 12,
+            padding: "7px 10px",
+          }}
+        />
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+          <button
+            type="button"
+            onClick={uploadRelatedDocument}
+            disabled={!documentUploadFile || documentUploadState === "uploading"}
+            style={{
+              ...secondaryButtonStyle,
+              minHeight: 36,
+              cursor:
+                !documentUploadFile || documentUploadState === "uploading"
+                  ? "default"
+                  : "pointer",
+              opacity: !documentUploadFile || documentUploadState === "uploading" ? 0.65 : 1,
+            }}
+          >
+            {documentUploadState === "uploading" ? "Uploading..." : "Upload document"}
+          </button>
+          {documentUploadMessage ? (
+            <span
+              style={{
+                color: documentUploadState === "failed" ? "var(--danger)" : "var(--sub)",
+                fontSize: 12,
+                fontWeight: 800,
+              }}
+            >
+              {documentUploadMessage}
+            </span>
+          ) : null}
+        </div>
+        {visibility === "SELECTED" ? (
+          <div style={sectionIntroStyle}>
+            Selected-item document visibility uses shared trip document visibility.
+          </div>
+        ) : null}
+      </div>
     </Card>
   );
 
