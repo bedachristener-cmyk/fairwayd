@@ -12,6 +12,7 @@ import {
   TripDocumentVisibility,
   TripItemCostMode,
   TripItemExpenseType,
+  TripItemPaymentMode,
   TripItemVisibility,
   TripRole,
 } from '@prisma/client';
@@ -24,6 +25,7 @@ import { MoveTripItemDto } from './dto/move-trip-item.dto';
 import { UpdateTripMemberDto } from './dto/update-trip-member.dto';
 import { UpdateTripItemDto } from './dto/update-trip-item.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
+import { TripItemCostDto } from './dto/trip-item-cost.dto';
 
 function startsAtFromDto(date?: string, startTime?: string) {
   if (!date) return undefined;
@@ -138,6 +140,22 @@ const tripItemInclude = {
     include: {
       tripMember: {
         include: tripMemberInclude,
+      },
+    },
+  },
+  costs: {
+    orderBy: { createdAt: 'asc' },
+    include: {
+      paidByMember: {
+        include: tripMemberInclude,
+      },
+      participants: {
+        orderBy: { createdAt: 'asc' },
+        include: {
+          tripMember: {
+            include: tripMemberInclude,
+          },
+        },
       },
     },
   },
@@ -815,6 +833,15 @@ export class TripsService {
       membership.id,
       true,
     );
+    const itemCosts = await this.resolveTripItemCosts(
+      tripId,
+      dto,
+      dto.costs,
+      paidByMemberId,
+      participantMemberIds,
+      membership.id,
+      true,
+    );
     const visibility = cleanTripItemVisibility(dto.visibility);
     const visibleToMemberIds =
       visibility === TripItemVisibility.SELECTED
@@ -869,6 +896,12 @@ export class TripsService {
                 create: participantMemberIds.map((tripMemberId) => ({
                   tripMemberId,
                 })),
+              },
+        costs:
+          itemCosts === undefined
+            ? undefined
+            : {
+                create: itemCosts,
               },
         visibilityMembers:
           visibility === TripItemVisibility.SELECTED
@@ -932,6 +965,18 @@ export class TripsService {
       membership.id,
       dto.expenseType !== undefined,
     );
+    const itemCosts =
+      dto.costs === undefined
+        ? undefined
+        : await this.resolveTripItemCosts(
+            tripId,
+            dto,
+            dto.costs,
+            effectivePaidByMemberId,
+            participantMemberIds,
+            membership.id,
+            false,
+          );
     const visibility =
       dto.visibility === undefined
         ? undefined
@@ -1022,6 +1067,13 @@ export class TripsService {
                 create: participantMemberIds.map((tripMemberId) => ({
                   tripMemberId,
                 })),
+              },
+        costs:
+          itemCosts === undefined
+            ? undefined
+            : {
+                deleteMany: {},
+                create: itemCosts,
               },
         visibilityMembers: shouldReplaceVisibilityMembers
           ? {
@@ -1429,6 +1481,122 @@ export class TripsService {
     });
 
     return members.map((member) => member.id);
+  }
+
+  private hasLegacyCostInput(dto: {
+    amount?: number;
+    baseAmount?: number;
+    greenFee?: number;
+    directPrice?: number;
+    caddyFee?: number;
+    cartFee?: number;
+    providerPrice?: number;
+  }) {
+    return [
+      dto.amount,
+      dto.baseAmount,
+      dto.greenFee,
+      dto.directPrice,
+      dto.caddyFee,
+      dto.cartFee,
+      dto.providerPrice,
+    ].some((value) => typeof value === 'number' && Number.isFinite(value));
+  }
+
+  private defaultPaymentMode(paidByMemberId?: string | null) {
+    return paidByMemberId
+      ? TripItemPaymentMode.PAID_BY_ONE
+      : TripItemPaymentMode.EACH_PAYS_OWN;
+  }
+
+  private async resolveTripItemCosts(
+    tripId: string,
+    itemDto: {
+      title?: string;
+      type?: string;
+      amount?: number;
+      currency?: string;
+      exchangeRate?: number;
+      baseAmount?: number;
+      costMode?: TripItemCostMode;
+      greenFee?: number;
+      directPrice?: number;
+      caddyFee?: number;
+      cartFee?: number;
+      providerPrice?: number;
+    },
+    costs: TripItemCostDto[] | undefined,
+    fallbackPaidByMemberId: string | null | undefined,
+    fallbackParticipantMemberIds: string[] | undefined,
+    currentMemberId: string,
+    includeLegacyFallback: boolean,
+  ): Promise<Prisma.TripItemCostCreateWithoutTripItemInput[] | undefined> {
+    const sourceCosts =
+      costs ??
+      (includeLegacyFallback && this.hasLegacyCostInput(itemDto)
+        ? [
+            {
+              label: itemDto.title,
+              amount: itemDto.amount,
+              currency: itemDto.currency,
+              exchangeRate: itemDto.exchangeRate,
+              baseAmount: itemDto.baseAmount,
+              costMode: itemDto.costMode ?? defaultTripItemCostMode(itemDto.type),
+              paymentMode: this.defaultPaymentMode(fallbackPaidByMemberId),
+              paidByMemberId: fallbackPaidByMemberId ?? undefined,
+              participantMemberIds: fallbackParticipantMemberIds,
+            } satisfies TripItemCostDto,
+          ]
+        : undefined);
+
+    if (sourceCosts === undefined) return undefined;
+
+    const resolvedCosts: Prisma.TripItemCostCreateWithoutTripItemInput[] = [];
+
+    for (const cost of sourceCosts) {
+      const paidByMemberId =
+        cost.paidByMemberId === undefined
+          ? fallbackPaidByMemberId
+          : await this.resolveOptionalTripMemberId(tripId, cost.paidByMemberId);
+      const explicitParticipantMemberIds = await this.resolveParticipantMemberIds(
+        tripId,
+        cost,
+      );
+      const participantMemberIds =
+        explicitParticipantMemberIds ??
+        fallbackParticipantMemberIds ??
+        (await this.resolveExpenseParticipantMemberIds(
+          tripId,
+          {},
+          TripItemExpenseType.SHARED,
+          paidByMemberId,
+          currentMemberId,
+          true,
+        ));
+
+      resolvedCosts.push({
+        label: cost.label?.trim() || itemDto.title?.trim() || null,
+        amount: cost.amount ?? null,
+        currency: cost.currency?.trim() || itemDto.currency?.trim() || null,
+        exchangeRate: cost.exchangeRate ?? null,
+        baseAmount: cost.baseAmount ?? null,
+        costMode: cost.costMode ?? itemDto.costMode ?? defaultTripItemCostMode(itemDto.type),
+        paymentMode: cost.paymentMode ?? this.defaultPaymentMode(paidByMemberId),
+        paidByMember:
+          paidByMemberId === null || paidByMemberId === undefined
+            ? undefined
+            : {
+                connect: { id: paidByMemberId },
+              },
+        participants: {
+          create: (participantMemberIds ?? []).map((tripMemberId) => ({
+            tripMemberId,
+          })),
+        },
+      });
+    }
+
+    return resolvedCosts;
   }
 
   private async resolveLinkableDocumentIds(

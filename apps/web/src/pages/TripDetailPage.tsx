@@ -1386,12 +1386,12 @@ function formatSettlementBalanceLine(
     return `${memberDisplayName(member)} owes ${amountText}`;
   }
 
-  return `${memberDisplayName(member)} is settled`;
+  return `${memberDisplayName(member)} is even`;
 }
 
 function settlementSummaryText(trip: Trip | null, summary: SettlementSummary) {
   const lines = [
-    `${trip?.title || "Trip"} settlement summary`,
+    `${trip?.title || "Trip"} trip balances`,
     "",
   ];
 
@@ -1406,7 +1406,7 @@ function settlementSummaryText(trip: Trip | null, summary: SettlementSummary) {
       );
 
       if (activeRows.length === 0) {
-        lines.push("- Everyone is settled.");
+        lines.push("- Everyone is even.");
       } else {
         for (const row of activeRows) {
           lines.push(
@@ -1441,7 +1441,7 @@ function settlementSummaryText(trip: Trip | null, summary: SettlementSummary) {
 
   lines.push("", "Suggested payments:");
   if (summary.transfers.length === 0) {
-    lines.push("- Everyone is settled.");
+    lines.push("- Everyone is even.");
   } else {
     for (const transfer of summary.transfers) {
       lines.push(
@@ -3551,7 +3551,7 @@ export default function TripDetailPage() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "Trip settlement",
+          title: "Trip balances",
           text,
         });
         return;
@@ -8646,7 +8646,7 @@ export default function TripDetailPage() {
                 ...sectionMutedCardStyle,
               }}
             >
-              Settlement is disabled until exchange rates are available for all
+              Trip balances are disabled until exchange rates are available for all
               currencies.
             </div>
           ) : null}
@@ -8661,7 +8661,7 @@ export default function TripDetailPage() {
             <div style={{ display: "grid", gap: 2 }}>
               <div style={sectionTitleTextStyle}>Cost list by item</div>
               <div style={sectionSubtitleTextStyle}>
-                Recorded costs only. Settlements are not calculated here.
+                Recorded costs only. Who owes what is not calculated here.
               </div>
             </div>
 
@@ -8826,7 +8826,7 @@ export default function TripDetailPage() {
             >
               <div style={{ minWidth: 0, display: "grid", gap: 2 }}>
                 <div style={sectionTitleTextStyle}>
-                  Settlement
+                  Trip balances
                 </div>
                 <div style={sectionSubtitleTextStyle}>
                   Frontend estimate from paid-by, participants, and item costs
@@ -8891,8 +8891,8 @@ export default function TripDetailPage() {
               <div
                 style={{ padding: 10, color: "var(--sub)", fontSize: 12, lineHeight: 1.35, ...sectionMutedCardStyle }}
               >
-                Settlement combines multiple currencies. Check source costs before
-                settling balances.
+                Trip balances combine multiple currencies. Check source costs before
+                deciding who owes what.
               </div>
             ) : null}
 
@@ -8929,7 +8929,7 @@ export default function TripDetailPage() {
                             lineHeight: 1.35,
                           }}
                         >
-                          Everyone is settled.
+                          Everyone is even.
                         </div>
                       ) : (
                         activeRows.map((row) => (
@@ -9004,7 +9004,7 @@ export default function TripDetailPage() {
               <div
                 style={{ padding: 12, color: "var(--sub)", fontSize: 13, lineHeight: 1.4, ...sectionMutedCardStyle }}
               >
-                Add trip members and costs to see settlement balances.
+                Add trip members and costs to see trip balances.
               </div>
             ) : (
               <div style={{ display: "grid", gap: 8 }}>
@@ -9014,7 +9014,7 @@ export default function TripDetailPage() {
                       ? "Gets back"
                       : row.balance < -0.005
                         ? "Owes"
-                        : "Settled";
+                        : "Even";
 
                   return (
                     <div
@@ -9051,8 +9051,8 @@ export default function TripDetailPage() {
                             whiteSpace: "nowrap",
                           }}
                         >
-                          {balanceLabel === "Settled"
-                            ? "Settled"
+                          {balanceLabel === "Even"
+                            ? "Even"
                             : `${balanceLabel} ${settlementAmount(row.balance, settlementSummary)}`}
                         </div>
                       </div>
@@ -9115,7 +9115,7 @@ export default function TripDetailPage() {
                   <div
                     style={{ padding: 10, color: "var(--sub)", fontSize: 12, lineHeight: 1.35, ...sectionMutedCardStyle }}
                   >
-                    Everyone is settled.
+                    Everyone is even.
                   </div>
                 ) : (
                   <div style={{ display: "grid", gap: 7 }}>

@@ -9,6 +9,7 @@ import {
   IsOptional,
   IsString,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
 import {
   TripItemCostMode,
@@ -16,6 +17,7 @@ import {
   TripItemType,
   TripItemVisibility,
 } from '@prisma/client';
+import { TripItemCostDto } from './trip-item-cost.dto';
 
 export class UpdateTripItemDto {
   @IsOptional()
@@ -160,6 +162,13 @@ export class UpdateTripItemDto {
   @IsArray()
   @IsString({ each: true })
   participantUserIds?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => TripItemCostDto)
+  costs?: TripItemCostDto[];
+
   @IsOptional()
   @IsEnum(TripItemVisibility)
   visibility?: TripItemVisibility;

@@ -464,7 +464,9 @@ model TripMember {
   createdAt                DateTime                   @default(now())
   updatedAt                DateTime                   @updatedAt
   itemParticipations       TripItemParticipant[]
+  itemCostParticipations   TripItemCostParticipant[]
   itemVisibilitySelections TripItemVisibilityMember[]
+  paidItemCosts            TripItemCost[]             @relation("TripItemCostPayer")
   paidItems                TripItem[]                 @relation("TripItemPayer")
   trip                     Trip                       @relation(fields: [tripId], references: [id], onDelete: Cascade)
   user                     User?                      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -516,6 +518,7 @@ model TripItem {
   createdBy              User                       @relation("TripItemCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
   paidByMember           TripMember?                @relation("TripItemPayer", fields: [paidByMemberId], references: [id])
   participants           TripItemParticipant[]
+  costs                  TripItemCost[]
   trip                   Trip                       @relation(fields: [tripId], references: [id], onDelete: Cascade)
   documentLinks          TripItemDocument[]
   visibilityMembers      TripItemVisibilityMember[]
@@ -526,6 +529,39 @@ model TripItem {
   @@index([paidByMemberId])
   @@index([visibility])
   @@index([tripId, sortOrder])
+}
+
+model TripItemCost {
+  id             String                    @id @default(cuid())
+  tripItemId     String
+  label          String?
+  amount         Float?
+  currency       String?
+  exchangeRate   Float?
+  baseAmount     Float?
+  costMode       TripItemCostMode          @default(TOTAL)
+  paymentMode    TripItemPaymentMode       @default(PAID_BY_ONE)
+  paidByMemberId String?
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+  tripItem       TripItem                  @relation(fields: [tripItemId], references: [id], onDelete: Cascade)
+  paidByMember   TripMember?               @relation("TripItemCostPayer", fields: [paidByMemberId], references: [id])
+  participants   TripItemCostParticipant[]
+
+  @@index([tripItemId])
+  @@index([paidByMemberId])
+}
+
+model TripItemCostParticipant {
+  id           String       @id @default(cuid())
+  costId       String
+  tripMemberId String
+  createdAt    DateTime     @default(now())
+  cost         TripItemCost @relation(fields: [costId], references: [id], onDelete: Cascade)
+  tripMember   TripMember   @relation(fields: [tripMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([costId, tripMemberId])
+  @@index([tripMemberId])
 }
 
 model TripItemDocument {
@@ -657,6 +693,11 @@ enum TripItemExpenseType {
 enum TripItemCostMode {
   PER_PERSON
   TOTAL
+}
+
+enum TripItemPaymentMode {
+  PAID_BY_ONE
+  EACH_PAYS_OWN
 }
 
 enum TripActivityType {
