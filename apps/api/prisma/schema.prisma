@@ -429,6 +429,7 @@ model TripDocument {
   updatedAt        DateTime               @updatedAt
   trip             Trip                   @relation(fields: [tripId], references: [id], onDelete: Cascade)
   uploadedBy       User                   @relation(fields: [uploadedByUserId], references: [id], onDelete: Cascade)
+  itemLinks        TripItemDocument[]
 
   @@index([tripId])
   @@index([uploadedByUserId])
@@ -516,6 +517,7 @@ model TripItem {
   paidByMember           TripMember?                @relation("TripItemPayer", fields: [paidByMemberId], references: [id])
   participants           TripItemParticipant[]
   trip                   Trip                       @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  documentLinks          TripItemDocument[]
   visibilityMembers      TripItemVisibilityMember[]
 
   @@index([tripId])
@@ -524,6 +526,18 @@ model TripItem {
   @@index([paidByMemberId])
   @@index([visibility])
   @@index([tripId, sortOrder])
+}
+
+model TripItemDocument {
+  id             String       @id @default(cuid())
+  tripItemId     String
+  tripDocumentId String
+  createdAt      DateTime     @default(now())
+  tripItem       TripItem     @relation(fields: [tripItemId], references: [id], onDelete: Cascade)
+  tripDocument   TripDocument @relation(fields: [tripDocumentId], references: [id], onDelete: Cascade)
+
+  @@unique([tripItemId, tripDocumentId])
+  @@index([tripDocumentId])
 }
 
 model TripItemVisibilityMember {

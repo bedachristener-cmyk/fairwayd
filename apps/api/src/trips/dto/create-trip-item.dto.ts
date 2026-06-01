@@ -165,4 +165,9 @@ export class CreateTripItemDto {
   @IsArray()
   @IsString({ each: true })
   visibleToMemberIds?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  documentIds?: string[];
 }

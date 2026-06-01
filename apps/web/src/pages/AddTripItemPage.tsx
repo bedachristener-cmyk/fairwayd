@@ -26,6 +26,7 @@ type ReturnToHotelMode = "" | "after_round" | "custom" | "own_transport";
 type ExpenseType = "PERSONAL" | "SHARED";
 type CostMode = "PER_PERSON" | "TOTAL";
 type GolfCostInputMode = "package" | "breakdown";
+type BudgetParticipantMode = "ALL" | "SELECTED";
 
 type FormStep = 1 | 2;
 
@@ -88,8 +89,16 @@ type TripMember = {
   } | null;
 };
 
+type TripDocument = {
+  id: string;
+  title: string;
+  fileName: string;
+  visibility?: "SHARED" | "PRIVATE";
+};
+
 type Trip = {
   members?: TripMember[];
+  documents?: TripDocument[];
 };
 
 const fieldStyle: CSSProperties = {
@@ -166,7 +175,7 @@ function Card({
     <section
       style={{
         ...sectionCardStyle,
-        borderLeft: "4px solid var(--accent-strong)",
+        borderLeft: "4px solid var(--item-accent, var(--accent-strong))",
       }}
     >
       <SectionHeader title={title} subtitle={subtitle} />
@@ -263,8 +272,44 @@ function amountValue(value: string) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function formatAmountInput(value: number) {
+  if (!Number.isFinite(value)) return "";
+  return String(Math.round(value * 100) / 100);
+}
+
 function validDateParam(value: string | null) {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
+}
+
+function dateFromInput(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+
+  const date = new Date(
+    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
+  );
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function dateInputFromDate(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function addDaysToInputDate(value: string, days: number) {
+  const date = dateFromInput(value);
+  if (!date || !Number.isFinite(days)) return "";
+
+  date.setUTCDate(date.getUTCDate() + days);
+  return dateInputFromDate(date);
+}
+
+function nightsBetweenDates(checkIn: string, checkOut: string) {
+  const start = dateFromInput(checkIn);
+  const end = dateFromInput(checkOut);
+  if (!start || !end) return "";
+
+  const days = Math.round((end.getTime() - start.getTime()) / 86400000);
+  return days > 0 ? String(days) : "";
 }
 
 function defaultCostModeForType(type: TripItemType): CostMode {
@@ -364,6 +409,7 @@ export default function AddTripItemPage() {
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [hotelNights, setHotelNights] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [departureFromHotelTime, setDepartureFromHotelTime] = useState("");
@@ -392,7 +438,10 @@ export default function AddTripItemPage() {
   const [selectedCourse, setSelectedCourse] =
     useState<CourseSearchResult | null>(null);
   const [trip, setTrip] = useState<Trip | null>(null);
+  const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
   const [participantMemberIds, setParticipantMemberIds] = useState<string[]>([]);
+  const [budgetParticipantMode, setBudgetParticipantMode] =
+    useState<BudgetParticipantMode>("ALL");
   const [visibility, setVisibility] = useState<TripItemVisibility>("GROUP");
   const [visibleToMemberIds, setVisibleToMemberIds] = useState<string[]>([]);
   const [paidByMemberId, setPaidByMemberId] = useState("");
@@ -434,6 +483,23 @@ export default function AddTripItemPage() {
 
   function updateDate(nextDate: string) {
     setDate(nextDate);
+    if (type === "hotel") {
+      if (nextDate && hotelNights) {
+        setEndDate(addDaysToInputDate(nextDate, Number(hotelNights)));
+        return;
+      }
+
+      if (nextDate && endDate && endDate > nextDate) {
+        const nextNights = nightsBetweenDates(nextDate, endDate);
+        setHotelNights(nextNights);
+        updateHotelCostsForNights(nextNights);
+      } else if (endDate && nextDate && endDate <= nextDate) {
+        setEndDate("");
+        setHotelNights("");
+      }
+      return;
+    }
+
     setEndDate((currentEndDate) =>
       currentEndDate && nextDate && currentEndDate < nextDate
         ? nextDate
@@ -442,7 +508,61 @@ export default function AddTripItemPage() {
   }
 
   function updateEndDate(nextEndDate: string) {
+    if (type === "hotel") {
+      const validEndDate = nextEndDate && date && nextEndDate <= date ? "" : nextEndDate;
+      const nextNights = date && validEndDate ? nightsBetweenDates(date, validEndDate) : "";
+      setEndDate(validEndDate);
+      setHotelNights(nextNights);
+      updateHotelCostsForNights(nextNights);
+      return;
+    }
+
     setEndDate(nextEndDate && date && nextEndDate < date ? date : nextEndDate);
+  }
+
+  function updateHotelNights(nextNights: string) {
+    const digitsOnly = nextNights.replace(/[^\d]/g, "");
+    const normalizedNights = Number(digitsOnly) > 0 ? String(Number(digitsOnly)) : "";
+    setHotelNights(normalizedNights);
+
+    const nights = Number(normalizedNights);
+    if (date && Number.isFinite(nights) && nights > 0) {
+      setEndDate(addDaysToInputDate(date, nights));
+    }
+    updateHotelCostsForNights(normalizedNights);
+  }
+
+  function updateHotelCostsForNights(nextNights: string) {
+    const nights = Number(nextNights);
+    if (!Number.isFinite(nights) || nights <= 0) return;
+
+    const nightlyCost = optionalNumber(directPrice);
+    const totalCost = optionalNumber(amount);
+    if (nightlyCost !== undefined) {
+      setAmount(formatAmountInput(nightlyCost * nights));
+    } else if (totalCost !== undefined) {
+      setDirectPrice(formatAmountInput(totalCost / nights));
+    }
+  }
+
+  function updateHotelTotalCost(nextAmount: string) {
+    setAmount(nextAmount);
+
+    const totalCost = optionalNumber(nextAmount);
+    const nights = optionalNumber(hotelNights);
+    if (totalCost !== undefined && nights && nights > 0) {
+      setDirectPrice(formatAmountInput(totalCost / nights));
+    }
+  }
+
+  function updateHotelNightlyCost(nextAmount: string) {
+    setDirectPrice(nextAmount);
+
+    const nightlyCost = optionalNumber(nextAmount);
+    const nights = optionalNumber(hotelNights);
+    if (nightlyCost !== undefined && nights && nights > 0) {
+      setAmount(formatAmountInput(nightlyCost * nights));
+    }
   }
 
   function updateType(nextType: TripItemType) {
@@ -509,7 +629,8 @@ export default function AddTripItemPage() {
         if (cancelled) return;
 
         const members = Array.isArray(data?.members) ? data.members : [];
-        setTrip({ members });
+        const documents = Array.isArray(data?.documents) ? data.documents : [];
+        setTrip({ members, documents });
         setParticipantMemberIds(members.map((member: TripMember) => member.id));
         setVisibleToMemberIds(members.map((member: TripMember) => member.id));
         const currentMember = members.find(
@@ -598,16 +719,29 @@ export default function AddTripItemPage() {
       return;
     }
 
+    if (isHotel && !endDate) {
+      setErr("Check-in and check-out dates are required for hotel stays.");
+      return;
+    }
+
     try {
       setSaving(true);
       setErr(null);
 
       const normalizedEndDate =
         !isGolfRound && endDate && date && endDate < date ? date : endDate;
+      const hotelNightCount = optionalNumber(hotelNights);
+      const hotelTotalAmount =
+        optionalNumber(amount) ??
+        (hotelNightCount && hotelNightCount > 0 && optionalNumber(directPrice) !== undefined
+          ? optionalNumber(directPrice)! * hotelNightCount
+          : undefined);
       const itemAmount = isGolfRound
         ? golfCostInputMode === "package"
           ? optionalNumber(packagePrice)
           : golfBreakdownTotal
+        : isHotel
+          ? hotelTotalAmount
         : optionalNumber(amount);
       const sharedParticipantMemberIds =
         expenseType === "SHARED" && participantMemberIds.length > 0
@@ -675,6 +809,7 @@ export default function AddTripItemPage() {
         visibility,
         visibleToMemberIds:
           visibility === "SELECTED" ? visibleToMemberIds : undefined,
+        documentIds: selectedDocumentIds,
       };
 
       console.info("Submitting trip item", {
@@ -865,22 +1000,56 @@ export default function AddTripItemPage() {
         />
       </label>
 
-      {!isGolfRound ? (
-        <label style={{ ...labelStyle, flex: "1 1 160px", minWidth: 0 }}>
-          {isFlight ? "Arrival date" : "End date"}
-          <input
-            type="date"
-            value={endDate}
-            min={date || undefined}
-            onChange={(e) => updateEndDate(e.target.value)}
-            style={fieldStyle}
-          />
+      {isHotel ? (
+        <>
+          <label style={{ ...labelStyle, flex: "0.75 1 110px", minWidth: 0 }}>
+            Nights
+            <input
+              type="number"
+              inputMode="numeric"
+              min="1"
+              value={hotelNights}
+              onChange={(e) => updateHotelNights(e.target.value)}
+              style={fieldStyle}
+            />
+          </label>
+          <label style={{ ...labelStyle, flex: "1 1 160px", minWidth: 0 }}>
+            Check-out
+            <input
+              type="date"
+              value={endDate}
+              min={date ? addDaysToInputDate(date, 1) : undefined}
+              onChange={(e) => updateEndDate(e.target.value)}
+              required
+              style={fieldStyle}
+            />
+          </label>
+        </>
+      ) : !isGolfRound ? (
+        <>
+          <label style={{ ...labelStyle, flex: "1 1 160px", minWidth: 0 }}>
+            {isFlight ? "Arrival date" : "End date"}
+            <input
+              type="date"
+              value={endDate}
+              min={date || undefined}
+              onChange={(e) => updateEndDate(e.target.value)}
+              style={fieldStyle}
+            />
+          </label>
           {dateRangeTypes.has(type) ? (
-            <span style={{ color: "var(--sub)", fontSize: 12 }}>
+            <span
+              style={{
+                flex: "1 0 100%",
+                color: "var(--sub)",
+                fontSize: 12,
+                fontWeight: 750,
+              }}
+            >
               Optional for multi-day plans.
             </span>
           ) : null}
-        </label>
+        </>
       ) : null}
     </div>
   );
@@ -1020,8 +1189,8 @@ export default function AddTripItemPage() {
 
   const renderDetails = (
     <Card
-      title="Booked Via"
-      subtitle={isGolfRound ? "Keep the round source clear." : "Add the provider or booking source."}
+      title="Booked via / Provider / Notes"
+      subtitle="Add the provider, booking source and notes."
     >
       {!isFlight ? (
         <label style={labelStyle}>
@@ -1064,8 +1233,37 @@ export default function AddTripItemPage() {
   );
 
   const renderCosts = (
-    <Card title="Costs" subtitle="Keep shared costs simple.">
-      {!isFlight && !isGolfRound ? (
+    <Card title="Costs" subtitle="Add the item cost before choosing who is included.">
+      {isHotel ? (
+        <div style={{ display: "grid", gap: 9 }}>
+          <label style={labelStyle}>
+            Cost for entire stay
+            <input
+              type="number"
+              inputMode="decimal"
+              value={amount}
+              onChange={(e) => updateHotelTotalCost(e.target.value)}
+              style={fieldStyle}
+            />
+            <span style={sectionIntroStyle}>
+              Total cost for the selected rooms and dates.
+            </span>
+          </label>
+          <label style={labelStyle}>
+            Cost per night
+            <input
+              type="number"
+              inputMode="decimal"
+              value={directPrice}
+              onChange={(e) => updateHotelNightlyCost(e.target.value)}
+              style={fieldStyle}
+            />
+            <span style={sectionIntroStyle}>
+              Used to estimate the total stay cost.
+            </span>
+          </label>
+        </div>
+      ) : !isFlight && !isGolfRound ? (
         <label style={labelStyle}>
           Amount
           <input
@@ -1170,10 +1368,10 @@ export default function AddTripItemPage() {
             </>
           )}
         </div>
-      ) : !isFlight ? (
+      ) : !isFlight && !isHotel ? (
         <>
           <label style={labelStyle}>
-            {isHotel ? "Amount per day" : "Direct price"}
+            Direct price
             <input
               type="number"
               inputMode="decimal"
@@ -1220,7 +1418,7 @@ export default function AddTripItemPage() {
   );
 
   const renderBudget = (trip?.members ?? []).length > 0 && !isFlight ? (
-    <Card title="Budget" subtitle="Set who paid and who shares this cost.">
+    <Card title="Budget" subtitle="Set who paid and who is included in this cost.">
       <label style={labelStyle}>
         Paid by
         <select
@@ -1275,46 +1473,92 @@ export default function AddTripItemPage() {
 
       {expenseType === "SHARED" ? (
         <div style={{ display: "grid", gap: 8 }}>
-          <div style={{ display: "grid", gap: 2 }}>
-            <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 900 }}>
-              Shared with
-            </div>
-            <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 750 }}>
-              These people are included in this cost.
-            </div>
+          <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 900 }}>
+            Shared with
           </div>
-          <div style={{ display: "grid", gap: 6 }}>
-            {(trip?.members ?? []).map((member) => {
-              const checked = participantMemberIds.includes(member.id);
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {[
+              { value: "ALL", label: "All members" },
+              { value: "SELECTED", label: "Select members" },
+            ].map((option) => {
+              const selected = budgetParticipantMode === option.value;
               return (
-                <label
-                  key={member.id}
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => {
+                    setBudgetParticipantMode(option.value as BudgetParticipantMode);
+                    if (option.value === "ALL") {
+                      setParticipantMemberIds(
+                        (trip?.members ?? []).map((member) => member.id),
+                      );
+                    }
+                  }}
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    minHeight: 34,
-                    gap: 8,
-                    color: "var(--text)",
-                    fontSize: 13,
-                    fontWeight: 800,
+                    minHeight: 40,
+                    padding: "0 13px",
+                    borderRadius: 999,
+                    border: selected
+                      ? `1px solid ${theme.color}`
+                      : "1px solid var(--border)",
+                    background: selected ? theme.soft : "transparent",
+                    color: selected ? "var(--text)" : "var(--sub)",
+                    cursor: "pointer",
+                    fontSize: 12,
+                    fontWeight: 900,
                   }}
                 >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={(e) => {
-                      setParticipantMemberIds((current) =>
-                        e.target.checked
-                          ? [...current, member.id]
-                          : current.filter((id) => id !== member.id),
-                      );
-                    }}
-                  />
-                  <span>{memberDisplayName(member)}</span>
-                </label>
+                  {option.label}
+                </button>
               );
             })}
           </div>
+
+          {budgetParticipantMode === "SELECTED" ? (
+            <div style={{ display: "grid", gap: 7 }}>
+              <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 750 }}>
+                These people are included in this cost.
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                {(trip?.members ?? []).map((member) => {
+                  const checked = participantMemberIds.includes(member.id);
+                  return (
+                    <label
+                      key={member.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        minHeight: 36,
+                        gap: 7,
+                        padding: "0 10px",
+                        borderRadius: 999,
+                        border: checked
+                          ? `1px solid ${theme.color}`
+                          : "1px solid var(--border)",
+                        background: checked ? theme.soft : "transparent",
+                        color: "var(--text)",
+                        fontSize: 12,
+                        fontWeight: 850,
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          setParticipantMemberIds((current) =>
+                            e.target.checked
+                              ? [...current, member.id]
+                              : current.filter((id) => id !== member.id),
+                          );
+                        }}
+                      />
+                      <span>{memberDisplayName(member)}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -1370,6 +1614,66 @@ export default function AddTripItemPage() {
       </div>
     </Card>
   ) : null;
+
+  const renderRelatedDocuments = (
+    <Card title="Related documents" subtitle="Attach an existing trip document to this item.">
+      {(trip?.documents ?? []).length === 0 ? (
+        <div style={sectionIntroStyle}>
+          No trip documents yet. Upload documents from the trip Documents tab first.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+          {(trip?.documents ?? []).map((document) => {
+            const selected = selectedDocumentIds.includes(document.id);
+            return (
+              <label
+                key={document.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 7,
+                  minHeight: 36,
+                  maxWidth: "100%",
+                  padding: "0 10px",
+                  borderRadius: 999,
+                  border: selected
+                    ? `1px solid ${theme.color}`
+                    : "1px solid var(--border)",
+                  background: selected ? theme.soft : "transparent",
+                  color: "var(--text)",
+                  fontSize: 12,
+                  fontWeight: 850,
+                  overflow: "hidden",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={selected}
+                  onChange={(event) => {
+                    setSelectedDocumentIds((current) =>
+                      event.target.checked
+                        ? [...current, document.id]
+                        : current.filter((id) => id !== document.id),
+                    );
+                  }}
+                />
+                <span
+                  style={{
+                    minWidth: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {document.title || document.fileName}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      )}
+    </Card>
+  );
 
   const renderVisibility = (
     <Card title="Visibility" subtitle="Choose who can see this item.">
@@ -1553,6 +1857,7 @@ export default function AddTripItemPage() {
   return (
     <div
       style={{
+        "--item-accent": theme.color,
         width: "100%",
         maxWidth: 720,
         margin: "0 auto",
@@ -1563,7 +1868,7 @@ export default function AddTripItemPage() {
         gap: 10,
         background:
           "linear-gradient(180deg, color-mix(in srgb, var(--card) 92%, transparent), transparent 180px)",
-      }}
+      } as CSSProperties & { "--item-accent": string }}
     >
       <div style={{ display: "grid", gap: 6 }}>
         <div
@@ -1751,11 +2056,11 @@ export default function AddTripItemPage() {
             </Card>
 
             {renderTransportTiming}
-            {renderDetails}
-            {isGolfRound ? renderCosts : renderBudget}
-            {isGolfRound ? renderBudget : null}
+            {renderCosts}
+            {renderBudget}
+            {renderRelatedDocuments}
             {renderVisibility}
-            {isGolfRound ? null : renderCosts}
+            {renderDetails}
 
             <div
               style={{

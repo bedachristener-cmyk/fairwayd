@@ -149,6 +149,18 @@ const tripItemInclude = {
       },
     },
   },
+  documentLinks: {
+    orderBy: { createdAt: 'asc' },
+    include: {
+      tripDocument: {
+        include: {
+          uploadedBy: {
+            select: tripUserSelect,
+          },
+        },
+      },
+    },
+  },
 } satisfies Prisma.TripItemInclude;
 
 const tripItemOrderBy = [
@@ -161,6 +173,12 @@ const tripItemOrderBy = [
 const tripDocumentInclude = {
   uploadedBy: {
     select: tripUserSelect,
+  },
+  itemLinks: {
+    orderBy: { createdAt: 'asc' },
+    select: {
+      tripItemId: true,
+    },
   },
 } satisfies Prisma.TripDocumentInclude;
 
@@ -252,10 +270,10 @@ export class TripsService {
     });
   }
 
-  findMine(userId: string) {
+  async findMine(userId: string) {
     const visibleItemsWhere = visibleTripItemWhereForUser(userId);
 
-    return this.prisma.trip.findMany({
+    const trips = await this.prisma.trip.findMany({
       where: {
         members: {
           some: {
@@ -284,6 +302,11 @@ export class TripsService {
         createdAt: 'desc',
       },
     });
+
+    return trips.map((trip) => ({
+      ...trip,
+      items: this.filterTripItemsDocumentsForUser(trip.items, userId),
+    }));
   }
 
   async findOne(tripId: string, userId: string) {
@@ -303,6 +326,16 @@ export class TripsService {
           orderBy: tripItemOrderBy,
           include: tripItemInclude,
         },
+        documents: {
+          where: {
+            OR: [
+              { visibility: TripDocumentVisibility.SHARED },
+              { uploadedByUserId: userId },
+            ],
+          },
+          orderBy: { createdAt: 'desc' },
+          include: tripDocumentInclude,
+        },
       },
     });
 
@@ -310,7 +343,10 @@ export class TripsService {
       throw new NotFoundException('Trip not found');
     }
 
-    return trip;
+    return {
+      ...trip,
+      items: this.filterTripItemsDocumentsForUser(trip.items, userId),
+    };
   }
 
   async getOrCreateInvite(tripId: string, userId: string) {
@@ -484,7 +520,10 @@ export class TripsService {
       (name) => `${name} updated trip details`,
     );
 
-    return trip;
+    return {
+      ...trip,
+      items: this.filterTripItemsDocumentsForUser(trip.items, userId),
+    };
   }
 
   async delete(tripId: string, userId: string) {
@@ -781,6 +820,11 @@ export class TripsService {
       visibility === TripItemVisibility.SELECTED
         ? await this.resolveVisibilityMemberIds(tripId, dto.visibleToMemberIds)
         : [];
+    const documentIds = await this.resolveLinkableDocumentIds(
+      tripId,
+      userId,
+      dto.documentIds,
+    );
 
     const item = await this.prisma.tripItem.create({
       data: {
@@ -834,6 +878,14 @@ export class TripsService {
                 })),
               }
             : undefined,
+        documentLinks:
+          documentIds.length > 0
+            ? {
+                create: documentIds.map((tripDocumentId) => ({
+                  tripDocumentId,
+                })),
+              }
+            : undefined,
       },
       include: tripItemInclude,
     });
@@ -848,7 +900,7 @@ export class TripsService {
       );
     }
 
-    return item;
+    return this.filterTripItemDocumentsForUser(item, userId);
   }
 
   async updateItem(
@@ -898,6 +950,10 @@ export class TripsService {
       visibleToMemberIds !== undefined ||
       visibility === TripItemVisibility.PRIVATE ||
       visibility === TripItemVisibility.GROUP;
+    const documentIds =
+      dto.documentIds === undefined
+        ? undefined
+        : await this.resolveLinkableDocumentIds(tripId, userId, dto.documentIds);
 
     const item = await this.prisma.tripItem.update({
       where: {
@@ -978,6 +1034,15 @@ export class TripsService {
                   : [],
             }
           : undefined,
+        documentLinks:
+          documentIds === undefined
+            ? undefined
+            : {
+                deleteMany: {},
+                create: documentIds.map((tripDocumentId) => ({
+                  tripDocumentId,
+                })),
+              },
       },
       include: tripItemInclude,
     });
@@ -993,7 +1058,7 @@ export class TripsService {
       );
     }
 
-    return item;
+    return this.filterTripItemDocumentsForUser(item, userId);
   }
 
   async deleteItem(tripId: string, itemId: string, userId: string) {
@@ -1087,7 +1152,7 @@ export class TripsService {
       }),
     ]);
 
-    return this.prisma.tripItem.findMany({
+    const movedItems = await this.prisma.tripItem.findMany({
       where: sameDateWhere,
       orderBy: [
         { sortOrder: 'asc' },
@@ -1097,6 +1162,8 @@ export class TripsService {
       ],
       include: tripItemInclude,
     });
+
+    return this.filterTripItemsDocumentsForUser(movedItems, userId);
   }
 
   private async createTripActivity(
@@ -1362,6 +1429,60 @@ export class TripsService {
     });
 
     return members.map((member) => member.id);
+  }
+
+  private async resolveLinkableDocumentIds(
+    tripId: string,
+    userId: string,
+    documentIds?: string[],
+  ) {
+    const uniqueIds = [
+      ...new Set((documentIds ?? []).map((id) => id.trim()).filter(Boolean)),
+    ];
+    if (uniqueIds.length === 0) return [];
+
+    const documents = await this.prisma.tripDocument.findMany({
+      where: {
+        id: { in: uniqueIds },
+        tripId,
+        OR: [
+          { visibility: TripDocumentVisibility.SHARED },
+          { uploadedByUserId: userId },
+        ],
+      },
+      select: { id: true },
+    });
+
+    if (documents.length !== uniqueIds.length) {
+      throw new BadRequestException('One or more trip documents are unavailable');
+    }
+
+    return uniqueIds;
+  }
+
+  private filterTripItemsDocumentsForUser<T extends { documentLinks?: any[] }>(
+    items: T[],
+    userId: string,
+  ) {
+    return items.map((item) => this.filterTripItemDocumentsForUser(item, userId));
+  }
+
+  private filterTripItemDocumentsForUser<T extends { documentLinks?: any[] }>(
+    item: T,
+    userId: string,
+  ) {
+    if (!Array.isArray(item.documentLinks)) return item;
+
+    return {
+      ...item,
+      documentLinks: item.documentLinks.filter((link) => {
+        const document = link?.tripDocument;
+        return (
+          document?.visibility === TripDocumentVisibility.SHARED ||
+          document?.uploadedByUserId === userId
+        );
+      }),
+    };
   }
 
 

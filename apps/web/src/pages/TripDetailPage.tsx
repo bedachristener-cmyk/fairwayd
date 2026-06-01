@@ -67,6 +67,7 @@ type TripItem = {
   visibility?: TripItemVisibility | null;
   participants?: TripItemParticipant[];
   visibilityMembers?: TripItemVisibilityMember[];
+  documentLinks?: TripItemDocumentLink[];
   course?: {
     id: string;
     name?: string | null;
@@ -84,6 +85,7 @@ type Trip = {
   coverImageUrl?: string | null;
   members?: TripMember[];
   items?: TripItem[];
+  documents?: TripDocument[];
 };
 
 type TripRole = "OWNER" | "ADMIN" | "MEMBER";
@@ -116,6 +118,13 @@ type TripItemVisibilityMember = {
   id: string;
   tripMemberId: string;
   tripMember?: TripMember | null;
+};
+
+type TripItemDocumentLink = {
+  id?: string;
+  tripDocumentId?: string;
+  tripItemId?: string;
+  tripDocument?: TripDocument | null;
 };
 
 type UserSearchResult = {
@@ -157,6 +166,7 @@ type EditDraft = {
   participantMemberIds: string[];
   visibility: TripItemVisibility;
   visibleToMemberIds: string[];
+  documentIds: string[];
 };
 
 type TripView =
@@ -278,6 +288,7 @@ type TripDocument = {
     name?: string | null;
     avatarUrl?: string | null;
   } | null;
+  itemLinks?: { tripItemId: string }[];
 };
 
 type TripDocumentDraft = {
@@ -1436,6 +1447,11 @@ function isFlightItem(item: TripItem) {
   return value === "flight" || value === "flights";
 }
 
+function isHotelItem(item: TripItem) {
+  const value = String(item.type ?? "").toLowerCase();
+  return value === "hotel" || value === "stay" || value === "accommodation";
+}
+
 function flightTitle(flightNumber: string) {
   const value = flightNumber.trim();
   if (!value) return "Flight";
@@ -1484,8 +1500,39 @@ function itemBudgetAmount(item: TripItem) {
   return settlementItemAmount(item);
 }
 
+function itemStayNights(item: TripItem) {
+  if (!isHotelItem(item) || !item.endDate) return 0;
+
+  const startValue = itemDateValue(item);
+  if (!startValue) return 0;
+
+  const start = new Date(startValue);
+  const end = new Date(item.endDate);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0;
+
+  const nights = Math.round(
+    (end.getTime() - start.getTime()) / 86400000,
+  );
+  return nights > 0 ? nights : 0;
+}
+
 function pricingParts(item: TripItem) {
   if (isFlightItem(item)) return [];
+
+  if (isHotelItem(item)) {
+    const total = itemBudgetAmount(item);
+    const nights = itemStayNights(item);
+    const nightly =
+      nights > 0 && total > 0
+        ? total / nights
+        : finiteAmount(item.directPrice);
+
+    return [
+      nights ? `${nights} night${nights === 1 ? "" : "s"}` : "",
+      total ? `${formatMoney(total, item.currency)} total` : "",
+      nightly ? `${formatMoney(nightly, item.currency)} / night` : "",
+    ].filter(Boolean);
+  }
 
   if (isGolfItem(item)) {
     const green = finiteAmount(item.greenFee ?? item.directPrice);
@@ -1656,21 +1703,21 @@ function directionsUrlForItem(item: TripItem) {
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`;
 }
 
-function documentCategoryForItem(item: TripItem): TripDocumentCategory | null {
-  const type = String(item.type ?? "").toLowerCase();
+function linkedDocumentsForItem(item: TripItem, documents: TripDocument[] = []) {
+  const linked = (item.documentLinks ?? [])
+    .map((link) => link.tripDocument)
+    .filter((document): document is TripDocument => Boolean(document));
+  if (linked.length > 0) return linked;
 
-  if (type === "flight" || type === "flights") return "FLIGHT";
-  if (type === "hotel") return "HOTEL";
-  if (type === "transfer" || type === "car_rental") return "TRANSFER";
-  if (type === "golf_round" || type === "course") return "GOLF";
-  return null;
+  return documents.filter((document) =>
+    (document.itemLinks ?? []).some((link) => link.tripItemId === item.id),
+  );
 }
 
-function relatedDocumentForItem(item: TripItem, documents: TripDocument[]) {
-  const category = documentCategoryForItem(item);
-  if (!category) return null;
-
-  return documents.find((document) => document.category === category) ?? null;
+function documentLinkLabel(documents: TripDocument[]) {
+  if (documents.length === 0) return "";
+  if (documents.length === 1) return documents[0].title || documents[0].fileName;
+  return `${documents.length} documents`;
 }
 
 function timelineDetails(item: TripItem) {
@@ -2160,6 +2207,7 @@ function TripCalendarView({
   onAddItem,
   canEditItem,
   onEditItem,
+  onOpenDocuments,
   onOpenCourse,
 }: {
   days: CalendarDay[];
@@ -2170,7 +2218,8 @@ function TripCalendarView({
   canEditTrip: boolean;
   onAddItem: (date?: string) => void;
   canEditItem: (item: TripItem) => boolean;
-  onEditItem: (item: TripItem) => void;
+  onEditItem: (item: TripItem, event?: React.MouseEvent) => void;
+  onOpenDocuments: () => void;
   onOpenCourse: (courseId: string) => void;
 }) {
   const selected = days.find((day) => day.key === selectedDay) ?? days[0];
@@ -2462,6 +2511,8 @@ function TripCalendarView({
                 const prices = pricingParts(item);
                 const participants = participantSummary(item, members);
                 const payer = payerSummary(item);
+                const linkedDocuments = linkedDocumentsForItem(item);
+                const documentLabel = documentLinkLabel(linkedDocuments);
                 const canEditCurrentItem = canEditItem(item);
                 const title =
                   (isGolf && courseName) ||
@@ -2717,7 +2768,7 @@ function TripCalendarView({
 
                       {isGolf ? <GolfTimingChips item={item} /> : null}
 
-                      {item.provider || item.bookingRef || participants || payer || item.expenseType || prices.length > 0 ? (
+                      {item.provider || item.bookingRef || participants || payer || item.expenseType || prices.length > 0 || documentLabel ? (
                         <div
                           style={{
                             display: "flex",
@@ -2759,6 +2810,16 @@ function TripCalendarView({
                               {price}
                             </span>
                           ))}
+                          {documentLabel ? (
+                            <button
+                              type="button"
+                              className="fw-pill fw-pill--meta fw-pill--action"
+                              onClick={onOpenDocuments}
+                              style={{ cursor: "pointer" }}
+                            >
+                              {documentLabel}
+                            </button>
+                          ) : null}
                         </div>
                       ) : null}
 
@@ -2792,7 +2853,7 @@ function TripCalendarView({
                         <button
                           type="button"
                           className="fw-pill fw-pill--meta fw-pill--action"
-                          onClick={() => onEditItem(item)}
+                          onClick={(event) => onEditItem(item, event)}
                           style={{
                             width: "fit-content",
                             cursor: "pointer",
@@ -3069,6 +3130,7 @@ export default function TripDetailPage() {
       const data = (await res.json()) as Trip;
       const cachedAt = writeCachedTrip(tripId, data);
       setTrip(data);
+      if (Array.isArray(data.documents)) setDocuments(data.documents);
       setCachedTripAt(cachedAt);
       setShowingCachedTrip(false);
       setRefreshTripMessage(null);
@@ -3252,6 +3314,9 @@ export default function TripDetailPage() {
       item.visibilityMembers && item.visibilityMembers.length > 0
         ? item.visibilityMembers.map((visibilityMember) => visibilityMember.tripMemberId)
         : (trip?.members ?? []).map((member) => member.id);
+    const documentIds = linkedDocumentsForItem(item, documents).map(
+      (document) => document.id,
+    );
     setEditDraft({
       type: item.type || "note",
       title: item.title || "",
@@ -3278,7 +3343,15 @@ export default function TripDetailPage() {
       participantMemberIds,
       visibility: item.visibility || "GROUP",
       visibleToMemberIds,
+      documentIds,
     });
+  }
+
+  function openItemEdit(item: TripItem, event?: React.MouseEvent) {
+    event?.preventDefault();
+    event?.stopPropagation();
+    startEdit(item);
+    setActiveView("timeline");
   }
 
   function startTripEdit() {
@@ -3680,6 +3753,7 @@ export default function TripDetailPage() {
       setDocuments((current) =>
         current.filter((document) => document.id !== documentId),
       );
+      await loadTrip();
       await loadActivity();
     } catch (e: any) {
       setDocumentsErr(e?.message ?? "Failed to delete document");
@@ -3924,6 +3998,7 @@ export default function TripDetailPage() {
               editDraft.visibility === "SELECTED"
                 ? editDraft.visibleToMemberIds
                 : undefined,
+            documentIds: editDraft.documentIds,
           }),
         },
       );
@@ -4922,10 +4997,13 @@ export default function TripDetailPage() {
               const title = tripItemTitle(item);
               const dateBlock = eventDateBlockParts(dateKey(item));
               const canEditCurrentItem = canEditTripItem(item);
+              const linkedDocuments = linkedDocumentsForItem(item, documents);
+              const documentLabel = documentLinkLabel(linkedDocuments);
               const hasMetaActions = Boolean(
                 participants ||
                   mapUrl ||
                   directionsUrl ||
+                  documentLabel ||
                   item.expenseType ||
                   canEditCurrentItem,
               );
@@ -5135,6 +5213,16 @@ export default function TripDetailPage() {
                       >
                         {expenseTypeLabel(item)}
                       </span>
+                      {documentLabel ? (
+                        <button
+                          type="button"
+                          className="fw-pill fw-pill--meta fw-pill--action"
+                          onClick={() => setActiveView("documents")}
+                          style={{ width: "fit-content", cursor: "pointer" }}
+                        >
+                          {documentLabel}
+                        </button>
+                      ) : null}
                       {mapUrl || directionsUrl || canEditCurrentItem ? (
                         <div
                           style={{
@@ -5175,7 +5263,7 @@ export default function TripDetailPage() {
                           {canEditCurrentItem ? (
                             <button
                               type="button"
-                              onClick={() => startEdit(item)}
+                              onClick={(event) => openItemEdit(item, event)}
                               className="fw-pill fw-pill--meta"
                               style={{
                                 height: 30,
@@ -5260,8 +5348,9 @@ export default function TripDetailPage() {
                 .join(" - ");
               const mapUrl = mapUrlForItem(item);
               const websiteUrl = normalizeWebsite(item.course?.website);
-              const relatedDocument = relatedDocumentForItem(item, documents);
-              const hasActions = Boolean(mapUrl || websiteUrl || relatedDocument);
+              const linkedDocuments = linkedDocumentsForItem(item, documents);
+              const documentLabel = documentLinkLabel(linkedDocuments);
+              const hasActions = Boolean(mapUrl || websiteUrl || documentLabel);
 
               return (
                 <article
@@ -5466,19 +5555,18 @@ export default function TripDetailPage() {
                           Website
                         </a>
                       ) : null}
-                      {relatedDocument ? (
-                        <a
+                      {documentLabel ? (
+                        <button
+                          type="button"
                           className="fw-pill fw-pill--meta fw-pill--action"
-                          href={fileUrl(relatedDocument.fileUrl)}
-                          target="_blank"
-                          rel="noreferrer"
+                          onClick={() => setActiveView("documents")}
                           style={{
-                            textDecoration: "none",
+                            cursor: "pointer",
                             whiteSpace: "nowrap",
                           }}
                         >
-                          Document
-                        </a>
+                          {documentLabel}
+                        </button>
                       ) : null}
                     </div>
                   ) : null}
@@ -6418,6 +6506,8 @@ export default function TripDetailPage() {
                 const time = formatTimeRange(item);
                 const dateRange = formatDateRange(item);
                 const details = timelineDetails(item);
+                const linkedDocuments = linkedDocumentsForItem(item, documents);
+                const documentLabel = documentLinkLabel(linkedDocuments);
                 const participantText = participantSummary(
                   item,
                   trip?.members ?? [],
@@ -7404,6 +7494,81 @@ export default function TripDetailPage() {
                             </>
                           ) : null}
 
+                          <div
+                            style={{
+                              display: "grid",
+                              gap: 7,
+                              padding: 10,
+                              borderRadius: 14,
+                              border: "1px solid var(--border)",
+                              background: "color-mix(in srgb, var(--bg) 54%, var(--card))",
+                            }}
+                          >
+                            <div style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
+                              Related documents
+                            </div>
+                            {documents.length === 0 ? (
+                              <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+                                No trip documents yet.
+                              </div>
+                            ) : (
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                                {documents.map((document) => {
+                                  const selected = editDraft.documentIds.includes(document.id);
+                                  return (
+                                    <label
+                                      key={document.id}
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 7,
+                                        minHeight: 34,
+                                        maxWidth: "100%",
+                                        padding: "0 10px",
+                                        borderRadius: 999,
+                                        border: selected
+                                          ? "1px solid var(--accent-strong)"
+                                          : "1px solid var(--border)",
+                                        background: selected
+                                          ? "var(--accent-soft)"
+                                          : "transparent",
+                                        color: "var(--text)",
+                                        fontSize: 12,
+                                        fontWeight: 850,
+                                        overflow: "hidden",
+                                      }}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={selected}
+                                        onChange={(event) =>
+                                          setEditDraft({
+                                            ...editDraft,
+                                            documentIds: event.target.checked
+                                              ? [...editDraft.documentIds, document.id]
+                                              : editDraft.documentIds.filter(
+                                                  (id) => id !== document.id,
+                                                ),
+                                          })
+                                        }
+                                      />
+                                      <span
+                                        style={{
+                                          minWidth: 0,
+                                          overflow: "hidden",
+                                          textOverflow: "ellipsis",
+                                          whiteSpace: "nowrap",
+                                        }}
+                                      >
+                                        {document.title || document.fileName}
+                                      </span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+
                           <textarea
                             value={editDraft.notes}
                             onChange={(e) =>
@@ -7570,7 +7735,7 @@ export default function TripDetailPage() {
                               ))}
                             </div>
 
-                            {prices.length > 0 || participantText || payerText || item.expenseType ? (
+                            {prices.length > 0 || participantText || payerText || item.expenseType || documentLabel ? (
                               <div
                                 style={{
                                   display: "flex",
@@ -7604,6 +7769,16 @@ export default function TripDetailPage() {
                                   <span className="fw-pill fw-pill--meta">
                                     {costModeLabel(item)}
                                   </span>
+                                ) : null}
+                                {documentLabel ? (
+                                  <button
+                                    type="button"
+                                    className="fw-pill fw-pill--meta fw-pill--action"
+                                    onClick={() => setActiveView("documents")}
+                                    style={{ cursor: "pointer" }}
+                                  >
+                                    {documentLabel}
+                                  </button>
                                 ) : null}
                               </div>
                             ) : null}
@@ -7675,7 +7850,7 @@ export default function TripDetailPage() {
                               {canEditCurrentItem ? (
                                 <button
                                   type="button"
-                                  onClick={() => startEdit(item)}
+                                  onClick={(event) => openItemEdit(item, event)}
                                   disabled={deletingItemId === item.id}
                                   className="fw-pill fw-pill--meta"
                                   style={{
@@ -7732,7 +7907,8 @@ export default function TripDetailPage() {
             if (tripId) nav(addItemPath(date));
           }}
           canEditItem={canEditTripItem}
-          onEditItem={startEdit}
+          onEditItem={openItemEdit}
+          onOpenDocuments={() => setActiveView("documents")}
           onOpenCourse={(courseId) => nav(`/courses/${courseId}`)}
         />
       ) : activeView === "documents" ? (
