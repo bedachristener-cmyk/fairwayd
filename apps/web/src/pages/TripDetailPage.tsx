@@ -175,21 +175,9 @@ type EditDraft = {
   endTime: string;
   provider: string;
   notes: string;
-  greenFee: string;
-  caddyFee: string;
-  cartFee: string;
-  includeGreenFeeInSplit: boolean;
-  includeCaddyFeeInSplit: boolean;
-  includeCartFeeInSplit: boolean;
-  directPrice: string;
-  providerPrice: string;
-  currency: string;
   locationName: string;
   address: string;
   bookingRef: string;
-  paidByMemberId: string;
-  expenseType: ExpenseType;
-  participantMemberIds: string[];
   visibility: TripItemVisibility;
   visibleToMemberIds: string[];
   documentIds: string[];
@@ -3516,10 +3504,6 @@ export default function TripDetailPage() {
   function startEdit(item: TripItem) {
     setErr(null);
     setEditingItemId(item.id);
-    const participantMemberIds =
-      item.participants && item.participants.length > 0
-        ? item.participants.map((participant) => participant.tripMemberId)
-        : (trip?.members ?? []).map((member) => member.id);
     const visibleToMemberIds =
       item.visibilityMembers && item.visibilityMembers.length > 0
         ? item.visibilityMembers.map((visibilityMember) => visibilityMember.tripMemberId)
@@ -3536,21 +3520,9 @@ export default function TripDetailPage() {
       endTime: item.endTime || "",
       provider: item.provider || "",
       notes: item.notes || "",
-      greenFee: numberInputValue(item.greenFee ?? item.directPrice),
-      caddyFee: numberInputValue(item.caddyFee),
-      cartFee: numberInputValue(item.cartFee),
-      includeGreenFeeInSplit: item.includeGreenFeeInSplit !== false,
-      includeCaddyFeeInSplit: item.includeCaddyFeeInSplit !== false,
-      includeCartFeeInSplit: item.includeCartFeeInSplit !== false,
-      directPrice: numberInputValue(item.directPrice),
-      providerPrice: numberInputValue(item.providerPrice),
-      currency: item.currency || "CHF",
       locationName: item.locationName || "",
       address: item.address || "",
       bookingRef: item.bookingRef || "",
-      paidByMemberId: item.paidByMemberId || item.paidByMember?.id || "",
-      expenseType: item.expenseType || "SHARED",
-      participantMemberIds,
       visibility: item.visibility || "GROUP",
       visibleToMemberIds,
       documentIds,
@@ -7786,7 +7758,7 @@ export default function TripDetailPage() {
                             }
                             placeholder={
                               editIsHotel
-                                ? "Breakfast included/excluded, direct vs provider comparison, room type, cancellation details"
+                                ? "Breakfast included/excluded, room type, cancellation details"
                                 : "Notes"
                             }
                             rows={4}
@@ -9315,7 +9287,7 @@ export default function TripDetailPage() {
                             className="fw-pill fw-pill--meta fw-pill--action"
                             style={{ height: 28, cursor: "pointer" }}
                           >
-                            {isExpanded ? "Done" : "Edit"}
+                            {isExpanded ? "Close" : "Edit"}
                           </button>
                           <button
                             type="button"
@@ -9544,32 +9516,32 @@ export default function TripDetailPage() {
                 {costLabelExamplesForItemType(budgetEditingItem.type).join(", ")}.
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              <button
-                type="button"
-                onClick={addBudgetDraft}
-                className="fw-pill fw-pill--meta fw-pill--action"
-                style={{ height: 32, cursor: "pointer" }}
-              >
-                Add cost
-              </button>
-              <button
-                type="button"
-                onClick={saveBudgetEdit}
-                disabled={Boolean(savingBudgetItemId)}
-                style={{
-                  height: 32,
-                  padding: "0 12px",
-                  borderRadius: 999,
-                  border: "1px solid var(--border)",
-                  background: "var(--text)",
-                  color: "var(--bg)",
-                  cursor: savingBudgetItemId ? "default" : "pointer",
-                  fontWeight: 900,
-                  fontSize: 12,
-                }}
-              >
-                {savingBudgetItemId ? "Saving..." : "Save budget"}
-              </button>
+                <button
+                  type="button"
+                  onClick={addBudgetDraft}
+                  className="fw-pill fw-pill--meta fw-pill--action"
+                  style={{ height: 32, cursor: "pointer" }}
+                >
+                  Add cost
+                </button>
+                <button
+                  type="button"
+                  onClick={saveBudgetEdit}
+                  disabled={Boolean(savingBudgetItemId)}
+                  style={{
+                    height: 32,
+                    padding: "0 12px",
+                    borderRadius: 999,
+                    border: "1px solid var(--border)",
+                    background: "var(--text)",
+                    color: "var(--bg)",
+                    cursor: savingBudgetItemId ? "default" : "pointer",
+                    fontWeight: 900,
+                    fontSize: 12,
+                  }}
+                >
+                  {savingBudgetItemId ? "Saving..." : "Save costs"}
+                </button>
               </div>
             </div>
           </div>
