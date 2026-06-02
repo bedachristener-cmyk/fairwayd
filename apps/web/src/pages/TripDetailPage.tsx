@@ -1504,11 +1504,6 @@ function isFlightItem(item: TripItem) {
   return value === "flight" || value === "flights";
 }
 
-function isHotelItem(item: TripItem) {
-  const value = String(item.type ?? "").toLowerCase();
-  return value === "hotel" || value === "stay" || value === "accommodation";
-}
-
 function flightTitle(flightNumber: string) {
   const value = flightNumber.trim();
   if (!value) return "Flight";
@@ -1555,82 +1550,6 @@ function itemBudgetAmount(item: TripItem) {
   const baseAmount = finiteAmount(item.baseAmount);
   if (baseAmount > 0) return baseAmount;
   return settlementItemAmount(item);
-}
-
-function itemStayNights(item: TripItem) {
-  if (!isHotelItem(item) || !item.endDate) return 0;
-
-  const startValue = itemDateValue(item);
-  if (!startValue) return 0;
-
-  const start = new Date(startValue);
-  const end = new Date(item.endDate);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0;
-
-  const nights = Math.round(
-    (end.getTime() - start.getTime()) / 86400000,
-  );
-  return nights > 0 ? nights : 0;
-}
-
-function pricingParts(item: TripItem) {
-  if (isFlightItem(item)) return [];
-
-  if (isHotelItem(item)) {
-    const total = itemBudgetAmount(item);
-    const nights = itemStayNights(item);
-    const nightly =
-      nights > 0 && total > 0
-        ? total / nights
-        : finiteAmount(item.directPrice);
-
-    return [
-      nights ? `${nights} night${nights === 1 ? "" : "s"}` : "",
-      total ? `${formatMoney(total, item.currency)} total` : "",
-      nightly ? `${formatMoney(nightly, item.currency)} / night` : "",
-    ].filter(Boolean);
-  }
-
-  if (isGolfItem(item)) {
-    const green = finiteAmount(item.greenFee ?? item.directPrice);
-    const caddy = finiteAmount(item.caddyFee);
-    const cart = finiteAmount(item.cartFee);
-
-    return [
-      green
-        ? `Greenfee ${formatMoney(green, item.currency)}${
-            item.includeGreenFeeInSplit === false ? " excluded" : ""
-          }`
-        : "",
-      item.providerPrice
-        ? `Provider ${formatMoney(item.providerPrice, item.currency)}`
-        : "",
-      caddy
-        ? `Caddy ${formatMoney(caddy, item.currency)}${
-            item.includeCaddyFeeInSplit === false ? " excluded" : ""
-          }`
-        : "",
-      cart
-        ? `Cart ${formatMoney(cart, item.currency)}${
-            item.includeCartFeeInSplit === false ? " excluded" : ""
-          }`
-        : "",
-      item.greenFee && item.directPrice
-        ? `Other direct ${formatMoney(item.directPrice, item.currency)}`
-        : "",
-    ].filter(Boolean);
-  }
-
-  return [
-    item.directPrice
-      ? `Direct ${formatMoney(item.directPrice, item.currency)}`
-      : "",
-    item.providerPrice
-      ? `Provider ${formatMoney(item.providerPrice, item.currency)}`
-      : "",
-    item.caddyFee ? `Caddy ${formatMoney(item.caddyFee, item.currency)}` : "",
-    item.cartFee ? `Cart ${formatMoney(item.cartFee, item.currency)}` : "",
-  ].filter(Boolean);
 }
 
 function dateInputValue(item: TripItem) {
@@ -1856,11 +1775,6 @@ function optionalNumber(value: string) {
 
   const n = Number(text);
   return Number.isFinite(n) ? n : undefined;
-}
-
-function amountValue(value: string) {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
 }
 
 function errorMessageForResponse(status: number, fallback: string) {
@@ -2799,9 +2713,6 @@ function TripCalendarView({
                 const time = formatTimeRange(item);
                 const checkInDate = isHotel ? formatItemDate(item.date) : "";
                 const checkOutDate = isHotel ? formatItemDate(item.endDate) : "";
-                const prices = pricingParts(item);
-                const participants = participantSummary(item, members);
-                const payer = payerSummary(item);
                 const linkedDocuments = linkedDocumentsForItem(item);
                 const documentLabel = documentLinkLabel(linkedDocuments);
                 const canEditCurrentItem = canEditItem(item);
@@ -3059,7 +2970,7 @@ function TripCalendarView({
 
                       {isGolf ? <GolfTimingChips item={item} /> : null}
 
-                      {item.provider || item.bookingRef || participants || payer || item.expenseType || prices.length > 0 || documentLabel ? (
+                      {item.provider || item.bookingRef || documentLabel ? (
                         <div
                           style={{
                             display: "flex",
@@ -3078,29 +2989,6 @@ function TripCalendarView({
                               Booking {item.bookingRef}
                             </span>
                           ) : null}
-                          {participants ? (
-                            <span className="fw-pill fw-pill--meta fw-pill--info">
-                              {participants}
-                            </span>
-                          ) : null}
-                          {payer ? (
-                            <span className="fw-pill fw-pill--meta fw-pill--info">
-                              Paid by {payer}
-                            </span>
-                          ) : null}
-                          <span className="fw-pill fw-pill--meta fw-pill--info">
-                            {expenseTypeLabel(item)}
-                          </span>
-                          {prices.length > 0 ? (
-                            <span className="fw-pill fw-pill--meta fw-pill--info">
-                              {costModeLabel(item)}
-                            </span>
-                          ) : null}
-                          {prices.map((price) => (
-                            <span key={price} className="fw-pill fw-pill--meta fw-pill--info">
-                              {price}
-                            </span>
-                          ))}
                           {documentLabel ? (
                             <button
                               type="button"
@@ -3681,7 +3569,7 @@ export default function TripDetailPage() {
   function newBudgetDraft(item: TripItem): BudgetCostDraft {
     return {
       localId: `new-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      label: item.title || itemTypeLabel(item.type),
+      label: "",
       amount: "",
       currency: trip?.baseCurrency || item.currency || "CHF",
       exchangeRate: "",
@@ -4556,26 +4444,8 @@ export default function TripDetailPage() {
             provider: optionalText(editDraft.provider),
             bookingRef: isFlightEdit ? optionalText(editDraft.bookingRef) : undefined,
             notes: optionalText(editDraft.notes),
-            greenFee: isFlightEdit ? undefined : optionalNumber(editDraft.greenFee),
-            caddyFee: isFlightEdit ? undefined : optionalNumber(editDraft.caddyFee),
-            cartFee: isFlightEdit ? undefined : optionalNumber(editDraft.cartFee),
-            includeGreenFeeInSplit: editDraft.includeGreenFeeInSplit,
-            includeCaddyFeeInSplit: editDraft.includeCaddyFeeInSplit,
-            includeCartFeeInSplit: editDraft.includeCartFeeInSplit,
-            directPrice: isFlightEdit ? undefined : optionalNumber(editDraft.directPrice),
-            providerPrice:
-              isGolfEdit || editDraft.type === "hotel" || isFlightEdit
-                ? undefined
-                : optionalNumber(editDraft.providerPrice),
-            currency: isFlightEdit ? undefined : optionalText(editDraft.currency),
             locationName: isFlightEdit ? optionalText(editDraft.locationName) : undefined,
             address: isFlightEdit ? optionalText(editDraft.address) : undefined,
-            paidByMemberId: isFlightEdit ? undefined : optionalText(editDraft.paidByMemberId),
-            expenseType: isFlightEdit ? undefined : editDraft.expenseType,
-            participantMemberIds:
-              isFlightEdit || editDraft.expenseType === "PERSONAL"
-                ? undefined
-                : editDraft.participantMemberIds,
             visibility: editDraft.visibility,
             visibleToMemberIds:
               editDraft.visibility === "SELECTED"
@@ -5141,6 +5011,9 @@ export default function TripDetailPage() {
   const atmosphereCoverUrl = trip?.coverImageUrl ? fileUrl(trip.coverImageUrl) : "";
   const budgetEditingItem =
     trip?.items?.find((item) => item.id === budgetEditingItemId) ?? null;
+  const budgetEditingItemType = String(budgetEditingItem?.type ?? "").toLowerCase();
+  const budgetEditingItemIsTransport =
+    budgetEditingItemType === "transfer" || budgetEditingItemType === "car_rental";
 
   return (
     <div className="fw-page">
@@ -7088,17 +6961,11 @@ export default function TripDetailPage() {
 
             <div style={{ display: "grid", gap: 10 }}>
               {items.map((item, itemIndex) => {
-                const prices = pricingParts(item);
                 const time = formatTimeRange(item);
                 const dateRange = formatDateRange(item);
                 const details = timelineDetails(item);
                 const linkedDocuments = linkedDocumentsForItem(item, documents);
                 const documentLabel = documentLinkLabel(linkedDocuments);
-                const participantText = participantSummary(
-                  item,
-                  trip?.members ?? [],
-                );
-                const payerText = payerSummary(item);
                 const courseId = item.course?.id ?? item.courseId;
                 const courseName = item.course?.name;
                 const itemType = String(item.type ?? "").toLowerCase();
@@ -7118,17 +6985,6 @@ export default function TripDetailPage() {
                   editDraft?.type === "course";
                 const editIsHotel = editDraft?.type === "hotel";
                 const editIsFlight = editDraft?.type === "flight";
-                const editOrganizerTotal = editDraft
-                  ? (editDraft.includeGreenFeeInSplit
-                      ? amountValue(editDraft.greenFee)
-                      : 0) +
-                    (editDraft.includeCaddyFeeInSplit
-                      ? amountValue(editDraft.caddyFee)
-                      : 0) +
-                    (editDraft.includeCartFeeInSplit
-                      ? amountValue(editDraft.cartFee)
-                      : 0)
-                  : 0;
                 const isMoving = movingItemId === item.id;
                 const canEditCurrentItem = canEditTripItem(item);
                 const canMoveUp =
@@ -7374,71 +7230,6 @@ export default function TripDetailPage() {
                               }}
                             >
                               Course stays linked: {courseName}
-                            </div>
-                          ) : null}
-
-                          {(trip?.members ?? []).length > 0 &&
-                          editDraft.expenseType === "SHARED" ? (
-                            <div
-                              style={{
-                                display: "grid",
-                                gap: 8,
-                                padding: 10,
-                                borderRadius: 12,
-                                border: "1px solid var(--border)",
-                                background: "var(--bg)",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  color: "var(--text)",
-                                  fontSize: 12,
-                                  fontWeight: 950,
-                                }}
-                              >
-                                Participants
-                              </div>
-                              <div style={{ display: "grid", gap: 6 }}>
-                                {(trip?.members ?? []).map((member) => {
-                                  const checked =
-                                    editDraft.participantMemberIds.includes(
-                                      member.id,
-                                    );
-                                  return (
-                                    <label
-                                      key={member.id}
-                                      style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 8,
-                                        color: "var(--text)",
-                                        fontSize: 12,
-                                        fontWeight: 850,
-                                      }}
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        checked={checked}
-                                        onChange={(e) => {
-                                          setEditDraft({
-                                            ...editDraft,
-                                            participantMemberIds: e.target
-                                              .checked
-                                              ? [
-                                                  ...editDraft.participantMemberIds,
-                                                  member.id,
-                                                ]
-                                              : editDraft.participantMemberIds.filter(
-                                                  (id) => id !== member.id,
-                                                ),
-                                          });
-                                        }}
-                                      />
-                                      <span>{memberDisplayName(member)}</span>
-                                    </label>
-                                  );
-                                })}
-                              </div>
                             </div>
                           ) : null}
 
@@ -7831,255 +7622,6 @@ export default function TripDetailPage() {
                             </div>
                           ) : null}
 
-                          {editIsGolf ? (
-                            <div
-                              style={{
-                                display: "grid",
-                                gap: 10,
-                                padding: 10,
-                                borderRadius: 12,
-                                border: "1px solid var(--border)",
-                                background: "var(--bg)",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  color: "var(--text)",
-                                  fontSize: 12,
-                                  fontWeight: 950,
-                                }}
-                              >
-                                Golf costs
-                              </div>
-                              {[
-                                {
-                                  label: "Greenfee",
-                                  value: editDraft.greenFee,
-                                  amountKey: "greenFee",
-                                  checked: editDraft.includeGreenFeeInSplit,
-                                  includeKey: "includeGreenFeeInSplit",
-                                },
-                                {
-                                  label: "Caddyfee",
-                                  value: editDraft.caddyFee,
-                                  amountKey: "caddyFee",
-                                  checked: editDraft.includeCaddyFeeInSplit,
-                                  includeKey: "includeCaddyFeeInSplit",
-                                },
-                                {
-                                  label: "Cartfee",
-                                  value: editDraft.cartFee,
-                                  amountKey: "cartFee",
-                                  checked: editDraft.includeCartFeeInSplit,
-                                  includeKey: "includeCartFeeInSplit",
-                                },
-                              ].map((cost) => (
-                                <div key={cost.label} style={{ display: "grid", gap: 6 }}>
-                                  <input
-                                    type="number"
-                                    inputMode="decimal"
-                                    value={cost.value}
-                                    onChange={(e) =>
-                                      setEditDraft({
-                                        ...editDraft,
-                                        [cost.amountKey]: e.target.value,
-                                      })
-                                    }
-                                    placeholder={cost.label}
-                                    style={editFieldStyle}
-                                  />
-                                  <label
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 8,
-                                      color: "var(--sub)",
-                                      fontSize: 12,
-                                      fontWeight: 850,
-                                    }}
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={cost.checked}
-                                      onChange={(e) =>
-                                        setEditDraft({
-                                          ...editDraft,
-                                          [cost.includeKey]: e.target.checked,
-                                        })
-                                      }
-                                    />
-                                    Include in group total
-                                  </label>
-                                </div>
-                              ))}
-                              <div
-                                style={{
-                                  display: "flex",
-                                  justifyContent: "space-between",
-                                  gap: 10,
-                                  color: "var(--text)",
-                                  fontSize: 12,
-                                  fontWeight: 950,
-                                }}
-                              >
-                                <span>Organizer total</span>
-                                <span>{editOrganizerTotal.toLocaleString()}</span>
-                              </div>
-                            </div>
-                          ) : null}
-
-                          {!editIsGolf && !editIsFlight ? (
-                            <div
-                              style={{
-                                display: "grid",
-                                gridTemplateColumns:
-                                  "minmax(0, 1fr) minmax(0, 1fr)",
-                                gap: 8,
-                              }}
-                            >
-                              <label
-                                style={{
-                                  display: "grid",
-                                  gap: 6,
-                                  color: "var(--text)",
-                                  fontSize: 12,
-                                  fontWeight: 900,
-                                }}
-                              >
-                                {editIsHotel ? "Amount per day" : "Direct price"}
-                                <input
-                                  type="number"
-                                  inputMode="decimal"
-                                  value={editDraft.directPrice}
-                                  onChange={(e) =>
-                                    setEditDraft({
-                                      ...editDraft,
-                                      directPrice: e.target.value,
-                                    })
-                                  }
-                                  placeholder={
-                                    editIsHotel ? "Amount per day" : "Direct price"
-                                  }
-                                  style={editFieldStyle}
-                                />
-                                {editIsHotel ? (
-                                  <span
-                                    style={{
-                                      color: "var(--sub)",
-                                      fontSize: 12,
-                                      fontWeight: 800,
-                                    }}
-                                  >
-                                    Use notes for breakfast included, room details or price comparisons.
-                                  </span>
-                                ) : null}
-                              </label>
-                              {!editIsHotel ? (
-                                <input
-                                  type="number"
-                                  inputMode="decimal"
-                                  value={editDraft.providerPrice}
-                                  onChange={(e) =>
-                                    setEditDraft({
-                                      ...editDraft,
-                                      providerPrice: e.target.value,
-                                    })
-                                  }
-                                  placeholder="Provider price"
-                                  style={editFieldStyle}
-                                />
-                              ) : null}
-                            </div>
-                          ) : null}
-
-                          {!editIsFlight ? (
-                          <label
-                            style={{
-                              display: "grid",
-                              gap: 6,
-                              color: "var(--text)",
-                              fontSize: 12,
-                              fontWeight: 900,
-                            }}
-                          >
-                            Currency
-                            <select
-                              value={editDraft.currency || "CHF"}
-                              onChange={(e) =>
-                                setEditDraft({
-                                  ...editDraft,
-                                  currency: e.target.value,
-                                })
-                              }
-                              style={editFieldStyle}
-                            >
-                              {currencyOptions.map((option) => (
-                                <option key={option} value={option}>
-                                  {option}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          ) : null}
-
-                          {(trip?.members ?? []).length > 0 && !editIsFlight ? (
-                            <>
-                              <label
-                                style={{
-                                  display: "grid",
-                                  gap: 6,
-                                  color: "var(--text)",
-                                  fontSize: 12,
-                                  fontWeight: 900,
-                                }}
-                              >
-                                Paid by
-                                <select
-                                  value={editDraft.paidByMemberId}
-                                  onChange={(e) =>
-                                    setEditDraft({
-                                      ...editDraft,
-                                      paidByMemberId: e.target.value,
-                                    })
-                                  }
-                                  style={editFieldStyle}
-                                >
-                                  <option value="">Not specified</option>
-                                  {(trip?.members ?? []).map((member) => (
-                                    <option key={member.id} value={member.id}>
-                                      {memberDisplayName(member)}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-
-                              <label
-                                style={{
-                                  display: "grid",
-                                  gap: 6,
-                                  color: "var(--text)",
-                                  fontSize: 12,
-                                  fontWeight: 900,
-                                }}
-                              >
-                                Expense type
-                                <select
-                                  value={editDraft.expenseType}
-                                  onChange={(e) =>
-                                    setEditDraft({
-                                      ...editDraft,
-                                      expenseType: e.target.value as ExpenseType,
-                                    })
-                                  }
-                                  style={editFieldStyle}
-                                >
-                                  <option value="SHARED">Shared</option>
-                                  <option value="PERSONAL">Personal</option>
-                                </select>
-                              </label>
-                            </>
-                          ) : null}
-
                           <div
                             style={{
                               display: "grid",
@@ -8389,7 +7931,7 @@ export default function TripDetailPage() {
                               ))}
                             </div>
 
-                            {prices.length > 0 || participantText || payerText || item.expenseType || documentLabel ? (
+                            {documentLabel ? (
                               <div
                                 style={{
                                   display: "flex",
@@ -8398,42 +7940,14 @@ export default function TripDetailPage() {
                                   alignItems: "center",
                                 }}
                               >
-                                {prices.map((price) => (
-                                  <span
-                                    key={price}
-                                    className="fw-pill fw-pill--meta"
-                                  >
-                                    {price}
-                                  </span>
-                                ))}
-                                {participantText ? (
-                                  <span className="fw-pill fw-pill--meta">
-                                    Participants: {participantText}
-                                  </span>
-                                ) : null}
-                                {payerText ? (
-                                  <span className="fw-pill fw-pill--meta">
-                                    Paid by {payerText}
-                                  </span>
-                                ) : null}
-                                <span className="fw-pill fw-pill--meta">
-                                  {expenseTypeLabel(item)}
-                                </span>
-                                {prices.length > 0 ? (
-                                  <span className="fw-pill fw-pill--meta">
-                                    {costModeLabel(item)}
-                                  </span>
-                                ) : null}
-                                {documentLabel ? (
-                                  <button
-                                    type="button"
-                                    className="fw-pill fw-pill--meta fw-pill--action"
-                                    onClick={() => setActiveView("documents")}
-                                    style={{ cursor: "pointer" }}
-                                  >
-                                    {documentLabel}
-                                  </button>
-                                ) : null}
+                                <button
+                                  type="button"
+                                  className="fw-pill fw-pill--meta fw-pill--action"
+                                  onClick={() => setActiveView("documents")}
+                                  style={{ cursor: "pointer" }}
+                                >
+                                  {documentLabel}
+                                </button>
                               </div>
                             ) : null}
 
@@ -9704,6 +9218,11 @@ export default function TripDetailPage() {
                 <div style={{ color: "var(--sub)", fontSize: 13, lineHeight: 1.4 }}>
                   {tripItemTitle(budgetEditingItem)}
                 </div>
+                {budgetEditingItemIsTransport ? (
+                  <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+                    Add rental fee, fuel, parking, tolls or driver costs as separate costs.
+                  </div>
+                ) : null}
               </div>
               <button
                 type="button"
@@ -9932,7 +9451,12 @@ export default function TripDetailPage() {
               })}
             </div>
 
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <div style={{ display: "grid", gap: 7 }}>
+              <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+                Use Add cost for separate trip costs like room charge, greenfee,
+                dinner, fuel, parking or tips.
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               <button
                 type="button"
                 onClick={addBudgetDraft}
@@ -9959,6 +9483,7 @@ export default function TripDetailPage() {
               >
                 {savingBudgetItemId ? "Saving..." : "Save budget"}
               </button>
+              </div>
             </div>
           </div>
         </div>,
