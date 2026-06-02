@@ -1044,7 +1044,14 @@ function calendarItemMatchesDay(item: TripItem, selectedKey: string) {
 
 function isCalendarSpanningItem(item: TripItem) {
   const value = String(item.type ?? "").toLowerCase();
-  return value === "hotel" || value === "stay" || value === "accommodation";
+  return (
+    value === "hotel" ||
+    value === "stay" ||
+    value === "accommodation" ||
+    value === "transfer" ||
+    value === "transport" ||
+    value === "car_rental"
+  );
 }
 
 function dayKeyFromValue(value?: string | null) {
@@ -1925,30 +1932,38 @@ function budgetCostPaymentText(cost: TripItemCost, members: TripMember[]) {
   return paidBy ? `paid by ${memberDisplayName(paidBy)}` : "paid by one member";
 }
 
-function budgetCostSplitPreview(
-  cost: TripItemCost,
-  members: TripMember[],
-  item?: TripItem,
-) {
-  const participants = costParticipantMembers(cost, members);
-  const count = participants.length;
+function budgetCostParticipantText(cost: TripItemCost, members: TripMember[]) {
+  const count = costParticipantMembers(cost, members).length;
   if (count === 0) return "";
+  return `shared with ${count} ${count === 1 ? "person" : "people"}`;
+}
 
-  const amount = finiteAmount(cost.amount);
-  const noun = item && isGolfItem(item) ? "player" : "people";
-  const countText = `${count} ${noun}${count === 1 ? "" : "s"}`;
-  if (amount <= 0) return countText;
-
-  const mode = cost.costMode || "TOTAL";
-  const each =
-    mode === "PER_PERSON" ? amount : count > 0 ? amount / count : amount;
-  const eachText = `${formatMoney(each, cost.currency || "CHF")} each`;
-
-  if (cost.paymentMode === "EACH_PAYS_OWN") {
-    return `${countText} · ${eachText} · no payback needed`;
+function costLabelExamplesForItemType(type?: string | null) {
+  const value = String(type ?? "").toLowerCase();
+  if (value === "golf_round" || value === "course") {
+    return ["Package price", "Greenfee", "Caddy", "Cart"];
   }
+  if (value === "hotel" || value === "stay" || value === "accommodation") {
+    return ["Room", "Stay", "Breakfast", "Resort fee"];
+  }
+  if (value === "flight") {
+    return ["Ticket", "Baggage", "Seat reservation"];
+  }
+  if (value === "transfer" || value === "transport" || value === "car_rental") {
+    return ["Rental fee", "Fuel", "Parking", "Damage", "Toll", "Driver tip"];
+  }
+  if (value === "restaurant") {
+    return ["Dinner", "Drinks", "Tip"];
+  }
+  if (value === "activity" || value === "free_day") {
+    return ["Entry fee", "Tour", "Equipment"];
+  }
+  return ["Cost name"];
+}
 
-  return `${countText} · ${eachText}`;
+function costLabelPlaceholderForItemType(type?: string | null) {
+  const examples = costLabelExamplesForItemType(type);
+  return examples.length === 1 ? examples[0] : examples.join(", ");
 }
 
 function TripItemBudgetSection({
@@ -2067,9 +2082,9 @@ function TripItemBudgetSection({
                 <span className="fw-pill fw-pill--meta">
                   {budgetCostPaymentText(cost, members)}
                 </span>
-                {budgetCostSplitPreview(cost, members, item) ? (
+                {budgetCostParticipantText(cost, members) ? (
                   <span className="fw-pill fw-pill--meta">
-                    {budgetCostSplitPreview(cost, members, item)}
+                    {budgetCostParticipantText(cost, members)}
                   </span>
                 ) : null}
               </div>
@@ -3156,6 +3171,7 @@ export default function TripDetailPage() {
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
   const [budgetEditingItemId, setBudgetEditingItemId] = useState<string | null>(null);
   const [budgetDrafts, setBudgetDrafts] = useState<BudgetCostDraft[]>([]);
+  const [expandedBudgetCostId, setExpandedBudgetCostId] = useState<string | null>(null);
   const [savingBudgetItemId, setSavingBudgetItemId] = useState<string | null>(null);
   const [savingItemId, setSavingItemId] = useState<string | null>(null);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
@@ -3613,14 +3629,16 @@ export default function TripDetailPage() {
     setBudgetDrafts(
       costs.length > 0
         ? costs.map((cost) => budgetDraftFromCost(cost, item))
-        : [newBudgetDraft(item)],
+        : [],
     );
+    setExpandedBudgetCostId(null);
   }
 
   function closeBudgetEdit() {
     if (savingBudgetItemId) return;
     setBudgetEditingItemId(null);
     setBudgetDrafts([]);
+    setExpandedBudgetCostId(null);
   }
 
   function updateBudgetDraft(
@@ -3637,22 +3655,14 @@ export default function TripDetailPage() {
   function addBudgetDraft() {
     const item = trip?.items?.find((candidate) => candidate.id === budgetEditingItemId);
     if (!item) return;
-    setBudgetDrafts((drafts) => [...drafts, newBudgetDraft(item)]);
+    const draft = newBudgetDraft(item);
+    setBudgetDrafts((drafts) => [...drafts, draft]);
+    setExpandedBudgetCostId(draft.localId);
   }
 
   function deleteBudgetDraft(localId: string) {
-    setBudgetDrafts((drafts) =>
-      drafts.length <= 1
-        ? drafts.map((draft) => ({
-            ...draft,
-            label: "",
-            amount: "",
-            exchangeRate: "",
-            baseAmount: "",
-            participantMemberIds: [],
-          }))
-        : drafts.filter((draft) => draft.localId !== localId),
-    );
+    setBudgetDrafts((drafts) => drafts.filter((draft) => draft.localId !== localId));
+    setExpandedBudgetCostId((current) => (current === localId ? null : current));
   }
 
   async function saveBudgetEdit() {
@@ -3733,6 +3743,7 @@ export default function TripDetailPage() {
 
       setBudgetEditingItemId(null);
       setBudgetDrafts([]);
+      setExpandedBudgetCostId(null);
       await loadTrip();
     } catch (e: any) {
       setErr(e?.message ?? "Failed to save budget");
@@ -9220,7 +9231,7 @@ export default function TripDetailPage() {
                 </div>
                 {budgetEditingItemIsTransport ? (
                   <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
-                    Add rental fee, fuel, parking, tolls or driver costs as separate costs.
+                    Add rental fee, fuel, parking, tolls, damage or driver costs as separate costs.
                   </div>
                 ) : null}
               </div>
@@ -9241,6 +9252,23 @@ export default function TripDetailPage() {
             <div style={{ display: "grid", gap: 10 }}>
               {budgetDrafts.map((draft, index) => {
                 const paidByRequired = draft.paymentMode === "PAID_BY_ONE";
+                const isExpanded = expandedBudgetCostId === draft.localId;
+                const draftAmount = optionalNumber(draft.amount);
+                const draftPaidBy = (trip.members ?? []).find(
+                  (member) => member.id === draft.paidByMemberId,
+                );
+                const participantCount = draft.participantMemberIds.length;
+                const labelText = draft.label.trim() || `Cost ${index + 1}`;
+                const amountText =
+                  draftAmount !== undefined
+                    ? formatMoney(draftAmount, draft.currency)
+                    : "Amount not set";
+                const paymentText =
+                  draft.paymentMode === "EACH_PAYS_OWN"
+                    ? "everyone pays own part"
+                    : draftPaidBy
+                      ? `paid by ${memberDisplayName(draftPaidBy)}`
+                      : "paid by one member";
                 return (
                   <section
                     key={draft.localId}
@@ -9253,208 +9281,267 @@ export default function TripDetailPage() {
                       background: "color-mix(in srgb, var(--bg) 58%, var(--card))",
                     }}
                   >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: 8,
-                      }}
-                    >
-                      <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
-                        Cost {index + 1}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => deleteBudgetDraft(draft.localId)}
-                        className="fw-pill fw-pill--meta"
-                        style={{ height: 28, cursor: "pointer" }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-
-                    <label style={{ display: "grid", gap: 6, color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
-                      Label
-                      <input
-                        value={draft.label}
-                        onChange={(event) =>
-                          updateBudgetDraft(draft.localId, { label: event.target.value })
-                        }
-                        placeholder="Hotel, greenfee, dinner"
-                        style={editFieldStyle}
-                      />
-                    </label>
-
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "minmax(0, 1fr) minmax(92px, 120px)",
-                        gap: 8,
-                      }}
-                    >
-                      <label style={{ display: "grid", gap: 6, color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
-                        Amount
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          value={draft.amount}
-                          onChange={(event) =>
-                            updateBudgetDraft(draft.localId, { amount: event.target.value })
-                          }
-                          style={editFieldStyle}
-                        />
-                      </label>
-                      <label style={{ display: "grid", gap: 6, color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
-                        Currency
-                        <select
-                          value={draft.currency}
-                          onChange={(event) =>
-                            updateBudgetDraft(draft.localId, { currency: event.target.value })
-                          }
-                          style={editFieldStyle}
-                        >
-                          {currencyOptions.map((currency) => (
-                            <option key={currency} value={currency}>
-                              {currency}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-                      {[
-                        { value: "PER_PERSON" as CostMode, label: "Per person" },
-                        { value: "TOTAL" as CostMode, label: "Total" },
-                      ].map((option) => {
-                        const selected = draft.costMode === option.value;
-                        return (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() =>
-                              updateBudgetDraft(draft.localId, { costMode: option.value })
-                            }
-                            className="fw-pill fw-pill--meta"
-                            style={{
-                              height: 32,
-                              cursor: "pointer",
-                              borderColor: selected ? "var(--accent-strong)" : "var(--border)",
-                              background: selected ? "var(--accent-soft)" : "transparent",
-                              color: selected ? "var(--text)" : "var(--sub)",
-                            }}
-                          >
-                            {option.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-                      {[
-                        { value: "PAID_BY_ONE" as PaymentMode, label: "One member paid" },
-                        { value: "EACH_PAYS_OWN" as PaymentMode, label: "Everyone pays own part" },
-                      ].map((option) => {
-                        const selected = draft.paymentMode === option.value;
-                        return (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() =>
-                              updateBudgetDraft(draft.localId, { paymentMode: option.value })
-                            }
-                            className="fw-pill fw-pill--meta"
-                            style={{
-                              height: 32,
-                              cursor: "pointer",
-                              borderColor: selected ? "var(--accent-strong)" : "var(--border)",
-                              background: selected ? "var(--accent-soft)" : "transparent",
-                              color: selected ? "var(--text)" : "var(--sub)",
-                            }}
-                          >
-                            {option.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {paidByRequired ? (
-                      <label style={{ display: "grid", gap: 6, color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
-                        Paid by
-                        <select
-                          value={draft.paidByMemberId}
-                          onChange={(event) =>
-                            updateBudgetDraft(draft.localId, {
-                              paidByMemberId: event.target.value,
-                            })
-                          }
-                          style={editFieldStyle}
-                        >
-                          <option value="">Choose member</option>
-                          {(trip.members ?? []).map((member) => (
-                            <option key={member.id} value={member.id}>
-                              {memberDisplayName(member)}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    ) : null}
-
                     <div style={{ display: "grid", gap: 7 }}>
-                      <div style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
-                        Shared with
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          justifyContent: "space-between",
+                          gap: 10,
+                        }}
+                      >
+                        <div style={{ minWidth: 0, display: "grid", gap: 3 }}>
+                          <div
+                            style={{
+                              color: "var(--text)",
+                              fontSize: 13,
+                              fontWeight: 950,
+                              lineHeight: 1.25,
+                              overflowWrap: "anywhere",
+                            }}
+                          >
+                            {labelText}
+                          </div>
+                          <div style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
+                            {amountText}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 6, flex: "0 0 auto" }}>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedBudgetCostId(isExpanded ? null : draft.localId)
+                            }
+                            className="fw-pill fw-pill--meta fw-pill--action"
+                            style={{ height: 28, cursor: "pointer" }}
+                          >
+                            {isExpanded ? "Done" : "Edit"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteBudgetDraft(draft.localId)}
+                            className="fw-pill fw-pill--meta"
+                            style={{ height: 28, cursor: "pointer" }}
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-                        {(trip.members ?? []).map((member) => {
-                          const selected = draft.participantMemberIds.includes(member.id);
-                          return (
-                            <label
-                              key={member.id}
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 6,
-                                minHeight: 32,
-                                padding: "0 10px",
-                                borderRadius: 999,
-                                border: selected
-                                  ? "1px solid var(--accent-strong)"
-                                  : "1px solid var(--border)",
-                                background: selected ? "var(--accent-soft)" : "transparent",
-                                color: "var(--text)",
-                                fontSize: 12,
-                                fontWeight: 850,
-                              }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selected}
-                                onChange={(event) =>
-                                  updateBudgetDraft(draft.localId, {
-                                    participantMemberIds: event.target.checked
-                                      ? [...draft.participantMemberIds, member.id]
-                                      : draft.participantMemberIds.filter(
-                                          (id) => id !== member.id,
-                                        ),
-                                  })
-                                }
-                              />
-                              {memberDisplayName(member)}
-                            </label>
-                          );
-                        })}
+
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                        <span className="fw-pill fw-pill--meta">
+                          {costModeText(draft.costMode)}
+                        </span>
+                        <span className="fw-pill fw-pill--meta">{paymentText}</span>
+                        {participantCount > 0 ? (
+                          <span className="fw-pill fw-pill--meta">
+                            shared with {participantCount}{" "}
+                            {participantCount === 1 ? "person" : "people"}
+                          </span>
+                        ) : null}
                       </div>
                     </div>
+
+                    {isExpanded ? (
+                      <div style={{ display: "grid", gap: 9 }}>
+                        <label style={{ display: "grid", gap: 6, color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
+                          Label
+                          <input
+                            value={draft.label}
+                            onChange={(event) =>
+                              updateBudgetDraft(draft.localId, { label: event.target.value })
+                            }
+                            placeholder={costLabelPlaceholderForItemType(budgetEditingItem.type)}
+                            style={editFieldStyle}
+                          />
+                        </label>
+
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "minmax(0, 1fr) minmax(92px, 120px)",
+                            gap: 8,
+                          }}
+                        >
+                          <label style={{ display: "grid", gap: 6, color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
+                            Amount
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              value={draft.amount}
+                              onChange={(event) =>
+                                updateBudgetDraft(draft.localId, { amount: event.target.value })
+                              }
+                              style={editFieldStyle}
+                            />
+                          </label>
+                          <label style={{ display: "grid", gap: 6, color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
+                            Currency
+                            <select
+                              value={draft.currency}
+                              onChange={(event) =>
+                                updateBudgetDraft(draft.localId, { currency: event.target.value })
+                              }
+                              style={editFieldStyle}
+                            >
+                              {currencyOptions.map((currency) => (
+                                <option key={currency} value={currency}>
+                                  {currency}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        </div>
+
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                          {[
+                            { value: "PER_PERSON" as CostMode, label: "Per person" },
+                            { value: "TOTAL" as CostMode, label: "Total" },
+                          ].map((option) => {
+                            const selected = draft.costMode === option.value;
+                            return (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={() =>
+                                  updateBudgetDraft(draft.localId, { costMode: option.value })
+                                }
+                                className="fw-pill fw-pill--meta"
+                                style={{
+                                  height: 32,
+                                  cursor: "pointer",
+                                  borderColor: selected ? "var(--accent-strong)" : "var(--border)",
+                                  background: selected ? "var(--accent-soft)" : "transparent",
+                                  color: selected ? "var(--text)" : "var(--sub)",
+                                }}
+                              >
+                                {option.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                          {[
+                            { value: "PAID_BY_ONE" as PaymentMode, label: "One member paid" },
+                            { value: "EACH_PAYS_OWN" as PaymentMode, label: "Everyone pays own part" },
+                          ].map((option) => {
+                            const selected = draft.paymentMode === option.value;
+                            return (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={() =>
+                                  updateBudgetDraft(draft.localId, { paymentMode: option.value })
+                                }
+                                className="fw-pill fw-pill--meta"
+                                style={{
+                                  height: 32,
+                                  cursor: "pointer",
+                                  borderColor: selected ? "var(--accent-strong)" : "var(--border)",
+                                  background: selected ? "var(--accent-soft)" : "transparent",
+                                  color: selected ? "var(--text)" : "var(--sub)",
+                                }}
+                              >
+                                {option.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {paidByRequired ? (
+                          <label style={{ display: "grid", gap: 6, color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
+                            Paid by
+                            <select
+                              value={draft.paidByMemberId}
+                              onChange={(event) =>
+                                updateBudgetDraft(draft.localId, {
+                                  paidByMemberId: event.target.value,
+                                })
+                              }
+                              style={editFieldStyle}
+                            >
+                              <option value="">Choose member</option>
+                              {(trip.members ?? []).map((member) => (
+                                <option key={member.id} value={member.id}>
+                                  {memberDisplayName(member)}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ) : null}
+
+                        <div style={{ display: "grid", gap: 7 }}>
+                          <div style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
+                            Shared with
+                          </div>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                            {(trip.members ?? []).map((member) => {
+                              const selected = draft.participantMemberIds.includes(member.id);
+                              return (
+                                <label
+                                  key={member.id}
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                    minHeight: 32,
+                                    padding: "0 10px",
+                                    borderRadius: 999,
+                                    border: selected
+                                      ? "1px solid var(--accent-strong)"
+                                      : "1px solid var(--border)",
+                                    background: selected ? "var(--accent-soft)" : "transparent",
+                                    color: "var(--text)",
+                                    fontSize: 12,
+                                    fontWeight: 850,
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selected}
+                                    onChange={(event) =>
+                                      updateBudgetDraft(draft.localId, {
+                                        participantMemberIds: event.target.checked
+                                          ? [...draft.participantMemberIds, member.id]
+                                          : draft.participantMemberIds.filter(
+                                              (id) => id !== member.id,
+                                            ),
+                                      })
+                                    }
+                                  />
+                                  {memberDisplayName(member)}
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
                   </section>
                 );
               })}
+              {budgetDrafts.length === 0 ? (
+                <div
+                  style={{
+                    padding: 10,
+                    borderRadius: 14,
+                    border: "1px solid var(--border)",
+                    background: "color-mix(in srgb, var(--bg) 58%, var(--card))",
+                    color: "var(--sub)",
+                    fontSize: 12,
+                    lineHeight: 1.35,
+                  }}
+                >
+                  No costs added yet.
+                </div>
+              ) : null}
             </div>
 
             <div style={{ display: "grid", gap: 7 }}>
               <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
-                Use Add cost for separate trip costs like room charge, greenfee,
-                dinner, fuel, parking or tips.
+                Use Add cost for separate costs like{" "}
+                {costLabelExamplesForItemType(budgetEditingItem.type).join(", ")}.
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               <button
