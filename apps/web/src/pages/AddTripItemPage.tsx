@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, FormEvent, ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   BedDouble,
@@ -8,6 +9,7 @@ import {
   Flag,
   Plane,
   StickyNote,
+  Utensils,
 } from "lucide-react";
 import { API_BASE } from "../api/base";
 import { friendlyApiErrorMessage } from "../api/client";
@@ -19,15 +21,27 @@ type TripItemType =
   | "transfer"
   | "car_rental"
   | "flight"
+  | "restaurant"
   | "free_day"
   | "note";
 
 type TripItemVisibility = "GROUP" | "SELECTED" | "PRIVATE";
 type ReturnToHotelMode = "" | "after_round" | "custom" | "own_transport";
-type ExpenseType = "PERSONAL" | "SHARED";
 type CostMode = "PER_PERSON" | "TOTAL";
-type GolfCostInputMode = "package" | "breakdown";
-type BudgetParticipantMode = "ALL" | "SELECTED";
+type PaymentMode = "PAID_BY_ONE" | "EACH_PAYS_OWN";
+
+type BudgetCostDraft = {
+  localId: string;
+  label: string;
+  amount: string;
+  currency: string;
+  exchangeRate: string;
+  baseAmount: string;
+  costMode: CostMode;
+  paymentMode: PaymentMode;
+  paidByMemberId: string;
+  participantMemberIds: string[];
+};
 
 type FormStep = 1 | 2;
 
@@ -37,6 +51,7 @@ const typeOptions: { value: TripItemType; label: string }[] = [
   { value: "transfer", label: "Transfer" },
   { value: "car_rental", label: "Car rental" },
   { value: "flight", label: "Flight" },
+  { value: "restaurant", label: "Restaurant" },
   { value: "free_day", label: "Free day" },
   { value: "note", label: "Note" },
 ];
@@ -107,6 +122,7 @@ type TripDocument = {
 };
 
 type Trip = {
+  baseCurrency?: string | null;
   members?: TripMember[];
   documents?: TripDocument[];
 };
@@ -209,6 +225,7 @@ function itemTheme(type: TripItemType) {
     return { color: "#2f6fb9", soft: "rgba(47, 111, 185, 0.09)" };
   }
   if (type === "flight") return { color: "#2f91d8", soft: "rgba(47, 145, 216, 0.08)" };
+  if (type === "restaurant") return { color: "#d15f32", soft: "rgba(209, 95, 50, 0.09)" };
   return { color: "#7467b8", soft: "rgba(116, 103, 184, 0.08)" };
 }
 
@@ -218,6 +235,7 @@ function itemTitle(type: TripItemType) {
   if (type === "transfer") return "Add Transfer";
   if (type === "car_rental") return "Add Car Rental";
   if (type === "flight") return "Add Flight";
+  if (type === "restaurant") return "Add Restaurant";
   if (type === "free_day") return "Add Activity";
   return "Add Note";
 }
@@ -228,6 +246,7 @@ function itemNoun(type: TripItemType) {
   if (type === "transfer") return "Transfer";
   if (type === "car_rental") return "Car rental";
   if (type === "flight") return "Flight";
+  if (type === "restaurant") return "Restaurant";
   if (type === "free_day") return "Activity";
   return "Note";
 }
@@ -235,6 +254,7 @@ function itemNoun(type: TripItemType) {
 function itemSubtitle(type: TripItemType) {
   if (type === "transfer") return "Airport, hotel or golf transport";
   if (type === "car_rental") return "Vehicle, minibus or driver";
+  if (type === "restaurant") return "Dinner, drinks or group meals";
   return "";
 }
 
@@ -244,6 +264,7 @@ function itemCta(type: TripItemType) {
   if (type === "transfer") return "Add Transfer";
   if (type === "car_rental") return "Add Car Rental";
   if (type === "flight") return "Add Flight";
+  if (type === "restaurant") return "Add Restaurant";
   if (type === "free_day") return "Add Activity";
   return "Add Note";
 }
@@ -254,6 +275,7 @@ function itemIcon(type: TripItemType) {
   if (type === "transfer") return Bus;
   if (type === "car_rental") return Car;
   if (type === "flight") return Plane;
+  if (type === "restaurant") return Utensils;
   return StickyNote;
 }
 
@@ -290,16 +312,6 @@ function optionalNumber(value: string) {
   return Number.isFinite(n) ? n : undefined;
 }
 
-function amountValue(value: string) {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function formatAmountInput(value: number) {
-  if (!Number.isFinite(value)) return "";
-  return String(Math.round(value * 100) / 100);
-}
-
 function validDateParam(value: string | null) {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
 }
@@ -333,11 +345,6 @@ function nightsBetweenDates(checkIn: string, checkOut: string) {
 
   const days = Math.round((end.getTime() - start.getTime()) / 86400000);
   return days > 0 ? String(days) : "";
-}
-
-function defaultCostModeForType(type: TripItemType): CostMode {
-  if (type === "golf_round" || type === "flight") return "PER_PERSON";
-  return "TOTAL";
 }
 
 async function tripItemSaveError(res: Response) {
@@ -421,11 +428,57 @@ function memberDisplayName(member: TripMember) {
   );
 }
 
+function formatMoney(value?: number | null, currency?: string | null) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "";
+  const code = currency?.trim() || "CHF";
+
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: code,
+      maximumFractionDigits: 0,
+    }).format(value);
+  } catch {
+    return `${value} ${code}`.trim();
+  }
+}
+
+function defaultCostModeForItemType(type: TripItemType): CostMode {
+  if (type === "golf_round" || type === "flight") return "PER_PERSON";
+  return "TOTAL";
+}
+
+function defaultPaymentModeForItemType(type: TripItemType): PaymentMode {
+  if (type === "golf_round" || type === "flight") return "EACH_PAYS_OWN";
+  return "PAID_BY_ONE";
+}
+
+function costModeText(mode?: CostMode | null) {
+  return mode === "PER_PERSON" ? "per person" : "total";
+}
+
+function costLabelExamplesForItemType(type: TripItemType) {
+  if (type === "golf_round") return ["Package price", "Greenfee", "Caddy", "Cart"];
+  if (type === "hotel") return ["Room", "Stay", "Breakfast", "Resort fee"];
+  if (type === "flight") return ["Ticket", "Baggage", "Seat reservation"];
+  if (type === "transfer" || type === "car_rental") {
+    return ["Rental fee", "Fuel", "Parking", "Damage", "Toll", "Driver tip"];
+  }
+  if (type === "restaurant") return ["Dinner", "Drinks", "Tip"];
+  if (type === "free_day") return ["Entry fee", "Tour", "Equipment"];
+  return ["Cost name"];
+}
+
+function costLabelPlaceholderForItemType(type: TripItemType) {
+  const examples = costLabelExamplesForItemType(type);
+  return examples.length === 1 ? examples[0] : examples.join(", ");
+}
+
 export default function AddTripItemPage() {
   const { tripId } = useParams();
   const nav = useNavigate();
   const location = useLocation();
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const documentInputRef = useRef<HTMLInputElement | null>(null);
 
   const [step, setStep] = useState<FormStep>(1);
@@ -447,37 +500,22 @@ export default function AddTripItemPage() {
   const [bookingRef, setBookingRef] = useState("");
   const [provider, setProvider] = useState("");
   const [notes, setNotes] = useState("");
-  const [golfCostInputMode, setGolfCostInputMode] =
-    useState<GolfCostInputMode>("package");
-  const [packagePrice, setPackagePrice] = useState("");
-  const [greenFee, setGreenFee] = useState("");
-  const [caddyFee, setCaddyFee] = useState("");
-  const [cartFee, setCartFee] = useState("");
-  const [directPrice, setDirectPrice] = useState("");
-  const [providerPrice, setProviderPrice] = useState("");
-  const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState("CHF");
   const [courseQuery, setCourseQuery] = useState("");
   const [courseResults, setCourseResults] = useState<CourseSearchResult[]>([]);
   const [selectedCourse, setSelectedCourse] =
     useState<CourseSearchResult | null>(null);
   const [trip, setTrip] = useState<Trip | null>(null);
   const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
+  const [budgetDrafts, setBudgetDrafts] = useState<BudgetCostDraft[]>([]);
+  const [budgetModalOpen, setBudgetModalOpen] = useState(false);
+  const [expandedBudgetCostId, setExpandedBudgetCostId] = useState<string | null>(null);
   const [documentUploadFile, setDocumentUploadFile] = useState<File | null>(null);
   const [documentUploadState, setDocumentUploadState] = useState<
     "idle" | "uploading" | "uploaded" | "failed"
   >("idle");
   const [documentUploadMessage, setDocumentUploadMessage] = useState("");
-  const [participantMemberIds, setParticipantMemberIds] = useState<string[]>([]);
-  const [budgetParticipantMode, setBudgetParticipantMode] =
-    useState<BudgetParticipantMode>("ALL");
   const [visibility, setVisibility] = useState<TripItemVisibility>("GROUP");
   const [visibleToMemberIds, setVisibleToMemberIds] = useState<string[]>([]);
-  const [paidByMemberId, setPaidByMemberId] = useState("");
-  const [expenseType, setExpenseType] = useState<ExpenseType>("SHARED");
-  const [costMode, setCostMode] = useState<CostMode>(
-    defaultCostModeForType("golf_round"),
-  );
   const [courseLoading, setCourseLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -496,8 +534,6 @@ export default function AddTripItemPage() {
     : isFlight
       ? flightTitle(flightNumber)
       : title.trim() || itemNoun(type);
-  const golfBreakdownTotal =
-    amountValue(greenFee) + amountValue(caddyFee) + amountValue(cartFee);
   const visibleGolfDurationOptions =
     roundDurationMinutes &&
     !golfDurationOptions.some((option) => option.value === roundDurationMinutes)
@@ -521,7 +557,6 @@ export default function AddTripItemPage() {
       if (nextDate && endDate && endDate > nextDate) {
         const nextNights = nightsBetweenDates(nextDate, endDate);
         setHotelNights(nextNights);
-        updateHotelCostsForNights(nextNights);
       } else if (endDate && nextDate && endDate <= nextDate) {
         setEndDate("");
         setHotelNights("");
@@ -542,7 +577,6 @@ export default function AddTripItemPage() {
       const nextNights = date && validEndDate ? nightsBetweenDates(date, validEndDate) : "";
       setEndDate(validEndDate);
       setHotelNights(nextNights);
-      updateHotelCostsForNights(nextNights);
       return;
     }
 
@@ -558,45 +592,10 @@ export default function AddTripItemPage() {
     if (date && Number.isFinite(nights) && nights > 0) {
       setEndDate(addDaysToInputDate(date, nights));
     }
-    updateHotelCostsForNights(normalizedNights);
-  }
-
-  function updateHotelCostsForNights(nextNights: string) {
-    const nights = Number(nextNights);
-    if (!Number.isFinite(nights) || nights <= 0) return;
-
-    const nightlyCost = optionalNumber(directPrice);
-    const totalCost = optionalNumber(amount);
-    if (nightlyCost !== undefined) {
-      setAmount(formatAmountInput(nightlyCost * nights));
-    } else if (totalCost !== undefined) {
-      setDirectPrice(formatAmountInput(totalCost / nights));
-    }
-  }
-
-  function updateHotelTotalCost(nextAmount: string) {
-    setAmount(nextAmount);
-
-    const totalCost = optionalNumber(nextAmount);
-    const nights = optionalNumber(hotelNights);
-    if (totalCost !== undefined && nights && nights > 0) {
-      setDirectPrice(formatAmountInput(totalCost / nights));
-    }
-  }
-
-  function updateHotelNightlyCost(nextAmount: string) {
-    setDirectPrice(nextAmount);
-
-    const nightlyCost = optionalNumber(nextAmount);
-    const nights = optionalNumber(hotelNights);
-    if (nightlyCost !== undefined && nights && nights > 0) {
-      setAmount(formatAmountInput(nightlyCost * nights));
-    }
   }
 
   function updateType(nextType: TripItemType) {
     setType(nextType);
-    setCostMode(defaultCostModeForType(nextType));
   }
 
   function updateGolfTeeTime(nextTime: string) {
@@ -636,6 +635,130 @@ export default function AddTripItemPage() {
     if (nextMode === "own_transport") setReturnToHotel("Own transport");
     if (nextMode === "custom") setReturnToHotel("");
     if (nextMode === "") setReturnToHotel("");
+  }
+
+  function defaultBudgetParticipantIds() {
+    return (trip?.members ?? []).map((member) => member.id);
+  }
+
+  function defaultBudgetPaidByMemberId() {
+    return trip?.members?.[0]?.id || "";
+  }
+
+  function newBudgetDraft(): BudgetCostDraft {
+    return {
+      localId: `new-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      label: "",
+      amount: "",
+      currency: trip?.baseCurrency || "CHF",
+      exchangeRate: "",
+      baseAmount: "",
+      costMode: defaultCostModeForItemType(type),
+      paymentMode: defaultPaymentModeForItemType(type),
+      paidByMemberId: defaultBudgetPaidByMemberId(),
+      participantMemberIds: defaultBudgetParticipantIds(),
+    };
+  }
+
+  function updateBudgetDraft(
+    localId: string,
+    patch: Partial<BudgetCostDraft>,
+  ) {
+    setBudgetDrafts((drafts) =>
+      drafts.map((draft) =>
+        draft.localId === localId ? { ...draft, ...patch } : draft,
+      ),
+    );
+  }
+
+  function addBudgetDraft() {
+    const draft = newBudgetDraft();
+    setBudgetDrafts((drafts) => [...drafts, draft]);
+    setExpandedBudgetCostId(draft.localId);
+  }
+
+  function editBudgetDraft(localId: string) {
+    setExpandedBudgetCostId(localId);
+    setBudgetModalOpen(true);
+  }
+
+  function deleteBudgetDraft(localId: string) {
+    setBudgetDrafts((drafts) => drafts.filter((draft) => draft.localId !== localId));
+    setExpandedBudgetCostId((current) => (current === localId ? null : current));
+  }
+
+  function budgetPaymentText(draft: BudgetCostDraft) {
+    if (draft.paymentMode === "EACH_PAYS_OWN") return "everyone pays own part";
+    const paidBy = (trip?.members ?? []).find(
+      (member) => member.id === draft.paidByMemberId,
+    );
+    return paidBy ? `paid by ${memberDisplayName(paidBy)}` : "paid by one member";
+  }
+
+  function budgetParticipantText(draft: BudgetCostDraft) {
+    const count = draft.participantMemberIds.length;
+    if (count === 0) return "";
+    return `shared with ${count} ${count === 1 ? "person" : "people"}`;
+  }
+
+  function budgetAmountText(draft: BudgetCostDraft) {
+    const amountValue = optionalNumber(draft.amount);
+    return amountValue !== undefined
+      ? formatMoney(amountValue, draft.currency)
+      : "Amount not set";
+  }
+
+  function budgetPayloadCosts() {
+    return budgetDrafts
+      .map((draft) => ({
+        label: optionalText(draft.label),
+        amount: optionalNumber(draft.amount),
+        currency: optionalText(draft.currency),
+        exchangeRate: optionalNumber(draft.exchangeRate),
+        baseAmount: optionalNumber(draft.baseAmount),
+        costMode: draft.costMode,
+        paymentMode: draft.paymentMode,
+        paidByMemberId:
+          draft.paymentMode === "PAID_BY_ONE"
+            ? optionalText(draft.paidByMemberId)
+            : undefined,
+        participantMemberIds: draft.participantMemberIds,
+      }))
+      .filter(
+        (cost) =>
+          cost.label ||
+          cost.amount !== undefined ||
+          cost.baseAmount !== undefined,
+      );
+  }
+
+  function validateBudgetCosts() {
+    const costs = budgetPayloadCosts();
+    if (costs.some((cost) => !cost.label || cost.amount === undefined)) {
+      return "Each cost needs a label and amount.";
+    }
+    if (
+      costs.some(
+        (cost) => cost.paymentMode === "PAID_BY_ONE" && !cost.paidByMemberId,
+      )
+    ) {
+      return "Choose who paid for each cost marked as one member paid.";
+    }
+    if (costs.some((cost) => cost.participantMemberIds.length === 0)) {
+      return "Choose at least one member in Shared with for each cost.";
+    }
+    return "";
+  }
+
+  function saveBudgetDrafts() {
+    const message = validateBudgetCosts();
+    if (message) {
+      setErr(message);
+      return;
+    }
+    setErr(null);
+    setBudgetModalOpen(false);
+    setExpandedBudgetCostId(null);
   }
 
   function documentCategoryForType(): string {
@@ -719,14 +842,8 @@ export default function AddTripItemPage() {
 
         const members = Array.isArray(data?.members) ? data.members : [];
         const documents = Array.isArray(data?.documents) ? data.documents : [];
-        setTrip({ members, documents });
-        setParticipantMemberIds(members.map((member: TripMember) => member.id));
+        setTrip({ baseCurrency: data?.baseCurrency, members, documents });
         setVisibleToMemberIds(members.map((member: TripMember) => member.id));
-        const currentMember = members.find(
-          (member: TripMember) =>
-            member.userId === user?.id || member.user?.id === user?.id,
-        );
-        if (currentMember) setPaidByMemberId(currentMember.id);
       } catch {
         if (!cancelled) setTrip(null);
       }
@@ -737,7 +854,7 @@ export default function AddTripItemPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, tripId, user?.id]);
+  }, [token, tripId]);
 
   useEffect(() => {
     const dateParam = validDateParam(new URLSearchParams(location.search).get("date"));
@@ -813,29 +930,19 @@ export default function AddTripItemPage() {
       return;
     }
 
+    const budgetValidationMessage = validateBudgetCosts();
+    if (budgetValidationMessage) {
+      setErr(budgetValidationMessage);
+      return;
+    }
+
     try {
       setSaving(true);
       setErr(null);
 
       const normalizedEndDate =
         !isGolfRound && endDate && date && endDate < date ? date : endDate;
-      const hotelNightCount = optionalNumber(hotelNights);
-      const hotelTotalAmount =
-        optionalNumber(amount) ??
-        (hotelNightCount && hotelNightCount > 0 && optionalNumber(directPrice) !== undefined
-          ? optionalNumber(directPrice)! * hotelNightCount
-          : undefined);
-      const itemAmount = isGolfRound
-        ? golfCostInputMode === "package"
-          ? optionalNumber(packagePrice)
-          : golfBreakdownTotal
-        : isHotel
-          ? hotelTotalAmount
-        : optionalNumber(amount);
-      const sharedParticipantMemberIds =
-        expenseType === "SHARED" && participantMemberIds.length > 0
-          ? participantMemberIds
-          : undefined;
+      const costs = budgetPayloadCosts();
       const payload = {
         type,
         title: isGolfRound
@@ -857,48 +964,14 @@ export default function AddTripItemPage() {
         provider: optionalText(provider),
         bookingRef: isFlight ? optionalText(bookingRef) : undefined,
         notes: optionalText(notes),
-        greenFee:
-          isGolfRound && golfCostInputMode === "breakdown"
-            ? optionalNumber(greenFee)
-            : undefined,
-        caddyFee:
-          isGolfRound && golfCostInputMode === "breakdown"
-            ? optionalNumber(caddyFee)
-            : undefined,
-        cartFee:
-          isGolfRound && golfCostInputMode === "breakdown"
-            ? optionalNumber(cartFee)
-            : undefined,
-        includeGreenFeeInSplit:
-          isGolfRound && golfCostInputMode === "breakdown" ? true : undefined,
-        includeCaddyFeeInSplit:
-          isGolfRound && golfCostInputMode === "breakdown" ? true : undefined,
-        includeCartFeeInSplit:
-          isGolfRound && golfCostInputMode === "breakdown" ? true : undefined,
-        directPrice:
-          isFlight || isGolfRound ? undefined : optionalNumber(directPrice),
-        providerPrice:
-          isGolfRound || isHotel || isFlight
-            ? undefined
-            : optionalNumber(providerPrice),
-        amount: isFlight ? undefined : itemAmount,
-        currency: isFlight ? undefined : optionalText(currency),
-        exchangeRate: isFlight || itemAmount === undefined ? undefined : 1,
-        baseAmount: isFlight ? undefined : itemAmount,
         locationName: isFlight ? optionalText(fromAirport) : undefined,
         address: isFlight ? optionalText(toAirport) : undefined,
         courseId: type === "golf_round" ? selectedCourse?.id : undefined,
-        paidByMemberId: isFlight ? undefined : optionalText(paidByMemberId),
-        expenseType: isFlight ? undefined : expenseType,
-        costMode,
-        participantMemberIds:
-          isFlight || expenseType === "PERSONAL"
-            ? undefined
-            : sharedParticipantMemberIds,
         visibility,
         visibleToMemberIds:
           visibility === "SELECTED" ? visibleToMemberIds : undefined,
         documentIds: selectedDocumentIds,
+        costs: costs.length > 0 ? costs : undefined,
       };
 
       console.info("Submitting trip item", {
@@ -1321,388 +1394,130 @@ export default function AddTripItemPage() {
     </Card>
   );
 
-  const renderCosts = (
-    <Card title="Costs" subtitle="Add the item cost before choosing who is included.">
-      {isHotel ? (
-        <div style={{ display: "grid", gap: 9 }}>
-          <label style={labelStyle}>
-            Cost for entire stay
-            <input
-              type="number"
-              inputMode="decimal"
-              value={amount}
-              onChange={(e) => updateHotelTotalCost(e.target.value)}
-              style={fieldStyle}
-            />
-            <span style={sectionIntroStyle}>
-              Total cost for the selected rooms and dates.
-            </span>
-          </label>
-          <label style={labelStyle}>
-            Cost per night
-            <input
-              type="number"
-              inputMode="decimal"
-              value={directPrice}
-              onChange={(e) => updateHotelNightlyCost(e.target.value)}
-              style={fieldStyle}
-            />
-            <span style={sectionIntroStyle}>
-              Used to estimate the total stay cost.
-            </span>
-          </label>
+  const renderBudget = (
+    <Card title="Costs" subtitle="Plan or track item costs.">
+      {budgetDrafts.length === 0 ? (
+        <div style={{ display: "grid", gap: 8, justifyItems: "start" }}>
+          <div style={sectionIntroStyle}>No costs added yet.</div>
+          <button
+            type="button"
+            onClick={addBudgetDraft}
+            className="fw-pill fw-pill--meta fw-pill--action"
+            style={{ height: 32, cursor: "pointer" }}
+          >
+            + Add cost
+          </button>
         </div>
-      ) : !isFlight && !isGolfRound ? (
-        <label style={labelStyle}>
-          Amount
-          <input
-            type="number"
-            inputMode="decimal"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            style={fieldStyle}
-          />
-        </label>
-      ) : null}
-
-      {isGolfRound ? (
-        <div style={{ display: "grid", gap: 10 }}>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {[
-              { value: "package", label: "Package price" },
-              { value: "breakdown", label: "Breakdown" },
-            ].map((option) => {
-              const selected = golfCostInputMode === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() =>
-                    setGolfCostInputMode(option.value as GolfCostInputMode)
-                  }
-                  style={{
-                    minHeight: 40,
-                    padding: "0 13px",
-                    borderRadius: 999,
-                    border: selected
-                      ? `1px solid ${theme.color}`
-                      : "1px solid var(--border)",
-                    background: selected ? theme.soft : "transparent",
-                    color: selected ? "var(--text)" : "var(--sub)",
-                    cursor: "pointer",
-                    fontSize: 12,
-                    fontWeight: 900,
-                  }}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {golfCostInputMode === "package" ? (
-            <label style={labelStyle}>
-              Package price per person
-              <input
-                type="number"
-                inputMode="decimal"
-                value={packagePrice}
-                onChange={(e) => setPackagePrice(e.target.value)}
-                style={fieldStyle}
-              />
-            </label>
-          ) : (
-            <>
-              {[
-                {
-                  label: "Greenfee",
-                  value: greenFee,
-                  onAmountChange: setGreenFee,
-                },
-                {
-                  label: "Caddy fee",
-                  value: caddyFee,
-                  onAmountChange: setCaddyFee,
-                },
-                {
-                  label: "Cart fee",
-                  value: cartFee,
-                  onAmountChange: setCartFee,
-                },
-              ].map((cost) => (
-                <label key={cost.label} style={labelStyle}>
-                  {cost.label}
+      ) : (
+        <div style={{ display: "grid", gap: 7 }}>
+          {budgetDrafts.map((draft, index) => (
+            <div
+              key={draft.localId}
+              style={{
+                display: "grid",
+                gap: 5,
+                padding: "8px 9px",
+                borderRadius: 12,
+                border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                background: "color-mix(in srgb, var(--card) 86%, var(--bg))",
+                minWidth: 0,
+              }}
+            >
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "minmax(0, 1.35fr) minmax(86px, 0.85fr) minmax(82px, 0.55fr)",
+                  gap: 7,
+                  alignItems: "end",
+                }}
+              >
+                <label style={{ ...labelStyle, gap: 4, fontSize: 11 }}>
+                  Label
+                  <input
+                    autoFocus={expandedBudgetCostId === draft.localId}
+                    value={draft.label}
+                    onChange={(event) =>
+                      updateBudgetDraft(draft.localId, { label: event.target.value })
+                    }
+                    placeholder={costLabelPlaceholderForItemType(type)}
+                    style={{ ...fieldStyle, minHeight: 36, padding: "7px 9px" }}
+                  />
+                </label>
+                <label style={{ ...labelStyle, gap: 4, fontSize: 11 }}>
+                  Amount
                   <input
                     type="number"
                     inputMode="decimal"
-                    value={cost.value}
-                    onChange={(e) => cost.onAmountChange(e.target.value)}
-                    style={fieldStyle}
+                    value={draft.amount}
+                    onChange={(event) =>
+                      updateBudgetDraft(draft.localId, { amount: event.target.value })
+                    }
+                    placeholder={index === 0 ? "120" : undefined}
+                    style={{ ...fieldStyle, minHeight: 36, padding: "7px 9px" }}
                   />
                 </label>
-              ))}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 10,
-                  color: "var(--text)",
-                  fontSize: 13,
-                  fontWeight: 950,
-                }}
-              >
-                <span>Total per person</span>
-                <span>{golfBreakdownTotal.toLocaleString()}</span>
-              </div>
-            </>
-          )}
-        </div>
-      ) : !isFlight && !isHotel ? (
-        <>
-          <label style={labelStyle}>
-            Direct price
-            <input
-              type="number"
-              inputMode="decimal"
-              value={directPrice}
-              onChange={(e) => setDirectPrice(e.target.value)}
-              style={fieldStyle}
-            />
-          </label>
-          {!isHotel ? (
-            <label style={labelStyle}>
-              Provider price
-              <input
-                type="number"
-                inputMode="decimal"
-                value={providerPrice}
-                onChange={(e) => setProviderPrice(e.target.value)}
-                style={fieldStyle}
-              />
-            </label>
-          ) : null}
-        </>
-      ) : (
-        <div style={sectionIntroStyle}>Flights do not use shared trip costs yet.</div>
-      )}
-
-      {!isFlight ? (
-        <label style={labelStyle}>
-          Currency
-          <select
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value)}
-            style={fieldStyle}
-          >
-            {currencyOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : null}
-
-    </Card>
-  );
-
-  const renderBudget = (trip?.members ?? []).length > 0 && !isFlight ? (
-    <Card title="Budget" subtitle="Set who paid and who is included in this cost.">
-      <label style={labelStyle}>
-        Paid by
-        <select
-          value={paidByMemberId}
-          onChange={(e) => setPaidByMemberId(e.target.value)}
-          style={fieldStyle}
-        >
-          <option value="">Not specified</option>
-          {(trip?.members ?? []).map((member) => (
-            <option key={member.id} value={member.id}>
-              {memberDisplayName(member)}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <div style={{ display: "grid", gap: 8 }}>
-        <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 900 }}>
-          Cost applies to
-        </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {[
-            { value: "SHARED", label: "Shared" },
-            { value: "PERSONAL", label: "Personal" },
-          ].map((option) => {
-            const selected = expenseType === option.value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setExpenseType(option.value as ExpenseType)}
-                style={{
-                  minHeight: 40,
-                  padding: "0 13px",
-                  borderRadius: 999,
-                  border: selected
-                    ? `1px solid ${theme.color}`
-                    : "1px solid var(--border)",
-                  background: selected ? theme.soft : "transparent",
-                  color: selected ? "var(--text)" : "var(--sub)",
-                  cursor: "pointer",
-                  fontSize: 12,
-                  fontWeight: 900,
-                }}
-              >
-                {option.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {expenseType === "SHARED" ? (
-        <div style={{ display: "grid", gap: 8 }}>
-          <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 900 }}>
-            Shared with
-          </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {[
-              { value: "ALL", label: "All members" },
-              { value: "SELECTED", label: "Select members" },
-            ].map((option) => {
-              const selected = budgetParticipantMode === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => {
-                    setBudgetParticipantMode(option.value as BudgetParticipantMode);
-                    if (option.value === "ALL") {
-                      setParticipantMemberIds(
-                        (trip?.members ?? []).map((member) => member.id),
-                      );
+                <label style={{ ...labelStyle, gap: 4, fontSize: 11 }}>
+                  Currency
+                  <select
+                    value={draft.currency}
+                    onChange={(event) =>
+                      updateBudgetDraft(draft.localId, { currency: event.target.value })
                     }
-                  }}
-                  style={{
-                    minHeight: 40,
-                    padding: "0 13px",
-                    borderRadius: 999,
-                    border: selected
-                      ? `1px solid ${theme.color}`
-                      : "1px solid var(--border)",
-                    background: selected ? theme.soft : "transparent",
-                    color: selected ? "var(--text)" : "var(--sub)",
-                    cursor: "pointer",
-                    fontSize: 12,
-                    fontWeight: 900,
-                  }}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {budgetParticipantMode === "SELECTED" ? (
-            <div style={{ display: "grid", gap: 7 }}>
-              <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 750 }}>
-                These people are included in this cost.
+                    style={{ ...fieldStyle, minHeight: 36, padding: "7px 8px" }}
+                  >
+                    {currencyOptions.map((currency) => (
+                      <option key={currency} value={currency}>
+                        {currency}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-                {(trip?.members ?? []).map((member) => {
-                  const checked = participantMemberIds.includes(member.id);
-                  return (
-                    <label
-                      key={member.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        minHeight: 36,
-                        gap: 7,
-                        padding: "0 10px",
-                        borderRadius: 999,
-                        border: checked
-                          ? `1px solid ${theme.color}`
-                          : "1px solid var(--border)",
-                        background: checked ? theme.soft : "transparent",
-                        color: "var(--text)",
-                        fontSize: 12,
-                        fontWeight: 850,
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={(e) => {
-                          setParticipantMemberIds((current) =>
-                            e.target.checked
-                              ? [...current, member.id]
-                              : current.filter((id) => id !== member.id),
-                          );
-                        }}
-                      />
-                      <span>{memberDisplayName(member)}</span>
-                    </label>
-                  );
-                })}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center" }}>
+                <span className="fw-pill fw-pill--meta">
+                  {costModeText(draft.costMode)}
+                </span>
+                <span className="fw-pill fw-pill--meta">
+                  {budgetPaymentText(draft)}
+                </span>
+                {budgetParticipantText(draft) ? (
+                  <span className="fw-pill fw-pill--meta">
+                    {budgetParticipantText(draft)}
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => editBudgetDraft(draft.localId)}
+                  className="fw-pill fw-pill--meta fw-pill--action"
+                  style={{ height: 28, cursor: "pointer" }}
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteBudgetDraft(draft.localId)}
+                  className="fw-pill fw-pill--meta"
+                  style={{ height: 28, cursor: "pointer" }}
+                >
+                  Delete
+                </button>
               </div>
             </div>
-          ) : null}
+          ))}
         </div>
+      )}
+      {budgetDrafts.length > 0 ? (
+        <button
+          type="button"
+          onClick={addBudgetDraft}
+          className="fw-pill fw-pill--meta fw-pill--action"
+          style={{ height: 32, width: "fit-content", cursor: "pointer" }}
+        >
+          + Add cost
+        </button>
       ) : null}
-
-      <div style={{ display: "grid", gap: 8 }}>
-        <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 900 }}>
-          Cost basis
-        </div>
-        <div style={{ display: "grid", gap: 7 }}>
-          {[
-            {
-              value: "PER_PERSON",
-              label: "Per person",
-              helper: "Amount is charged once for each selected participant.",
-            },
-            {
-              value: "TOTAL",
-              label: "Total for selected people",
-              helper: "Amount is split across selected participants.",
-            },
-          ].map((option) => {
-            const selected = costMode === option.value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setCostMode(option.value as CostMode)}
-                style={{
-                  width: "100%",
-                  minHeight: 54,
-                  padding: "9px 12px",
-                  borderRadius: 14,
-                  border: selected
-                    ? `1px solid ${theme.color}`
-                    : "1px solid var(--border)",
-                  background: selected ? theme.soft : "transparent",
-                  color: "var(--text)",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  display: "grid",
-                  gap: 3,
-                }}
-              >
-                <span style={{ fontSize: 13, fontWeight: 950 }}>
-                  {option.label}
-                </span>
-                <span style={{ color: "var(--sub)", fontSize: 12, fontWeight: 750 }}>
-                  {option.helper}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
     </Card>
-  ) : null;
+  );
 
   const renderRelatedDocuments = (
     <Card title="Related documents" subtitle="Attach an existing trip document to this item.">
@@ -2202,7 +2017,6 @@ export default function AddTripItemPage() {
             </Card>
 
             {renderTransportTiming}
-            {renderCosts}
             {renderBudget}
             {renderRelatedDocuments}
             {renderVisibility}
@@ -2246,6 +2060,388 @@ export default function AddTripItemPage() {
           </>
         )}
       </form>
+
+      {budgetModalOpen ? createPortal(
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="add-item-costs-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 2147483000,
+            isolation: "isolate",
+            background: "rgba(0,0,0,0.68)",
+            display: "grid",
+            placeItems: "end center",
+            padding: "16px 12px max(24px, calc(16px + env(safe-area-inset-bottom, 0px)))",
+            boxSizing: "border-box",
+          }}
+          onClick={() => {
+            setBudgetModalOpen(false);
+            setExpandedBudgetCostId(null);
+          }}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 640,
+              maxHeight: "calc(100dvh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))",
+              overflowY: "auto",
+              margin: "0 auto",
+              display: "grid",
+              gap: 12,
+              padding: 16,
+              borderRadius: 20,
+              border: "1px solid var(--border)",
+              background: "var(--card, #ffffff)",
+              backgroundColor: "var(--card, #ffffff)",
+              color: "var(--text)",
+              boxShadow: "0 24px 80px rgba(0,0,0,0.48)",
+              boxSizing: "border-box",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: 10,
+              }}
+            >
+              <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
+                <div id="add-item-costs-title" style={{ fontSize: 18, fontWeight: 950 }}>
+                  Costs
+                </div>
+                <div style={{ color: "var(--sub)", fontSize: 13, lineHeight: 1.4 }}>
+                  {summaryTitle}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setBudgetModalOpen(false);
+                  setExpandedBudgetCostId(null);
+                }}
+                className="fw-pill fw-pill--meta"
+                style={{ height: 30, cursor: "pointer" }}
+              >
+                Close
+              </button>
+            </div>
+
+            <div style={{ display: "grid", gap: 10 }}>
+              {budgetDrafts.map((draft, index) => {
+                const paidByRequired = draft.paymentMode === "PAID_BY_ONE";
+                const isExpanded = expandedBudgetCostId === draft.localId;
+                return (
+                  <section
+                    key={draft.localId}
+                    style={{
+                      display: "grid",
+                      gap: 9,
+                      padding: 11,
+                      borderRadius: 14,
+                      border: "1px solid var(--border)",
+                      background: "color-mix(in srgb, var(--bg) 58%, var(--card))",
+                    }}
+                  >
+                    <div style={{ display: "grid", gap: 7 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          justifyContent: "space-between",
+                          gap: 10,
+                        }}
+                      >
+                        <div style={{ minWidth: 0, display: "grid", gap: 3 }}>
+                          <div
+                            style={{
+                              color: "var(--text)",
+                              fontSize: 13,
+                              fontWeight: 950,
+                              lineHeight: 1.25,
+                              overflowWrap: "anywhere",
+                            }}
+                          >
+                            {draft.label.trim() || `Cost ${index + 1}`}
+                          </div>
+                          <div style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
+                            {budgetAmountText(draft)}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 6, flex: "0 0 auto" }}>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedBudgetCostId(isExpanded ? null : draft.localId)
+                            }
+                            className="fw-pill fw-pill--meta fw-pill--action"
+                            style={{ height: 28, cursor: "pointer" }}
+                          >
+                            {isExpanded ? "Close" : "Edit"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteBudgetDraft(draft.localId)}
+                            className="fw-pill fw-pill--meta"
+                            style={{ height: 28, cursor: "pointer" }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                        <span className="fw-pill fw-pill--meta">
+                          {costModeText(draft.costMode)}
+                        </span>
+                        <span className="fw-pill fw-pill--meta">
+                          {budgetPaymentText(draft)}
+                        </span>
+                        {budgetParticipantText(draft) ? (
+                          <span className="fw-pill fw-pill--meta">
+                            {budgetParticipantText(draft)}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {isExpanded ? (
+                      <div style={{ display: "grid", gap: 9 }}>
+                        <label style={labelStyle}>
+                          Label
+                          <input
+                            value={draft.label}
+                            onChange={(event) =>
+                              updateBudgetDraft(draft.localId, { label: event.target.value })
+                            }
+                            placeholder={costLabelPlaceholderForItemType(type)}
+                            style={fieldStyle}
+                          />
+                        </label>
+
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "minmax(0, 1fr) minmax(92px, 120px)",
+                            gap: 8,
+                          }}
+                        >
+                          <label style={labelStyle}>
+                            Amount
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              value={draft.amount}
+                              onChange={(event) =>
+                                updateBudgetDraft(draft.localId, { amount: event.target.value })
+                              }
+                              style={fieldStyle}
+                            />
+                          </label>
+                          <label style={labelStyle}>
+                            Currency
+                            <select
+                              value={draft.currency}
+                              onChange={(event) =>
+                                updateBudgetDraft(draft.localId, { currency: event.target.value })
+                              }
+                              style={fieldStyle}
+                            >
+                              {currencyOptions.map((currency) => (
+                                <option key={currency} value={currency}>
+                                  {currency}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        </div>
+
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                          {[
+                            { value: "PER_PERSON" as CostMode, label: "Per person" },
+                            { value: "TOTAL" as CostMode, label: "Total" },
+                          ].map((option) => {
+                            const selected = draft.costMode === option.value;
+                            return (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={() =>
+                                  updateBudgetDraft(draft.localId, { costMode: option.value })
+                                }
+                                className="fw-pill fw-pill--meta"
+                                style={{
+                                  height: 32,
+                                  cursor: "pointer",
+                                  borderColor: selected ? theme.color : "var(--border)",
+                                  background: selected ? theme.soft : "transparent",
+                                  color: selected ? "var(--text)" : "var(--sub)",
+                                }}
+                              >
+                                {option.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                          {[
+                            { value: "PAID_BY_ONE" as PaymentMode, label: "One member paid" },
+                            { value: "EACH_PAYS_OWN" as PaymentMode, label: "Everyone pays own part" },
+                          ].map((option) => {
+                            const selected = draft.paymentMode === option.value;
+                            return (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={() =>
+                                  updateBudgetDraft(draft.localId, { paymentMode: option.value })
+                                }
+                                className="fw-pill fw-pill--meta"
+                                style={{
+                                  height: 32,
+                                  cursor: "pointer",
+                                  borderColor: selected ? theme.color : "var(--border)",
+                                  background: selected ? theme.soft : "transparent",
+                                  color: selected ? "var(--text)" : "var(--sub)",
+                                }}
+                              >
+                                {option.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {paidByRequired ? (
+                          <label style={labelStyle}>
+                            Paid by
+                            <select
+                              value={draft.paidByMemberId}
+                              onChange={(event) =>
+                                updateBudgetDraft(draft.localId, {
+                                  paidByMemberId: event.target.value,
+                                })
+                              }
+                              style={fieldStyle}
+                            >
+                              <option value="">Choose member</option>
+                              {(trip?.members ?? []).map((member) => (
+                                <option key={member.id} value={member.id}>
+                                  {memberDisplayName(member)}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ) : null}
+
+                        <div style={{ display: "grid", gap: 7 }}>
+                          <div style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
+                            Shared with
+                          </div>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                            {(trip?.members ?? []).map((member) => {
+                              const selected = draft.participantMemberIds.includes(member.id);
+                              return (
+                                <label
+                                  key={member.id}
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                    minHeight: 32,
+                                    padding: "0 10px",
+                                    borderRadius: 999,
+                                    border: selected
+                                      ? `1px solid ${theme.color}`
+                                      : "1px solid var(--border)",
+                                    background: selected ? theme.soft : "transparent",
+                                    color: "var(--text)",
+                                    fontSize: 12,
+                                    fontWeight: 850,
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selected}
+                                    onChange={(event) =>
+                                      updateBudgetDraft(draft.localId, {
+                                        participantMemberIds: event.target.checked
+                                          ? [...draft.participantMemberIds, member.id]
+                                          : draft.participantMemberIds.filter(
+                                              (id) => id !== member.id,
+                                            ),
+                                      })
+                                    }
+                                  />
+                                  {memberDisplayName(member)}
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                  </section>
+                );
+              })}
+              {budgetDrafts.length === 0 ? (
+                <div
+                  style={{
+                    padding: 10,
+                    borderRadius: 14,
+                    border: "1px solid var(--border)",
+                    background: "color-mix(in srgb, var(--bg) 58%, var(--card))",
+                    color: "var(--sub)",
+                    fontSize: 12,
+                    lineHeight: 1.35,
+                  }}
+                >
+                  No costs added yet.
+                </div>
+              ) : null}
+            </div>
+
+            <div style={{ display: "grid", gap: 7 }}>
+              <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+                Use Add cost for separate costs like{" "}
+                {costLabelExamplesForItemType(type).join(", ")}.
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={addBudgetDraft}
+                  className="fw-pill fw-pill--meta fw-pill--action"
+                  style={{ height: 32, cursor: "pointer" }}
+                >
+                  Add cost
+                </button>
+                <button
+                  type="button"
+                  onClick={saveBudgetDrafts}
+                  style={{
+                    height: 32,
+                    padding: "0 12px",
+                    borderRadius: 999,
+                    border: "1px solid var(--border)",
+                    background: "var(--text)",
+                    color: "var(--bg)",
+                    cursor: "pointer",
+                    fontWeight: 900,
+                    fontSize: 12,
+                  }}
+                >
+                  Save costs
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      ) : null}
     </div>
   );
 }

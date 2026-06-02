@@ -226,7 +226,7 @@ type TripSummaryStat = {
   value: number;
 };
 
-type BudgetCategory = "Golf" | "Hotel" | "Transfer" | "Activity" | "Other";
+type BudgetCategory = "Golf" | "Hotel" | "Transfer" | "Restaurant" | "Activity" | "Other";
 
 type BudgetSummary = {
   mixedCurrencies: boolean;
@@ -364,9 +364,10 @@ type CalendarIndicator =
   | "Transfer"
   | "Car rental"
   | "Flight"
+  | "Restaurant"
   | "Other";
 
-type CalendarSection = "Golf" | "Hotel" | "Transfers / Car" | "Flights" | "Other";
+type CalendarSection = "Golf" | "Hotel" | "Transfers / Car" | "Flights" | "Restaurant" | "Other";
 
 type CalendarDay = {
   key: string;
@@ -398,6 +399,7 @@ const itemTypeOptions = [
   { value: "transfer", label: "Transfer" },
   { value: "car_rental", label: "Car rental" },
   { value: "flight", label: "Flight" },
+  { value: "restaurant", label: "Restaurant" },
   { value: "free_day", label: "Free day" },
   { value: "note", label: "Note" },
 ];
@@ -860,6 +862,7 @@ function itemIcon(type?: string | null) {
   if (value === "hotel") return "🏨";
   if (value === "transfer") return "🚗";
   if (value === "car_rental") return "🚙";
+  if (value === "restaurant") return "🍽";
   if (value === "free_day") return "🌴";
   return "📝";
 }
@@ -876,6 +879,7 @@ function itemTypeLabel(type?: string | null) {
   if (value === "transfer") return "Transfer";
   if (value === "car_rental") return "Car rental";
   if (value === "flight" || value === "flights") return "Flight";
+  if (value === "restaurant") return "Restaurant";
   if (value === "free_day") return "Activity";
   return "Other";
 }
@@ -888,6 +892,7 @@ function calendarIndicator(type?: string | null): CalendarIndicator {
   if (value === "transfer") return "Transfer";
   if (value === "car_rental") return "Car rental";
   if (value === "flight" || value === "flights") return "Flight";
+  if (value === "restaurant") return "Restaurant";
   return "Other";
 }
 
@@ -898,6 +903,7 @@ function calendarSection(type?: string | null): CalendarSection {
   if (value === "hotel") return "Hotel";
   if (value === "transfer" || value === "car_rental") return "Transfers / Car";
   if (value === "flight" || value === "flights") return "Flights";
+  if (value === "restaurant") return "Restaurant";
   return "Other";
 }
 
@@ -959,6 +965,17 @@ function calendarItemAccent(item: TripItem) {
     };
   }
 
+  if (value === "restaurant") {
+    return {
+      border: "color-mix(in srgb, #d15f32 74%, var(--border))",
+      header: "#d15f32",
+      rail: "color-mix(in srgb, #d15f32 94%, var(--border))",
+      headerText: "#fff",
+      headerSubText: "rgba(255,255,255,0.78)",
+      pill: "Restaurant",
+    };
+  }
+
   return {
     border: "color-mix(in srgb, #64748b 62%, var(--border))",
     header: "#64748b",
@@ -975,6 +992,7 @@ function budgetCategory(type?: string | null): BudgetCategory {
   if (value === "golf_round" || value === "course") return "Golf";
   if (value === "hotel") return "Hotel";
   if (value === "transfer" || value === "car_rental") return "Transfer";
+  if (value === "restaurant") return "Restaurant";
   if (value === "free_day") return "Activity";
   return "Other";
 }
@@ -1958,15 +1976,40 @@ function TripItemBudgetSection({
   item,
   members,
   canEdit,
+  drafts,
+  focusedDraftId,
+  saving,
+  onStartInline,
+  onAddDraft,
+  onUpdateDraft,
+  onDeleteDraft,
+  onSave,
   onEdit,
 }: {
   item: TripItem;
   members: TripMember[];
   canEdit: boolean;
-  onEdit: (item: TripItem, event?: React.MouseEvent) => void;
+  drafts?: BudgetCostDraft[] | null;
+  focusedDraftId?: string | null;
+  saving?: boolean;
+  onStartInline: (
+    item: TripItem,
+    event?: React.MouseEvent,
+    options?: { addNew?: boolean; costId?: string },
+  ) => void;
+  onAddDraft: (item: TripItem, event?: React.MouseEvent) => void;
+  onUpdateDraft: (localId: string, patch: Partial<BudgetCostDraft>) => void;
+  onDeleteDraft: (localId: string) => void;
+  onSave: (item: TripItem, event?: React.MouseEvent) => void;
+  onEdit: (
+    item: TripItem,
+    event?: React.MouseEvent,
+    options?: { addNew?: boolean; costId?: string },
+  ) => void;
 }) {
   const costs = budgetCostsForItem(item, members);
-  if (costs.length === 0 && !canEdit) return null;
+  const isInlineEditing = Boolean(drafts);
+  if (costs.length === 0 && !canEdit && !isInlineEditing) return null;
 
   return (
     <section
@@ -1989,24 +2032,174 @@ function TripItemBudgetSection({
           flexWrap: "wrap",
         }}
       >
-        <div style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
-          Budget
+        <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
+          <div style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
+            Costs
+          </div>
+          <div style={{ color: "var(--sub)", fontSize: 11, lineHeight: 1.25 }}>
+            Plan or track item costs.
+          </div>
         </div>
-        {canEdit ? (
-          <button
-            type="button"
-            onClick={(event) => onEdit(item, event)}
-            className="fw-pill fw-pill--meta fw-pill--action"
-            style={{ height: 28, cursor: "pointer" }}
-          >
-            Edit budget
-          </button>
-        ) : null}
       </div>
 
-      {costs.length === 0 ? (
-        <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
-          No costs added yet.
+      {isInlineEditing ? (
+        <div style={{ display: "grid", gap: 7 }}>
+          {(drafts ?? []).map((draft, index) => {
+            const paidBy =
+              draft.paymentMode === "PAID_BY_ONE"
+                ? members.find((member) => member.id === draft.paidByMemberId)
+                : null;
+            const paymentText =
+              draft.paymentMode === "EACH_PAYS_OWN"
+                ? "everyone pays own part"
+                : paidBy
+                  ? `paid by ${memberDisplayName(paidBy)}`
+                  : "paid by one member";
+            const participantCount = draft.participantMemberIds.length;
+
+            return (
+              <div
+                key={draft.localId}
+                style={{
+                  display: "grid",
+                  gap: 6,
+                  padding: "8px 9px",
+                  borderRadius: 12,
+                  border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                  background: "color-mix(in srgb, var(--card) 86%, var(--bg))",
+                  minWidth: 0,
+                }}
+              >
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns:
+                      "minmax(0, 1.35fr) minmax(86px, 0.85fr) minmax(82px, 0.55fr)",
+                    gap: 7,
+                    alignItems: "end",
+                  }}
+                >
+                  <label style={{ display: "grid", gap: 4, color: "var(--text)", fontSize: 11, fontWeight: 900 }}>
+                    Label
+                    <input
+                      autoFocus={focusedDraftId === draft.localId}
+                      value={draft.label}
+                      onChange={(event) =>
+                        onUpdateDraft(draft.localId, { label: event.target.value })
+                      }
+                      placeholder={costLabelPlaceholderForItemType(item.type)}
+                      style={{ ...editFieldStyle, minHeight: 36, padding: "7px 9px" }}
+                    />
+                  </label>
+                  <label style={{ display: "grid", gap: 4, color: "var(--text)", fontSize: 11, fontWeight: 900 }}>
+                    Amount
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={draft.amount}
+                      onChange={(event) =>
+                        onUpdateDraft(draft.localId, { amount: event.target.value })
+                      }
+                      placeholder={index === 0 ? "120" : undefined}
+                      style={{ ...editFieldStyle, minHeight: 36, padding: "7px 9px" }}
+                    />
+                  </label>
+                  <label style={{ display: "grid", gap: 4, color: "var(--text)", fontSize: 11, fontWeight: 900 }}>
+                    Currency
+                    <select
+                      value={draft.currency}
+                      onChange={(event) =>
+                        onUpdateDraft(draft.localId, { currency: event.target.value })
+                      }
+                      style={{ ...editFieldStyle, minHeight: 36, padding: "7px 8px" }}
+                    >
+                      {currencyOptions.map((currency) => (
+                        <option key={currency} value={currency}>
+                          {currency}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center" }}>
+                  <span className="fw-pill fw-pill--meta">
+                    {costModeText(draft.costMode)}
+                  </span>
+                  <span className="fw-pill fw-pill--meta">{paymentText}</span>
+                  {participantCount > 0 ? (
+                    <span className="fw-pill fw-pill--meta">
+                      shared with {participantCount} {participantCount === 1 ? "person" : "people"}
+                    </span>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={(event) => onEdit(item, event, { costId: draft.localId })}
+                    className="fw-pill fw-pill--meta fw-pill--action"
+                    style={{ height: 28, cursor: "pointer" }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDeleteDraft(draft.localId)}
+                    className="fw-pill fw-pill--meta"
+                    style={{ height: 28, cursor: "pointer" }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+          {(drafts ?? []).length === 0 ? (
+            <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+              No costs added yet.
+            </div>
+          ) : null}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <button
+              type="button"
+              onClick={(event) => onAddDraft(item, event)}
+              className="fw-pill fw-pill--meta fw-pill--action"
+              style={{ height: 32, cursor: "pointer" }}
+            >
+              + Add cost
+            </button>
+            <button
+              type="button"
+              onClick={(event) => onSave(item, event)}
+              disabled={saving}
+              style={{
+                height: 32,
+                padding: "0 12px",
+                borderRadius: 999,
+                border: "1px solid var(--border)",
+                background: "var(--text)",
+                color: "var(--bg)",
+                cursor: saving ? "default" : "pointer",
+                fontWeight: 900,
+                fontSize: 12,
+              }}
+            >
+              {saving ? "Saving..." : "Save costs"}
+            </button>
+          </div>
+        </div>
+      ) : costs.length === 0 ? (
+        <div style={{ display: "grid", gap: 8, justifyItems: "start" }}>
+          <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+            No costs added yet.
+          </div>
+          {canEdit ? (
+            <button
+              type="button"
+              onClick={(event) => onStartInline(item, event, { addNew: true })}
+              className="fw-pill fw-pill--meta fw-pill--action"
+              style={{ height: 32, cursor: "pointer" }}
+            >
+              + Add cost
+            </button>
+          ) : null}
         </div>
       ) : (
         <div style={{ display: "grid", gap: 6 }}>
@@ -2026,7 +2219,7 @@ function TripItemBudgetSection({
               <div
                 style={{
                   display: "flex",
-                  alignItems: "baseline",
+                  alignItems: "flex-start",
                   justifyContent: "space-between",
                   gap: 10,
                   minWidth: 0,
@@ -2044,17 +2237,36 @@ function TripItemBudgetSection({
                 >
                   {budgetCostTitle(cost)}
                 </span>
-                <span
+                <div
                   style={{
-                    color: "var(--text)",
-                    fontSize: 12,
-                    lineHeight: 1.25,
-                    fontWeight: 950,
-                    whiteSpace: "nowrap",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    flex: "0 0 auto",
                   }}
                 >
-                  {budgetCostAmountText(cost)}
-                </span>
+                  <span
+                    style={{
+                      color: "var(--text)",
+                      fontSize: 12,
+                      lineHeight: 1.25,
+                      fontWeight: 950,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {budgetCostAmountText(cost)}
+                  </span>
+                  {canEdit ? (
+                    <button
+                      type="button"
+                      onClick={(event) => onStartInline(item, event, { costId: cost.id })}
+                      className="fw-pill fw-pill--meta fw-pill--action"
+                      style={{ height: 28, cursor: "pointer" }}
+                    >
+                      Edit
+                    </button>
+                  ) : null}
+                </div>
               </div>
               <div
                 style={{
@@ -2078,6 +2290,16 @@ function TripItemBudgetSection({
               </div>
             </div>
           ))}
+          {canEdit ? (
+            <button
+              type="button"
+              onClick={(event) => onStartInline(item, event, { addNew: true })}
+              className="fw-pill fw-pill--meta fw-pill--action"
+              style={{ height: 32, width: "fit-content", cursor: "pointer" }}
+            >
+              + Add cost
+            </button>
+          ) : null}
         </div>
       )}
     </section>
@@ -2116,6 +2338,15 @@ function markerTypeStyles(typeKey: string) {
       color: "var(--text)",
       ring: "var(--sub)",
       glyph: "T",
+    };
+  }
+
+  if (value === "restaurant") {
+    return {
+      background: "var(--bg)",
+      color: "var(--text)",
+      ring: "#d15f32",
+      glyph: "R",
     };
   }
 
@@ -2414,6 +2645,15 @@ function TripCalendarView({
   canEditItem,
   onEditItem,
   onEditBudget,
+  budgetEditingItemId,
+  budgetDrafts,
+  focusedBudgetDraftId,
+  savingBudgetItemId,
+  onStartBudgetInline,
+  onAddBudgetDraft,
+  onUpdateBudgetDraft,
+  onDeleteBudgetDraft,
+  onSaveBudget,
   onOpenDocuments,
   onOpenCourse,
 }: {
@@ -2426,7 +2666,24 @@ function TripCalendarView({
   onAddItem: (date?: string) => void;
   canEditItem: (item: TripItem) => boolean;
   onEditItem: (item: TripItem, event?: React.MouseEvent) => void;
-  onEditBudget: (item: TripItem, event?: React.MouseEvent) => void;
+  onEditBudget: (
+    item: TripItem,
+    event?: React.MouseEvent,
+    options?: { addNew?: boolean; costId?: string },
+  ) => void;
+  budgetEditingItemId: string | null;
+  budgetDrafts: BudgetCostDraft[];
+  focusedBudgetDraftId: string | null;
+  savingBudgetItemId: string | null;
+  onStartBudgetInline: (
+    item: TripItem,
+    event?: React.MouseEvent,
+    options?: { addNew?: boolean; costId?: string },
+  ) => void;
+  onAddBudgetDraft: (item: TripItem, event?: React.MouseEvent) => void;
+  onUpdateBudgetDraft: (localId: string, patch: Partial<BudgetCostDraft>) => void;
+  onDeleteBudgetDraft: (localId: string) => void;
+  onSaveBudget: (item: TripItem, event?: React.MouseEvent) => void;
   onOpenDocuments: () => void;
   onOpenCourse: (courseId: string) => void;
 }) {
@@ -3009,6 +3266,14 @@ function TripCalendarView({
                         item={item}
                         members={members}
                         canEdit={canEditCurrentItem}
+                        drafts={budgetEditingItemId === item.id ? budgetDrafts : null}
+                        focusedDraftId={budgetEditingItemId === item.id ? focusedBudgetDraftId : null}
+                        saving={savingBudgetItemId === item.id}
+                        onStartInline={onStartBudgetInline}
+                        onAddDraft={onAddBudgetDraft}
+                        onUpdateDraft={onUpdateBudgetDraft}
+                        onDeleteDraft={onDeleteBudgetDraft}
+                        onSave={onSaveBudget}
                         onEdit={onEditBudget}
                       />
 
@@ -3159,6 +3424,7 @@ export default function TripDetailPage() {
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
   const [budgetEditingItemId, setBudgetEditingItemId] = useState<string | null>(null);
   const [budgetDrafts, setBudgetDrafts] = useState<BudgetCostDraft[]>([]);
+  const [budgetModalOpen, setBudgetModalOpen] = useState(false);
   const [expandedBudgetCostId, setExpandedBudgetCostId] = useState<string | null>(null);
   const [savingBudgetItemId, setSavingBudgetItemId] = useState<string | null>(null);
   const [savingItemId, setSavingItemId] = useState<string | null>(null);
@@ -3590,24 +3856,74 @@ export default function TripDetailPage() {
     };
   }
 
-  function openBudgetEdit(item: TripItem, event?: React.MouseEvent) {
+  function budgetDraftsForItem(
+    item: TripItem,
+    options?: { addNew?: boolean },
+  ) {
+    const costs = budgetCostsForItem(item, trip?.members ?? []);
+    const drafts = costs.map((cost) => budgetDraftFromCost(cost, item));
+    const newDraft = options?.addNew || drafts.length === 0 ? newBudgetDraft(item) : null;
+    return {
+      drafts: newDraft ? [...drafts, newDraft] : drafts,
+      newDraft,
+    };
+  }
+
+  function startBudgetInlineEdit(
+    item: TripItem,
+    event?: React.MouseEvent,
+    options?: { addNew?: boolean; costId?: string },
+  ) {
     event?.preventDefault();
     event?.stopPropagation();
     if (!canEditTripItem(item)) return;
 
-    const costs = budgetCostsForItem(item, trip?.members ?? []);
+    const { drafts, newDraft } = budgetDraftsForItem(item, options);
     setErr(null);
     setBudgetEditingItemId(item.id);
-    setBudgetDrafts(
-      costs.length > 0
-        ? costs.map((cost) => budgetDraftFromCost(cost, item))
-        : [],
+    setBudgetDrafts(drafts);
+    setExpandedBudgetCostId(
+      newDraft?.localId ||
+        (options?.costId && drafts.some((draft) => draft.localId === options.costId)
+          ? options.costId
+          : null),
     );
-    setExpandedBudgetCostId(null);
+    setBudgetModalOpen(false);
+  }
+
+  function openBudgetEdit(
+    item: TripItem,
+    event?: React.MouseEvent,
+    options?: { addNew?: boolean; costId?: string },
+  ) {
+    event?.preventDefault();
+    event?.stopPropagation();
+    if (!canEditTripItem(item)) return;
+
+    const activeDrafts =
+      budgetEditingItemId === item.id && budgetDrafts.length > 0
+        ? budgetDrafts
+        : budgetDraftsForItem(item, options).drafts;
+    const newDraft =
+      options?.addNew && budgetEditingItemId === item.id
+        ? newBudgetDraft(item)
+        : null;
+    const nextDrafts = newDraft ? [...activeDrafts, newDraft] : activeDrafts;
+    setErr(null);
+    setBudgetEditingItemId(item.id);
+    setBudgetDrafts(nextDrafts);
+    setExpandedBudgetCostId(
+      newDraft?.localId ||
+        (options?.costId && nextDrafts.some((draft) => draft.localId === options.costId)
+          ? options.costId
+          : nextDrafts[0]?.localId || null),
+    );
+    setBudgetModalOpen(true);
   }
 
   function closeBudgetEdit() {
     if (savingBudgetItemId) return;
+    setBudgetModalOpen(false);
     setBudgetEditingItemId(null);
     setBudgetDrafts([]);
     setExpandedBudgetCostId(null);
@@ -3632,14 +3948,31 @@ export default function TripDetailPage() {
     setExpandedBudgetCostId(draft.localId);
   }
 
+  function addBudgetDraftInline(item: TripItem, event?: React.MouseEvent) {
+    event?.preventDefault();
+    event?.stopPropagation();
+    if (!canEditTripItem(item)) return;
+
+    if (budgetEditingItemId !== item.id) {
+      startBudgetInlineEdit(item, event, { addNew: true });
+      return;
+    }
+
+    const draft = newBudgetDraft(item);
+    setBudgetDrafts((drafts) => [...drafts, draft]);
+    setExpandedBudgetCostId(draft.localId);
+    setBudgetModalOpen(false);
+  }
+
   function deleteBudgetDraft(localId: string) {
     setBudgetDrafts((drafts) => drafts.filter((draft) => draft.localId !== localId));
     setExpandedBudgetCostId((current) => (current === localId ? null : current));
   }
 
-  async function saveBudgetEdit() {
+  async function saveBudgetEdit(itemOverride?: TripItem) {
     if (!tripId || !token || !budgetEditingItemId) return;
-    const item = trip?.items?.find((candidate) => candidate.id === budgetEditingItemId);
+    const item =
+      itemOverride ?? trip?.items?.find((candidate) => candidate.id === budgetEditingItemId);
     if (!item || !canEditTripItem(item)) return;
 
     const costs = budgetDrafts
@@ -3669,7 +4002,7 @@ export default function TripDetailPage() {
         (cost) => !cost.label || cost.amount === undefined,
       )
     ) {
-      setErr("Each budget cost needs a label and amount.");
+      setErr("Each cost needs a label and amount.");
       return;
     }
 
@@ -3713,15 +4046,22 @@ export default function TripDetailPage() {
         );
       }
 
+      setBudgetModalOpen(false);
       setBudgetEditingItemId(null);
       setBudgetDrafts([]);
       setExpandedBudgetCostId(null);
       await loadTrip();
     } catch (e: any) {
-      setErr(e?.message ?? "Failed to save budget");
+      setErr(e?.message ?? "Failed to save costs");
     } finally {
       setSavingBudgetItemId(null);
     }
+  }
+
+  function saveBudgetInline(item: TripItem, event?: React.MouseEvent) {
+    event?.preventDefault();
+    event?.stopPropagation();
+    void saveBudgetEdit(item);
   }
 
   function startTripEdit() {
@@ -4570,6 +4910,7 @@ export default function TripDetailPage() {
           Transfer: 0,
           "Car rental": 0,
           Flight: 0,
+          Restaurant: 0,
           Other: 0,
         };
 
@@ -4713,6 +5054,7 @@ export default function TripDetailPage() {
       Golf: 0,
       Hotel: 0,
       Transfer: 0,
+      Restaurant: 0,
       Activity: 0,
       Other: 0,
     };
@@ -4974,6 +5316,7 @@ export default function TripDetailPage() {
     { label: "Golf", value: budgetSummary.categories.Golf },
     { label: "Hotel", value: budgetSummary.categories.Hotel },
     { label: "Transfer", value: budgetSummary.categories.Transfer },
+    { label: "Restaurant", value: budgetSummary.categories.Restaurant },
     { label: "Activity", value: budgetSummary.categories.Activity },
     { label: "Other", value: budgetSummary.categories.Other },
   ];
@@ -4994,10 +5337,6 @@ export default function TripDetailPage() {
   const atmosphereCoverUrl = trip?.coverImageUrl ? fileUrl(trip.coverImageUrl) : "";
   const budgetEditingItem =
     trip?.items?.find((item) => item.id === budgetEditingItemId) ?? null;
-  const budgetEditingItemType = String(budgetEditingItem?.type ?? "").toLowerCase();
-  const budgetEditingItemIsTransport =
-    budgetEditingItemType === "transfer" || budgetEditingItemType === "car_rental";
-
   return (
     <div className="fw-page">
       <div className="fw-page-atmosphere" aria-hidden="true">
@@ -7938,6 +8277,14 @@ export default function TripDetailPage() {
                               item={item}
                               members={trip?.members ?? []}
                               canEdit={canEditCurrentItem}
+                              drafts={budgetEditingItemId === item.id ? budgetDrafts : null}
+                              focusedDraftId={budgetEditingItemId === item.id ? expandedBudgetCostId : null}
+                              saving={savingBudgetItemId === item.id}
+                              onStartInline={startBudgetInlineEdit}
+                              onAddDraft={addBudgetDraftInline}
+                              onUpdateDraft={updateBudgetDraft}
+                              onDeleteDraft={deleteBudgetDraft}
+                              onSave={saveBudgetInline}
                               onEdit={openBudgetEdit}
                             />
 
@@ -8067,6 +8414,15 @@ export default function TripDetailPage() {
           canEditItem={canEditTripItem}
           onEditItem={openItemEdit}
           onEditBudget={openBudgetEdit}
+          budgetEditingItemId={budgetEditingItemId}
+          budgetDrafts={budgetDrafts}
+          focusedBudgetDraftId={expandedBudgetCostId}
+          savingBudgetItemId={savingBudgetItemId}
+          onStartBudgetInline={startBudgetInlineEdit}
+          onAddBudgetDraft={addBudgetDraftInline}
+          onUpdateBudgetDraft={updateBudgetDraft}
+          onDeleteBudgetDraft={deleteBudgetDraft}
+          onSaveBudget={saveBudgetInline}
           onOpenDocuments={() => setActiveView("documents")}
           onOpenCourse={(courseId) => nav(`/courses/${courseId}`)}
         />
@@ -9150,7 +9506,7 @@ export default function TripDetailPage() {
       ) : null}
       </div>
 
-      {budgetEditingItem && trip ? createPortal(
+      {budgetModalOpen && budgetEditingItem && trip ? createPortal(
         <div
           role="dialog"
           aria-modal="true"
@@ -9159,10 +9515,11 @@ export default function TripDetailPage() {
             position: "fixed",
             inset: 0,
             zIndex: 2147483000,
-            background: "rgba(0,0,0,0.58)",
+            isolation: "isolate",
+            background: "rgba(0,0,0,0.68)",
             display: "grid",
-            alignItems: "end",
-            padding: "16px 12px max(16px, env(safe-area-inset-bottom, 0px))",
+            placeItems: "end center",
+            padding: "16px 12px max(24px, calc(16px + env(safe-area-inset-bottom, 0px)))",
             boxSizing: "border-box",
           }}
           onClick={closeBudgetEdit}
@@ -9180,9 +9537,10 @@ export default function TripDetailPage() {
               padding: 16,
               borderRadius: 20,
               border: "1px solid var(--border)",
-              background: "var(--card)",
+              background: "var(--card, #ffffff)",
+              backgroundColor: "var(--card, #ffffff)",
               color: "var(--text)",
-              boxShadow: "0 18px 60px rgba(0,0,0,0.38)",
+              boxShadow: "0 24px 80px rgba(0,0,0,0.48)",
               boxSizing: "border-box",
             }}
           >
@@ -9196,16 +9554,11 @@ export default function TripDetailPage() {
             >
               <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
                 <div id="budget-edit-title" style={{ fontSize: 18, fontWeight: 950 }}>
-                  Budget
+                  Costs
                 </div>
                 <div style={{ color: "var(--sub)", fontSize: 13, lineHeight: 1.4 }}>
                   {tripItemTitle(budgetEditingItem)}
                 </div>
-                {budgetEditingItemIsTransport ? (
-                  <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
-                    Add rental fee, fuel, parking, tolls, damage or driver costs as separate costs.
-                  </div>
-                ) : null}
               </div>
               <button
                 type="button"
@@ -9526,7 +9879,7 @@ export default function TripDetailPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={saveBudgetEdit}
+                  onClick={() => void saveBudgetEdit()}
                   disabled={Boolean(savingBudgetItemId)}
                   style={{
                     height: 32,
