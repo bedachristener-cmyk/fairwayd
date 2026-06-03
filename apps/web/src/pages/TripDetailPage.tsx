@@ -84,6 +84,8 @@ type Trip = {
   title: string;
   destination?: string | null;
   description?: string | null;
+  createdById?: string | null;
+  createdByUserId?: string | null;
   baseCurrency?: string | null;
   coverImageUrl?: string | null;
   members?: TripMember[];
@@ -227,6 +229,13 @@ type TripSummaryStat = {
 };
 
 type BudgetCategory = "Golf" | "Hotel" | "Transfer" | "Restaurant" | "Activity" | "Other";
+type CostSummaryCategory = "Golf" | "Hotel" | "Transport" | "Restaurant" | "Activity";
+
+type CostSummary = {
+  categories: Record<CostSummaryCategory, number>;
+  total: number;
+  missingExchangeRateCount: number;
+};
 
 type BudgetSummary = {
   mixedCurrencies: boolean;
@@ -860,7 +869,7 @@ function itemIcon(type?: string | null) {
 
   if (value === "golf_round" || value === "course") return "🏌";
   if (value === "hotel") return "🏨";
-  if (value === "transfer") return "🚗";
+  if (value === "transfer" || value === "transport") return "🚗";
   if (value === "car_rental") return "🚙";
   if (value === "restaurant") return "🍽";
   if (value === "free_day") return "🌴";
@@ -876,7 +885,7 @@ function itemTypeLabel(type?: string | null) {
 
   if (value === "golf_round" || value === "course") return "Golf";
   if (value === "hotel") return "Hotel";
-  if (value === "transfer") return "Transfer";
+  if (value === "transfer" || value === "transport") return "Transfer";
   if (value === "car_rental") return "Car rental";
   if (value === "flight" || value === "flights") return "Flight";
   if (value === "restaurant") return "Restaurant";
@@ -889,7 +898,7 @@ function calendarIndicator(type?: string | null): CalendarIndicator {
 
   if (value === "golf_round" || value === "course") return "Golf";
   if (value === "hotel") return "Hotel";
-  if (value === "transfer") return "Transfer";
+  if (value === "transfer" || value === "transport") return "Transfer";
   if (value === "car_rental") return "Car rental";
   if (value === "flight" || value === "flights") return "Flight";
   if (value === "restaurant") return "Restaurant";
@@ -901,7 +910,9 @@ function calendarSection(type?: string | null): CalendarSection {
 
   if (value === "golf_round" || value === "course") return "Golf";
   if (value === "hotel") return "Hotel";
-  if (value === "transfer" || value === "car_rental") return "Transfers / Car";
+  if (value === "transfer" || value === "transport" || value === "car_rental") {
+    return "Transfers / Car";
+  }
   if (value === "flight" || value === "flights") return "Flights";
   if (value === "restaurant") return "Restaurant";
   return "Other";
@@ -943,7 +954,7 @@ function calendarItemAccent(item: TripItem) {
     };
   }
 
-  if (value === "transfer") {
+  if (value === "transfer" || value === "transport") {
     return {
       border: "color-mix(in srgb, #b86f16 74%, var(--border))",
       header: "#b86f16",
@@ -991,7 +1002,9 @@ function budgetCategory(type?: string | null): BudgetCategory {
 
   if (value === "golf_round" || value === "course") return "Golf";
   if (value === "hotel") return "Hotel";
-  if (value === "transfer" || value === "car_rental") return "Transfer";
+  if (value === "transfer" || value === "transport" || value === "car_rental") {
+    return "Transfer";
+  }
   if (value === "restaurant") return "Restaurant";
   if (value === "free_day") return "Activity";
   return "Other";
@@ -1972,9 +1985,127 @@ function costLabelPlaceholderForItemType(type?: string | null) {
   return examples.length === 1 ? examples[0] : examples.join(", ");
 }
 
+const costSummaryCategories: CostSummaryCategory[] = [
+  "Golf",
+  "Hotel",
+  "Transport",
+  "Restaurant",
+  "Activity",
+];
+
+function emptyCostSummary(): CostSummary {
+  return {
+    categories: {
+      Golf: 0,
+      Hotel: 0,
+      Transport: 0,
+      Restaurant: 0,
+      Activity: 0,
+    },
+    total: 0,
+    missingExchangeRateCount: 0,
+  };
+}
+
+function costSummaryCategory(type?: string | null): CostSummaryCategory {
+  const value = String(type ?? "").toLowerCase();
+  if (value === "golf_round" || value === "course") return "Golf";
+  if (value === "hotel" || value === "stay" || value === "accommodation") return "Hotel";
+  if (value === "transfer" || value === "transport" || value === "car_rental") return "Transport";
+  if (value === "restaurant") return "Restaurant";
+  return "Activity";
+}
+
+function costParticipantIds(cost: TripItemCost, tripMembers: TripMember[]) {
+  const explicitIds = (cost.participants ?? [])
+    .map((participant) => participant.tripMemberId)
+    .filter(Boolean);
+  if (explicitIds.length > 0) return explicitIds;
+  return tripMembers.map((member) => member.id);
+}
+
+type ConvertedCostAmount = {
+  amount: number;
+  missingExchangeRate: boolean;
+};
+
+function costAmountInBaseCurrency(
+  cost: TripItemCost,
+  baseCurrency: string,
+): ConvertedCostAmount {
+  const amount = finiteAmount(cost.amount);
+  if (amount <= 0) return { amount: 0, missingExchangeRate: false };
+
+  const baseAmount = finiteAmount(cost.baseAmount);
+  if (baseAmount > 0) return { amount: baseAmount, missingExchangeRate: false };
+
+  const currency = cost.currency?.trim() || baseCurrency;
+  if (currency.toUpperCase() === baseCurrency.toUpperCase()) {
+    return { amount, missingExchangeRate: false };
+  }
+
+  const exchangeRate = finiteAmount(cost.exchangeRate);
+  if (exchangeRate > 0) {
+    return { amount: amount * exchangeRate, missingExchangeRate: false };
+  }
+
+  return { amount: 0, missingExchangeRate: true };
+}
+
+function totalCostAmountInBaseCurrency(
+  cost: TripItemCost,
+  baseCurrency: string,
+  participantCount: number,
+) {
+  const converted = costAmountInBaseCurrency(cost, baseCurrency);
+  if (converted.amount <= 0) return converted;
+  return {
+    ...converted,
+    amount:
+      cost.costMode === "PER_PERSON"
+        ? converted.amount * Math.max(participantCount, 1)
+        : converted.amount,
+  };
+}
+
+function memberCostShareInBaseCurrency(
+  cost: TripItemCost,
+  baseCurrency: string,
+  participantCount: number,
+) {
+  const converted = costAmountInBaseCurrency(cost, baseCurrency);
+  if (converted.amount <= 0) return converted;
+  return {
+    ...converted,
+    amount:
+      cost.costMode === "PER_PERSON"
+        ? converted.amount
+        : converted.amount / Math.max(participantCount, 1),
+  };
+}
+
+function costNeedsExchangeRate(cost: TripItemCost, baseCurrency: string) {
+  const amount = finiteAmount(cost.amount);
+  if (amount <= 0) return false;
+  const currency = cost.currency?.trim();
+  if (!currency || currency.toUpperCase() === baseCurrency.toUpperCase()) return false;
+  if (finiteAmount(cost.baseAmount) > 0) return false;
+  return finiteAmount(cost.exchangeRate) <= 0;
+}
+
+function draftNeedsExchangeRate(draft: BudgetCostDraft, baseCurrency: string) {
+  const amount = optionalNumber(draft.amount);
+  if (amount === undefined || amount <= 0) return false;
+  const currency = draft.currency.trim();
+  if (!currency || currency.toUpperCase() === baseCurrency.toUpperCase()) return false;
+  if (optionalNumber(draft.baseAmount) !== undefined) return false;
+  return optionalNumber(draft.exchangeRate) === undefined;
+}
+
 function TripItemBudgetSection({
   item,
   members,
+  baseCurrency,
   canEdit,
   drafts,
   focusedDraftId,
@@ -1988,6 +2119,7 @@ function TripItemBudgetSection({
 }: {
   item: TripItem;
   members: TripMember[];
+  baseCurrency: string;
   canEdit: boolean;
   drafts?: BudgetCostDraft[] | null;
   focusedDraftId?: string | null;
@@ -2056,6 +2188,7 @@ function TripItemBudgetSection({
                   ? `paid by ${memberDisplayName(paidBy)}`
                   : "paid by one member";
             const participantCount = draft.participantMemberIds.length;
+            const needsExchangeRate = draftNeedsExchangeRate(draft, baseCurrency);
 
             return (
               <div
@@ -2131,6 +2264,11 @@ function TripItemBudgetSection({
                       shared with {participantCount} {participantCount === 1 ? "person" : "people"}
                     </span>
                   ) : null}
+                  {needsExchangeRate ? (
+                    <span className="fw-pill fw-pill--meta">
+                      exchange rate needed
+                    </span>
+                  ) : null}
                   <button
                     type="button"
                     onClick={(event) => onEdit(item, event, { costId: draft.localId })}
@@ -2203,19 +2341,22 @@ function TripItemBudgetSection({
         </div>
       ) : (
         <div style={{ display: "grid", gap: 6 }}>
-          {costs.map((cost) => (
-            <div
-              key={cost.id}
-              style={{
-                display: "grid",
-                gap: 4,
-                padding: "8px 9px",
-                borderRadius: 12,
-                border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                background: "color-mix(in srgb, var(--card) 86%, var(--bg))",
-                minWidth: 0,
-              }}
-            >
+          {costs.map((cost) => {
+            const needsExchangeRate = costNeedsExchangeRate(cost, baseCurrency);
+
+            return (
+              <div
+                key={cost.id}
+                style={{
+                  display: "grid",
+                  gap: 4,
+                  padding: "8px 9px",
+                  borderRadius: 12,
+                  border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                  background: "color-mix(in srgb, var(--card) 86%, var(--bg))",
+                  minWidth: 0,
+                }}
+              >
               <div
                 style={{
                   display: "flex",
@@ -2287,9 +2428,15 @@ function TripItemBudgetSection({
                     {budgetCostParticipantText(cost, members)}
                   </span>
                 ) : null}
+                {needsExchangeRate ? (
+                  <span className="fw-pill fw-pill--meta">
+                    exchange rate needed
+                  </span>
+                ) : null}
               </div>
             </div>
-          ))}
+            );
+          })}
           {canEdit ? (
             <button
               type="button"
@@ -2332,7 +2479,7 @@ function markerTypeStyles(typeKey: string) {
     };
   }
 
-  if (value === "transfer" || value === "car_rental") {
+  if (value === "transfer" || value === "transport" || value === "car_rental") {
     return {
       background: "var(--bg)",
       color: "var(--text)",
@@ -2638,6 +2785,7 @@ function TripCalendarView({
   days,
   items,
   members,
+  baseCurrency,
   selectedDay,
   onSelectDay,
   canEditTrip,
@@ -2660,6 +2808,7 @@ function TripCalendarView({
   days: CalendarDay[];
   items: TripItem[];
   members: TripMember[];
+  baseCurrency: string;
   selectedDay: string;
   onSelectDay: (key: string) => void;
   canEditTrip: boolean;
@@ -3265,6 +3414,7 @@ function TripCalendarView({
                       <TripItemBudgetSection
                         item={item}
                         members={members}
+                        baseCurrency={baseCurrency}
                         canEdit={canEditCurrentItem}
                         drafts={budgetEditingItemId === item.id ? budgetDrafts : null}
                         focusedDraftId={budgetEditingItemId === item.id ? focusedBudgetDraftId : null}
@@ -3473,6 +3623,7 @@ export default function TripDetailPage() {
   const myMembership = trip?.members?.find((member) => member.userId === user?.id);
   const canEditTrip =
     myMembership?.role === "OWNER" || myMembership?.role === "ADMIN";
+  const canAddTripItems = Boolean(myMembership);
   const canUploadTripDocuments = Boolean(myMembership);
 
   function canEditTripItem(item: TripItem) {
@@ -3975,21 +4126,32 @@ export default function TripDetailPage() {
       itemOverride ?? trip?.items?.find((candidate) => candidate.id === budgetEditingItemId);
     if (!item || !canEditTripItem(item)) return;
 
+    const baseCurrency = trip?.baseCurrency?.trim();
     const costs = budgetDrafts
-      .map((draft) => ({
-        label: optionalText(draft.label),
-        amount: optionalNumber(draft.amount),
-        currency: optionalText(draft.currency),
-        exchangeRate: optionalNumber(draft.exchangeRate),
-        baseAmount: optionalNumber(draft.baseAmount),
-        costMode: draft.costMode,
-        paymentMode: draft.paymentMode,
-        paidByMemberId:
-          draft.paymentMode === "PAID_BY_ONE"
-            ? optionalText(draft.paidByMemberId)
-            : undefined,
-        participantMemberIds: draft.participantMemberIds,
-      }))
+      .map((draft) => {
+        const amount = optionalNumber(draft.amount);
+        const currency = optionalText(draft.currency);
+        const isBaseCurrency =
+          amount !== undefined &&
+          currency &&
+          baseCurrency &&
+          currency.toUpperCase() === baseCurrency.toUpperCase();
+
+        return {
+          label: optionalText(draft.label),
+          amount,
+          currency,
+          exchangeRate: optionalNumber(draft.exchangeRate) ?? (isBaseCurrency ? 1 : undefined),
+          baseAmount: optionalNumber(draft.baseAmount) ?? (isBaseCurrency ? amount : undefined),
+          costMode: draft.costMode,
+          paymentMode: draft.paymentMode,
+          paidByMemberId:
+            draft.paymentMode === "PAID_BY_ONE"
+              ? optionalText(draft.paidByMemberId)
+              : undefined,
+          participantMemberIds: draft.participantMemberIds,
+        };
+      })
       .filter(
         (cost) =>
           cost.label ||
@@ -4359,6 +4521,24 @@ export default function TripDetailPage() {
         );
       }
 
+      const updatedTrip = (await res.json().catch(() => null)) as Trip | null;
+      if (updatedTrip?.coverImageUrl) {
+        const nextTrip = trip
+          ? {
+              ...trip,
+              ...updatedTrip,
+              members: updatedTrip.members ?? trip.members,
+              items: updatedTrip.items ?? trip.items,
+              documents: updatedTrip.documents ?? trip.documents,
+            }
+          : updatedTrip;
+        const cachedAt = writeCachedTrip(tripId, nextTrip);
+        setTrip(nextTrip);
+        setCachedTripAt(cachedAt);
+        setShowingCachedTrip(false);
+        setRefreshTripMessage(null);
+      }
+
       await loadTrip();
       await loadActivity();
     } catch (e: any) {
@@ -4457,7 +4637,9 @@ export default function TripDetailPage() {
     const type = String(editDraft.type ?? "").toLowerCase();
     if (type === "golf_round" || type === "course") return "GOLF";
     if (type === "hotel") return "HOTEL";
-    if (type === "transfer" || type === "car_rental") return "TRANSFER";
+    if (type === "transfer" || type === "transport" || type === "car_rental") {
+      return "TRANSFER";
+    }
     if (type === "flight") return "FLIGHT";
     return "GENERAL";
   }
@@ -5012,7 +5194,7 @@ export default function TripDetailPage() {
       const itemType = String(item.type ?? "").toLowerCase();
       if (itemType === "golf_round" || itemType === "course") golfRounds += 1;
       if (itemType === "hotel") hotels += 1;
-      if (itemType === "transfer") transfers += 1;
+      if (itemType === "transfer" || itemType === "transport") transfers += 1;
 
       for (const value of [itemDateValue(item), item.endDate]) {
         if (!value) continue;
@@ -5128,6 +5310,61 @@ export default function TripDetailPage() {
       categories,
     };
   }, [trip?.items, trip?.members]);
+
+  const baseCurrency = trip?.baseCurrency?.trim() || "CHF";
+  const myCostsSummary = useMemo<CostSummary>(() => {
+    const summary = emptyCostSummary();
+    const currentMemberId = myMembership?.id;
+    if (!currentMemberId) return summary;
+
+    for (const item of trip?.items ?? []) {
+      const category = costSummaryCategory(item.type);
+      for (const cost of item.costs ?? []) {
+        const participantIds = costParticipantIds(cost, trip?.members ?? []);
+        if (!participantIds.includes(currentMemberId)) continue;
+
+        const converted = memberCostShareInBaseCurrency(
+          cost,
+          baseCurrency,
+          participantIds.length,
+        );
+        if (converted.missingExchangeRate) {
+          summary.missingExchangeRateCount += 1;
+          continue;
+        }
+
+        summary.categories[category] += converted.amount;
+        summary.total += converted.amount;
+      }
+    }
+
+    return summary;
+  }, [baseCurrency, myMembership?.id, trip?.items, trip?.members]);
+
+  const tripCostOverview = useMemo<CostSummary>(() => {
+    const summary = emptyCostSummary();
+
+    for (const item of trip?.items ?? []) {
+      const category = costSummaryCategory(item.type);
+      for (const cost of item.costs ?? []) {
+        const participantIds = costParticipantIds(cost, trip?.members ?? []);
+        const converted = totalCostAmountInBaseCurrency(
+          cost,
+          baseCurrency,
+          participantIds.length,
+        );
+        if (converted.missingExchangeRate) {
+          summary.missingExchangeRateCount += 1;
+          continue;
+        }
+
+        summary.categories[category] += converted.amount;
+        summary.total += converted.amount;
+      }
+    }
+
+    return summary;
+  }, [baseCurrency, trip?.items, trip?.members]);
 
   const settlementSummary = useMemo<SettlementSummary>(() => {
     const members = trip?.members ?? [];
@@ -5279,15 +5516,35 @@ export default function TripDetailPage() {
     if (dayCompare !== 0) return dayCompare;
     return timeSortValue(a).localeCompare(timeSortValue(b));
   });
-  const todayItems = datedItems.filter((item) => dateKey(item) === todayKey);
-  const futureItems = datedItems
-    .filter((item) => {
-      const key = dateKey(item);
-      return key !== "unscheduled" && key >= todayKey;
+  const upcomingItemEntries = datedItems
+    .map((item, index) => {
+      const nextKey =
+        calendarItemDayKeys(item)
+          .filter((key) => key >= todayKey)
+          .sort()[0] ?? "";
+      return { item, index, nextKey };
     })
+    .filter((entry) => entry.nextKey)
+    .sort((a, b) => {
+      const dayCompare = a.nextKey.localeCompare(b.nextKey);
+      if (dayCompare !== 0) return dayCompare;
+      const timeCompare = timeSortValue(a.item).localeCompare(timeSortValue(b.item));
+      if (timeCompare !== 0) return timeCompare;
+      return a.index - b.index;
+    });
+  const todayItems = upcomingItemEntries
+    .filter((entry) => entry.nextKey === todayKey)
+    .map((entry) => entry.item);
+  const futureItems = upcomingItemEntries
+    .filter((entry) => entry.nextKey > todayKey)
     .slice(0, 3);
   const travelEssentialsItems =
-    todayItems.length > 0 ? todayItems : futureItems.slice(0, 1);
+    todayItems.length > 0
+      ? todayItems.map((item) => ({ item, displayKey: todayKey }))
+      : futureItems.slice(0, 3).map((entry) => ({
+          item: entry.item,
+          displayKey: entry.nextKey,
+        }));
   const upcomingTeeTimes = datedItems
     .filter((item) => {
       const key = dateKey(item);
@@ -5325,6 +5582,19 @@ export default function TripDetailPage() {
     { label: "Group/shared costs", value: budgetSummary.sharedTotal },
     { label: "Personal costs", value: budgetSummary.personalTotal },
   ];
+  const isTripCreator = Boolean(
+    user?.id &&
+      ((trip?.createdByUserId && trip.createdByUserId === user.id) ||
+        (trip?.createdById && trip.createdById === user.id)),
+  );
+  const myCostRows = costSummaryCategories.map((category) => ({
+    label: category,
+    value: myCostsSummary.categories[category],
+  }));
+  const tripCostRows = costSummaryCategories.map((category) => ({
+    label: category === "Transport" ? "Transport" : category,
+    value: tripCostOverview.categories[category],
+  }));
 
   const filteredDocuments = useMemo(() => {
     if (documentCategoryFilter === "ALL") return documents;
@@ -5633,9 +5903,9 @@ export default function TripDetailPage() {
             )}
           </div>
 
-          {canEditTrip ? (
+          {canEditTrip || canAddTripItems ? (
             <div style={{ ...wrappingActionRowStyle, opacity: 0.82 }}>
-              {!editingTrip ? (
+              {canEditTrip && !editingTrip ? (
               <>
                 <input
                   ref={coverInputRef}
@@ -5720,6 +5990,7 @@ export default function TripDetailPage() {
                 </button>
               </>
             ) : null}
+            {canAddTripItems ? (
             <button
               className="fw-button-primary"
               type="button"
@@ -5738,6 +6009,7 @@ export default function TripDetailPage() {
             >
               + Add Item
             </button>
+            ) : null}
             </div>
           ) : null}
         </div>
@@ -6119,10 +6391,10 @@ export default function TripDetailPage() {
 
         {travelEssentialsItems.length > 0 ? (
           <div style={{ display: "grid", gap: 12 }}>
-            {travelEssentialsItems.map((item) => {
+            {travelEssentialsItems.map(({ item, displayKey }) => {
               const typeLabel = itemTypeLabel(item.type);
               const dateTime = tripItemDateTimeLabel(item);
-              const dateBlock = eventDateBlockParts(dateKey(item));
+              const dateBlock = eventDateBlockParts(displayKey);
               const title = tripItemTitle(item);
               const location = [item.locationName, item.address]
                 .filter(Boolean)
@@ -6132,6 +6404,7 @@ export default function TripDetailPage() {
               const linkedDocuments = linkedDocumentsForItem(item, documents);
               const documentLabel = documentLinkLabel(linkedDocuments);
               const hasActions = Boolean(mapUrl || websiteUrl || documentLabel);
+              const accent = calendarItemAccent(item);
 
               return (
                 <article
@@ -6140,7 +6413,7 @@ export default function TripDetailPage() {
                     display: "grid",
                     gap: 0,
                     ...sectionInnerCardStyle,
-                    border: "1px solid color-mix(in srgb, var(--atmosphere-travel) 24%, var(--border))",
+                    border: `1px solid ${accent.border}`,
                     background: "color-mix(in srgb, var(--card) 96%, var(--bg))",
                     boxShadow: "0 10px 24px rgba(0,0,0,0.1)",
                     overflow: "hidden",
@@ -6149,9 +6422,8 @@ export default function TripDetailPage() {
                 >
                   <div
                     style={{
-                      borderBottom: "1px solid color-mix(in srgb, var(--atmosphere-travel) 18%, var(--border))",
-                      background:
-                        "linear-gradient(135deg, color-mix(in srgb, var(--atmosphere-travel) 44%, var(--card)), color-mix(in srgb, var(--sand) 16%, var(--card)))",
+                      borderBottom: `1px solid ${accent.border}`,
+                      background: accent.header,
                       padding: 12,
                       display: "grid",
                       gridTemplateColumns: "50px 1px minmax(0, 1fr) 30px",
@@ -6420,6 +6692,188 @@ export default function TripDetailPage() {
           ))}
         </div>
       </section>
+
+      {myMembership ? (
+        <section
+          style={{
+            ...overviewAnchorStyle,
+            ...sectionCardStyle,
+            gap: 10,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              gap: 10,
+              flexWrap: "wrap",
+            }}
+          >
+            <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
+              <div style={sectionTitleTextStyle}>My Costs</div>
+              <div style={sectionSubtitleTextStyle}>
+                Your part of item costs in {baseCurrency}
+              </div>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gap: 1,
+                textAlign: "right",
+                minWidth: 112,
+              }}
+            >
+              <span style={{ color: "var(--sub)", fontSize: 11, fontWeight: 900 }}>
+                Estimated total
+              </span>
+              <span style={{ color: "var(--text)", fontSize: 17, fontWeight: 950 }}>
+                {formatMoney(myCostsSummary.total, baseCurrency)}
+              </span>
+            </div>
+          </div>
+
+          {myCostsSummary.missingExchangeRateCount > 0 ? (
+            <div
+              style={{
+                color: "var(--sub)",
+                fontSize: 12,
+                lineHeight: 1.35,
+                padding: "7px 9px",
+                borderRadius: 12,
+                background: "color-mix(in srgb, var(--warning) 10%, var(--card))",
+                border:
+                  "1px solid color-mix(in srgb, var(--warning) 24%, var(--border))",
+              }}
+            >
+              Some foreign currency costs need an exchange rate.
+            </div>
+          ) : null}
+
+          <div style={{ display: "grid", gap: 6 }}>
+            {myCostRows.map((row) => (
+              <div
+                key={row.label}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  padding: "7px 9px",
+                  borderRadius: 12,
+                  background: "color-mix(in srgb, var(--bg) 72%, var(--card))",
+                  border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                }}
+              >
+                <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
+                  {row.label}
+                </span>
+                <span
+                  style={{
+                    color: "var(--text)",
+                    fontSize: 12,
+                    fontWeight: 950,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {formatMoney(row.value, baseCurrency)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {isTripCreator ? (
+        <section
+          style={{
+            ...overviewAnchorStyle,
+            ...sectionCardStyle,
+            gap: 10,
+          }}
+        >
+          <div style={{ display: "grid", gap: 2 }}>
+            <div style={sectionTitleTextStyle}>Organizer Tools</div>
+            <div style={sectionSubtitleTextStyle}>Trip Cost Overview</div>
+          </div>
+
+          {tripCostOverview.missingExchangeRateCount > 0 ? (
+            <div
+              style={{
+                color: "var(--sub)",
+                fontSize: 12,
+                lineHeight: 1.35,
+                padding: "7px 9px",
+                borderRadius: 12,
+                background: "color-mix(in srgb, var(--warning) 10%, var(--card))",
+                border:
+                  "1px solid color-mix(in srgb, var(--warning) 24%, var(--border))",
+              }}
+            >
+              Some foreign currency costs are not converted yet.
+            </div>
+          ) : null}
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 10,
+              padding: "9px 10px",
+              borderRadius: 14,
+              background: "var(--bg)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
+              Total Group Costs
+            </span>
+            <span
+              style={{
+                color: "var(--text)",
+                fontSize: 14,
+                fontWeight: 950,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {formatMoney(tripCostOverview.total, baseCurrency)}
+            </span>
+          </div>
+
+          <div style={{ display: "grid", gap: 6 }}>
+            {tripCostRows.map((row) => (
+              <div
+                key={row.label}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  padding: "7px 9px",
+                  borderRadius: 12,
+                  background: "color-mix(in srgb, var(--bg) 72%, var(--card))",
+                  border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                }}
+              >
+                <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
+                  {row.label}
+                </span>
+                <span
+                  style={{
+                    color: "var(--text)",
+                    fontSize: 12,
+                    fontWeight: 950,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {formatMoney(row.value, baseCurrency)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section
         ref={checklistSectionRef}
@@ -7200,11 +7654,11 @@ export default function TripDetailPage() {
               No timeline items yet
             </div>
             <div style={{ color: "var(--sub)", fontSize: 13, lineHeight: 1.45 }}>
-              {canEditTrip
+              {canAddTripItems
                 ? "Add the first round, hotel, transfer, or note to start building this trip."
                 : "Trip admins have not added timeline items yet."}
             </div>
-            {canEditTrip ? (
+            {canAddTripItems ? (
               <button
                 type="button"
                 onClick={() => {
@@ -8276,6 +8730,7 @@ export default function TripDetailPage() {
                             <TripItemBudgetSection
                               item={item}
                               members={trip?.members ?? []}
+                              baseCurrency={baseCurrency}
                               canEdit={canEditCurrentItem}
                               drafts={budgetEditingItemId === item.id ? budgetDrafts : null}
                               focusedDraftId={budgetEditingItemId === item.id ? expandedBudgetCostId : null}
@@ -8405,9 +8860,10 @@ export default function TripDetailPage() {
           days={calendarDays}
           items={trip?.items ?? []}
           members={trip?.members ?? []}
+          baseCurrency={baseCurrency}
           selectedDay={selectedCalendarDay}
           onSelectDay={setSelectedCalendarDay}
-          canEditTrip={canEditTrip}
+          canEditTrip={canAddTripItems}
           onAddItem={(date) => {
             if (tripId) nav(addItemPath(date));
           }}
@@ -9594,6 +10050,7 @@ export default function TripDetailPage() {
                     : draftPaidBy
                       ? `paid by ${memberDisplayName(draftPaidBy)}`
                       : "paid by one member";
+                const needsExchangeRate = draftNeedsExchangeRate(draft, baseCurrency);
                 return (
                   <section
                     key={draft.localId}
@@ -9662,6 +10119,11 @@ export default function TripDetailPage() {
                           <span className="fw-pill fw-pill--meta">
                             shared with {participantCount}{" "}
                             {participantCount === 1 ? "person" : "people"}
+                          </span>
+                        ) : null}
+                        {needsExchangeRate ? (
+                          <span className="fw-pill fw-pill--meta">
+                            exchange rate needed
                           </span>
                         ) : null}
                       </div>

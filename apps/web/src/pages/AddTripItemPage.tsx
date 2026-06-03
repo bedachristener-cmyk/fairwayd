@@ -98,6 +98,7 @@ type TripMember = {
   userId?: string | null;
   displayName?: string | null;
   isGuest?: boolean;
+  role?: "OWNER" | "ADMIN" | "MEMBER";
   user?: {
     id?: string | null;
     name?: string | null;
@@ -478,7 +479,7 @@ export default function AddTripItemPage() {
   const { tripId } = useParams();
   const nav = useNavigate();
   const location = useLocation();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const documentInputRef = useRef<HTMLInputElement | null>(null);
 
   const [step, setStep] = useState<FormStep>(1);
@@ -519,6 +520,12 @@ export default function AddTripItemPage() {
   const [courseLoading, setCourseLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const myMembership = trip?.members?.find((member) => member.userId === user?.id);
+  const canCreateGroupItem =
+    myMembership?.role === "OWNER" || myMembership?.role === "ADMIN";
+  const availableVisibilityOptions = canCreateGroupItem
+    ? visibilityOptions
+    : visibilityOptions.filter((option) => option.value === "PRIVATE");
   const isGolfRound = type === "golf_round";
   const isHotel = type === "hotel";
   const isFlight = type === "flight";
@@ -638,10 +645,12 @@ export default function AddTripItemPage() {
   }
 
   function defaultBudgetParticipantIds() {
+    if (!canCreateGroupItem && myMembership?.id) return [myMembership.id];
     return (trip?.members ?? []).map((member) => member.id);
   }
 
   function defaultBudgetPaidByMemberId() {
+    if (myMembership?.id) return myMembership.id;
     return trip?.members?.[0]?.id || "";
   }
 
@@ -708,22 +717,44 @@ export default function AddTripItemPage() {
       : "Amount not set";
   }
 
+  function draftNeedsExchangeRate(draft: BudgetCostDraft) {
+    const amount = optionalNumber(draft.amount);
+    const baseCurrency = trip?.baseCurrency?.trim();
+    const currency = draft.currency.trim();
+    if (amount === undefined || amount <= 0) return false;
+    if (!baseCurrency || !currency) return false;
+    if (currency.toUpperCase() === baseCurrency.toUpperCase()) return false;
+    if (optionalNumber(draft.baseAmount) !== undefined) return false;
+    return optionalNumber(draft.exchangeRate) === undefined;
+  }
+
   function budgetPayloadCosts() {
+    const baseCurrency = trip?.baseCurrency?.trim();
     return budgetDrafts
-      .map((draft) => ({
-        label: optionalText(draft.label),
-        amount: optionalNumber(draft.amount),
-        currency: optionalText(draft.currency),
-        exchangeRate: optionalNumber(draft.exchangeRate),
-        baseAmount: optionalNumber(draft.baseAmount),
-        costMode: draft.costMode,
-        paymentMode: draft.paymentMode,
-        paidByMemberId:
-          draft.paymentMode === "PAID_BY_ONE"
-            ? optionalText(draft.paidByMemberId)
-            : undefined,
-        participantMemberIds: draft.participantMemberIds,
-      }))
+      .map((draft) => {
+        const amount = optionalNumber(draft.amount);
+        const currency = optionalText(draft.currency);
+        const isBaseCurrency =
+          amount !== undefined &&
+          currency &&
+          baseCurrency &&
+          currency.toUpperCase() === baseCurrency.toUpperCase();
+
+        return {
+          label: optionalText(draft.label),
+          amount,
+          currency,
+          exchangeRate: optionalNumber(draft.exchangeRate) ?? (isBaseCurrency ? 1 : undefined),
+          baseAmount: optionalNumber(draft.baseAmount) ?? (isBaseCurrency ? amount : undefined),
+          costMode: draft.costMode,
+          paymentMode: draft.paymentMode,
+          paidByMemberId:
+            draft.paymentMode === "PAID_BY_ONE"
+              ? optionalText(draft.paidByMemberId)
+              : undefined,
+          participantMemberIds: draft.participantMemberIds,
+        };
+      })
       .filter(
         (cost) =>
           cost.label ||
@@ -843,7 +874,19 @@ export default function AddTripItemPage() {
         const members = Array.isArray(data?.members) ? data.members : [];
         const documents = Array.isArray(data?.documents) ? data.documents : [];
         setTrip({ baseCurrency: data?.baseCurrency, members, documents });
-        setVisibleToMemberIds(members.map((member: TripMember) => member.id));
+        const currentMember = members.find(
+          (member: TripMember) => member.userId === user?.id,
+        );
+        const canCreateGroup =
+          currentMember?.role === "OWNER" || currentMember?.role === "ADMIN";
+        setVisibility(canCreateGroup ? "GROUP" : "PRIVATE");
+        setVisibleToMemberIds(
+          canCreateGroup
+            ? members.map((member: TripMember) => member.id)
+            : currentMember?.id
+              ? [currentMember.id]
+              : [],
+        );
       } catch {
         if (!cancelled) setTrip(null);
       }
@@ -854,7 +897,7 @@ export default function AddTripItemPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, tripId]);
+  }, [token, tripId, user?.id]);
 
   useEffect(() => {
     const dateParam = validDateParam(new URLSearchParams(location.search).get("date"));
@@ -1485,6 +1528,11 @@ export default function AddTripItemPage() {
                     {budgetParticipantText(draft)}
                   </span>
                 ) : null}
+                {draftNeedsExchangeRate(draft) ? (
+                  <span className="fw-pill fw-pill--meta">
+                    exchange rate needed
+                  </span>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => editBudgetDraft(draft.localId)}
@@ -1634,7 +1682,7 @@ export default function AddTripItemPage() {
   const renderVisibility = (
     <Card title="Visibility" subtitle="Choose who can see this item.">
       <div style={{ display: "grid", gap: 8 }}>
-        {visibilityOptions.map((option) => {
+        {availableVisibilityOptions.map((option) => {
           const selected = visibility === option.value;
           return (
             <button
@@ -2135,6 +2183,7 @@ export default function AddTripItemPage() {
               {budgetDrafts.map((draft, index) => {
                 const paidByRequired = draft.paymentMode === "PAID_BY_ONE";
                 const isExpanded = expandedBudgetCostId === draft.localId;
+                const needsExchangeRate = draftNeedsExchangeRate(draft);
                 return (
                   <section
                     key={draft.localId}
@@ -2204,6 +2253,11 @@ export default function AddTripItemPage() {
                         {budgetParticipantText(draft) ? (
                           <span className="fw-pill fw-pill--meta">
                             {budgetParticipantText(draft)}
+                          </span>
+                        ) : null}
+                        {needsExchangeRate ? (
+                          <span className="fw-pill fw-pill--meta">
+                            exchange rate needed
                           </span>
                         ) : null}
                       </div>

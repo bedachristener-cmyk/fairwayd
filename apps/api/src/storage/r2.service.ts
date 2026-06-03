@@ -26,5 +26,12 @@ export async function uploadToR2(
 
   await client.send(command);
 
-  return `${process.env.R2_PUBLIC_URL}/${key}`;
+  const publicUrl = (process.env.R2_PUBLIC_URL || '').trim().replace(/\/+$/, '');
+  if (!publicUrl) return key;
+  const normalizedPublicUrl =
+    publicUrl.startsWith('http://') || publicUrl.startsWith('https://')
+      ? publicUrl
+      : `https://${publicUrl}`;
+
+  return `${normalizedPublicUrl}/${key}`;
 }

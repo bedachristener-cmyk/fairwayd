@@ -819,7 +819,9 @@ export class TripsService {
   }
 
   async createItem(tripId: string, userId: string, dto: CreateTripItemDto) {
-    const membership = await this.assertCanModifyTrip(tripId, userId);
+    const membership = await this.assertIsTripMember(tripId, userId);
+    const canCreateGroupItem =
+      membership.role === TripRole.OWNER || membership.role === TripRole.ADMIN;
     const paidByMemberId = await this.resolveOptionalTripMemberId(
       tripId,
       dto.paidByMemberId,
@@ -842,7 +844,10 @@ export class TripsService {
       membership.id,
       true,
     );
-    const visibility = cleanTripItemVisibility(dto.visibility);
+    const requestedVisibility = cleanTripItemVisibility(dto.visibility);
+    const visibility = canCreateGroupItem
+      ? requestedVisibility
+      : TripItemVisibility.PRIVATE;
     const visibleToMemberIds =
       visibility === TripItemVisibility.SELECTED
         ? await this.resolveVisibilityMemberIds(tripId, dto.visibleToMemberIds)
