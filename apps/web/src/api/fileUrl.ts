@@ -14,6 +14,8 @@ export function fileUrl(u?: string | null) {
 
   // already absolute (R2/CDN/etc.)
   if (value.startsWith("http://") || value.startsWith("https://")) {
+    const malformedUploads = value.match(/^https?:\/\/\/(uploads\/.+)$/i);
+    if (malformedUploads) return `${API_ORIGIN}/${malformedUploads[1]}`;
     return value;
   }
 

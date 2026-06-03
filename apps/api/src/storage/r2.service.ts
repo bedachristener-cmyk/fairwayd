@@ -28,10 +28,18 @@ export async function uploadToR2(
 
   const publicUrl = (process.env.R2_PUBLIC_URL || '').trim().replace(/\/+$/, '');
   if (!publicUrl) return key;
-  const normalizedPublicUrl =
-    publicUrl.startsWith('http://') || publicUrl.startsWith('https://')
-      ? publicUrl
-      : `https://${publicUrl}`;
+  let normalizedPublicUrl = publicUrl;
+
+  if (publicUrl.startsWith('//')) {
+    normalizedPublicUrl = `https:${publicUrl}`;
+  } else if (
+    !publicUrl.startsWith('/') &&
+    !publicUrl.startsWith('http://') &&
+    !publicUrl.startsWith('https://') &&
+    /^[a-z0-9.-]+\.[a-z]{2,}(?::\d+)?(?:\/|$)/i.test(publicUrl)
+  ) {
+    normalizedPublicUrl = `https://${publicUrl}`;
+  }
 
   return `${normalizedPublicUrl}/${key}`;
 }

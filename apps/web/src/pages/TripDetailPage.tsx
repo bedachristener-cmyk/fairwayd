@@ -422,6 +422,14 @@ const tripItemVisibilityOptions: {
   { value: "PRIVATE", label: "Private" },
 ];
 
+const memberTripItemVisibilityOptions: {
+  value: TripItemVisibility;
+  label: string;
+}[] = [
+  { value: "PRIVATE", label: "Private" },
+  { value: "SELECTED", label: "Selected members" },
+];
+
 const memberRoleOptions: TripRole[] = ["MEMBER", "ADMIN", "OWNER"];
 
 const tripDocumentCategories: TripDocumentCategory[] = [
@@ -1198,6 +1206,18 @@ function eventDateBlockParts(key: string) {
   return { weekday, date: `${day}.${month}` };
 }
 
+function compactDateLabel(key: string) {
+  if (key === "unscheduled") return "";
+
+  const date = new Date(`${key}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return new Intl.DateTimeFormat(undefined, {
+    day: "numeric",
+    month: "short",
+  }).format(date);
+}
+
 function formatItemDate(value?: string | null) {
   if (!value) return "";
 
@@ -1338,66 +1358,6 @@ function expectedGolfEndTime(item: TripItem) {
   }
 
   return minutesToTime(start + duration);
-}
-
-function golfTimingParts(item: TripItem) {
-  if (!isGolfItem(item)) return [];
-
-  return [
-    { label: "Tee time", value: formatTime(item) },
-    { label: "Depart", value: item.departureFromHotelTime?.trim() || "" },
-    { label: "End", value: expectedGolfEndTime(item) },
-    { label: "Return", value: item.returnToHotel?.trim() || "" },
-  ].filter((part) => part.value);
-}
-
-function GolfTimingChips({ item }: { item: TripItem }) {
-  const parts = golfTimingParts(item);
-  if (parts.length === 0) return null;
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexWrap: "wrap",
-        gap: 6,
-        alignItems: "center",
-      }}
-    >
-      {parts.map((part, index) => {
-        const primary = index === 0;
-        return (
-          <span
-            key={`${part.label}-${part.value}`}
-            style={{
-              display: "inline-flex",
-              alignItems: "baseline",
-              gap: 5,
-              minHeight: primary ? 28 : 26,
-              padding: primary ? "5px 9px" : "4px 8px",
-              borderRadius: 999,
-              border: primary
-                ? "1px solid color-mix(in srgb, var(--accent) 58%, var(--border))"
-                : "1px solid var(--border)",
-              background: primary
-                ? "color-mix(in srgb, var(--accent-soft) 62%, var(--card))"
-                : "color-mix(in srgb, var(--bg) 54%, var(--card))",
-              color: "var(--text)",
-              fontSize: primary ? 12 : 11,
-              lineHeight: 1.15,
-              fontWeight: 900,
-              whiteSpace: "nowrap",
-            }}
-          >
-            <span style={{ color: "var(--sub)", fontWeight: 850 }}>
-              {part.label}
-            </span>
-            <span>{part.value}</span>
-          </span>
-        );
-      })}
-    </div>
-  );
 }
 
 function timeSortValue(item: TripItem) {
@@ -1638,12 +1598,79 @@ function tripItemTitle(item: TripItem) {
   );
 }
 
-function tripItemDateTimeLabel(item: TripItem) {
-  const dateRange = formatDateRange(item);
-  const date = dateRange || formatItemDate(itemDateValue(item));
-  const time = formatTimeRange(item);
+function isTransportItem(item: TripItem) {
+  const value = String(item.type ?? "").toLowerCase();
+  return value === "transfer" || value === "transport" || value === "car_rental";
+}
 
-  return [date, time].filter(Boolean).join(" - ");
+function airportCodeOrName(value?: string | null) {
+  const text = value?.trim() ?? "";
+  if (!text) return "";
+
+  if (/^[a-z]{3}$/i.test(text)) return text.toUpperCase();
+  const code = text.match(/\b[A-Z]{3}\b/)?.[0];
+  return code || text;
+}
+
+function nextUpFlightRoute(item: TripItem) {
+  const origin = airportCodeOrName(item.locationName);
+  const destination = airportCodeOrName(item.address);
+
+  if (origin && destination) return `${origin} → ${destination}`;
+  return origin || destination || tripItemTitle(item);
+}
+
+function nextUpFlightTiming(item: TripItem) {
+  const startKey = dateKey(item);
+  const endKey = item.endDate ? dayKeyFromValue(item.endDate) : "";
+  const start = [compactDateLabel(startKey), formatTime(item)].filter(Boolean).join(" ");
+  const end = [compactDateLabel(endKey || startKey), item.endTime?.trim()]
+    .filter(Boolean)
+    .join(" ");
+
+  if (start && end) return `${start} → ${end}`;
+  return start || end;
+}
+
+function nextUpDateTimeLine(item: TripItem, displayKey: string) {
+  const date = compactDateLabel(displayKey);
+  const time = formatTimeRange(item);
+  return [date, time].filter(Boolean).join(" · ");
+}
+
+function compactItemWhenLine(item: TripItem, displayKey?: string) {
+  if (isGolfItem(item)) {
+    return [
+      compactDateLabel(displayKey || dateKey(item)),
+      formatTime(item) ? `Tee ${formatTime(item)}` : "",
+      item.departureFromHotelTime?.trim()
+        ? `Depart ${item.departureFromHotelTime.trim()}`
+        : "",
+      expectedGolfEndTime(item) ? `End ${expectedGolfEndTime(item)}` : "",
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  }
+
+  if (isFlightItem(item)) return nextUpFlightTiming(item);
+  return nextUpDateTimeLine(item, displayKey || dateKey(item));
+}
+
+function compactItemWhereLine(item: TripItem) {
+  if (isFlightItem(item)) {
+    const route = nextUpFlightRoute(item);
+    return route === tripItemTitle(item) ? "" : route;
+  }
+
+  if (item.locationName?.trim() && item.address?.trim()) {
+    return `${item.locationName.trim()} → ${item.address.trim()}`;
+  }
+
+  return item.locationName?.trim() || item.address?.trim() || "";
+}
+
+function tripItemDomId(itemId: string) {
+  return `trip-item-${itemId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
 }
 
 function normalizeWebsite(url?: string | null) {
@@ -1714,12 +1741,6 @@ function linkedDocumentsForItem(item: TripItem, documents: TripDocument[] = []) 
   return documents.filter((document) =>
     (document.itemLinks ?? []).some((link) => link.tripItemId === item.id),
   );
-}
-
-function documentLinkLabel(documents: TripDocument[]) {
-  if (documents.length === 0) return "";
-  if (documents.length === 1) return documents[0].title || documents[0].fileName;
-  return `${documents.length} documents`;
 }
 
 function timelineDetails(item: TripItem) {
@@ -1848,18 +1869,6 @@ function effectiveParticipants(item: TripItem, members: TripMember[]) {
   }
 
   return members;
-}
-
-function participantSummary(item: TripItem, members: TripMember[]) {
-  const participants = effectiveParticipants(item, members);
-  if (participants.length === 0) return "";
-  if (participants.length === members.length && members.length > 0) {
-    return `All members (${participants.length})`;
-  }
-
-  const names = participants.map(memberDisplayName);
-  if (names.length <= 2) return names.join(", ");
-  return `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
 }
 
 function payerSummary(item: TripItem) {
@@ -2784,57 +2793,25 @@ function TripMapView({
 function TripCalendarView({
   days,
   items,
-  members,
-  baseCurrency,
   selectedDay,
   onSelectDay,
   canEditTrip,
   onAddItem,
   canEditItem,
   onEditItem,
-  onEditBudget,
-  budgetEditingItemId,
-  budgetDrafts,
-  focusedBudgetDraftId,
-  savingBudgetItemId,
-  onStartBudgetInline,
-  onAddBudgetDraft,
-  onUpdateBudgetDraft,
-  onDeleteBudgetDraft,
-  onSaveBudget,
-  onOpenDocuments,
   onOpenCourse,
+  onOpenDetails,
 }: {
   days: CalendarDay[];
   items: TripItem[];
-  members: TripMember[];
-  baseCurrency: string;
   selectedDay: string;
   onSelectDay: (key: string) => void;
   canEditTrip: boolean;
   onAddItem: (date?: string) => void;
   canEditItem: (item: TripItem) => boolean;
   onEditItem: (item: TripItem, event?: React.MouseEvent) => void;
-  onEditBudget: (
-    item: TripItem,
-    event?: React.MouseEvent,
-    options?: { addNew?: boolean; costId?: string },
-  ) => void;
-  budgetEditingItemId: string | null;
-  budgetDrafts: BudgetCostDraft[];
-  focusedBudgetDraftId: string | null;
-  savingBudgetItemId: string | null;
-  onStartBudgetInline: (
-    item: TripItem,
-    event?: React.MouseEvent,
-    options?: { addNew?: boolean; costId?: string },
-  ) => void;
-  onAddBudgetDraft: (item: TripItem, event?: React.MouseEvent) => void;
-  onUpdateBudgetDraft: (localId: string, patch: Partial<BudgetCostDraft>) => void;
-  onDeleteBudgetDraft: (localId: string) => void;
-  onSaveBudget: (item: TripItem, event?: React.MouseEvent) => void;
-  onOpenDocuments: () => void;
   onOpenCourse: (courseId: string) => void;
+  onOpenDetails: (item: TripItem, event?: React.MouseEvent) => void;
 }) {
   const selected = days.find((day) => day.key === selectedDay) ?? days[0];
   const calendarTodayKey = new Date().toISOString().slice(0, 10);
@@ -3122,8 +3099,6 @@ function TripCalendarView({
                 const time = formatTimeRange(item);
                 const checkInDate = isHotel ? formatItemDate(item.date) : "";
                 const checkOutDate = isHotel ? formatItemDate(item.endDate) : "";
-                const linkedDocuments = linkedDocumentsForItem(item);
-                const documentLabel = documentLinkLabel(linkedDocuments);
                 const canEditCurrentItem = canEditItem(item);
                 const title =
                   (isGolf && courseName) ||
@@ -3131,6 +3106,8 @@ function TripCalendarView({
                   item.locationName ||
                   itemTypeLabel(item.type);
                 const accent = calendarItemAccent(item);
+                const whenLine = compactItemWhenLine(item, selected.key);
+                const whereLine = compactItemWhereLine(item);
 
                 return (
                   <article
@@ -3377,66 +3354,19 @@ function TripCalendarView({
                         </div>
                       ) : null}
 
-                      {isGolf ? <GolfTimingChips item={item} /> : null}
-
-                      {item.provider || item.bookingRef || documentLabel ? (
+                      {whereLine || whenLine ? (
                         <div
                           style={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: 6,
-                            alignItems: "center",
-                          }}
-                        >
-                          {item.provider ? (
-                            <span className="fw-pill fw-pill--meta fw-pill--info">
-                              {item.provider}
-                            </span>
-                          ) : null}
-                          {item.bookingRef ? (
-                            <span className="fw-pill fw-pill--meta fw-pill--info">
-                              Booking {item.bookingRef}
-                            </span>
-                          ) : null}
-                          {documentLabel ? (
-                            <button
-                              type="button"
-                              className="fw-pill fw-pill--meta fw-pill--action"
-                              onClick={onOpenDocuments}
-                              style={{ cursor: "pointer" }}
-                            >
-                              {documentLabel}
-                            </button>
-                          ) : null}
-                        </div>
-                      ) : null}
-
-                      <TripItemBudgetSection
-                        item={item}
-                        members={members}
-                        baseCurrency={baseCurrency}
-                        canEdit={canEditCurrentItem}
-                        drafts={budgetEditingItemId === item.id ? budgetDrafts : null}
-                        focusedDraftId={budgetEditingItemId === item.id ? focusedBudgetDraftId : null}
-                        saving={savingBudgetItemId === item.id}
-                        onStartInline={onStartBudgetInline}
-                        onAddDraft={onAddBudgetDraft}
-                        onUpdateDraft={onUpdateBudgetDraft}
-                        onDeleteDraft={onDeleteBudgetDraft}
-                        onSave={onSaveBudget}
-                        onEdit={onEditBudget}
-                      />
-
-                      {item.notes ? (
-                        <div
-                          style={{
+                            display: "grid",
+                            gap: 4,
                             color: "var(--text)",
                             fontSize: 12,
-                            lineHeight: 1.4,
-                            overflowWrap: "anywhere",
+                            lineHeight: 1.28,
+                            fontWeight: 900,
                           }}
                         >
-                          {item.notes}
+                          {whereLine ? <div>{whereLine}</div> : null}
+                          {whenLine ? <div style={{ color: "var(--sub)" }}>{whenLine}</div> : null}
                         </div>
                       ) : null}
 
@@ -3453,6 +3383,17 @@ function TripCalendarView({
                           Open course
                         </button>
                       ) : null}
+                      <button
+                        type="button"
+                        className="fw-pill fw-pill--meta fw-pill--action"
+                        onClick={(event) => onOpenDetails(item, event)}
+                        style={{
+                          width: "fit-content",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Details
+                      </button>
                       {canEditCurrentItem ? (
                         <button
                           type="button"
@@ -3571,6 +3512,7 @@ export default function TripDetailPage() {
   const [deleteTripConfirmOpen, setDeleteTripConfirmOpen] = useState(false);
   const [deleteTripTitleInput, setDeleteTripTitleInput] = useState("");
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [detailsItemId, setDetailsItemId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
   const [budgetEditingItemId, setBudgetEditingItemId] = useState<string | null>(null);
   const [budgetDrafts, setBudgetDrafts] = useState<BudgetCostDraft[]>([]);
@@ -3954,6 +3896,18 @@ export default function TripDetailPage() {
     setItemDocumentUploadState("idle");
     setItemDocumentUploadMessage("");
     setActiveView("timeline");
+  }
+
+  function openItemDetails(item: TripItem, event?: React.MouseEvent) {
+    event?.preventDefault();
+    event?.stopPropagation();
+    setDetailsItemId(item.id);
+    setActiveView("timeline");
+    window.setTimeout(() => {
+      document
+        .getElementById(tripItemDomId(item.id))
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 0);
   }
 
   function defaultBudgetParticipantIds(item: TripItem) {
@@ -4522,23 +4476,34 @@ export default function TripDetailPage() {
       }
 
       const updatedTrip = (await res.json().catch(() => null)) as Trip | null;
-      if (updatedTrip?.coverImageUrl) {
-        const nextTrip = trip
-          ? {
-              ...trip,
-              ...updatedTrip,
-              members: updatedTrip.members ?? trip.members,
-              items: updatedTrip.items ?? trip.items,
-              documents: updatedTrip.documents ?? trip.documents,
-            }
-          : updatedTrip;
-        const cachedAt = writeCachedTrip(tripId, nextTrip);
-        setTrip(nextTrip);
-        setCachedTripAt(cachedAt);
-        setShowingCachedTrip(false);
-        setRefreshTripMessage(null);
+      const coverImageUrl =
+        typeof updatedTrip?.coverImageUrl === "string"
+          ? updatedTrip.coverImageUrl.trim()
+          : "";
+
+      if (!coverImageUrl) {
+        throw new Error("Cover upload completed, but the API did not return coverImageUrl.");
       }
 
+      const renderedCoverUrl = fileUrl(coverImageUrl);
+      if (!renderedCoverUrl) {
+        throw new Error("Cover upload returned an empty image URL.");
+      }
+
+      setTrip((current) => {
+        const nextTrip = current
+          ? { ...current, coverImageUrl }
+          : updatedTrip
+            ? { ...updatedTrip, coverImageUrl }
+            : current;
+        if (nextTrip && tripId) {
+          const cachedAt = writeCachedTrip(tripId, nextTrip);
+          setCachedTripAt(cachedAt);
+        }
+        return nextTrip;
+      });
+      setShowingCachedTrip(false);
+      setRefreshTripMessage(null);
       await loadTrip();
       await loadActivity();
     } catch (e: any) {
@@ -5605,6 +5570,8 @@ export default function TripDetailPage() {
   }, [documentCategoryFilter, documents]);
   const isRefreshingTrip = loading && !!trip;
   const atmosphereCoverUrl = trip?.coverImageUrl ? fileUrl(trip.coverImageUrl) : "";
+  const detailsItem =
+    trip?.items?.find((item) => item.id === detailsItemId) ?? null;
   const budgetEditingItem =
     trip?.items?.find((item) => item.id === budgetEditingItemId) ?? null;
   return (
@@ -6045,19 +6012,24 @@ export default function TripDetailPage() {
             {upcomingTeeTimes.map((item) => {
               const mapUrl = mapUrlForItem(item);
               const directionsUrl = directionsUrlForItem(item);
-              const participants = participantSummary(item, trip?.members ?? []);
               const courseId = item.course?.id ?? item.courseId;
               const title = tripItemTitle(item);
               const dateBlock = eventDateBlockParts(dateKey(item));
+              const teeMetaLine = [
+                formatTime(item) ? `Tee ${formatTime(item)}` : "",
+                item.departureFromHotelTime?.trim()
+                  ? `Depart ${item.departureFromHotelTime.trim()}`
+                  : "",
+                expectedGolfEndTime(item) ? `End ${expectedGolfEndTime(item)}` : "",
+                item.returnToHotel?.trim() ? item.returnToHotel.trim() : "",
+              ]
+                .filter(Boolean)
+                .join(" · ");
               const canEditCurrentItem = canEditTripItem(item);
-              const linkedDocuments = linkedDocumentsForItem(item, documents);
-              const documentLabel = documentLinkLabel(linkedDocuments);
               const hasMetaActions = Boolean(
-                participants ||
-                  mapUrl ||
+                mapUrl ||
                   directionsUrl ||
-                  documentLabel ||
-                  item.expenseType ||
+                  item.id ||
                   canEditCurrentItem,
               );
               const accent = calendarItemAccent(item);
@@ -6229,62 +6201,39 @@ export default function TripDetailPage() {
 
                   <div
                     style={{
-                      padding: "11px 12px 10px",
+                      padding: "9px 12px 8px",
                       display: "grid",
-                      gap: 7,
+                      gap: 4,
                       background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
                     }}
                   >
-                    <GolfTimingChips item={item} />
+                    <div
+                      style={{
+                        color: "var(--text)",
+                        fontSize: 13,
+                        lineHeight: 1.25,
+                        fontWeight: 900,
+                        overflowWrap: "anywhere",
+                      }}
+                    >
+                      {teeMetaLine || "Tee time TBD"}
+                    </div>
                   </div>
 
                   {hasMetaActions ? (
                     <div
                       style={{
-                        display: "grid",
-                        gap: 8,
-                        padding: "0 12px 12px",
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: 5,
+                        alignItems: "center",
+                        padding: "0 12px 10px",
                         background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
                         minWidth: 0,
                       }}
                     >
-                      {participants ? (
-                        <span
-                          className="fw-pill fw-pill--meta fw-pill--info"
-                          style={{
-                            width: "fit-content",
-                            maxWidth: "100%",
-                            overflowWrap: "anywhere",
-                          }}
-                        >
-                          {participants}
-                        </span>
-                      ) : null}
-                      <span
-                        className="fw-pill fw-pill--meta fw-pill--info"
-                        style={{ width: "fit-content" }}
-                      >
-                        {expenseTypeLabel(item)}
-                      </span>
-                      {documentLabel ? (
-                        <button
-                          type="button"
-                          className="fw-pill fw-pill--meta fw-pill--action"
-                          onClick={() => setActiveView("documents")}
-                          style={{ width: "fit-content", cursor: "pointer" }}
-                        >
-                          {documentLabel}
-                        </button>
-                      ) : null}
-                      {mapUrl || directionsUrl || canEditCurrentItem ? (
-                        <div
-                          style={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: 6,
-                            alignItems: "center",
-                          }}
-                        >
+                      {mapUrl || directionsUrl || item.id || canEditCurrentItem ? (
+                        <>
                           {mapUrl ? (
                             <a
                               className="fw-pill fw-pill--meta fw-pill--info"
@@ -6313,6 +6262,17 @@ export default function TripDetailPage() {
                               Directions
                             </a>
                           ) : null}
+                          <button
+                            type="button"
+                            className="fw-pill fw-pill--meta"
+                            onClick={(event) => openItemDetails(item, event)}
+                            style={{
+                              cursor: "pointer",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            Details
+                          </button>
                           {canEditCurrentItem ? (
                             <button
                               type="button"
@@ -6326,7 +6286,7 @@ export default function TripDetailPage() {
                               Edit
                             </button>
                           ) : null}
-                        </div>
+                        </>
                       ) : null}
                     </div>
                   ) : null}
@@ -6393,17 +6353,39 @@ export default function TripDetailPage() {
           <div style={{ display: "grid", gap: 12 }}>
             {travelEssentialsItems.map(({ item, displayKey }) => {
               const typeLabel = itemTypeLabel(item.type);
-              const dateTime = tripItemDateTimeLabel(item);
               const dateBlock = eventDateBlockParts(displayKey);
-              const title = tripItemTitle(item);
+              const title = isFlightItem(item)
+                ? nextUpFlightRoute(item)
+                : tripItemTitle(item);
               const location = [item.locationName, item.address]
                 .filter(Boolean)
                 .join(" - ");
-              const mapUrl = mapUrlForItem(item);
+              const provider = item.provider?.trim() ?? "";
+              const timingLine = isFlightItem(item)
+                ? nextUpFlightTiming(item)
+                : nextUpDateTimeLine(item, displayKey);
+              const golfTimingLine = isGolfItem(item)
+                ? [
+                    compactDateLabel(displayKey),
+                    `Tee ${formatTime(item) || "TBD"}`,
+                    item.departureFromHotelTime?.trim()
+                      ? `Depart ${item.departureFromHotelTime.trim()}`
+                      : "",
+                    expectedGolfEndTime(item) ? `End ${expectedGolfEndTime(item)}` : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")
+                : "";
+              const compactLines = isFlightItem(item)
+                ? [timingLine]
+                : isGolfItem(item)
+                  ? [golfTimingLine, item.returnToHotel?.trim()]
+                  : isTransportItem(item)
+                    ? [timingLine, provider || location]
+                    : [timingLine, location];
+              const mapUrl = isFlightItem(item) ? null : mapUrlForItem(item);
               const websiteUrl = normalizeWebsite(item.course?.website);
-              const linkedDocuments = linkedDocumentsForItem(item, documents);
-              const documentLabel = documentLinkLabel(linkedDocuments);
-              const hasActions = Boolean(mapUrl || websiteUrl || documentLabel);
+              const hasActions = Boolean(mapUrl || websiteUrl || item.id);
               const accent = calendarItemAccent(item);
 
               return (
@@ -6509,64 +6491,41 @@ export default function TripDetailPage() {
                     </div>
                   </div>
 
-                  {dateTime || location ? (
+                  {compactLines.some(Boolean) ? (
                     <div
                       style={{
-                        padding: "13px 12px 12px",
+                        padding: "10px 12px 11px",
                         display: "grid",
-                        gap: 8,
+                        gap: 7,
                         background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
                       }}
                     >
-                      {dateTime ? (
+                      {compactLines.filter(Boolean).map((line) => (
                         <div
+                          key={line}
                           style={{
-                            minWidth: 0,
-                            display: "grid",
-                            gap: 3,
-                            padding: "9px 8px",
-                            borderRadius: 12,
-                            background: "color-mix(in srgb, var(--bg) 56%, var(--card))",
+                            color: "var(--text)",
+                            fontSize: 13,
+                            lineHeight: 1.25,
+                            fontWeight: 900,
+                            overflowWrap: "anywhere",
                           }}
                         >
-                          <div
-                            style={{
-                              color: "var(--text)",
-                              fontSize: 13,
-                              lineHeight: 1.2,
-                              fontWeight: 950,
-                              overflowWrap: "anywhere",
-                            }}
-                          >
-                            {dateTime}
-                          </div>
-                          <div style={compactMetaTextStyle}>When</div>
+                          {line}
                         </div>
-                      ) : null}
-                      {location ? (
+                      ))}
+                      {!isGolfItem(item) && !isFlightItem(item) && provider && location ? (
                         <div
-                          style={{
-                            minWidth: 0,
-                            display: "grid",
-                            gap: 3,
-                            padding: "9px 8px",
-                            borderRadius: 12,
-                            background: "color-mix(in srgb, var(--bg) 56%, var(--card))",
-                          }}
-                        >
-                          <div
                             style={{
-                              color: "var(--text)",
-                              fontSize: 13,
-                              lineHeight: 1.25,
-                              fontWeight: 900,
-                              overflowWrap: "anywhere",
+                            color: "var(--sub)",
+                            fontSize: 12,
+                            lineHeight: 1.25,
+                            fontWeight: 800,
+                            overflowWrap: "anywhere",
                             }}
                           >
-                            {location}
+                          {location}
                           </div>
-                          <div style={compactMetaTextStyle}>Where</div>
-                        </div>
                       ) : null}
                     </div>
                   ) : null}
@@ -6608,19 +6567,17 @@ export default function TripDetailPage() {
                           Website
                         </a>
                       ) : null}
-                      {documentLabel ? (
-                        <button
-                          type="button"
-                          className="fw-pill fw-pill--meta fw-pill--action"
-                          onClick={() => setActiveView("documents")}
-                          style={{
-                            cursor: "pointer",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {documentLabel}
-                        </button>
-                      ) : null}
+                      <button
+                        type="button"
+                        className="fw-pill fw-pill--meta"
+                        onClick={(event) => openItemDetails(item, event)}
+                        style={{
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        Details
+                      </button>
                     </div>
                   ) : null}
                 </article>
@@ -7739,9 +7696,6 @@ export default function TripDetailPage() {
               {items.map((item, itemIndex) => {
                 const time = formatTimeRange(item);
                 const dateRange = formatDateRange(item);
-                const details = timelineDetails(item);
-                const linkedDocuments = linkedDocumentsForItem(item, documents);
-                const documentLabel = documentLinkLabel(linkedDocuments);
                 const courseId = item.course?.id ?? item.courseId;
                 const courseName = item.course?.name;
                 const itemType = String(item.type ?? "").toLowerCase();
@@ -7769,10 +7723,13 @@ export default function TripDetailPage() {
                   canEditTrip &&
                   itemIndex < items.length - 1 &&
                   !isMoving;
+                const compactWhen = compactItemWhenLine(item);
+                const compactWhere = compactItemWhereLine(item);
 
                 return (
                   <article
                     key={item.id}
+                    id={tripItemDomId(item.id)}
                     style={
                       isEditing
                         ? {
@@ -8031,20 +7988,27 @@ export default function TripDetailPage() {
                               Visibility
                               <select
                                 value={editDraft.visibility}
-                                onChange={(e) =>
+                                onChange={(e) => {
+                                  const nextVisibility = e.target
+                                    .value as TripItemVisibility;
                                   setEditDraft({
                                     ...editDraft,
-                                    visibility: e.target
-                                      .value as TripItemVisibility,
-                                  })
-                                }
+                                    visibility: nextVisibility,
+                                    visibleToMemberIds:
+                                      nextVisibility === "SELECTED" &&
+                                      editDraft.visibleToMemberIds.length === 0 &&
+                                      myMembership?.id
+                                        ? [myMembership.id]
+                                        : editDraft.visibleToMemberIds,
+                                  });
+                                }}
                                 style={editFieldStyle}
                               >
-                                {tripItemVisibilityOptions.map((option) => (
-                                  <option
-                                    key={option.value}
-                                    value={option.value}
-                                  >
+                                {(canEditTrip
+                                  ? tripItemVisibilityOptions
+                                  : memberTripItemVisibilityOptions
+                                ).map((option) => (
+                                  <option key={option.value} value={option.value}>
                                     {option.label}
                                   </option>
                                 ))}
@@ -8624,108 +8588,21 @@ export default function TripDetailPage() {
                             <div
                               style={{
                                 display: "grid",
-                                gridTemplateColumns:
-                                  "repeat(auto-fit, minmax(116px, 1fr))",
-                                gap: 7,
+                                gap: 4,
+                                color: "var(--text)",
+                                fontSize: 13,
+                                lineHeight: 1.3,
+                                fontWeight: 900,
                               }}
                             >
-                              <div
-                                style={{
-                                  minWidth: 0,
-                                  display: "grid",
-                                  gap: 3,
-                                  padding: "8px 9px",
-                                  borderRadius: 12,
-                                  background:
-                                    "color-mix(in srgb, var(--bg) 54%, var(--card))",
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    color: "var(--text)",
-                                    fontSize: 12,
-                                    fontWeight: 900,
-                                    overflowWrap: "anywhere",
-                                  }}
-                                >
-                                  {dateRange || formatDateLabel(dateKey(item))}
-                                </div>
-                                <div style={compactMetaTextStyle}>Date</div>
+                              <div>
+                                {dateRange || compactWhen || formatDateLabel(dateKey(item))}
+                                {!isGolf && time && !compactWhen ? ` · ${time}` : ""}
                               </div>
-                              {time ? (
-                                <div
-                                  style={{
-                                    minWidth: 0,
-                                    display: "grid",
-                                    gap: 3,
-                                    padding: "8px 9px",
-                                    borderRadius: 12,
-                                    background:
-                                      "color-mix(in srgb, var(--bg) 54%, var(--card))",
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      color: "var(--text)",
-                                      fontSize: 12,
-                                      fontWeight: 900,
-                                      overflowWrap: "anywhere",
-                                    }}
-                                  >
-                                    {time}
-                                  </div>
-                                  <div style={compactMetaTextStyle}>Time</div>
-                                </div>
+                              {compactWhere ? (
+                                <div style={{ color: "var(--sub)" }}>{compactWhere}</div>
                               ) : null}
-                              {details.map((detail) => (
-                                <div
-                                  key={`${detail.label}-${detail.value}`}
-                                  style={{
-                                    minWidth: 0,
-                                    display: "grid",
-                                    gap: 3,
-                                    padding: "8px 9px",
-                                    borderRadius: 12,
-                                    background:
-                                      "color-mix(in srgb, var(--bg) 54%, var(--card))",
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      color: "var(--text)",
-                                      fontSize: 12,
-                                      fontWeight: 900,
-                                      overflowWrap: "anywhere",
-                                    }}
-                                  >
-                                    {detail.value}
-                                  </div>
-                                  <div style={compactMetaTextStyle}>
-                                    {detail.label}
-                                  </div>
-                                </div>
-                              ))}
                             </div>
-
-                            {documentLabel ? (
-                              <div
-                                style={{
-                                  display: "flex",
-                                  flexWrap: "wrap",
-                                  gap: 6,
-                                  alignItems: "center",
-                                }}
-                              >
-                                <button
-                                  type="button"
-                                  className="fw-pill fw-pill--meta fw-pill--action"
-                                  onClick={() => setActiveView("documents")}
-                                  style={{ cursor: "pointer" }}
-                                >
-                                  {documentLabel}
-                                </button>
-                              </div>
-                            ) : null}
 
                             <TripItemBudgetSection
                               item={item}
@@ -8742,19 +8619,6 @@ export default function TripDetailPage() {
                               onSave={saveBudgetInline}
                               onEdit={openBudgetEdit}
                             />
-
-                            {item.notes ? (
-                              <div
-                                style={{
-                                  color: "var(--text)",
-                                  fontSize: 13,
-                                  lineHeight: 1.45,
-                                  overflowWrap: "anywhere",
-                                }}
-                              >
-                                {item.notes}
-                              </div>
-                            ) : null}
 
                             <div
                               style={{
@@ -8807,6 +8671,17 @@ export default function TripDetailPage() {
                                   Open course
                                 </button>
                               ) : null}
+                              <button
+                                type="button"
+                                onClick={(event) => openItemDetails(item, event)}
+                                className="fw-pill fw-pill--meta fw-pill--action"
+                                style={{
+                                  height: 30,
+                                  cursor: "pointer",
+                                }}
+                              >
+                                Details
+                              </button>
                               {canEditCurrentItem ? (
                                 <button
                                   type="button"
@@ -8859,8 +8734,6 @@ export default function TripDetailPage() {
         <TripCalendarView
           days={calendarDays}
           items={trip?.items ?? []}
-          members={trip?.members ?? []}
-          baseCurrency={baseCurrency}
           selectedDay={selectedCalendarDay}
           onSelectDay={setSelectedCalendarDay}
           canEditTrip={canAddTripItems}
@@ -8869,18 +8742,8 @@ export default function TripDetailPage() {
           }}
           canEditItem={canEditTripItem}
           onEditItem={openItemEdit}
-          onEditBudget={openBudgetEdit}
-          budgetEditingItemId={budgetEditingItemId}
-          budgetDrafts={budgetDrafts}
-          focusedBudgetDraftId={expandedBudgetCostId}
-          savingBudgetItemId={savingBudgetItemId}
-          onStartBudgetInline={startBudgetInlineEdit}
-          onAddBudgetDraft={addBudgetDraftInline}
-          onUpdateBudgetDraft={updateBudgetDraft}
-          onDeleteBudgetDraft={deleteBudgetDraft}
-          onSaveBudget={saveBudgetInline}
-          onOpenDocuments={() => setActiveView("documents")}
           onOpenCourse={(courseId) => nav(`/courses/${courseId}`)}
+          onOpenDetails={openItemDetails}
         />
       ) : activeView === "documents" ? (
         <section
@@ -9961,6 +9824,129 @@ export default function TripDetailPage() {
         />
       ) : null}
       </div>
+
+      {detailsItem ? createPortal(
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="trip-item-details-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 2147482500,
+            background: "rgba(15, 23, 42, 0.42)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+          onClick={() => setDetailsItemId(null)}
+        >
+          <div
+            className="fw-card"
+            style={{
+              width: "min(560px, 100%)",
+              maxHeight: "min(720px, calc(100vh - 32px))",
+              overflow: "auto",
+              background: "var(--fw-surface, #fff)",
+              padding: 18,
+            }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="fw-row-between" style={{ gap: 12, alignItems: "flex-start" }}>
+              <div>
+                <div className="fw-eyebrow">{itemTypeLabel(detailsItem.type)}</div>
+                <h2 id="trip-item-details-title" style={{ margin: "2px 0 0" }}>
+                  {tripItemTitle(detailsItem)}
+                </h2>
+              </div>
+              <button
+                type="button"
+                className="fw-btn fw-btn-ghost"
+                onClick={() => setDetailsItemId(null)}
+              >
+                Close
+              </button>
+            </div>
+
+            <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
+              {compactItemWhenLine(detailsItem) ? (
+                <div>
+                  <div className="fw-field-label">When</div>
+                  <div>{compactItemWhenLine(detailsItem)}</div>
+                </div>
+              ) : null}
+              {compactItemWhereLine(detailsItem) ? (
+                <div>
+                  <div className="fw-field-label">Where / Route</div>
+                  <div>{compactItemWhereLine(detailsItem)}</div>
+                </div>
+              ) : null}
+              {timelineDetails(detailsItem).map((detail) => (
+                <div key={`${detail.label}-${detail.value}`}>
+                  <div className="fw-field-label">{detail.label}</div>
+                  <div>{detail.value}</div>
+                </div>
+              ))}
+              {detailsItem.notes?.trim() ? (
+                <div>
+                  <div className="fw-field-label">Notes</div>
+                  <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>
+                    {detailsItem.notes.trim()}
+                  </p>
+                </div>
+              ) : null}
+              <div>
+                <div className="fw-field-label">Documents</div>
+                {linkedDocumentsForItem(detailsItem, documents).length > 0 ? (
+                  <div style={{ display: "grid", gap: 8, marginTop: 6 }}>
+                    {linkedDocumentsForItem(detailsItem, documents).map((document) => (
+                      <a
+                        key={document.id}
+                        href={fileUrl(document.fileUrl)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="fw-btn fw-btn-ghost"
+                        style={{ justifyContent: "flex-start" }}
+                      >
+                        {document.title || document.fileName}
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="fw-muted">No linked documents.</div>
+                )}
+              </div>
+            </div>
+
+            <div className="fw-actions" style={{ marginTop: 16 }}>
+              {mapUrlForItem(detailsItem) ? (
+                <a className="fw-btn fw-btn-ghost" href={mapUrlForItem(detailsItem) ?? "#"} target="_blank" rel="noreferrer">
+                  Map
+                </a>
+              ) : null}
+              {directionsUrlForItem(detailsItem) ? (
+                <a className="fw-btn fw-btn-ghost" href={directionsUrlForItem(detailsItem) ?? "#"} target="_blank" rel="noreferrer">
+                  Directions
+                </a>
+              ) : null}
+              {canEditTripItem(detailsItem) ? (
+                <button
+                  type="button"
+                  className="fw-btn"
+                  onClick={(event) => {
+                    setDetailsItemId(null);
+                    openItemEdit(detailsItem, event);
+                  }}
+                >
+                  Edit
+                </button>
+              ) : null}
+            </div>
+          </div>
+        </div>,
+        document.body,
+      ) : null}
 
       {budgetModalOpen && budgetEditingItem && trip ? createPortal(
         <div

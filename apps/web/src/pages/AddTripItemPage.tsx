@@ -62,6 +62,11 @@ const visibilityOptions: { value: TripItemVisibility; label: string }[] = [
   { value: "PRIVATE", label: "Private" },
 ];
 
+const memberVisibilityOptions: { value: TripItemVisibility; label: string }[] = [
+  { value: "PRIVATE", label: "Private" },
+  { value: "SELECTED", label: "Selected members" },
+];
+
 const currencyOptions = [
   "THB",
   "CHF",
@@ -525,7 +530,7 @@ export default function AddTripItemPage() {
     myMembership?.role === "OWNER" || myMembership?.role === "ADMIN";
   const availableVisibilityOptions = canCreateGroupItem
     ? visibilityOptions
-    : visibilityOptions.filter((option) => option.value === "PRIVATE");
+    : memberVisibilityOptions;
   const isGolfRound = type === "golf_round";
   const isHotel = type === "hotel";
   const isFlight = type === "flight";
@@ -1017,13 +1022,6 @@ export default function AddTripItemPage() {
         costs: costs.length > 0 ? costs : undefined,
       };
 
-      console.info("Submitting trip item", {
-        tripId,
-        type,
-        payload,
-        selectedCourseId: selectedCourse?.id,
-      });
-
       const res = await fetch(
         `${API_BASE}/trips/${encodeURIComponent(tripId)}/items`,
         {
@@ -1042,12 +1040,6 @@ export default function AddTripItemPage() {
 
       nav(`/trips/${tripId}`);
     } catch (e: any) {
-      console.error("Failed to save trip item", {
-        status: e?.status,
-        data: e?.data,
-        message: e?.message,
-        selectedCourseId: selectedCourse?.id,
-      });
       setErr(
         friendlyApiErrorMessage(
           e,
@@ -1688,7 +1680,16 @@ export default function AddTripItemPage() {
             <button
               key={option.value}
               type="button"
-              onClick={() => setVisibility(option.value)}
+              onClick={() => {
+                setVisibility(option.value);
+                if (
+                  option.value === "SELECTED" &&
+                  visibleToMemberIds.length === 0 &&
+                  myMembership?.id
+                ) {
+                  setVisibleToMemberIds([myMembership.id]);
+                }
+              }}
               style={{
                 width: "100%",
                 minHeight: 48,

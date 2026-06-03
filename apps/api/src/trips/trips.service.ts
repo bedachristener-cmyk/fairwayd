@@ -106,6 +106,24 @@ function cleanTripItemVisibility(visibility?: TripItemVisibility) {
   return visibility;
 }
 
+function canUseGroupTripItemVisibility(membership: { role: TripRole }) {
+  return membership.role === TripRole.OWNER || membership.role === TripRole.ADMIN;
+}
+
+function enforceTripItemVisibilityPermission(
+  visibility: TripItemVisibility,
+  membership: { role: TripRole },
+) {
+  if (
+    visibility === TripItemVisibility.GROUP &&
+    !canUseGroupTripItemVisibility(membership)
+  ) {
+    throw new ForbiddenException('Only trip organizers can use group visibility');
+  }
+
+  return visibility;
+}
+
 function defaultTripItemCostMode(type: string | null | undefined) {
   if (type === 'golf_round' || type === 'flight') {
     return TripItemCostMode.PER_PERSON;
@@ -820,8 +838,6 @@ export class TripsService {
 
   async createItem(tripId: string, userId: string, dto: CreateTripItemDto) {
     const membership = await this.assertIsTripMember(tripId, userId);
-    const canCreateGroupItem =
-      membership.role === TripRole.OWNER || membership.role === TripRole.ADMIN;
     const paidByMemberId = await this.resolveOptionalTripMemberId(
       tripId,
       dto.paidByMemberId,
@@ -844,10 +860,14 @@ export class TripsService {
       membership.id,
       true,
     );
-    const requestedVisibility = cleanTripItemVisibility(dto.visibility);
-    const visibility = canCreateGroupItem
-      ? requestedVisibility
-      : TripItemVisibility.PRIVATE;
+    const requestedVisibility =
+      dto.visibility === undefined && !canUseGroupTripItemVisibility(membership)
+        ? TripItemVisibility.PRIVATE
+        : cleanTripItemVisibility(dto.visibility);
+    const visibility = enforceTripItemVisibilityPermission(
+      requestedVisibility,
+      membership,
+    );
     const visibleToMemberIds =
       visibility === TripItemVisibility.SELECTED
         ? await this.resolveVisibilityMemberIds(tripId, dto.visibleToMemberIds)
@@ -985,7 +1005,10 @@ export class TripsService {
     const visibility =
       dto.visibility === undefined
         ? undefined
-        : cleanTripItemVisibility(dto.visibility);
+        : enforceTripItemVisibilityPermission(
+            cleanTripItemVisibility(dto.visibility),
+            membership,
+          );
     const visibilityForMembers = visibility ?? existingItem.visibility;
     const visibleToMemberIds =
       dto.visibleToMemberIds === undefined
