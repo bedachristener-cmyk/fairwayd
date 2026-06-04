@@ -503,6 +503,8 @@ export default function AddTripItemPage() {
   const [flightNumber, setFlightNumber] = useState("");
   const [fromAirport, setFromAirport] = useState("");
   const [toAirport, setToAirport] = useState("");
+  const [locationName, setLocationName] = useState("");
+  const [address, setAddress] = useState("");
   const [bookingRef, setBookingRef] = useState("");
   const [provider, setProvider] = useState("");
   const [notes, setNotes] = useState("");
@@ -534,6 +536,7 @@ export default function AddTripItemPage() {
   const isGolfRound = type === "golf_round";
   const isHotel = type === "hotel";
   const isFlight = type === "flight";
+  const isTransferLike = type === "transfer" || type === "car_rental";
   const theme = itemTheme(type);
   const pageTitle = itemTitle(type);
   const HeroIcon = itemIcon(type);
@@ -1012,8 +1015,10 @@ export default function AddTripItemPage() {
         provider: optionalText(provider),
         bookingRef: isFlight ? optionalText(bookingRef) : undefined,
         notes: optionalText(notes),
-        locationName: isFlight ? optionalText(fromAirport) : undefined,
-        address: isFlight ? optionalText(toAirport) : undefined,
+        locationName: isFlight
+          ? optionalText(fromAirport)
+          : optionalText(locationName),
+        address: isFlight ? optionalText(toAirport) : optionalText(address),
         courseId: type === "golf_round" ? selectedCourse?.id : undefined,
         visibility,
         visibleToMemberIds:
@@ -1056,8 +1061,8 @@ export default function AddTripItemPage() {
     minHeight: 46,
     borderRadius: 999,
     border: `1px solid ${theme.color}`,
-    background: "var(--text)",
-    color: "var(--bg)",
+    background: theme.color,
+    color: "#fff",
     cursor: saving ? "default" : "pointer",
     fontWeight: 950,
     fontSize: 14,
@@ -1069,7 +1074,7 @@ export default function AddTripItemPage() {
     borderRadius: 999,
     border: "1px solid var(--border)",
     background: "transparent",
-    color: "var(--sub)",
+    color: "var(--text)",
     cursor: "pointer",
     fontWeight: 900,
     fontSize: 12,
@@ -1954,15 +1959,59 @@ export default function AddTripItemPage() {
             {isGolfRound ? null : (
               <Card title="Basic Info" subtitle="Add the main details.">
                 {!isFlight ? (
-                  <label style={labelStyle}>
-                    {isHotel ? "Hotel name" : "Title"}
-                    <input
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      required
-                      style={fieldStyle}
-                    />
-                  </label>
+                  <>
+                    <label style={labelStyle}>
+                      {isHotel
+                        ? "Hotel name"
+                        : type === "restaurant"
+                          ? "Restaurant name"
+                          : "Title"}
+                      <input
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        required
+                        style={fieldStyle}
+                      />
+                    </label>
+                    {type !== "note" ? (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                        <label style={{ ...labelStyle, flex: "1 1 150px", minWidth: 0 }}>
+                          {isTransferLike
+                            ? "Pickup / From"
+                            : "Location"}
+                          <input
+                            value={locationName}
+                            onChange={(e) => setLocationName(e.target.value)}
+                            placeholder={
+                              isTransferLike
+                                ? "BKK Airport"
+                                : type === "restaurant"
+                                  ? "Surf & Turf"
+                                  : "Location"
+                            }
+                            style={fieldStyle}
+                          />
+                        </label>
+                        <label style={{ ...labelStyle, flex: "1 1 150px", minWidth: 0 }}>
+                          {isTransferLike
+                            ? "Destination / To"
+                            : "Meeting point"}
+                          <input
+                            value={address}
+                            onChange={(e) => setAddress(e.target.value)}
+                            placeholder={
+                              isTransferLike
+                                ? "Areca Lodge"
+                                : type === "restaurant"
+                                  ? "Meet 19:00 at hotel"
+                                  : "Optional"
+                            }
+                            style={fieldStyle}
+                          />
+                        </label>
+                      </div>
+                    ) : null}
+                  </>
                 ) : (
                   <>
                     <label style={labelStyle}>

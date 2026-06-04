@@ -367,6 +367,11 @@ type TimelineDetail = {
   value: string;
 };
 
+type TripItemMapAction = {
+  label: string;
+  href: string;
+};
+
 type CalendarIndicator =
   | "Golf"
   | "Hotel"
@@ -564,6 +569,24 @@ const compactMetaTextStyle: React.CSSProperties = {
   fontSize: 11,
   lineHeight: 1.25,
   fontWeight: 800,
+};
+
+const secondaryButtonStyle: React.CSSProperties = {
+  background: "transparent",
+  borderColor: "var(--border)",
+  color: "var(--text)",
+};
+
+const primaryButtonStyle: React.CSSProperties = {
+  background: "var(--accent-strong)",
+  borderColor: "var(--accent-strong)",
+  color: "#fff",
+};
+
+const dangerButtonStyle: React.CSSProperties = {
+  background: "transparent",
+  borderColor: "color-mix(in srgb, #dc2626 70%, var(--border))",
+  color: "#dc2626",
 };
 
 const subviewOrder: Exclude<TripView, "overview">[] = [
@@ -875,7 +898,8 @@ function shouldIgnoreTripSwipe(target: EventTarget | null) {
 function itemIcon(type?: string | null) {
   const value = String(type ?? "").toLowerCase();
 
-  if (value === "golf_round" || value === "course") return "🏌";
+  if (value === "flight" || value === "flights") return "✈️";
+  if (value === "golf_round" || value === "course") return "⛳";
   if (value === "hotel") return "🏨";
   if (value === "transfer" || value === "transport") return "🚗";
   if (value === "car_rental") return "🚙";
@@ -1496,6 +1520,14 @@ function flightTitle(flightNumber: string) {
   return value.toLowerCase().startsWith("flight ") ? value : `Flight ${value}`;
 }
 
+function flightNumberText(item: TripItem) {
+  return (item.title || "").replace(/^Flight\s+/i, "").trim();
+}
+
+function flightSummaryLine(item: TripItem) {
+  return [flightNumberText(item), item.provider?.trim()].filter(Boolean).join(" · ");
+}
+
 function finiteAmount(value?: number | null) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
@@ -1598,9 +1630,38 @@ function tripItemTitle(item: TripItem) {
   );
 }
 
+function tripItemHeaderTitle(item: TripItem) {
+  if (isFlightItem(item)) return nextUpFlightRoute(item);
+  if (isTransportItem(item)) return compactItemWhereLine(item) || tripItemTitle(item);
+  return tripItemTitle(item);
+}
+
 function isTransportItem(item: TripItem) {
   const value = String(item.type ?? "").toLowerCase();
   return value === "transfer" || value === "transport" || value === "car_rental";
+}
+
+function isHotelItem(item: TripItem) {
+  const value = String(item.type ?? "").toLowerCase();
+  return value === "hotel" || value === "stay" || value === "accommodation";
+}
+
+function isCarRentalItem(item: TripItem) {
+  return String(item.type ?? "").toLowerCase() === "car_rental";
+}
+
+function isTransferType(type?: string | null) {
+  const value = String(type ?? "").toLowerCase();
+  return value === "transfer" || value === "transport" || value === "car_rental";
+}
+
+function isNoteItem(item: TripItem) {
+  return String(item.type ?? "").toLowerCase() === "note";
+}
+
+function itemTypeSupportsCosts(type?: string | null) {
+  const value = String(type ?? "").toLowerCase();
+  return value !== "note" && value !== "free_day";
 }
 
 function airportCodeOrName(value?: string | null) {
@@ -1617,7 +1678,9 @@ function nextUpFlightRoute(item: TripItem) {
   const destination = airportCodeOrName(item.address);
 
   if (origin && destination) return `${origin} → ${destination}`;
-  return origin || destination || tripItemTitle(item);
+  if (origin) return `${origin} → Arrival airport missing`;
+  if (destination) return `Departure airport missing → ${destination}`;
+  return "Departure airport → Arrival airport missing";
 }
 
 function nextUpFlightTiming(item: TripItem) {
@@ -1647,13 +1710,48 @@ function compactItemWhenLine(item: TripItem, displayKey?: string) {
         ? `Depart ${item.departureFromHotelTime.trim()}`
         : "",
       expectedGolfEndTime(item) ? `End ${expectedGolfEndTime(item)}` : "",
+      item.returnToHotel?.trim() ? item.returnToHotel.trim() : "",
     ]
       .filter(Boolean)
       .join(" · ");
   }
 
   if (isFlightItem(item)) return nextUpFlightTiming(item);
+  if (isHotelItem(item)) {
+    const dateRange = [
+      compactDateLabel(dateKey(item)),
+      item.endDate ? compactDateLabel(dayKeyFromValue(item.endDate)) : "",
+    ]
+      .filter(Boolean)
+      .join(" → ");
+    const checkIn = item.startTime?.trim() || "14:00";
+    const checkOut = item.endTime?.trim() || "11:00";
+    return [
+      dateRange || compactDateLabel(displayKey || dateKey(item)),
+      `Check-in ${checkIn}`,
+      `Check-out ${checkOut}`,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  }
   return nextUpDateTimeLine(item, displayKey || dateKey(item));
+}
+
+function compactGolfTimingLine(item: TripItem, displayKey?: string) {
+  return [
+    compactDateLabel(displayKey || dateKey(item)),
+    formatTime(item) ? `Tee ${formatTime(item)}` : "",
+    item.departureFromHotelTime?.trim()
+      ? `Depart ${item.departureFromHotelTime.trim()}`
+      : "",
+    expectedGolfEndTime(item) ? `End ${expectedGolfEndTime(item)}` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function compactGolfReturnLine(item: TripItem) {
+  return item.returnToHotel?.trim() || "";
 }
 
 function compactItemWhereLine(item: TripItem) {
@@ -1663,23 +1761,139 @@ function compactItemWhereLine(item: TripItem) {
   }
 
   if (item.locationName?.trim() && item.address?.trim()) {
+    if (isCarRentalItem(item)) {
+      return `Pickup ${item.locationName.trim()} · Return ${item.address.trim()}`;
+    }
     return `${item.locationName.trim()} → ${item.address.trim()}`;
   }
 
   return item.locationName?.trim() || item.address?.trim() || "";
 }
 
-function tripItemDomId(itemId: string) {
-  return `trip-item-${itemId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+function TripItemCardHeader({
+  item,
+  displayKey,
+  onTitleClick,
+}: {
+  item: TripItem;
+  displayKey?: string;
+  onTitleClick?: () => void;
+}) {
+  const accent = calendarItemAccent(item);
+  const dateBlock = eventDateBlockParts(displayKey || dateKey(item));
+  const typeLabel = itemTypeLabel(item.type).toUpperCase();
+  const title = tripItemHeaderTitle(item);
+  const titleStyle: React.CSSProperties = {
+    appearance: "none",
+    WebkitAppearance: "none",
+    border: 0,
+    padding: 0,
+    margin: 0,
+    background: "transparent",
+    color: accent.headerText,
+    cursor: onTitleClick ? "pointer" : "default",
+    font: "inherit",
+    fontSize: 15,
+    fontWeight: 950,
+    lineHeight: 1.18,
+    textAlign: "left",
+    overflowWrap: "anywhere",
+  };
+
+  return (
+    <div
+      style={{
+        borderBottom: `1px solid ${accent.border}`,
+        background: accent.header,
+        padding: 12,
+        display: "grid",
+        gridTemplateColumns: "50px 1px minmax(0, 1fr)",
+        alignItems: "center",
+        columnGap: 11,
+      }}
+    >
+      <div
+        aria-hidden="true"
+        style={{
+          display: "grid",
+          gap: 3,
+          justifyItems: "start",
+        }}
+      >
+        <span
+          style={{
+            color: accent.headerSubText,
+            fontSize: 10,
+            lineHeight: 1,
+            fontWeight: 950,
+            textTransform: "uppercase",
+          }}
+        >
+          {dateBlock.weekday}
+        </span>
+        <span
+          style={{
+            color: accent.headerText,
+            fontSize: 15,
+            lineHeight: 1,
+            fontWeight: 950,
+          }}
+        >
+          {dateBlock.date}
+        </span>
+      </div>
+      <div
+        aria-hidden="true"
+        style={{
+          width: 1,
+          alignSelf: "stretch",
+          background: "rgba(255,255,255,0.34)",
+        }}
+      />
+      <div style={{ minWidth: 0, display: "grid", gap: 4 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            minWidth: 0,
+          }}
+        >
+          <span aria-hidden="true" style={{ fontSize: 14, lineHeight: 1 }}>
+            {itemIcon(item.type)}
+          </span>
+          <span
+            style={{
+              color: accent.headerSubText,
+              fontSize: 11,
+              lineHeight: 1.1,
+              fontWeight: 950,
+              textTransform: "uppercase",
+            }}
+          >
+            {typeLabel}
+          </span>
+        </div>
+        {onTitleClick ? (
+          <button type="button" onClick={onTitleClick} style={titleStyle}>
+            {title}
+          </button>
+        ) : (
+          <div style={titleStyle}>{title}</div>
+        )}
+      </div>
+    </div>
+  );
 }
 
-function normalizeWebsite(url?: string | null) {
-  if (!url) return null;
+function compactNoteLine(item: TripItem) {
+  const text = item.notes?.trim() || "";
+  if (!text) return "";
+  return text.length > 88 ? `${text.slice(0, 85).trim()}...` : text;
+}
 
-  const trimmed = url.trim();
-  if (!trimmed) return null;
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  return `https://${trimmed}`;
+function tripItemDomId(itemId: string) {
+  return `trip-item-${itemId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
 }
 
 function mapUrlForItem(item: TripItem) {
@@ -1701,6 +1915,65 @@ function mapUrlForItem(item: TripItem) {
   if (!query.trim()) return null;
 
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
+function mapUrlForPlace(value?: string | null) {
+  const query = value?.trim() ?? "";
+  if (!query) return null;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
+function routeUrlForPlaces(origin?: string | null, destination?: string | null) {
+  const start = origin?.trim() ?? "";
+  const end = destination?.trim() ?? "";
+  if (!start || !end) return null;
+  return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(start)}&destination=${encodeURIComponent(end)}`;
+}
+
+function directionsUrlForPlace(destination?: string | null) {
+  const end = destination?.trim() ?? "";
+  if (!end) return null;
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(end)}`;
+}
+
+function tripItemMapActions(item: TripItem): TripItemMapAction[] {
+  if (isFlightItem(item)) {
+    return [
+      mapUrlForPlace(item.locationName)
+        ? { label: "Map Departure", href: mapUrlForPlace(item.locationName) as string }
+        : null,
+      mapUrlForPlace(item.address)
+        ? { label: "Map Arrival", href: mapUrlForPlace(item.address) as string }
+        : null,
+    ].filter((action): action is TripItemMapAction => Boolean(action));
+  }
+
+  if (isTransportItem(item)) {
+    const pickupMap = mapUrlForPlace(item.locationName);
+    const routeMap = routeUrlForPlaces(item.locationName, item.address);
+    const destinationDirections = directionsUrlForPlace(item.address);
+    return [
+      pickupMap
+        ? {
+            label: isCarRentalItem(item) ? "Pickup Map" : "Map Pickup",
+            href: pickupMap,
+          }
+        : null,
+      !isCarRentalItem(item) && routeMap
+        ? { label: "Route", href: routeMap }
+        : null,
+      !isCarRentalItem(item) && !routeMap && destinationDirections
+        ? { label: "Directions", href: destinationDirections }
+        : null,
+    ].filter((action): action is TripItemMapAction => Boolean(action));
+  }
+
+  return [
+    mapUrlForItem(item) ? { label: "Map", href: mapUrlForItem(item) as string } : null,
+    directionsUrlForItem(item)
+      ? { label: "Directions", href: directionsUrlForItem(item) as string }
+      : null,
+  ].filter((action): action is TripItemMapAction => Boolean(action));
 }
 
 function directionsUrlForItem(item: TripItem) {
@@ -1964,6 +2237,55 @@ function budgetCostParticipantText(cost: TripItemCost, members: TripMember[]) {
   const count = costParticipantMembers(cost, members).length;
   if (count === 0) return "";
   return `shared with ${count} ${count === 1 ? "person" : "people"}`;
+}
+
+function itemVisibilityText(item: TripItem, members: TripMember[]) {
+  if (item.visibility === "PRIVATE") return "Private";
+  if (item.visibility === "SELECTED") {
+    const memberById = new Map(members.map((member) => [member.id, member]));
+    const names = (item.visibilityMembers ?? [])
+      .map((visibilityMember) => memberById.get(visibilityMember.tripMemberId))
+      .filter((member): member is TripMember => Boolean(member))
+      .map(memberDisplayName);
+    return names.length > 0 ? `Selected members: ${names.join(", ")}` : "Selected members";
+  }
+  return "Group";
+}
+
+function timelineCostSummaryText(item: TripItem, members: TripMember[], baseCurrency: string) {
+  const costs = budgetCostsForItem(item, members);
+  if (costs.length === 0) return "";
+
+  const totalsByCurrency = new Map<string, number>();
+  for (const cost of costs) {
+    const amount = finiteAmount(cost.amount);
+    if (amount <= 0) continue;
+    const participantCount = costParticipantMembers(cost, members).length || members.length || 1;
+    const total = cost.costMode === "PER_PERSON" ? amount * Math.max(participantCount, 1) : amount;
+    const currency = (cost.currency || baseCurrency || "CHF").trim().toUpperCase();
+    totalsByCurrency.set(currency, (totalsByCurrency.get(currency) ?? 0) + total);
+  }
+
+  if (totalsByCurrency.size === 1) {
+    const [[currency, amount]] = Array.from(totalsByCurrency.entries());
+    const amountText = amount > 0 ? formatMoney(amount, currency) : "amount not set";
+    return costs.length === 1 ? `Costs: ${amountText}` : `Costs: ${costs.length} entries · ${amountText}`;
+  }
+
+  const convertedTotals = costs.map((cost) =>
+    totalCostAmountInBaseCurrency(
+      cost,
+      baseCurrency,
+      costParticipantMembers(cost, members).length || members.length || 1,
+    ),
+  );
+  const hasMissingExchangeRate = convertedTotals.some((total) => total.missingExchangeRate);
+  const baseTotal = convertedTotals.reduce((sum, total) => sum + total.amount, 0);
+  if (!hasMissingExchangeRate && baseTotal > 0) {
+    return `Costs: ${costs.length} entries · ${formatMoney(baseTotal, baseCurrency)}`;
+  }
+
+  return `Costs: ${costs.length} entries · mixed currencies`;
 }
 
 function costLabelExamplesForItemType(type?: string | null) {
@@ -2282,7 +2604,7 @@ function TripItemBudgetSection({
                     type="button"
                     onClick={(event) => onEdit(item, event, { costId: draft.localId })}
                     className="fw-pill fw-pill--meta fw-pill--action"
-                    style={{ height: 28, cursor: "pointer" }}
+                    style={{ height: 28, cursor: "pointer", ...secondaryButtonStyle }}
                   >
                     Edit
                   </button>
@@ -2290,7 +2612,7 @@ function TripItemBudgetSection({
                     type="button"
                     onClick={() => onDeleteDraft(draft.localId)}
                     className="fw-pill fw-pill--meta"
-                    style={{ height: 28, cursor: "pointer" }}
+                    style={{ height: 28, cursor: "pointer", ...dangerButtonStyle }}
                   >
                     Delete
                   </button>
@@ -2308,7 +2630,7 @@ function TripItemBudgetSection({
               type="button"
               onClick={(event) => onAddDraft(item, event)}
               className="fw-pill fw-pill--meta fw-pill--action"
-              style={{ height: 32, cursor: "pointer" }}
+              style={{ height: 32, cursor: "pointer", ...secondaryButtonStyle }}
             >
               + Add cost
             </button>
@@ -2321,8 +2643,7 @@ function TripItemBudgetSection({
                 padding: "0 12px",
                 borderRadius: 999,
                 border: "1px solid var(--border)",
-                background: "var(--text)",
-                color: "var(--bg)",
+                ...primaryButtonStyle,
                 cursor: saving ? "default" : "pointer",
                 fontWeight: 900,
                 fontSize: 12,
@@ -2342,7 +2663,7 @@ function TripItemBudgetSection({
               type="button"
               onClick={(event) => onStartInline(item, event, { addNew: true })}
               className="fw-pill fw-pill--meta fw-pill--action"
-              style={{ height: 32, cursor: "pointer" }}
+              style={{ height: 32, cursor: "pointer", ...secondaryButtonStyle }}
             >
               + Add cost
             </button>
@@ -2411,7 +2732,7 @@ function TripItemBudgetSection({
                       type="button"
                       onClick={(event) => onStartInline(item, event, { costId: cost.id })}
                       className="fw-pill fw-pill--meta fw-pill--action"
-                      style={{ height: 28, cursor: "pointer" }}
+                      style={{ height: 28, cursor: "pointer", ...secondaryButtonStyle }}
                     >
                       Edit
                     </button>
@@ -2451,7 +2772,12 @@ function TripItemBudgetSection({
               type="button"
               onClick={(event) => onStartInline(item, event, { addNew: true })}
               className="fw-pill fw-pill--meta fw-pill--action"
-              style={{ height: 32, width: "fit-content", cursor: "pointer" }}
+              style={{
+                height: 32,
+                width: "fit-content",
+                cursor: "pointer",
+                ...secondaryButtonStyle,
+              }}
             >
               + Add cost
             </button>
@@ -2793,6 +3119,8 @@ function TripMapView({
 function TripCalendarView({
   days,
   items,
+  members,
+  baseCurrency,
   selectedDay,
   onSelectDay,
   canEditTrip,
@@ -2804,6 +3132,8 @@ function TripCalendarView({
 }: {
   days: CalendarDay[];
   items: TripItem[];
+  members: TripMember[];
+  baseCurrency: string;
   selectedDay: string;
   onSelectDay: (key: string) => void;
   canEditTrip: boolean;
@@ -2833,6 +3163,7 @@ function TripCalendarView({
       "Golf",
       "Hotel",
       "Transfers / Car",
+      "Restaurant",
       "Other",
     ];
 
@@ -3089,25 +3420,20 @@ function TripCalendarView({
                 const itemType = String(item.type ?? "").toLowerCase();
                 const isGolf =
                   itemType === "golf_round" || itemType === "course";
-                const isHotel =
-                  itemType === "hotel" ||
-                  itemType === "stay" ||
-                  itemType === "accommodation";
-                const isFlight = isFlightItem(item);
                 const courseId = item.course?.id ?? item.courseId;
-                const courseName = item.course?.name?.trim();
-                const time = formatTimeRange(item);
-                const checkInDate = isHotel ? formatItemDate(item.date) : "";
-                const checkOutDate = isHotel ? formatItemDate(item.endDate) : "";
                 const canEditCurrentItem = canEditItem(item);
-                const title =
-                  (isGolf && courseName) ||
-                  item.title ||
-                  item.locationName ||
-                  itemTypeLabel(item.type);
                 const accent = calendarItemAccent(item);
                 const whenLine = compactItemWhenLine(item, selected.key);
                 const whereLine = compactItemWhereLine(item);
+                const isFlight = isFlightItem(item);
+                const flightSummary = isFlight ? flightSummaryLine(item) : "";
+                const providerLine =
+                  !isFlight && item.provider?.trim() ? item.provider.trim() : "";
+                const compactCostSummary = timelineCostSummaryText(
+                  item,
+                  members,
+                  baseCurrency,
+                );
 
                 return (
                   <article
@@ -3122,103 +3448,13 @@ function TripCalendarView({
                       boxShadow: "0 8px 22px rgba(0,0,0,0.08)",
                     }}
                   >
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "4px minmax(0, 1fr)",
-                        background: accent.header,
-                        borderBottom: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                      }}
-                    >
-                      <div aria-hidden="true" style={{ background: accent.rail }} />
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          gap: 10,
-                          alignItems: "flex-start",
-                          padding: 11,
-                        }}
-                      >
-                        <div style={{ minWidth: 0, display: "grid", gap: 5 }}>
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 6,
-                              flexWrap: "wrap",
-                            }}
-                          >
-                            <span
-                              className="fw-pill fw-pill--meta fw-pill--info"
-                              style={{
-                                background: "rgba(255,255,255,0.86)",
-                                borderColor: "rgba(255,255,255,0.58)",
-                                boxShadow: "0 4px 12px rgba(0,0,0,0.16)",
-                                color: "#172019",
-                              }}
-                            >
-                              {accent.pill}
-                            </span>
-                            {time ? (
-                              <span
-                                style={{
-                                  color: accent.headerText,
-                                  fontSize: 12,
-                                  fontWeight: 900,
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                {time}
-                              </span>
-                            ) : null}
-                          </div>
-                          {isGolf && courseId ? (
-                            <button
-                              type="button"
-                              onClick={() => onOpenCourse(courseId)}
-                              style={{
-                                appearance: "none",
-                                WebkitAppearance: "none",
-                                border: 0,
-                                padding: 0,
-                                margin: 0,
-                                background: "transparent",
-                                color: accent.headerText,
-                                cursor: "pointer",
-                                font: "inherit",
-                                fontWeight: 950,
-                                lineHeight: 1.2,
-                                textAlign: "left",
-                                overflowWrap: "anywhere",
-                              }}
-                            >
-                              {title}
-                            </button>
-                          ) : (
-                            <div
-                              style={{
-                                color: accent.headerText,
-                                fontWeight: 950,
-                                overflowWrap: "anywhere",
-                                lineHeight: 1.2,
-                              }}
-                            >
-                              {title}
-                            </div>
-                          )}
-                        </div>
-                        <ChevronRight
-                          aria-hidden="true"
-                          size={17}
-                          strokeWidth={2.5}
-                          style={{
-                            color: isGolf && courseId ? accent.headerSubText : "transparent",
-                            flex: "0 0 auto",
-                          }}
-                        />
-                      </div>
-                    </div>
+                    <TripItemCardHeader
+                      item={item}
+                      displayKey={selected.key}
+                      onTitleClick={
+                        isGolf && courseId ? () => onOpenCourse(courseId) : undefined
+                      }
+                    />
 
                     <div
                       style={{
@@ -3227,134 +3463,7 @@ function TripCalendarView({
                         padding: isFlight ? 8 : 11,
                       }}
                     >
-                      {checkInDate || checkOutDate ? (
-                        <div
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns:
-                              checkInDate && checkOutDate
-                                ? "repeat(2, minmax(0, 1fr))"
-                                : "1fr",
-                            gap: 7,
-                          }}
-                        >
-                          {checkInDate ? (
-                            <div
-                              style={{
-                                minWidth: 0,
-                                display: "grid",
-                                gap: 3,
-                                padding: "8px 9px",
-                                borderRadius: 12,
-                                background:
-                                  "color-mix(in srgb, var(--bg) 54%, var(--card))",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  color: "var(--text)",
-                                  fontSize: 12,
-                                  fontWeight: 900,
-                                  overflowWrap: "anywhere",
-                                }}
-                              >
-                                {checkInDate}
-                              </div>
-                              <div style={compactMetaTextStyle}>Check-in</div>
-                            </div>
-                          ) : null}
-                          {checkOutDate ? (
-                            <div
-                              style={{
-                                minWidth: 0,
-                                display: "grid",
-                                gap: 3,
-                                padding: "8px 9px",
-                                borderRadius: 12,
-                                background:
-                                  "color-mix(in srgb, var(--bg) 54%, var(--card))",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  color: "var(--text)",
-                                  fontSize: 12,
-                                  fontWeight: 900,
-                                  overflowWrap: "anywhere",
-                                }}
-                              >
-                                {checkOutDate}
-                              </div>
-                              <div style={compactMetaTextStyle}>Check-out</div>
-                            </div>
-                          ) : null}
-                        </div>
-                      ) : null}
-
-                      {item.locationName || item.address ? (
-                        <div
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns: item.locationName && item.address ? "repeat(2, minmax(0, 1fr))" : "1fr",
-                            gap: isFlight ? 5 : 7,
-                          }}
-                        >
-                          {item.locationName ? (
-                            <div
-                              style={{
-                                minWidth: 0,
-                                display: "grid",
-                                gap: isFlight ? 2 : 3,
-                                padding: isFlight ? "6px 8px" : "8px 9px",
-                                borderRadius: isFlight ? 10 : 12,
-                                background: "color-mix(in srgb, var(--bg) 54%, var(--card))",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  color: "var(--text)",
-                                  fontSize: 12,
-                                  fontWeight: 900,
-                                  overflowWrap: "anywhere",
-                                }}
-                              >
-                                {item.locationName}
-                              </div>
-                              <div style={compactMetaTextStyle}>
-                                {isFlight ? "From" : "Location"}
-                              </div>
-                            </div>
-                          ) : null}
-                          {item.address ? (
-                            <div
-                              style={{
-                                minWidth: 0,
-                                display: "grid",
-                                gap: isFlight ? 2 : 3,
-                                padding: isFlight ? "6px 8px" : "8px 9px",
-                                borderRadius: isFlight ? 10 : 12,
-                                background: "color-mix(in srgb, var(--bg) 54%, var(--card))",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  color: "var(--text)",
-                                  fontSize: 12,
-                                  fontWeight: 900,
-                                  overflowWrap: "anywhere",
-                                }}
-                              >
-                                {item.address}
-                              </div>
-                              <div style={compactMetaTextStyle}>
-                                {isFlight ? "To" : "Address"}
-                              </div>
-                            </div>
-                          ) : null}
-                        </div>
-                      ) : null}
-
-                      {whereLine || whenLine ? (
+                      {flightSummary || whereLine || whenLine || compactCostSummary || providerLine ? (
                         <div
                           style={{
                             display: "grid",
@@ -3365,11 +3474,26 @@ function TripCalendarView({
                             fontWeight: 900,
                           }}
                         >
-                          {whereLine ? <div>{whereLine}</div> : null}
+                          {flightSummary ? <div>{flightSummary}</div> : null}
+                          {!isFlight && whereLine ? <div>{whereLine}</div> : null}
                           {whenLine ? <div style={{ color: "var(--sub)" }}>{whenLine}</div> : null}
+                          {compactCostSummary ? (
+                            <div style={{ color: "var(--sub)" }}>{compactCostSummary}</div>
+                          ) : null}
+                          {providerLine ? (
+                            <div style={{ color: "var(--sub)" }}>{providerLine}</div>
+                          ) : null}
                         </div>
                       ) : null}
 
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: 6,
+                          alignItems: "center",
+                        }}
+                      >
                       {isGolf && courseId ? (
                         <button
                           type="button"
@@ -3378,11 +3502,28 @@ function TripCalendarView({
                           style={{
                             width: "fit-content",
                             cursor: "pointer",
+                            ...secondaryButtonStyle,
                           }}
                         >
                           Open course
                         </button>
                       ) : null}
+                      {tripItemMapActions(item).map((action) => (
+                        <a
+                          key={`${selected.key}-${item.id}-${action.label}`}
+                          className="fw-pill fw-pill--meta fw-pill--action"
+                          href={action.href}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            width: "fit-content",
+                            textDecoration: "none",
+                            ...secondaryButtonStyle,
+                          }}
+                        >
+                          {action.label}
+                        </a>
+                      ))}
                       <button
                         type="button"
                         className="fw-pill fw-pill--meta fw-pill--action"
@@ -3390,6 +3531,7 @@ function TripCalendarView({
                         style={{
                           width: "fit-content",
                           cursor: "pointer",
+                          ...secondaryButtonStyle,
                         }}
                       >
                         Details
@@ -3402,11 +3544,13 @@ function TripCalendarView({
                           style={{
                             width: "fit-content",
                             cursor: "pointer",
+                            ...secondaryButtonStyle,
                           }}
                         >
                           Edit
                         </button>
                       ) : null}
+                      </div>
                     </div>
                   </article>
                 );
@@ -3886,6 +4030,17 @@ export default function TripDetailPage() {
       visibleToMemberIds,
       documentIds,
     });
+    if (itemTypeSupportsCosts(item.type)) {
+      setBudgetEditingItemId(item.id);
+      setBudgetDrafts(budgetDraftsForItem(item).drafts);
+      setExpandedBudgetCostId(null);
+      setBudgetModalOpen(false);
+    } else {
+      setBudgetEditingItemId(null);
+      setBudgetDrafts([]);
+      setExpandedBudgetCostId(null);
+      setBudgetModalOpen(false);
+    }
   }
 
   function openItemEdit(item: TripItem, event?: React.MouseEvent) {
@@ -3896,6 +4051,11 @@ export default function TripDetailPage() {
     setItemDocumentUploadState("idle");
     setItemDocumentUploadMessage("");
     setActiveView("timeline");
+    window.setTimeout(() => {
+      document
+        .getElementById(tripItemDomId(item.id))
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
   }
 
   function openItemDetails(item: TripItem, event?: React.MouseEvent) {
@@ -3906,7 +4066,7 @@ export default function TripDetailPage() {
     window.setTimeout(() => {
       document
         .getElementById(tripItemDomId(item.id))
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 0);
   }
 
@@ -4914,8 +5074,8 @@ export default function TripDetailPage() {
             provider: optionalText(editDraft.provider),
             bookingRef: isFlightEdit ? optionalText(editDraft.bookingRef) : undefined,
             notes: optionalText(editDraft.notes),
-            locationName: isFlightEdit ? optionalText(editDraft.locationName) : undefined,
-            address: isFlightEdit ? optionalText(editDraft.address) : undefined,
+            locationName: optionalText(editDraft.locationName),
+            address: optionalText(editDraft.address),
             visibility: editDraft.visibility,
             visibleToMemberIds:
               editDraft.visibility === "SELECTED"
@@ -4938,6 +5098,10 @@ export default function TripDetailPage() {
 
       setEditingItemId(null);
       setEditDraft(null);
+      setBudgetEditingItemId(null);
+      setBudgetDrafts([]);
+      setExpandedBudgetCostId(null);
+      setBudgetModalOpen(false);
       await loadTrip();
       await loadActivity();
     } catch (e: any) {
@@ -5574,6 +5738,126 @@ export default function TripDetailPage() {
     trip?.items?.find((item) => item.id === detailsItemId) ?? null;
   const budgetEditingItem =
     trip?.items?.find((item) => item.id === budgetEditingItemId) ?? null;
+
+  function renderMapActionLinks(item: TripItem, keyPrefix: string) {
+    return tripItemMapActions(item).map((action) => (
+      <a
+        key={`${keyPrefix}-${action.label}`}
+        className="fw-pill fw-pill--meta fw-pill--action"
+        href={action.href}
+        target="_blank"
+        rel="noreferrer"
+        style={{
+          textDecoration: "none",
+          whiteSpace: "nowrap",
+          ...secondaryButtonStyle,
+        }}
+      >
+        {action.label}
+      </a>
+    ));
+  }
+
+  function renderGolfRoundCompactCard(item: TripItem, key: string, displayKey?: string) {
+    const accent = calendarItemAccent(item);
+    const canEditCurrentItem = canEditTripItem(item);
+    const returnLine = compactGolfReturnLine(item);
+    const courseId = item.course?.id ?? item.courseId;
+
+    return (
+      <article
+        key={key}
+        style={{
+          display: "grid",
+          gap: 0,
+          ...sectionInnerCardStyle,
+          border: `1px solid ${accent.border}`,
+          background: "color-mix(in srgb, var(--card) 96%, var(--bg))",
+          boxShadow: "0 10px 24px rgba(0,0,0,0.1)",
+          overflow: "hidden",
+          minWidth: 0,
+        }}
+      >
+        <TripItemCardHeader
+          item={item}
+          displayKey={displayKey}
+          onTitleClick={courseId ? () => nav(`/courses/${courseId}`) : undefined}
+        />
+
+        <div
+          style={{
+            padding: "10px 12px 11px",
+            display: "grid",
+            gap: 6,
+            background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
+          }}
+        >
+          <div
+            style={{
+              color: "var(--text)",
+              fontSize: 13,
+              lineHeight: 1.3,
+              fontWeight: 900,
+              overflowWrap: "anywhere",
+            }}
+          >
+            {compactGolfTimingLine(item, displayKey) || "Tee time TBD"}
+          </div>
+          {returnLine ? (
+            <div
+              style={{
+                color: "var(--sub)",
+                fontSize: 13,
+                lineHeight: 1.3,
+                fontWeight: 850,
+                overflowWrap: "anywhere",
+              }}
+            >
+              {returnLine}
+            </div>
+          ) : null}
+        </div>
+
+        <div
+          style={{
+            ...wrappingActionRowStyle,
+            gap: 6,
+            padding: "0 12px 12px",
+            background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
+          }}
+        >
+          {renderMapActionLinks(item, key)}
+          <button
+            type="button"
+            className="fw-pill fw-pill--meta"
+            onClick={(event) => openItemDetails(item, event)}
+            style={{
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              ...secondaryButtonStyle,
+            }}
+          >
+            Details
+          </button>
+          {canEditCurrentItem ? (
+            <button
+              type="button"
+              className="fw-pill fw-pill--meta"
+              onClick={(event) => openItemEdit(item, event)}
+              style={{
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                ...secondaryButtonStyle,
+              }}
+            >
+              Edit
+            </button>
+          ) : null}
+        </div>
+      </article>
+    );
+  }
+
   return (
     <div className="fw-page">
       <div className="fw-page-atmosphere" aria-hidden="true">
@@ -5715,13 +5999,14 @@ export default function TripDetailPage() {
               height: 30,
               padding: "0 10px",
               borderRadius: 999,
-              border: "1px solid var(--border)",
-              background: "rgba(0,0,0,0.38)",
-              color: "var(--text)",
+              border: "1px solid rgba(255,255,255,0.42)",
+              background: "rgba(0,0,0,0.58)",
+              color: "#fff",
               cursor: "pointer",
               fontWeight: 900,
               fontSize: 12,
               backdropFilter: "blur(10px)",
+              textShadow: "0 1px 6px rgba(0,0,0,0.55)",
             }}
           >
             Back to Trips
@@ -5795,8 +6080,7 @@ export default function TripDetailPage() {
                       padding: "0 12px",
                       borderRadius: 999,
                       border: "1px solid var(--border)",
-                      background: "var(--text)",
-                      color: "var(--bg)",
+                      ...primaryButtonStyle,
                       cursor: savingTrip ? "default" : "pointer",
                       fontWeight: 900,
                       fontSize: 12,
@@ -5816,8 +6100,7 @@ export default function TripDetailPage() {
                       padding: "0 12px",
                       borderRadius: 999,
                       border: "1px solid var(--border)",
-                      background: "transparent",
-                      color: "var(--sub)",
+                      ...secondaryButtonStyle,
                       cursor: savingTrip ? "default" : "pointer",
                       fontWeight: 900,
                       fontSize: 12,
@@ -5910,10 +6193,13 @@ export default function TripDetailPage() {
                     height: 28,
                     padding: "0 9px",
                     borderRadius: 999,
+                    border: "1px solid var(--border)",
+                    ...dangerButtonStyle,
                     cursor: !trip || deletingTrip ? "default" : "pointer",
                     fontWeight: 900,
                     fontSize: 11,
                     whiteSpace: "nowrap",
+                    opacity: !trip || deletingTrip ? 0.55 : 1,
                   }}
                 >
                   Edit Trip
@@ -6009,290 +6295,9 @@ export default function TripDetailPage() {
           </div>
         ) : (
           <div style={{ display: "grid", gap: 12 }}>
-            {upcomingTeeTimes.map((item) => {
-              const mapUrl = mapUrlForItem(item);
-              const directionsUrl = directionsUrlForItem(item);
-              const courseId = item.course?.id ?? item.courseId;
-              const title = tripItemTitle(item);
-              const dateBlock = eventDateBlockParts(dateKey(item));
-              const teeMetaLine = [
-                formatTime(item) ? `Tee ${formatTime(item)}` : "",
-                item.departureFromHotelTime?.trim()
-                  ? `Depart ${item.departureFromHotelTime.trim()}`
-                  : "",
-                expectedGolfEndTime(item) ? `End ${expectedGolfEndTime(item)}` : "",
-                item.returnToHotel?.trim() ? item.returnToHotel.trim() : "",
-              ]
-                .filter(Boolean)
-                .join(" · ");
-              const canEditCurrentItem = canEditTripItem(item);
-              const hasMetaActions = Boolean(
-                mapUrl ||
-                  directionsUrl ||
-                  item.id ||
-                  canEditCurrentItem,
-              );
-              const accent = calendarItemAccent(item);
-
-              return (
-                <article
-                  key={`tee-${item.id}`}
-                  style={{
-                    display: "grid",
-                    gap: 0,
-                    ...sectionInnerCardStyle,
-                    border: `1px solid ${accent.border}`,
-                    background: "color-mix(in srgb, var(--card) 96%, var(--bg))",
-                    boxShadow: "0 10px 24px rgba(0,0,0,0.1)",
-                    overflow: "hidden",
-                    minWidth: 0,
-                  }}
-                >
-                  {courseId ? (
-                    <button
-                      type="button"
-                      onClick={() => nav(`/courses/${courseId}`)}
-                      style={{
-                        appearance: "none",
-                        WebkitAppearance: "none",
-                        width: "100%",
-                        border: 0,
-                        borderBottom:
-                          "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                        background: accent.header,
-                        color: "inherit",
-                        cursor: "pointer",
-                        textAlign: "left",
-                        padding: 12,
-                        display: "grid",
-                        gridTemplateColumns: "50px 1px minmax(0, 1fr) 24px",
-                        alignItems: "center",
-                        columnGap: 11,
-                      }}
-                    >
-                      <div
-                        aria-hidden="true"
-                        style={{
-                          display: "grid",
-                          gap: 3,
-                          justifyItems: "start",
-                        }}
-                      >
-                        <span
-                          style={{
-                            color: accent.headerSubText,
-                            fontSize: 10,
-                            lineHeight: 1,
-                            fontWeight: 950,
-                            textTransform: "uppercase",
-                          }}
-                        >
-                          {dateBlock.weekday}
-                        </span>
-                        <span
-                          style={{
-                            color: accent.headerText,
-                            fontSize: 15,
-                            lineHeight: 1,
-                            fontWeight: 950,
-                          }}
-                        >
-                          {dateBlock.date}
-                        </span>
-                      </div>
-                      <div
-                        aria-hidden="true"
-                        style={{
-                          width: 1,
-                          alignSelf: "stretch",
-                          background: "rgba(255,255,255,0.34)",
-                        }}
-                      />
-                      <div
-                        style={{
-                          ...compactLabelTextStyle,
-                          minWidth: 0,
-                          color: accent.headerText,
-                          fontSize: 15,
-                          lineHeight: 1.18,
-                          overflowWrap: "anywhere",
-                        }}
-                      >
-                        {title}
-                      </div>
-                      <ChevronRight
-                        aria-hidden="true"
-                        size={18}
-                        strokeWidth={2.6}
-                        style={{ color: accent.headerSubText }}
-                      />
-                    </button>
-                  ) : (
-                    <div
-                      style={{
-                        borderBottom:
-                          "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                        background: accent.header,
-                        padding: 12,
-                        display: "grid",
-                        gridTemplateColumns: "50px 1px minmax(0, 1fr) 24px",
-                        alignItems: "center",
-                        columnGap: 11,
-                      }}
-                    >
-                      <div
-                        aria-hidden="true"
-                        style={{
-                          display: "grid",
-                          gap: 3,
-                          justifyItems: "start",
-                        }}
-                      >
-                        <span
-                          style={{
-                            color: accent.headerSubText,
-                            fontSize: 10,
-                            lineHeight: 1,
-                            fontWeight: 950,
-                            textTransform: "uppercase",
-                          }}
-                        >
-                          {dateBlock.weekday}
-                        </span>
-                        <span
-                          style={{
-                            color: accent.headerText,
-                            fontSize: 15,
-                            lineHeight: 1,
-                            fontWeight: 950,
-                          }}
-                        >
-                          {dateBlock.date}
-                        </span>
-                      </div>
-                      <div
-                        aria-hidden="true"
-                        style={{
-                          width: 1,
-                          alignSelf: "stretch",
-                          background: "rgba(255,255,255,0.34)",
-                        }}
-                      />
-                      <div
-                        style={{
-                          ...compactLabelTextStyle,
-                          minWidth: 0,
-                          color: accent.headerText,
-                          fontSize: 15,
-                          lineHeight: 1.18,
-                          overflowWrap: "anywhere",
-                        }}
-                      >
-                        {title}
-                      </div>
-                      <ChevronRight
-                        aria-hidden="true"
-                        size={18}
-                        strokeWidth={2.6}
-                        style={{ color: "transparent" }}
-                      />
-                    </div>
-                  )}
-
-                  <div
-                    style={{
-                      padding: "9px 12px 8px",
-                      display: "grid",
-                      gap: 4,
-                      background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
-                    }}
-                  >
-                    <div
-                      style={{
-                        color: "var(--text)",
-                        fontSize: 13,
-                        lineHeight: 1.25,
-                        fontWeight: 900,
-                        overflowWrap: "anywhere",
-                      }}
-                    >
-                      {teeMetaLine || "Tee time TBD"}
-                    </div>
-                  </div>
-
-                  {hasMetaActions ? (
-                    <div
-                      style={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: 5,
-                        alignItems: "center",
-                        padding: "0 12px 10px",
-                        background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
-                        minWidth: 0,
-                      }}
-                    >
-                      {mapUrl || directionsUrl || item.id || canEditCurrentItem ? (
-                        <>
-                          {mapUrl ? (
-                            <a
-                              className="fw-pill fw-pill--meta fw-pill--info"
-                              href={mapUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{
-                                textDecoration: "none",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              Map
-                            </a>
-                          ) : null}
-                          {directionsUrl ? (
-                            <a
-                              className="fw-pill fw-pill--meta fw-pill--action"
-                              href={directionsUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{
-                                textDecoration: "none",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              Directions
-                            </a>
-                          ) : null}
-                          <button
-                            type="button"
-                            className="fw-pill fw-pill--meta"
-                            onClick={(event) => openItemDetails(item, event)}
-                            style={{
-                              cursor: "pointer",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            Details
-                          </button>
-                          {canEditCurrentItem ? (
-                            <button
-                              type="button"
-                              onClick={(event) => openItemEdit(item, event)}
-                              className="fw-pill fw-pill--meta"
-                              style={{
-                                height: 30,
-                                cursor: "pointer",
-                              }}
-                            >
-                              Edit
-                            </button>
-                          ) : null}
-                        </>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </article>
-              );
-            })}
+            {upcomingTeeTimes.map((item) =>
+              renderGolfRoundCompactCard(item, `tee-${item.id}`, dateKey(item)),
+            )}
           </div>
         )}
       </section>
@@ -6352,40 +6357,31 @@ export default function TripDetailPage() {
         {travelEssentialsItems.length > 0 ? (
           <div style={{ display: "grid", gap: 12 }}>
             {travelEssentialsItems.map(({ item, displayKey }) => {
-              const typeLabel = itemTypeLabel(item.type);
-              const dateBlock = eventDateBlockParts(displayKey);
-              const title = isFlightItem(item)
-                ? nextUpFlightRoute(item)
-                : tripItemTitle(item);
-              const location = [item.locationName, item.address]
-                .filter(Boolean)
-                .join(" - ");
-              const provider = item.provider?.trim() ?? "";
+              if (isGolfItem(item)) {
+                return renderGolfRoundCompactCard(
+                  item,
+                  `essentials-${item.id}`,
+                  displayKey,
+                );
+              }
+
+              const routeOrLocation = compactItemWhereLine(item);
+              const flightSummary = isFlightItem(item) ? flightSummaryLine(item) : "";
               const timingLine = isFlightItem(item)
                 ? nextUpFlightTiming(item)
                 : nextUpDateTimeLine(item, displayKey);
-              const golfTimingLine = isGolfItem(item)
-                ? [
-                    compactDateLabel(displayKey),
-                    `Tee ${formatTime(item) || "TBD"}`,
-                    item.departureFromHotelTime?.trim()
-                      ? `Depart ${item.departureFromHotelTime.trim()}`
-                      : "",
-                    expectedGolfEndTime(item) ? `End ${expectedGolfEndTime(item)}` : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")
-                : "";
+              const providerLine = item.provider?.trim() ?? "";
               const compactLines = isFlightItem(item)
-                ? [timingLine]
+                ? [timingLine, flightSummary]
                 : isGolfItem(item)
-                  ? [golfTimingLine, item.returnToHotel?.trim()]
+                  ? [compactItemWhenLine(item, displayKey)]
+                  : isHotelItem(item)
+                    ? [compactItemWhenLine(item, displayKey), routeOrLocation]
+                  : isNoteItem(item)
+                    ? [compactNoteLine(item)]
                   : isTransportItem(item)
-                    ? [timingLine, provider || location]
-                    : [timingLine, location];
-              const mapUrl = isFlightItem(item) ? null : mapUrlForItem(item);
-              const websiteUrl = normalizeWebsite(item.course?.website);
-              const hasActions = Boolean(mapUrl || websiteUrl || item.id);
+                    ? [timingLine, providerLine]
+                    : [timingLine, routeOrLocation];
               const accent = calendarItemAccent(item);
 
               return (
@@ -6402,94 +6398,7 @@ export default function TripDetailPage() {
                     minWidth: 0,
                   }}
                 >
-                  <div
-                    style={{
-                      borderBottom: `1px solid ${accent.border}`,
-                      background: accent.header,
-                      padding: 12,
-                      display: "grid",
-                      gridTemplateColumns: "50px 1px minmax(0, 1fr) 30px",
-                      alignItems: "center",
-                      columnGap: 11,
-                    }}
-                  >
-                    <div
-                      aria-hidden="true"
-                      style={{
-                        display: "grid",
-                        gap: 3,
-                        justifyItems: "start",
-                      }}
-                    >
-                      <span
-                        style={{
-                          color: "color-mix(in srgb, var(--text) 72%, var(--sub))",
-                          fontSize: 10,
-                          lineHeight: 1,
-                          fontWeight: 950,
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        {dateBlock.weekday}
-                      </span>
-                      <span
-                        style={{
-                          color: "var(--text)",
-                          fontSize: 15,
-                          lineHeight: 1,
-                          fontWeight: 950,
-                        }}
-                      >
-                        {dateBlock.date}
-                      </span>
-                    </div>
-                    <div
-                      aria-hidden="true"
-                      style={{
-                        width: 1,
-                        alignSelf: "stretch",
-                        background: "color-mix(in srgb, var(--text) 18%, transparent)",
-                      }}
-                    />
-                    <div style={{ minWidth: 0, display: "grid", gap: 3 }}>
-                      <div
-                        style={{
-                          color: "var(--sub)",
-                          fontSize: 11,
-                          lineHeight: 1.1,
-                          fontWeight: 950,
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        {typeLabel}
-                      </div>
-                      <div
-                        style={{
-                          color: "var(--text)",
-                          fontSize: 15,
-                          lineHeight: 1.18,
-                          fontWeight: 950,
-                          overflowWrap: "anywhere",
-                        }}
-                      >
-                        {title}
-                      </div>
-                    </div>
-                    <div
-                      aria-hidden="true"
-                      style={{
-                        width: 30,
-                        height: 30,
-                        minWidth: 30,
-                        display: "grid",
-                        placeItems: "center",
-                        color: "var(--sub)",
-                        fontSize: 14,
-                      }}
-                    >
-                      {itemIcon(item.type)}
-                    </div>
-                  </div>
+                  <TripItemCardHeader item={item} displayKey={displayKey} />
 
                   {compactLines.some(Boolean) ? (
                     <div
@@ -6514,72 +6423,31 @@ export default function TripDetailPage() {
                           {line}
                         </div>
                       ))}
-                      {!isGolfItem(item) && !isFlightItem(item) && provider && location ? (
-                        <div
-                            style={{
-                            color: "var(--sub)",
-                            fontSize: 12,
-                            lineHeight: 1.25,
-                            fontWeight: 800,
-                            overflowWrap: "anywhere",
-                            }}
-                          >
-                          {location}
-                          </div>
-                      ) : null}
                     </div>
                   ) : null}
 
-                  {hasActions ? (
-                    <div
+                  <div
+                    style={{
+                      ...wrappingActionRowStyle,
+                      gap: 6,
+                      padding: "0 12px 12px",
+                      background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
+                    }}
+                  >
+                    {renderMapActionLinks(item, `essentials-${item.id}`)}
+                    <button
+                      type="button"
+                      className="fw-pill fw-pill--meta"
+                      onClick={(event) => openItemDetails(item, event)}
                       style={{
-                        ...wrappingActionRowStyle,
-                        gap: 6,
-                        padding: "0 12px 12px",
-                        background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                        ...secondaryButtonStyle,
                       }}
                     >
-                      {mapUrl ? (
-                        <a
-                          className="fw-pill fw-pill--meta fw-pill--info"
-                          href={mapUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{
-                            textDecoration: "none",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          Map
-                        </a>
-                      ) : null}
-                      {websiteUrl ? (
-                        <a
-                          className="fw-pill fw-pill--meta fw-pill--info"
-                          href={websiteUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{
-                            textDecoration: "none",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          Website
-                        </a>
-                      ) : null}
-                      <button
-                        type="button"
-                        className="fw-pill fw-pill--meta"
-                        onClick={(event) => openItemDetails(item, event)}
-                        style={{
-                          cursor: "pointer",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        Details
-                      </button>
-                    </div>
-                  ) : null}
+                      Details
+                    </button>
+                  </div>
                 </article>
               );
             })}
@@ -7699,22 +7567,20 @@ export default function TripDetailPage() {
                 const courseId = item.course?.id ?? item.courseId;
                 const courseName = item.course?.name;
                 const itemType = String(item.type ?? "").toLowerCase();
-                const typeLabel = itemTypeLabel(item.type);
                 const accent = calendarItemAccent(item);
                 const isGolf =
                   itemType === "golf_round" || itemType === "course";
+                const isFlight = isFlightItem(item);
                 const canOpenCourse = isGolf && !!courseId;
-                const timelineTitle =
-                  (isGolf && courseName) ||
-                  item.title ||
-                  courseName ||
-                  "Untitled item";
                 const isEditing = editingItemId === item.id && !!editDraft;
                 const editIsGolf =
                   editDraft?.type === "golf_round" ||
                   editDraft?.type === "course";
                 const editIsHotel = editDraft?.type === "hotel";
                 const editIsFlight = editDraft?.type === "flight";
+                const editIsTransferLike = isTransferType(editDraft?.type);
+                const editIsNote = editDraft?.type === "note";
+                const editSupportsCosts = itemTypeSupportsCosts(editDraft?.type);
                 const isMoving = movingItemId === item.id;
                 const canEditCurrentItem = canEditTripItem(item);
                 const canMoveUp =
@@ -7725,6 +7591,12 @@ export default function TripDetailPage() {
                   !isMoving;
                 const compactWhen = compactItemWhenLine(item);
                 const compactWhere = compactItemWhereLine(item);
+                const flightSummary = isFlight ? flightSummaryLine(item) : "";
+                const compactCostSummary = timelineCostSummaryText(
+                  item,
+                  trip?.members ?? [],
+                  baseCurrency,
+                );
 
                 return (
                   <article
@@ -7733,14 +7605,17 @@ export default function TripDetailPage() {
                     style={
                       isEditing
                         ? {
-                            padding: 14,
-                            borderRadius: 14,
+                            scrollMarginTop: 84,
+                            borderRadius: 16,
                             background: "var(--card)",
-                            border: "1px solid var(--border)",
+                            border: `1px solid ${accent.border}`,
                             display: "grid",
-                            gap: 9,
+                            gap: 0,
+                            overflow: "hidden",
+                            boxShadow: "0 8px 22px rgba(0,0,0,0.08)",
                           }
                         : {
+                            scrollMarginTop: 84,
                             display: "grid",
                             gap: 0,
                             borderRadius: 16,
@@ -7752,206 +7627,21 @@ export default function TripDetailPage() {
                           }
                     }
                   >
-                      {isEditing ? (
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "flex-start",
-                            gap: 10,
-                          }}
-                        >
-                          <div
-                            aria-hidden="true"
-                            style={{
-                              width: 32,
-                              height: 32,
-                              borderRadius: 999,
-                              border: "1px solid var(--border)",
-                              display: "grid",
-                              placeItems: "center",
-                              background: "var(--bg)",
-                              flexShrink: 0,
-                            }}
-                          >
-                            {itemIcon(item.type)}
-                          </div>
-
-                          <div style={{ minWidth: 0, display: "grid", gap: 4 }}>
-                            <div
-                              style={{
-                                display: "flex",
-                                flexWrap: "wrap",
-                                alignItems: "center",
-                                gap: 8,
-                              }}
-                            >
-                              <span
-                                style={{
-                                  border: "1px solid var(--border)",
-                                  borderRadius: 999,
-                                  padding: "3px 8px",
-                                  background: "var(--bg)",
-                                  color: "var(--sub)",
-                                  fontSize: 11,
-                                  fontWeight: 950,
-                                }}
-                              >
-                                {typeLabel}
-                              </span>
-                              {isGolf && courseName ? (
-                                <span
-                                  style={{
-                                    border: "1px solid var(--border)",
-                                    borderRadius: 999,
-                                    padding: "3px 8px",
-                                    background: "var(--bg)",
-                                    color: "var(--text)",
-                                    fontSize: 11,
-                                    fontWeight: 950,
-                                  }}
-                                >
-                                  Linked course
-                                </span>
-                              ) : null}
-                            </div>
-
-                            <div
-                              style={{
-                                fontWeight: 950,
-                                color: "var(--text)",
-                                lineHeight: 1.25,
-                                overflowWrap: "anywhere",
-                              }}
-                            >
-                              {item.title || "Untitled item"}
-                            </div>
-
-                            {courseName ? (
-                              <div
-                                style={{
-                                  color: "var(--sub)",
-                                  fontSize: 13,
-                                  fontWeight: isGolf ? 900 : 700,
-                                  overflowWrap: "anywhere",
-                                }}
-                              >
-                                {isGolf ? `Course: ${courseName}` : courseName}
-                              </div>
-                            ) : null}
-                          </div>
-                        </div>
-                      ) : (
-                        <div
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns: "4px minmax(0, 1fr)",
-                            background: accent.header,
-                            borderBottom:
-                              "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                          }}
-                        >
-                          <div
-                            aria-hidden="true"
-                            style={{ background: accent.rail }}
-                          />
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              gap: 10,
-                              alignItems: "flex-start",
-                              padding: 11,
-                            }}
-                          >
-                            <div style={{ minWidth: 0, display: "grid", gap: 5 }}>
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 6,
-                                  flexWrap: "wrap",
-                                }}
-                              >
-                                <span
-                                  className="fw-pill fw-pill--meta fw-pill--info"
-                                  style={{
-                                    background: "rgba(255,255,255,0.86)",
-                                    borderColor: "rgba(255,255,255,0.58)",
-                                    boxShadow: "0 4px 12px rgba(0,0,0,0.16)",
-                                    color: "#172019",
-                                  }}
-                                >
-                                  {typeLabel}
-                                </span>
-                                {time ? (
-                                  <span
-                                    style={{
-                                      color: accent.headerText,
-                                      fontSize: 12,
-                                      fontWeight: 900,
-                                      whiteSpace: "nowrap",
-                                    }}
-                                  >
-                                    {time}
-                                  </span>
-                                ) : null}
-                              </div>
-                              {canOpenCourse ? (
-                                <button
-                                  type="button"
-                                  onClick={() => nav(`/courses/${courseId}`)}
-                                  style={{
-                                    appearance: "none",
-                                    WebkitAppearance: "none",
-                                    border: 0,
-                                    padding: 0,
-                                    margin: 0,
-                                    background: "transparent",
-                                    color: accent.headerText,
-                                    cursor: "pointer",
-                                    font: "inherit",
-                                    fontWeight: 950,
-                                    lineHeight: 1.2,
-                                    textAlign: "left",
-                                    overflowWrap: "anywhere",
-                                  }}
-                                >
-                                  {timelineTitle}
-                                </button>
-                              ) : (
-                                <div
-                                  style={{
-                                    color: accent.headerText,
-                                    fontWeight: 950,
-                                    overflowWrap: "anywhere",
-                                    lineHeight: 1.2,
-                                  }}
-                                >
-                                  {timelineTitle}
-                                </div>
-                              )}
-                            </div>
-                            {canOpenCourse ? (
-                              <ChevronRight
-                                aria-hidden="true"
-                                size={17}
-                                strokeWidth={2.5}
-                                style={{
-                                  color: accent.headerSubText,
-                                  flex: "0 0 auto",
-                                }}
-                              />
-                            ) : null}
-                          </div>
-                        </div>
-                      )}
+                      <TripItemCardHeader
+                        item={item}
+                        onTitleClick={
+                          canOpenCourse ? () => nav(`/courses/${courseId}`) : undefined
+                        }
+                      />
 
                       {isEditing ? (
                         <div
                           style={{
                             display: "grid",
                             gap: 10,
-                            paddingTop: 2,
+                            padding: 14,
+                            background:
+                              "color-mix(in srgb, var(--card) 96%, var(--bg))",
                           }}
                         >
                           {courseName ? (
@@ -8146,6 +7836,59 @@ export default function TripDetailPage() {
                                   style={editFieldStyle}
                                 />
                               </label>
+                              <div
+                                style={{
+                                  display: "grid",
+                                  gridTemplateColumns:
+                                    "repeat(auto-fit, minmax(140px, 1fr))",
+                                  gap: 8,
+                                }}
+                              >
+                                <label
+                                  style={{
+                                    display: "grid",
+                                    gap: 6,
+                                    color: "var(--text)",
+                                    fontSize: 12,
+                                    fontWeight: 900,
+                                  }}
+                                >
+                                  From airport
+                                  <input
+                                    value={editDraft.locationName}
+                                    onChange={(e) =>
+                                      setEditDraft({
+                                        ...editDraft,
+                                        locationName: e.target.value,
+                                      })
+                                    }
+                                    placeholder="ZRH"
+                                    style={editFieldStyle}
+                                  />
+                                </label>
+                                <label
+                                  style={{
+                                    display: "grid",
+                                    gap: 6,
+                                    color: "var(--text)",
+                                    fontSize: 12,
+                                    fontWeight: 900,
+                                  }}
+                                >
+                                  To airport
+                                  <input
+                                    value={editDraft.address}
+                                    onChange={(e) =>
+                                      setEditDraft({
+                                        ...editDraft,
+                                        address: e.target.value,
+                                      })
+                                    }
+                                    placeholder="BKK"
+                                    style={editFieldStyle}
+                                  />
+                                </label>
+                              </div>
                             </div>
                           ) : (
                             <label
@@ -8172,36 +7915,15 @@ export default function TripDetailPage() {
                             </label>
                           )}
 
-                          <div
-                            style={{
-                              display: "grid",
-                              gridTemplateColumns:
-                                "repeat(auto-fit, minmax(140px, 1fr))",
-                              gap: 8,
-                            }}
-                          >
-                            <label
+                          {!editIsFlight && !editIsNote ? (
+                            <div
                               style={{
                                 display: "grid",
-                                gap: 6,
-                                color: "var(--text)",
-                                fontSize: 12,
-                                fontWeight: 900,
+                                gridTemplateColumns:
+                                  "repeat(auto-fit, minmax(140px, 1fr))",
+                                gap: 8,
                               }}
                             >
-                              {editIsFlight
-                                ? "Departure date"
-                                : editIsHotel
-                                  ? "Check-in date"
-                                  : "Date"}
-                              <input
-                                type="date"
-                                value={editDraft.date}
-                                onChange={(e) => updateEditDate(e.target.value)}
-                                style={editFieldStyle}
-                              />
-                            </label>
-                            {!editIsGolf ? (
                               <label
                                 style={{
                                   display: "grid",
@@ -8211,31 +7933,113 @@ export default function TripDetailPage() {
                                   fontWeight: 900,
                                 }}
                               >
-                                {editIsFlight ? "Arrival date" : "End date"}
+                                {editIsTransferLike ? "Pickup / From" : "Location"}
                                 <input
-                                  type="date"
-                                  value={editDraft.endDate}
-                                  min={editDraft.date || undefined}
-                                  onChange={(e) => updateEditEndDate(e.target.value)}
+                                  value={editDraft.locationName}
+                                  onChange={(e) =>
+                                    setEditDraft({
+                                      ...editDraft,
+                                      locationName: e.target.value,
+                                    })
+                                  }
+                                  placeholder={
+                                    editIsTransferLike ? "BKK Airport" : "Location"
+                                  }
                                   style={editFieldStyle}
                                 />
-                                {editIsFlight || editIsHotel ? (
-                                  <span
-                                    style={{
-                                      color: "var(--sub)",
-                                      fontSize: 12,
-                                      fontWeight: 800,
-                                    }}
-                                  >
-                                    {editIsFlight
-                                      ? "Optional for overnight or connecting flights"
-                                      : "Optional for multi-day stays"}
-                                  </span>
-                                ) : null}
                               </label>
-                            ) : null}
+                              <label
+                                style={{
+                                  display: "grid",
+                                  gap: 6,
+                                  color: "var(--text)",
+                                  fontSize: 12,
+                                  fontWeight: 900,
+                                }}
+                              >
+                                {editIsTransferLike ? "Destination / To" : "Meeting point"}
+                                <input
+                                  value={editDraft.address}
+                                  onChange={(e) =>
+                                    setEditDraft({
+                                      ...editDraft,
+                                      address: e.target.value,
+                                    })
+                                  }
+                                  placeholder={
+                                    editIsTransferLike ? "Areca Lodge" : "Optional"
+                                  }
+                                  style={editFieldStyle}
+                                />
+                              </label>
+                            </div>
+                          ) : null}
+
+                          <div
+                            style={{
+                              display: "grid",
+                              gap: 8,
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns:
+                                  "repeat(auto-fit, minmax(140px, 1fr))",
+                                gap: 8,
+                              }}
+                            >
+                              <label
+                                style={{
+                                  display: "grid",
+                                  gap: 6,
+                                  color: "var(--text)",
+                                  fontSize: 12,
+                                  fontWeight: 900,
+                                }}
+                              >
+                                {editIsFlight
+                                  ? "Departure date"
+                                  : editIsHotel
+                                    ? "Check-in date"
+                                    : "Date"}
+                                <input
+                                  type="date"
+                                  value={editDraft.date}
+                                  onChange={(e) => updateEditDate(e.target.value)}
+                                  style={editFieldStyle}
+                                />
+                              </label>
+                              {!editIsGolf ? (
+                                <label
+                                  style={{
+                                    display: "grid",
+                                    gap: 6,
+                                    color: "var(--text)",
+                                    fontSize: 12,
+                                    fontWeight: 900,
+                                  }}
+                                >
+                                  {editIsFlight ? "Arrival date" : "End date"}
+                                  <input
+                                    type="date"
+                                    value={editDraft.endDate}
+                                    min={editDraft.date || undefined}
+                                    onChange={(e) => updateEditEndDate(e.target.value)}
+                                    style={editFieldStyle}
+                                  />
+                                </label>
+                              ) : null}
+                            </div>
                             {!editIsHotel ? (
-                              <>
+                              <div
+                                style={{
+                                  display: "grid",
+                                  gridTemplateColumns:
+                                    "repeat(auto-fit, minmax(140px, 1fr))",
+                                  gap: 8,
+                                }}
+                              >
                                 <label
                                   style={{
                                     display: "grid",
@@ -8280,7 +8084,20 @@ export default function TripDetailPage() {
                                     style={editFieldStyle}
                                   />
                                 </label>
-                              </>
+                              </div>
+                            ) : null}
+                            {editIsFlight || editIsHotel ? (
+                              <div
+                                style={{
+                                  color: "var(--sub)",
+                                  fontSize: 12,
+                                  fontWeight: 800,
+                                }}
+                              >
+                                {editIsFlight
+                                  ? "Arrival date is optional for overnight or connecting flights."
+                                  : "End date is optional for multi-day stays."}
+                              </div>
                             ) : null}
                           </div>
 
@@ -8318,36 +8135,16 @@ export default function TripDetailPage() {
                           ) : null}
 
                           {editIsFlight ? (
-                            <div
+                            <label
                               style={{
                                 display: "grid",
-                                gridTemplateColumns:
-                                  "repeat(auto-fit, minmax(140px, 1fr))",
-                                gap: 8,
+                                gap: 6,
+                                color: "var(--text)",
+                                fontSize: 12,
+                                fontWeight: 900,
                               }}
                             >
-                              <input
-                                value={editDraft.locationName}
-                                onChange={(e) =>
-                                  setEditDraft({
-                                    ...editDraft,
-                                    locationName: e.target.value,
-                                  })
-                                }
-                                placeholder="From airport"
-                                style={editFieldStyle}
-                              />
-                              <input
-                                value={editDraft.address}
-                                onChange={(e) =>
-                                  setEditDraft({
-                                    ...editDraft,
-                                    address: e.target.value,
-                                  })
-                                }
-                                placeholder="To airport"
-                                style={editFieldStyle}
-                              />
+                              Booking reference
                               <input
                                 value={editDraft.bookingRef}
                                 onChange={(e) =>
@@ -8359,7 +8156,31 @@ export default function TripDetailPage() {
                                 placeholder="Booking reference"
                                 style={editFieldStyle}
                               />
-                            </div>
+                            </label>
+                          ) : null}
+
+                          {editSupportsCosts ? (
+                            <TripItemBudgetSection
+                              item={{ ...item, type: editDraft.type, title: editDraft.title }}
+                              members={trip?.members ?? []}
+                              baseCurrency={baseCurrency}
+                              canEdit={canEditCurrentItem}
+                              drafts={
+                                budgetEditingItemId === item.id
+                                  ? budgetDrafts
+                                  : budgetCostsForItem(item, trip?.members ?? []).map((cost) =>
+                                      budgetDraftFromCost(cost, item),
+                                    )
+                              }
+                              focusedDraftId={expandedBudgetCostId}
+                              saving={savingBudgetItemId === item.id}
+                              onStartInline={startBudgetInlineEdit}
+                              onAddDraft={addBudgetDraftInline}
+                              onUpdateDraft={updateBudgetDraft}
+                              onDeleteDraft={deleteBudgetDraft}
+                              onSave={saveBudgetInline}
+                              onEdit={openBudgetEdit}
+                            />
                           ) : null}
 
                           <div
@@ -8538,8 +8359,7 @@ export default function TripDetailPage() {
                                 padding: "0 12px",
                                 borderRadius: 999,
                                 border: "1px solid var(--border)",
-                                background: "var(--text)",
-                                color: "var(--bg)",
+                                ...primaryButtonStyle,
                                 cursor:
                                   savingItemId === item.id
                                     ? "default"
@@ -8555,6 +8375,10 @@ export default function TripDetailPage() {
                               onClick={() => {
                                 setEditingItemId(null);
                                 setEditDraft(null);
+                                setBudgetEditingItemId(null);
+                                setBudgetDrafts([]);
+                                setExpandedBudgetCostId(null);
+                                setBudgetModalOpen(false);
                               }}
                               disabled={savingItemId === item.id}
                               style={{
@@ -8562,8 +8386,7 @@ export default function TripDetailPage() {
                                 padding: "0 12px",
                                 borderRadius: 999,
                                 border: "1px solid var(--border)",
-                                background: "transparent",
-                                color: "var(--sub)",
+                                ...secondaryButtonStyle,
                                 cursor:
                                   savingItemId === item.id
                                     ? "default"
@@ -8595,30 +8418,33 @@ export default function TripDetailPage() {
                                 fontWeight: 900,
                               }}
                             >
+                              {flightSummary ? (
+                                <div>{flightSummary}</div>
+                              ) : null}
                               <div>
-                                {dateRange || compactWhen || formatDateLabel(dateKey(item))}
-                                {!isGolf && time && !compactWhen ? ` · ${time}` : ""}
+                                {isFlight
+                                  ? compactWhen || formatDateLabel(dateKey(item))
+                                  : dateRange || compactWhen || formatDateLabel(dateKey(item))}
+                                {!isGolf && !isFlight && time && !compactWhen ? ` · ${time}` : ""}
                               </div>
-                              {compactWhere ? (
+                              {!isFlight && compactWhere ? (
                                 <div style={{ color: "var(--sub)" }}>{compactWhere}</div>
                               ) : null}
                             </div>
 
-                            <TripItemBudgetSection
-                              item={item}
-                              members={trip?.members ?? []}
-                              baseCurrency={baseCurrency}
-                              canEdit={canEditCurrentItem}
-                              drafts={budgetEditingItemId === item.id ? budgetDrafts : null}
-                              focusedDraftId={budgetEditingItemId === item.id ? expandedBudgetCostId : null}
-                              saving={savingBudgetItemId === item.id}
-                              onStartInline={startBudgetInlineEdit}
-                              onAddDraft={addBudgetDraftInline}
-                              onUpdateDraft={updateBudgetDraft}
-                              onDeleteDraft={deleteBudgetDraft}
-                              onSave={saveBudgetInline}
-                              onEdit={openBudgetEdit}
-                            />
+                            {compactCostSummary ? (
+                              <div
+                                style={{
+                                  color: "var(--sub)",
+                                  fontSize: 12,
+                                  lineHeight: 1.3,
+                                  fontWeight: 900,
+                                  overflowWrap: "anywhere",
+                                }}
+                              >
+                                {compactCostSummary}
+                              </div>
+                            ) : null}
 
                             <div
                               style={{
@@ -8639,6 +8465,7 @@ export default function TripDetailPage() {
                                       height: 30,
                                       cursor: canMoveUp ? "pointer" : "default",
                                       opacity: canMoveUp ? 1 : 0.45,
+                                      ...secondaryButtonStyle,
                                     }}
                                   >
                                     Up
@@ -8652,6 +8479,7 @@ export default function TripDetailPage() {
                                       height: 30,
                                       cursor: canMoveDown ? "pointer" : "default",
                                       opacity: canMoveDown ? 1 : 0.45,
+                                      ...secondaryButtonStyle,
                                     }}
                                   >
                                     Down
@@ -8666,11 +8494,13 @@ export default function TripDetailPage() {
                                   style={{
                                     height: 30,
                                     cursor: "pointer",
+                                    ...secondaryButtonStyle,
                                   }}
                                 >
                                   Open course
                                 </button>
                               ) : null}
+                              {renderMapActionLinks(item, `timeline-${item.id}`)}
                               <button
                                 type="button"
                                 onClick={(event) => openItemDetails(item, event)}
@@ -8678,6 +8508,7 @@ export default function TripDetailPage() {
                                 style={{
                                   height: 30,
                                   cursor: "pointer",
+                                  ...secondaryButtonStyle,
                                 }}
                               >
                                 Details
@@ -8694,6 +8525,7 @@ export default function TripDetailPage() {
                                       deletingItemId === item.id
                                         ? "default"
                                         : "pointer",
+                                    ...secondaryButtonStyle,
                                   }}
                                 >
                                   Edit
@@ -8711,6 +8543,7 @@ export default function TripDetailPage() {
                                       deletingItemId === item.id
                                         ? "default"
                                         : "pointer",
+                                    ...dangerButtonStyle,
                                   }}
                                 >
                                   {deletingItemId === item.id
@@ -8734,6 +8567,8 @@ export default function TripDetailPage() {
         <TripCalendarView
           days={calendarDays}
           items={trip?.items ?? []}
+          members={trip?.members ?? []}
+          baseCurrency={baseCurrency}
           selectedDay={selectedCalendarDay}
           onSelectDay={setSelectedCalendarDay}
           canEditTrip={canAddTripItems}
@@ -9173,14 +9008,14 @@ export default function TripDetailPage() {
                               padding: "0 11px",
                               borderRadius: 999,
                               border: "1px solid var(--border)",
-                              background: "transparent",
-                              color: "var(--sub)",
+                              ...dangerButtonStyle,
                               cursor:
                                 deletingDocumentId === document.id
                                   ? "default"
                                   : "pointer",
                               fontWeight: 900,
                               fontSize: 12,
+                              opacity: deletingDocumentId === document.id ? 0.55 : 1,
                             }}
                           >
                             {deletingDocumentId === document.id
@@ -9848,66 +9683,126 @@ export default function TripDetailPage() {
               width: "min(560px, 100%)",
               maxHeight: "min(720px, calc(100vh - 32px))",
               overflow: "auto",
-              background: "var(--fw-surface, #fff)",
-              padding: 18,
+              background: "var(--card)",
+              color: "var(--text)",
+              padding: 0,
+              border: "1px solid var(--border)",
+              boxShadow: "0 22px 70px rgba(0,0,0,0.36)",
+              overflowClipMargin: "border-box",
             }}
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="fw-row-between" style={{ gap: 12, alignItems: "flex-start" }}>
-              <div>
-                <div className="fw-eyebrow">{itemTypeLabel(detailsItem.type)}</div>
-                <h2 id="trip-item-details-title" style={{ margin: "2px 0 0" }}>
-                  {tripItemTitle(detailsItem)}
-                </h2>
+            <div
+              style={{
+                display: "grid",
+                gap: 0,
+                borderRadius: "inherit",
+                overflow: "hidden",
+              }}
+            >
+              <div id="trip-item-details-title">
+                <TripItemCardHeader item={detailsItem} />
               </div>
-              <button
-                type="button"
-                className="fw-btn fw-btn-ghost"
-                onClick={() => setDetailsItemId(null)}
-              >
-                Close
-              </button>
-            </div>
 
-            <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
-              {compactItemWhenLine(detailsItem) ? (
-                <div>
-                  <div className="fw-field-label">When</div>
-                  <div>{compactItemWhenLine(detailsItem)}</div>
+              <div style={{ display: "grid", gap: 12, padding: 16 }}>
+              <section
+                style={{
+                  ...sectionMutedCardStyle,
+                  display: "grid",
+                  gap: 9,
+                  padding: 12,
+                }}
+              >
+                <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
+                  Main info
                 </div>
-              ) : null}
-              {compactItemWhereLine(detailsItem) ? (
-                <div>
-                  <div className="fw-field-label">Where / Route</div>
-                  <div>{compactItemWhereLine(detailsItem)}</div>
+                <div style={{ display: "grid", gap: 8 }}>
+                  {compactItemWhereLine(detailsItem) ? (
+                    <div style={{ display: "grid", gap: 2 }}>
+                      <div style={compactMetaTextStyle}>Where / Route</div>
+                      <div style={{ color: "var(--text)", fontSize: 14, fontWeight: 900, overflowWrap: "anywhere" }}>
+                        {compactItemWhereLine(detailsItem)}
+                      </div>
+                    </div>
+                  ) : null}
+                  <div style={{ display: "grid", gap: 2 }}>
+                    <div style={compactMetaTextStyle}>Visibility</div>
+                    <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 850, overflowWrap: "anywhere" }}>
+                      {itemVisibilityText(detailsItem, trip?.members ?? [])}
+                    </div>
+                  </div>
+                  {timelineDetails(detailsItem).map((detail) => (
+                    <div key={`${detail.label}-${detail.value}`} style={{ display: "grid", gap: 2 }}>
+                      <div style={compactMetaTextStyle}>{detail.label}</div>
+                      <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 850, overflowWrap: "anywhere" }}>
+                        {detail.value}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ) : null}
-              {timelineDetails(detailsItem).map((detail) => (
-                <div key={`${detail.label}-${detail.value}`}>
-                  <div className="fw-field-label">{detail.label}</div>
-                  <div>{detail.value}</div>
+              </section>
+
+              <section
+                style={{
+                  ...sectionMutedCardStyle,
+                  display: "grid",
+                  gap: 8,
+                  padding: 12,
+                }}
+              >
+                <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
+                  Timing
                 </div>
-              ))}
-              {detailsItem.notes?.trim() ? (
-                <div>
-                  <div className="fw-field-label">Notes</div>
-                  <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-                    {detailsItem.notes.trim()}
-                  </p>
+                <div style={{ color: "var(--text)", fontSize: 14, lineHeight: 1.35, fontWeight: 900, overflowWrap: "anywhere" }}>
+                  {compactItemWhenLine(detailsItem) || "No timing set."}
                 </div>
-              ) : null}
-              <div>
-                <div className="fw-field-label">Documents</div>
+              </section>
+
+              <TripItemBudgetSection
+                item={detailsItem}
+                members={trip?.members ?? []}
+                baseCurrency={baseCurrency}
+                canEdit={false}
+                drafts={null}
+                focusedDraftId={null}
+                saving={false}
+                onStartInline={startBudgetInlineEdit}
+                onAddDraft={addBudgetDraftInline}
+                onUpdateDraft={updateBudgetDraft}
+                onDeleteDraft={deleteBudgetDraft}
+                onSave={saveBudgetInline}
+                onEdit={openBudgetEdit}
+              />
+
+              <section
+                style={{
+                  ...sectionMutedCardStyle,
+                  display: "grid",
+                  gap: 8,
+                  padding: 12,
+                }}
+              >
+                <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
+                  Documents
+                </div>
                 {linkedDocumentsForItem(detailsItem, documents).length > 0 ? (
-                  <div style={{ display: "grid", gap: 8, marginTop: 6 }}>
+                  <div style={{ display: "grid", gap: 8 }}>
                     {linkedDocumentsForItem(detailsItem, documents).map((document) => (
                       <a
                         key={document.id}
                         href={fileUrl(document.fileUrl)}
                         target="_blank"
                         rel="noreferrer"
-                        className="fw-btn fw-btn-ghost"
-                        style={{ justifyContent: "flex-start" }}
+                        className="fw-pill fw-pill--meta fw-pill--action"
+                        style={{
+                          minHeight: 36,
+                          width: "fit-content",
+                          maxWidth: "100%",
+                          textDecoration: "none",
+                          justifyContent: "flex-start",
+                          overflowWrap: "anywhere",
+                          ...secondaryButtonStyle,
+                        }}
                       >
                         {document.title || document.fileName}
                       </a>
@@ -9916,32 +9811,85 @@ export default function TripDetailPage() {
                 ) : (
                   <div className="fw-muted">No linked documents.</div>
                 )}
-              </div>
-            </div>
+              </section>
 
-            <div className="fw-actions" style={{ marginTop: 16 }}>
-              {mapUrlForItem(detailsItem) ? (
-                <a className="fw-btn fw-btn-ghost" href={mapUrlForItem(detailsItem) ?? "#"} target="_blank" rel="noreferrer">
-                  Map
-                </a>
-              ) : null}
-              {directionsUrlForItem(detailsItem) ? (
-                <a className="fw-btn fw-btn-ghost" href={directionsUrlForItem(detailsItem) ?? "#"} target="_blank" rel="noreferrer">
-                  Directions
-                </a>
-              ) : null}
-              {canEditTripItem(detailsItem) ? (
+              <section
+                style={{
+                  ...sectionMutedCardStyle,
+                  display: "grid",
+                  gap: 8,
+                  padding: 12,
+                }}
+              >
+                <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
+                  Notes
+                </div>
+                {detailsItem.notes?.trim() ? (
+                  <p
+                    style={{
+                      margin: 0,
+                      color: "var(--text)",
+                      fontSize: 13,
+                      lineHeight: 1.45,
+                      whiteSpace: "pre-wrap",
+                      overflowWrap: "anywhere",
+                    }}
+                  >
+                    {detailsItem.notes.trim()}
+                  </p>
+                ) : (
+                  <div className="fw-muted">No notes added.</div>
+                )}
+              </section>
+
+              <div style={{ ...wrappingActionRowStyle, gap: 8, paddingTop: 2 }}>
+                {tripItemMapActions(detailsItem).map((action) => (
+                  <a
+                    key={`details-${detailsItem.id}-${action.label}`}
+                    className="fw-pill fw-pill--meta fw-pill--action"
+                    href={action.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      minHeight: 38,
+                      textDecoration: "none",
+                      ...secondaryButtonStyle,
+                    }}
+                  >
+                    {action.label}
+                  </a>
+                ))}
+                {canEditTripItem(detailsItem) ? (
+                  <button
+                    type="button"
+                    className="fw-pill fw-pill--meta fw-pill--action"
+                    style={{
+                      minHeight: 38,
+                      cursor: "pointer",
+                      ...secondaryButtonStyle,
+                    }}
+                    onClick={(event) => {
+                      setDetailsItemId(null);
+                      openItemEdit(detailsItem, event);
+                    }}
+                  >
+                    Edit
+                  </button>
+                ) : null}
                 <button
                   type="button"
-                  className="fw-btn"
-                  onClick={(event) => {
-                    setDetailsItemId(null);
-                    openItemEdit(detailsItem, event);
+                  className="fw-pill fw-pill--meta"
+                  style={{
+                    minHeight: 38,
+                    cursor: "pointer",
+                      ...secondaryButtonStyle,
                   }}
+                  onClick={() => setDetailsItemId(null)}
                 >
-                  Edit
+                  Close
                 </button>
-              ) : null}
+              </div>
+              </div>
             </div>
           </div>
         </div>,
@@ -10010,6 +9958,7 @@ export default function TripDetailPage() {
                 style={{
                   height: 30,
                   cursor: savingBudgetItemId ? "default" : "pointer",
+                  ...secondaryButtonStyle,
                 }}
               >
                 Close
@@ -10081,7 +10030,7 @@ export default function TripDetailPage() {
                               setExpandedBudgetCostId(isExpanded ? null : draft.localId)
                             }
                             className="fw-pill fw-pill--meta fw-pill--action"
-                            style={{ height: 28, cursor: "pointer" }}
+                            style={{ height: 28, cursor: "pointer", ...secondaryButtonStyle }}
                           >
                             {isExpanded ? "Close" : "Edit"}
                           </button>
@@ -10089,7 +10038,7 @@ export default function TripDetailPage() {
                             type="button"
                             onClick={() => deleteBudgetDraft(draft.localId)}
                             className="fw-pill fw-pill--meta"
-                            style={{ height: 28, cursor: "pointer" }}
+                            style={{ height: 28, cursor: "pointer", ...dangerButtonStyle }}
                           >
                             Delete
                           </button>
@@ -10321,7 +10270,7 @@ export default function TripDetailPage() {
                   type="button"
                   onClick={addBudgetDraft}
                   className="fw-pill fw-pill--meta fw-pill--action"
-                  style={{ height: 32, cursor: "pointer" }}
+                  style={{ height: 32, cursor: "pointer", ...secondaryButtonStyle }}
                 >
                   Add cost
                 </button>
@@ -10334,8 +10283,7 @@ export default function TripDetailPage() {
                     padding: "0 12px",
                     borderRadius: 999,
                     border: "1px solid var(--border)",
-                    background: "var(--text)",
-                    color: "var(--bg)",
+                    ...primaryButtonStyle,
                     cursor: savingBudgetItemId ? "default" : "pointer",
                     fontWeight: 900,
                     fontSize: 12,
@@ -10620,8 +10568,7 @@ export default function TripDetailPage() {
                   padding: "0 13px",
                   borderRadius: 999,
                   border: "1px solid var(--border)",
-                  background: "transparent",
-                  color: "var(--text)",
+                  ...secondaryButtonStyle,
                   cursor: deletingTrip ? "default" : "pointer",
                   fontWeight: 900,
                   fontSize: 13,
@@ -10637,21 +10584,16 @@ export default function TripDetailPage() {
                   height: 36,
                   padding: "0 13px",
                   borderRadius: 999,
-                  border: "1px solid var(--danger)",
-                  background:
-                    deletingTrip || deleteTripTitleInput !== trip.title
-                      ? "transparent"
-                      : "var(--danger-soft)",
-                  color:
-                    deletingTrip || deleteTripTitleInput !== trip.title
-                      ? "var(--sub)"
-                      : "var(--danger)",
+                  border: "1px solid var(--border)",
+                  ...dangerButtonStyle,
                   cursor:
                     deletingTrip || deleteTripTitleInput !== trip.title
                       ? "default"
                       : "pointer",
                   fontWeight: 950,
                   fontSize: 13,
+                  opacity:
+                    deletingTrip || deleteTripTitleInput !== trip.title ? 0.55 : 1,
                 }}
               >
                 {deletingTrip ? "Deleting..." : "Delete trip permanently"}
