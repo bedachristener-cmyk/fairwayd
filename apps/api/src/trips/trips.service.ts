@@ -1579,6 +1579,11 @@ export class TripsService {
 
     if (sourceCosts === undefined) return undefined;
 
+    const trip = await this.prisma.trip.findUnique({
+      where: { id: tripId },
+      select: { baseCurrency: true },
+    });
+    const baseCurrency = trip?.baseCurrency?.trim().toUpperCase();
     const resolvedCosts: Prisma.TripItemCostCreateWithoutTripItemInput[] = [];
 
     for (const cost of sourceCosts) {
@@ -1601,13 +1606,24 @@ export class TripsService {
           currentMemberId,
           true,
         ));
+      const amount =
+        typeof cost.amount === 'number' && Number.isFinite(cost.amount)
+          ? cost.amount
+          : null;
+      const currency =
+        cost.currency?.trim() || itemDto.currency?.trim() || null;
+      const isBaseCurrency =
+        amount !== null &&
+        Boolean(currency) &&
+        Boolean(baseCurrency) &&
+        currency!.toUpperCase() === baseCurrency;
 
       resolvedCosts.push({
         label: cost.label?.trim() || itemDto.title?.trim() || null,
-        amount: cost.amount ?? null,
-        currency: cost.currency?.trim() || itemDto.currency?.trim() || null,
-        exchangeRate: cost.exchangeRate ?? null,
-        baseAmount: cost.baseAmount ?? null,
+        amount,
+        currency,
+        exchangeRate: isBaseCurrency ? 1 : cost.exchangeRate ?? null,
+        baseAmount: isBaseCurrency ? amount : cost.baseAmount ?? null,
         costMode: cost.costMode ?? itemDto.costMode ?? defaultTripItemCostMode(itemDto.type),
         paymentMode: cost.paymentMode ?? this.defaultPaymentMode(paidByMemberId),
         paidByMember:

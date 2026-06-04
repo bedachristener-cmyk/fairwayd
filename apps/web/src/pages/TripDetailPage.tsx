@@ -4255,8 +4255,12 @@ export default function TripDetailPage() {
           label: optionalText(draft.label),
           amount,
           currency,
-          exchangeRate: optionalNumber(draft.exchangeRate) ?? (isBaseCurrency ? 1 : undefined),
-          baseAmount: optionalNumber(draft.baseAmount) ?? (isBaseCurrency ? amount : undefined),
+          exchangeRate: isBaseCurrency
+            ? 1
+            : optionalNumber(draft.exchangeRate),
+          baseAmount: isBaseCurrency
+            ? amount
+            : optionalNumber(draft.baseAmount),
           costMode: draft.costMode,
           paymentMode: draft.paymentMode,
           paidByMemberId:
