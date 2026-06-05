@@ -229,12 +229,36 @@ type TripSummaryStat = {
 };
 
 type BudgetCategory = "Golf" | "Hotel" | "Transfer" | "Restaurant" | "Activity" | "Other";
-type CostSummaryCategory = "Golf" | "Hotel" | "Transport" | "Restaurant" | "Activity";
+type CostSummaryCategory =
+  | "Golf"
+  | "Hotel"
+  | "Flight"
+  | "Transport"
+  | "Car Rental"
+  | "Restaurant"
+  | "Activity";
 
 type CostSummary = {
   categories: Record<CostSummaryCategory, number>;
   total: number;
   missingExchangeRateCount: number;
+};
+
+type CostSummaryDrilldown = {
+  mode: "member" | "group";
+  category: CostSummaryCategory;
+};
+
+type CostSummaryDetailRow = {
+  id: string;
+  sortKey: string;
+  dateLabel: string;
+  title: string;
+  costLabel: string;
+  amount: number;
+  amountText: string;
+  missingExchangeRate: boolean;
+  meta: string[];
 };
 
 type BudgetSummary = {
@@ -1661,7 +1685,7 @@ function isNoteItem(item: TripItem) {
 
 function itemTypeSupportsCosts(type?: string | null) {
   const value = String(type ?? "").toLowerCase();
-  return value !== "note" && value !== "free_day";
+  return value !== "note";
 }
 
 function airportCodeOrName(value?: string | null) {
@@ -2306,7 +2330,7 @@ function costLabelExamplesForItemType(type?: string | null) {
     return ["Dinner", "Drinks", "Tip"];
   }
   if (value === "activity" || value === "free_day") {
-    return ["Entry fee", "Tour", "Equipment"];
+    return ["Entry fee", "Tour", "Equipment", "Other"];
   }
   return ["Cost name"];
 }
@@ -2319,7 +2343,9 @@ function costLabelPlaceholderForItemType(type?: string | null) {
 const costSummaryCategories: CostSummaryCategory[] = [
   "Golf",
   "Hotel",
+  "Flight",
   "Transport",
+  "Car Rental",
   "Restaurant",
   "Activity",
 ];
@@ -2329,7 +2355,9 @@ function emptyCostSummary(): CostSummary {
     categories: {
       Golf: 0,
       Hotel: 0,
+      Flight: 0,
       Transport: 0,
+      "Car Rental": 0,
       Restaurant: 0,
       Activity: 0,
     },
@@ -2338,13 +2366,20 @@ function emptyCostSummary(): CostSummary {
   };
 }
 
-function costSummaryCategory(type?: string | null): CostSummaryCategory {
+function costSummaryCategory(type?: string | null): CostSummaryCategory | null {
   const value = String(type ?? "").toLowerCase();
-  if (value === "golf_round" || value === "course") return "Golf";
+  if (value === "golf" || value === "golf_round" || value === "course") return "Golf";
   if (value === "hotel" || value === "stay" || value === "accommodation") return "Hotel";
-  if (value === "transfer" || value === "transport" || value === "car_rental") return "Transport";
+  if (value === "flight") return "Flight";
+  if (value === "transfer" || value === "transport") return "Transport";
+  if (value === "car_rental") return "Car Rental";
   if (value === "restaurant") return "Restaurant";
-  return "Activity";
+  if (value === "activity" || value === "free_day") return "Activity";
+  return null;
+}
+
+function costSummaryCategoryLabel(category: CostSummaryCategory) {
+  return category === "Transport" ? "Transfer / Transport" : category;
 }
 
 function costParticipantIds(cost: TripItemCost, tripMembers: TripMember[]) {
@@ -3661,6 +3696,8 @@ export default function TripDetailPage() {
   const [budgetEditingItemId, setBudgetEditingItemId] = useState<string | null>(null);
   const [budgetDrafts, setBudgetDrafts] = useState<BudgetCostDraft[]>([]);
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
+  const [costSummaryDrilldown, setCostSummaryDrilldown] =
+    useState<CostSummaryDrilldown | null>(null);
   const [expandedBudgetCostId, setExpandedBudgetCostId] = useState<string | null>(null);
   const [savingBudgetItemId, setSavingBudgetItemId] = useState<string | null>(null);
   const [savingItemId, setSavingItemId] = useState<string | null>(null);
@@ -4007,10 +4044,22 @@ export default function TripDetailPage() {
   function startEdit(item: TripItem) {
     setErr(null);
     setEditingItemId(item.id);
-    const visibleToMemberIds =
+    const canUseGroupVisibility = canEditTrip;
+    const itemVisibility = item.visibility || (canUseGroupVisibility ? "GROUP" : "PRIVATE");
+    const editableVisibility =
+      itemVisibility === "GROUP" && !canUseGroupVisibility ? "PRIVATE" : itemVisibility;
+    const savedVisibilityMemberIds =
       item.visibilityMembers && item.visibilityMembers.length > 0
         ? item.visibilityMembers.map((visibilityMember) => visibilityMember.tripMemberId)
-        : (trip?.members ?? []).map((member) => member.id);
+        : [];
+    const visibleToMemberIds =
+      editableVisibility === "SELECTED"
+        ? savedVisibilityMemberIds.length > 0
+          ? savedVisibilityMemberIds
+          : myMembership?.id
+            ? [myMembership.id]
+            : []
+        : savedVisibilityMemberIds;
     const documentIds = linkedDocumentsForItem(item, documents).map(
       (document) => document.id,
     );
@@ -4026,7 +4075,7 @@ export default function TripDetailPage() {
       locationName: item.locationName || "",
       address: item.address || "",
       bookingRef: item.bookingRef || "",
-      visibility: item.visibility || "GROUP",
+      visibility: editableVisibility,
       visibleToMemberIds,
       documentIds,
     });
@@ -4234,14 +4283,9 @@ export default function TripDetailPage() {
     setExpandedBudgetCostId((current) => (current === localId ? null : current));
   }
 
-  async function saveBudgetEdit(itemOverride?: TripItem) {
-    if (!tripId || !token || !budgetEditingItemId) return;
-    const item =
-      itemOverride ?? trip?.items?.find((candidate) => candidate.id === budgetEditingItemId);
-    if (!item || !canEditTripItem(item)) return;
-
+  function budgetPayloadCosts() {
     const baseCurrency = trip?.baseCurrency?.trim();
-    const costs = budgetDrafts
+    return budgetDrafts
       .map((draft) => {
         const amount = optionalNumber(draft.amount);
         const currency = optionalText(draft.currency);
@@ -4276,14 +4320,11 @@ export default function TripDetailPage() {
           cost.amount !== undefined ||
           cost.baseAmount !== undefined,
       );
+  }
 
-    if (
-      costs.some(
-        (cost) => !cost.label || cost.amount === undefined,
-      )
-    ) {
-      setErr("Each cost needs a label and amount.");
-      return;
+  function validateBudgetPayloadCosts(costs: ReturnType<typeof budgetPayloadCosts>) {
+    if (costs.some((cost) => !cost.label || cost.amount === undefined)) {
+      return "Each cost needs a label and amount.";
     }
 
     const invalidCost = costs.find(
@@ -4291,12 +4332,26 @@ export default function TripDetailPage() {
         cost.paymentMode === "PAID_BY_ONE" && !cost.paidByMemberId,
     );
     if (invalidCost) {
-      setErr("Choose who paid for each cost marked as one member paid.");
-      return;
+      return "Choose who paid for each cost marked as one member paid.";
     }
 
     if (costs.some((cost) => cost.participantMemberIds.length === 0)) {
-      setErr("Choose at least one member in Shared with for each cost.");
+      return "Choose at least one member in Shared with for each cost.";
+    }
+
+    return "";
+  }
+
+  async function saveBudgetEdit(itemOverride?: TripItem) {
+    if (!tripId || !token || !budgetEditingItemId) return;
+    const item =
+      itemOverride ?? trip?.items?.find((candidate) => candidate.id === budgetEditingItemId);
+    if (!item || !canEditTripItem(item)) return;
+
+    const costs = budgetPayloadCosts();
+    const validationMessage = validateBudgetPayloadCosts(costs);
+    if (validationMessage) {
+      setErr(validationMessage);
       return;
     }
 
@@ -5033,6 +5088,11 @@ export default function TripDetailPage() {
       editDraft.type === "golf_round" || editDraft.type === "course";
     const isFlightEdit = editDraft.type === "flight";
     const currentItem = trip?.items?.find((item) => item.id === itemId);
+    const shouldSaveCosts =
+      Boolean(currentItem) &&
+      itemTypeSupportsCosts(editDraft.type) &&
+      budgetEditingItemId === itemId;
+    const costs = shouldSaveCosts ? budgetPayloadCosts() : undefined;
     const derivedGolfTitle =
       currentItem?.course?.name || editDraft.title.trim() || "Golf round";
     const normalizedEndDate =
@@ -5050,6 +5110,14 @@ export default function TripDetailPage() {
     ) {
       setErr("Type, title, and date are required.");
       return;
+    }
+
+    if (costs) {
+      const validationMessage = validateBudgetPayloadCosts(costs);
+      if (validationMessage) {
+        setErr(validationMessage);
+        return;
+      }
     }
 
     try {
@@ -5086,6 +5154,7 @@ export default function TripDetailPage() {
                 ? editDraft.visibleToMemberIds
                 : undefined,
             documentIds: editDraft.documentIds,
+            costs,
           }),
         },
       );
@@ -5452,6 +5521,7 @@ export default function TripDetailPage() {
 
     for (const item of trip?.items ?? []) {
       const category = costSummaryCategory(item.type);
+      if (!category) continue;
       for (const cost of item.costs ?? []) {
         const participantIds = costParticipantIds(cost, trip?.members ?? []);
         if (!participantIds.includes(currentMemberId)) continue;
@@ -5479,6 +5549,7 @@ export default function TripDetailPage() {
 
     for (const item of trip?.items ?? []) {
       const category = costSummaryCategory(item.type);
+      if (!category) continue;
       for (const cost of item.costs ?? []) {
         const participantIds = costParticipantIds(cost, trip?.members ?? []);
         const converted = totalCostAmountInBaseCurrency(
@@ -5498,6 +5569,82 @@ export default function TripDetailPage() {
 
     return summary;
   }, [baseCurrency, trip?.items, trip?.members]);
+
+  function costSummaryDetailRows(
+    mode: CostSummaryDrilldown["mode"],
+    category: CostSummaryCategory,
+  ): CostSummaryDetailRow[] {
+    const currentMemberId = myMembership?.id;
+    if (mode === "member" && !currentMemberId) return [];
+
+    return (trip?.items ?? [])
+      .flatMap((item) => {
+        if (costSummaryCategory(item.type) !== category) return [];
+
+        return (item.costs ?? []).flatMap((cost) => {
+          const participantIds = costParticipantIds(cost, trip?.members ?? []);
+          if (mode === "member" && !participantIds.includes(currentMemberId ?? "")) {
+            return [];
+          }
+
+          const converted =
+            mode === "member"
+              ? memberCostShareInBaseCurrency(
+                  cost,
+                  baseCurrency,
+                  participantIds.length,
+                )
+              : totalCostAmountInBaseCurrency(
+                  cost,
+                  baseCurrency,
+                  participantIds.length,
+                );
+          const paidBy =
+            cost.paidByMember ??
+            (trip?.members ?? []).find((member) => member.id === cost.paidByMemberId);
+          const meta = [
+            costModeText(cost.costMode),
+            paidBy ? `paid by ${memberDisplayName(paidBy)}` : "",
+            participantIds.length > 0
+              ? `shared with ${participantIds.length} ${
+                  participantIds.length === 1 ? "person" : "people"
+                }`
+              : "",
+          ].filter(Boolean);
+
+          return [
+            {
+              id: `${item.id}-${cost.id}`,
+              sortKey: `${dateKey(item)}-${timeSortValue(item)}-${cost.id}`,
+              dateLabel: formatDateLabel(dateKey(item)),
+              title: tripItemHeaderTitle(item),
+              costLabel: budgetCostTitle(cost),
+              amount: converted.missingExchangeRate ? 0 : converted.amount,
+              amountText: converted.missingExchangeRate
+                ? budgetCostAmountText(cost)
+                : formatMoney(converted.amount, baseCurrency),
+              missingExchangeRate: converted.missingExchangeRate,
+              meta,
+            },
+          ];
+        });
+      })
+      .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+  }
+
+  const activeCostSummaryRows = costSummaryDrilldown
+    ? costSummaryDetailRows(
+        costSummaryDrilldown.mode,
+        costSummaryDrilldown.category,
+      )
+    : [];
+  const activeCostSummaryTotal = activeCostSummaryRows.reduce(
+    (sum, row) => sum + row.amount,
+    0,
+  );
+  const activeCostSummaryMissingCount = activeCostSummaryRows.filter(
+    (row) => row.missingExchangeRate,
+  ).length;
 
   const settlementSummary = useMemo<SettlementSummary>(() => {
     const members = trip?.members ?? [];
@@ -5721,11 +5868,13 @@ export default function TripDetailPage() {
         (trip?.createdById && trip.createdById === user.id)),
   );
   const myCostRows = costSummaryCategories.map((category) => ({
-    label: category,
+    category,
+    label: costSummaryCategoryLabel(category),
     value: myCostsSummary.categories[category],
   }));
   const tripCostRows = costSummaryCategories.map((category) => ({
-    label: category === "Transport" ? "Transport" : category,
+    category,
+    label: costSummaryCategoryLabel(category),
     value: tripCostOverview.categories[category],
   }));
 
@@ -6540,9 +6689,9 @@ export default function TripDetailPage() {
             }}
           >
             <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
-              <div style={sectionTitleTextStyle}>My Costs</div>
+              <div style={sectionTitleTextStyle}>My estimated share</div>
               <div style={sectionSubtitleTextStyle}>
-                Your part of item costs in {baseCurrency}
+                Your estimated part of the trip costs in {baseCurrency}
               </div>
             </div>
             <div
@@ -6560,6 +6709,10 @@ export default function TripDetailPage() {
                 {formatMoney(myCostsSummary.total, baseCurrency)}
               </span>
             </div>
+          </div>
+
+          <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+            These are your estimated shares based on selected participants.
           </div>
 
           {myCostsSummary.missingExchangeRateCount > 0 ? (
@@ -6581,33 +6734,49 @@ export default function TripDetailPage() {
 
           <div style={{ display: "grid", gap: 6 }}>
             {myCostRows.map((row) => (
-              <div
+              <button
+                type="button"
                 key={row.label}
+                onClick={() =>
+                  setCostSummaryDrilldown({
+                    mode: "member",
+                    category: row.category,
+                  })
+                }
                 style={{
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
                   gap: 10,
+                  width: "100%",
                   padding: "7px 9px",
                   borderRadius: 12,
                   background: "color-mix(in srgb, var(--bg) 72%, var(--card))",
                   border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                  color: "var(--text)",
+                  cursor: "pointer",
+                  textAlign: "left",
                 }}
               >
-                <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
-                  {row.label}
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                  <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
+                    {row.label}
+                  </span>
                 </span>
-                <span
-                  style={{
-                    color: "var(--text)",
-                    fontSize: 12,
-                    fontWeight: 950,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {formatMoney(row.value, baseCurrency)}
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, flex: "0 0 auto" }}>
+                  <span
+                    style={{
+                      color: "var(--text)",
+                      fontSize: 12,
+                      fontWeight: 950,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {formatMoney(row.value, baseCurrency)}
+                  </span>
+                  <ChevronRight size={14} aria-hidden="true" />
                 </span>
-              </div>
+              </button>
             ))}
           </div>
         </section>
@@ -6623,7 +6792,11 @@ export default function TripDetailPage() {
         >
           <div style={{ display: "grid", gap: 2 }}>
             <div style={sectionTitleTextStyle}>Organizer Tools</div>
-            <div style={sectionSubtitleTextStyle}>Trip Cost Overview</div>
+            <div style={sectionSubtitleTextStyle}>Group cost overview</div>
+          </div>
+
+          <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+            These are all recorded group costs. Payback tracking is not included yet.
           </div>
 
           {tripCostOverview.missingExchangeRateCount > 0 ? (
@@ -6656,7 +6829,7 @@ export default function TripDetailPage() {
             }}
           >
             <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
-              Total Group Costs
+              Total group costs
             </span>
             <span
               style={{
@@ -6672,34 +6845,54 @@ export default function TripDetailPage() {
 
           <div style={{ display: "grid", gap: 6 }}>
             {tripCostRows.map((row) => (
-              <div
+              <button
+                type="button"
                 key={row.label}
+                onClick={() =>
+                  setCostSummaryDrilldown({
+                    mode: "group",
+                    category: row.category,
+                  })
+                }
                 style={{
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
                   gap: 10,
+                  width: "100%",
                   padding: "7px 9px",
                   borderRadius: 12,
                   background: "color-mix(in srgb, var(--bg) 72%, var(--card))",
                   border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                  color: "var(--text)",
+                  cursor: "pointer",
+                  textAlign: "left",
                 }}
               >
-                <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
-                  {row.label}
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                  <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
+                    {row.label}
+                  </span>
                 </span>
-                <span
-                  style={{
-                    color: "var(--text)",
-                    fontSize: 12,
-                    fontWeight: 950,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {formatMoney(row.value, baseCurrency)}
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, flex: "0 0 auto" }}>
+                  <span
+                    style={{
+                      color: "var(--text)",
+                      fontSize: 12,
+                      fontWeight: 950,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {formatMoney(row.value, baseCurrency)}
+                  </span>
+                  <ChevronRight size={14} aria-hidden="true" />
                 </span>
-              </div>
+              </button>
             ))}
+          </div>
+
+          <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+            Payback overview coming later.
           </div>
         </section>
       ) : null}
@@ -7587,6 +7780,9 @@ export default function TripDetailPage() {
                 const editSupportsCosts = itemTypeSupportsCosts(editDraft?.type);
                 const isMoving = movingItemId === item.id;
                 const canEditCurrentItem = canEditTripItem(item);
+                const editVisibilityOptions = canEditTrip
+                  ? tripItemVisibilityOptions
+                  : memberTripItemVisibilityOptions;
                 const canMoveUp =
                   canEditTrip && itemIndex > 0 && !isMoving;
                 const canMoveDown =
@@ -7660,100 +7856,144 @@ export default function TripDetailPage() {
                             </div>
                           ) : null}
 
-                          <div
+                          <section
                             style={{
                               display: "grid",
-                              gap: 8,
+                              gap: 9,
                               padding: 10,
-                              borderRadius: 12,
+                              borderRadius: 14,
                               border: "1px solid var(--border)",
-                              background: "var(--bg)",
+                              background: "color-mix(in srgb, var(--bg) 58%, var(--card))",
                             }}
                           >
-                            <label
-                              style={{
-                                display: "grid",
-                                gap: 6,
-                                color: "var(--text)",
-                                fontSize: 12,
-                                fontWeight: 950,
-                              }}
-                            >
-                              Visibility
-                              <select
-                                value={editDraft.visibility}
-                                onChange={(e) => {
-                                  const nextVisibility = e.target
-                                    .value as TripItemVisibility;
-                                  setEditDraft({
-                                    ...editDraft,
-                                    visibility: nextVisibility,
-                                    visibleToMemberIds:
-                                      nextVisibility === "SELECTED" &&
-                                      editDraft.visibleToMemberIds.length === 0 &&
-                                      myMembership?.id
-                                        ? [myMembership.id]
-                                        : editDraft.visibleToMemberIds,
-                                  });
+                            <div style={{ display: "grid", gap: 2 }}>
+                              <div
+                                style={{
+                                  color: "var(--text)",
+                                  fontSize: 12,
+                                  fontWeight: 950,
                                 }}
-                                style={editFieldStyle}
                               >
-                                {(canEditTrip
-                                  ? tripItemVisibilityOptions
-                                  : memberTripItemVisibilityOptions
-                                ).map((option) => (
-                                  <option key={option.value} value={option.value}>
+                                Visibility
+                              </div>
+                              <div
+                                style={{
+                                  color: "var(--sub)",
+                                  fontSize: 11,
+                                  lineHeight: 1.35,
+                                }}
+                              >
+                                Choose who can see this item. This is separate from cost sharing.
+                              </div>
+                            </div>
+
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                              {editVisibilityOptions.map((option) => {
+                                const selected = editDraft.visibility === option.value;
+                                return (
+                                  <button
+                                    key={option.value}
+                                    type="button"
+                                    onClick={() => {
+                                      const nextVisibleToMemberIds =
+                                        option.value === "SELECTED" &&
+                                        editDraft.visibleToMemberIds.length === 0 &&
+                                        myMembership?.id
+                                          ? [myMembership.id]
+                                          : editDraft.visibleToMemberIds;
+                                      setEditDraft({
+                                        ...editDraft,
+                                        visibility: option.value,
+                                        visibleToMemberIds: nextVisibleToMemberIds,
+                                      });
+                                    }}
+                                    style={{
+                                      minHeight: 34,
+                                      padding: "0 11px",
+                                      borderRadius: 999,
+                                      border: selected
+                                        ? `1px solid ${accent.border}`
+                                        : "1px solid var(--border)",
+                                      background: selected
+                                        ? accent.rail
+                                        : "transparent",
+                                      color: "var(--text)",
+                                      cursor: "pointer",
+                                      fontSize: 12,
+                                      fontWeight: 900,
+                                    }}
+                                  >
                                     {option.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
+                                  </button>
+                                );
+                              })}
+                            </div>
 
                             {editDraft.visibility === "SELECTED" &&
                             (trip?.members ?? []).length > 0 ? (
-                              <div style={{ display: "grid", gap: 6 }}>
-                                {(trip?.members ?? []).map((member) => {
-                                  const checked =
-                                    editDraft.visibleToMemberIds.includes(
-                                      member.id,
-                                    );
-                                  return (
-                                    <label
-                                      key={member.id}
-                                      style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 8,
-                                        color: "var(--text)",
-                                        fontSize: 12,
-                                        fontWeight: 850,
-                                      }}
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        checked={checked}
-                                        onChange={(e) => {
-                                          setEditDraft({
-                                            ...editDraft,
-                                            visibleToMemberIds: e.target
-                                              .checked
-                                              ? [
-                                                  ...editDraft.visibleToMemberIds,
-                                                  member.id,
-                                                ]
+                              <div style={{ display: "grid", gap: 7 }}>
+                                <div
+                                  style={{
+                                    color: "var(--sub)",
+                                    fontSize: 11,
+                                    lineHeight: 1.35,
+                                  }}
+                                >
+                                  These members can see this item.
+                                </div>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                                  {(trip?.members ?? []).map((member) => {
+                                    const checked =
+                                      editDraft.visibleToMemberIds.includes(
+                                        member.id,
+                                      );
+                                    return (
+                                      <label
+                                        key={member.id}
+                                        style={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 6,
+                                          minHeight: 32,
+                                          padding: "0 10px",
+                                          borderRadius: 999,
+                                          border: checked
+                                            ? `1px solid ${accent.border}`
+                                            : "1px solid var(--border)",
+                                          background: checked ? accent.rail : "transparent",
+                                          color: "var(--text)",
+                                          fontSize: 12,
+                                          fontWeight: 850,
+                                        }}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={checked}
+                                          onChange={(e) => {
+                                            const nextIds = e.target.checked
+                                              ? Array.from(
+                                                  new Set([
+                                                    ...editDraft.visibleToMemberIds,
+                                                    member.id,
+                                                  ]),
+                                                )
                                               : editDraft.visibleToMemberIds.filter(
                                                   (id) => id !== member.id,
-                                                ),
-                                          });
-                                        }}
-                                      />
-                                      <span>{memberDisplayName(member)}</span>
-                                    </label>
-                                  );
-                                })}
+                                                );
+                                            setEditDraft({
+                                              ...editDraft,
+                                              visibleToMemberIds: nextIds,
+                                            });
+                                          }}
+                                        />
+                                        <span>{memberDisplayName(member)}</span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
                               </div>
                             ) : null}
-                          </div>
+                          </section>
 
                           <select
                             value={editDraft.type}
@@ -9663,6 +9903,223 @@ export default function TripDetailPage() {
         />
       ) : null}
       </div>
+
+      {costSummaryDrilldown ? createPortal(
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="cost-summary-drilldown-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 2147483000,
+            background: "rgba(0,0,0,0.58)",
+            display: "grid",
+            placeItems: "end center",
+            padding: "16px 12px max(24px, calc(16px + env(safe-area-inset-bottom, 0px)))",
+            boxSizing: "border-box",
+          }}
+          onClick={() => setCostSummaryDrilldown(null)}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 560,
+              maxHeight: "calc(100dvh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))",
+              overflowY: "auto",
+              margin: "0 auto",
+              display: "grid",
+              gap: 12,
+              padding: 16,
+              borderRadius: 20,
+              border: "1px solid var(--border)",
+              background: "var(--card, #ffffff)",
+              color: "var(--text)",
+              boxShadow: "0 24px 80px rgba(0,0,0,0.48)",
+              boxSizing: "border-box",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: 10,
+              }}
+            >
+              <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
+                <div
+                  id="cost-summary-drilldown-title"
+                  style={{ fontSize: 18, fontWeight: 950, lineHeight: 1.2 }}
+                >
+                  {costSummaryCategoryLabel(costSummaryDrilldown.category)}
+                  {costSummaryDrilldown.mode === "group" ? " group costs" : " costs"}
+                </div>
+                <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+                  {costSummaryDrilldown.mode === "group"
+                    ? "Full group costs in the trip base currency."
+                    : "Your share of costs where you are included."}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCostSummaryDrilldown(null)}
+                className="fw-pill fw-pill--meta"
+                style={{
+                  height: 30,
+                  cursor: "pointer",
+                  ...secondaryButtonStyle,
+                }}
+              >
+                Close
+              </button>
+            </div>
+
+            <div style={{ display: "grid", gap: 8 }}>
+              {activeCostSummaryRows.length > 0 ? (
+                activeCostSummaryRows.map((row) => (
+                  <div
+                    key={row.id}
+                    style={{
+                      display: "grid",
+                      gap: 6,
+                      padding: "9px 10px",
+                      borderRadius: 14,
+                      border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                      background: "color-mix(in srgb, var(--bg) 68%, var(--card))",
+                      minWidth: 0,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        justifyContent: "space-between",
+                        gap: 10,
+                      }}
+                    >
+                      <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
+                        <div style={compactMetaTextStyle}>{row.dateLabel}</div>
+                        <div
+                          style={{
+                            color: "var(--text)",
+                            fontSize: 13,
+                            lineHeight: 1.25,
+                            fontWeight: 950,
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {row.title}
+                        </div>
+                        {row.costLabel && row.costLabel !== row.title ? (
+                          <div
+                            style={{
+                              color: "var(--sub)",
+                              fontSize: 12,
+                              lineHeight: 1.25,
+                              fontWeight: 850,
+                              overflowWrap: "anywhere",
+                            }}
+                          >
+                            {row.costLabel}
+                          </div>
+                        ) : null}
+                      </div>
+                      <div
+                        style={{
+                          color: "var(--text)",
+                          fontSize: 13,
+                          lineHeight: 1.25,
+                          fontWeight: 950,
+                          whiteSpace: "nowrap",
+                          flex: "0 0 auto",
+                        }}
+                      >
+                        {row.amountText}
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                      {row.meta.map((meta) => (
+                        <span key={`${row.id}-${meta}`} className="fw-pill fw-pill--meta">
+                          {meta}
+                        </span>
+                      ))}
+                      {row.missingExchangeRate ? (
+                        <span className="fw-pill fw-pill--meta">
+                          exchange rate needed
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div
+                  style={{
+                    padding: 10,
+                    borderRadius: 14,
+                    border: "1px solid var(--border)",
+                    background: "color-mix(in srgb, var(--bg) 68%, var(--card))",
+                    color: "var(--sub)",
+                    fontSize: 12,
+                    lineHeight: 1.35,
+                  }}
+                >
+                  No costs in this category.
+                </div>
+              )}
+            </div>
+
+            {activeCostSummaryMissingCount > 0 ? (
+              <div
+                style={{
+                  color: "var(--sub)",
+                  fontSize: 12,
+                  lineHeight: 1.35,
+                  padding: "7px 9px",
+                  borderRadius: 12,
+                  background: "color-mix(in srgb, var(--warning) 10%, var(--card))",
+                  border:
+                    "1px solid color-mix(in srgb, var(--warning) 24%, var(--border))",
+                }}
+              >
+                {activeCostSummaryMissingCount} foreign currency{" "}
+                {activeCostSummaryMissingCount === 1 ? "cost needs" : "costs need"} an exchange rate
+                and {activeCostSummaryMissingCount === 1 ? "is" : "are"} not included in the total.
+              </div>
+            ) : null}
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+                padding: "9px 10px",
+                borderRadius: 14,
+                background: "var(--bg)",
+                border: "1px solid var(--border)",
+              }}
+            >
+              <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
+                Total
+              </span>
+              <span
+                style={{
+                  color: "var(--text)",
+                  fontSize: 14,
+                  fontWeight: 950,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {formatMoney(activeCostSummaryTotal, baseCurrency)}
+              </span>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      ) : null}
 
       {detailsItem ? createPortal(
         <div
