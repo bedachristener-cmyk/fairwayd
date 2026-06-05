@@ -471,7 +471,7 @@ function costLabelExamplesForItemType(type: TripItemType) {
     return ["Rental fee", "Fuel", "Parking", "Damage", "Toll", "Driver tip"];
   }
   if (type === "restaurant") return ["Dinner", "Drinks", "Tip"];
-  if (type === "free_day") return ["Entry fee", "Tour", "Equipment"];
+  if (type === "free_day") return ["Entry fee", "Tour", "Equipment", "Other"];
   return ["Cost name"];
 }
 

@@ -2382,6 +2382,15 @@ function costSummaryCategoryLabel(category: CostSummaryCategory) {
   return category === "Transport" ? "Transfer / Transport" : category;
 }
 
+function costSummaryParticipantLabel(category: CostSummaryCategory) {
+  if (category === "Golf") return "Played by";
+  if (category === "Hotel") return "Stayed";
+  if (category === "Restaurant") return "Attended";
+  if (category === "Transport" || category === "Flight") return "Passengers";
+  if (category === "Car Rental") return "Users";
+  return "Participants";
+}
+
 function costParticipantIds(cost: TripItemCost, tripMembers: TripMember[]) {
   const explicitIds = (cost.participants ?? [])
     .map((participant) => participant.tripMemberId)
@@ -5602,14 +5611,31 @@ export default function TripDetailPage() {
           const paidBy =
             cost.paidByMember ??
             (trip?.members ?? []).find((member) => member.id === cost.paidByMemberId);
+          const participantNames =
+            mode === "group"
+              ? participantIds
+                  .map((participantId) => {
+                    const participant = cost.participants?.find(
+                      (candidate) => candidate.tripMemberId === participantId,
+                    );
+                    return (
+                      participant?.tripMember ??
+                      (trip?.members ?? []).find((member) => member.id === participantId)
+                    );
+                  })
+                  .filter((member): member is TripMember => Boolean(member))
+                  .map(memberDisplayName)
+              : [];
           const meta = [
             costModeText(cost.costMode),
             paidBy ? `paid by ${memberDisplayName(paidBy)}` : "",
-            participantIds.length > 0
-              ? `shared with ${participantIds.length} ${
-                  participantIds.length === 1 ? "person" : "people"
-                }`
-              : "",
+            mode === "group" && participantNames.length > 0
+              ? `${costSummaryParticipantLabel(category)}: ${participantNames.join(", ")}`
+              : participantIds.length > 0
+                ? `shared with ${participantIds.length} ${
+                    participantIds.length === 1 ? "person" : "people"
+                  }`
+                : "",
           ].filter(Boolean);
 
           return [
