@@ -3,6 +3,7 @@ import { fileUrl } from "../api/fileUrl";
 
 type LightboxImage = {
   url: string;
+  resolvedUrl?: string;
 };
 
 type ImageLightboxProps = {
@@ -28,7 +29,8 @@ export default function ImageLightbox({
 
   const hasMultipleImages = images.length > 1;
   const activeImage = images[activeIndex];
-  const activeImageUrl = fileUrl(activeImage?.url);
+  const activeImageUrl =
+    activeImage?.resolvedUrl?.trim() || fileUrl(activeImage?.url);
 
   const showPreviousImage = () => {
     if (!hasMultipleImages) return;
@@ -191,9 +193,8 @@ export default function ImageLightbox({
           overflow: "auto",
           WebkitOverflowScrolling: "touch",
           touchAction: "pan-x pan-y pinch-zoom",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          display: "grid",
+          placeItems: "center",
           padding: isMobile
             ? "54px 0 calc(54px + env(safe-area-inset-bottom, 0px))"
             : "70px 78px",
@@ -244,7 +245,9 @@ export default function ImageLightbox({
             style={{
               display: "block",
               maxWidth: "100%",
-              maxHeight: "100%",
+              maxHeight: isMobile
+                ? "calc(100dvh - 108px - env(safe-area-inset-bottom, 0px))"
+                : "calc(100dvh - 140px)",
               width: "auto",
               height: "auto",
               objectFit: "contain",

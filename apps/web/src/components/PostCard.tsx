@@ -20,6 +20,11 @@ type PostImage = {
   url: string | null;
 };
 
+type ResolvedPostImage = {
+  url: string;
+  resolvedUrl: string;
+};
+
 type PostUser = {
   id?: string;
   handle: string;
@@ -300,11 +305,14 @@ export default function PostCard({
     e.stopPropagation();
   };
 
-  const validImages =
+  const validImages: ResolvedPostImage[] =
     post.images?.filter(
       (img): img is { url: string } =>
         typeof img.url === "string" && img.url.length > 0,
-    ) ?? [];
+    ).map((img) => ({
+      url: img.url,
+      resolvedUrl: fileUrl(img.url),
+    })) ?? [];
   const activeImage =
     validImages[Math.min(activeImageIndex, Math.max(validImages.length - 1, 0))];
   const hasMultipleImages = validImages.length > 1;
@@ -1249,7 +1257,22 @@ export default function PostCard({
                 >
                 <img
                   className="fw-post-img"
-                  src={fileUrl(img.url)}
+                  src={img.resolvedUrl}
+                  onLoad={(event) => {
+                    const image = event.currentTarget;
+                    console.debug("Post feed image loaded", {
+                      rawImageUrl: img.url,
+                      imageUrl: img.resolvedUrl,
+                      naturalWidth: image.naturalWidth,
+                      naturalHeight: image.naturalHeight,
+                    });
+                  }}
+                  onError={() => {
+                    console.error("Post feed image failed to load", {
+                      rawImageUrl: img.url,
+                      imageUrl: img.resolvedUrl,
+                    });
+                  }}
                   alt={t("post_image_alt")}
                   loading="lazy"
                   style={{
