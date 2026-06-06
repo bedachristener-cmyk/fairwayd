@@ -73,6 +73,17 @@ type CourseRatingMap = Record<string, RatingSummary | null>;
 
 type FeedFilter = "following" | "courses" | "destinations" | "trending";
 const MAX_POST_IMAGES = 5;
+const SUPPORTED_POST_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+const SUPPORTED_POST_IMAGE_EXTENSIONS = new Set([
+  "jpg",
+  "jpeg",
+  "png",
+  "webp",
+]);
 const VISIBILITY_OPTIONS: {
   value: "PUBLIC" | "FOLLOWERS" | "PRIVATE";
   label: string;
@@ -81,6 +92,15 @@ const VISIBILITY_OPTIONS: {
   { value: "FOLLOWERS", label: "Followers" },
   { value: "PRIVATE", label: "Private" },
 ];
+
+function isSupportedPostImageFile(file: File) {
+  const type = file.type.trim().toLowerCase();
+  const ext = file.name.split(".").pop()?.trim().toLowerCase() ?? "";
+  return (
+    SUPPORTED_POST_IMAGE_TYPES.has(type) ||
+    SUPPORTED_POST_IMAGE_EXTENSIONS.has(ext)
+  );
+}
 
 const FEED_FILTERS: { value: FeedFilter; label: string }[] = [
   { value: "following", label: "👥 Following" },
@@ -287,6 +307,10 @@ export default function FeedPage() {
   }, []);
 
   const openEditorForFile = useCallback(async (picked: File) => {
+    if (!isSupportedPostImageFile(picked)) {
+      throw new Error("Unsupported image format. Please use JPG, PNG or WebP.");
+    }
+
     const dataUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
 
@@ -294,6 +318,14 @@ export default function FeedPage() {
       reader.onerror = () => reject(new Error("Failed to read image file"));
 
       reader.readAsDataURL(picked);
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve();
+      image.onerror = () =>
+        reject(new Error("This image could not be loaded. Please use JPG, PNG or WebP."));
+      image.src = dataUrl;
     });
 
     setEditorFileName(picked.name || "image.jpg");
@@ -343,6 +375,16 @@ export default function FeedPage() {
       document.body.style.overflow = previousOverflow;
     };
   }, [editorOpen]);
+
+  useEffect(() => {
+    if (!editorOpen || !editorImageSrc) return;
+
+    console.debug("Post image editor imageUrl", {
+      scheme: editorImageSrc.split(":", 1)[0],
+      length: editorImageSrc.length,
+      preview: editorImageSrc.slice(0, 96),
+    });
+  }, [editorImageSrc, editorOpen]);
 
   useEffect(() => {
     if (!composerOpen || !isMobile) return;
@@ -672,7 +714,7 @@ export default function FeedPage() {
     typeof selectedLat === "number" &&
     typeof selectedLon === "number";
 
-  const handleComposerImageChange = (
+  const handleComposerImageChange = async (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const picked = Array.from(e.target.files ?? []);
@@ -680,8 +722,27 @@ export default function FeedPage() {
 
     if (picked.length === 0) return;
 
-    setFiles((current) => [...current, ...picked].slice(0, MAX_POST_IMAGES));
-    setErr(null);
+    const supported = picked.filter(isSupportedPostImageFile);
+    const hasUnsupportedFiles = supported.length !== picked.length;
+    if (supported.length !== picked.length) {
+      setErr("Unsupported image format. Please use JPG, PNG or WebP.");
+    } else {
+      setErr(null);
+    }
+
+    if (supported.length === 0) return;
+
+    setFiles((current) => [...current, ...supported].slice(0, MAX_POST_IMAGES));
+    if (!hasUnsupportedFiles) setErr(null);
+
+    if (supported.length === 1) {
+      try {
+        await openEditorForFile(supported[0]);
+      } catch (err: any) {
+        console.error("Open image editor failed", err);
+        setErr(err?.message ?? "Failed to open image editor");
+      }
+    }
   };
 
   const applyImageEdits = useCallback(async () => {
@@ -897,6 +958,10 @@ export default function FeedPage() {
       }
 
       const created = (await res.json()) as Post;
+      console.debug("Post upload response imageUrls", {
+        postId: created.id,
+        imageUrls: created.images?.map((image) => image.url) ?? [],
+      });
 
       setDraft("");
       setFiles([]);
@@ -1639,7 +1704,7 @@ export default function FeedPage() {
                       <input
                         ref={galleryInputRef}
                         type="file"
-                        accept="image/*"
+                        accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
                         multiple
                         onChange={handleComposerImageChange}
                         disabled={posting}
@@ -1649,7 +1714,7 @@ export default function FeedPage() {
                       <input
                         ref={cameraInputRef}
                         type="file"
-                        accept="image/*"
+                        accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
                         capture="environment"
                         onChange={handleComposerImageChange}
                         disabled={posting}
@@ -2135,6 +2200,22 @@ export default function FeedPage() {
                                   ref={editorImageRef}
                                   src={editorImageSrc}
                                   alt={t("edit_preview_alt")}
+                                  onLoad={(event) => {
+                                    const image = event.currentTarget;
+                                    console.debug("Post image editor loaded", {
+                                      naturalWidth: image.naturalWidth,
+                                      naturalHeight: image.naturalHeight,
+                                      renderedWidth: image.getBoundingClientRect().width,
+                                      renderedHeight: image.getBoundingClientRect().height,
+                                    });
+                                  }}
+                                  onError={() => {
+                                    console.error("Post image editor failed to load", {
+                                      imageUrl: editorImageSrc.slice(0, 96),
+                                      length: editorImageSrc.length,
+                                    });
+                                    setErr("Image failed to load. Please use JPG, PNG or WebP.");
+                                  }}
                                   style={{
                                     display: "block",
                                     maxWidth: "100%",

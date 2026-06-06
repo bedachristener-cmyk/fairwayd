@@ -20,6 +20,7 @@ import { Visibility } from '@prisma/client';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { uploadToR2 } from '../storage/r2.service';
+import { extname } from 'path';
 
 type CreatePostBody = {
   courseId: string;
@@ -36,6 +37,19 @@ type UpdatePostBody = {
   content?: string;
   visibility?: 'PUBLIC' | 'FOLLOWERS' | 'PRIVATE';
 };
+
+function safeImageExt(original: string, mimeType?: string) {
+  const ext = extname(original || '').toLowerCase();
+  if (ext === '.jpg' || ext === '.jpeg' || ext === '.png' || ext === '.webp') {
+    return ext;
+  }
+
+  if (mimeType === 'image/jpeg') return '.jpg';
+  if (mimeType === 'image/png') return '.png';
+  if (mimeType === 'image/webp') return '.webp';
+
+  return '';
+}
 
 @Controller('posts')
 export class PostsController {
@@ -145,6 +159,17 @@ export class PostsController {
     ], {
       storage: memoryStorage(),
       limits: { fileSize: 5 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        const ext = safeImageExt(file.originalname, file.mimetype);
+        if (!ext) {
+          cb(
+            new BadRequestException('Only jpg/jpeg/png/webp allowed') as any,
+            false,
+          );
+          return;
+        }
+        cb(null, true);
+      },
     }),
   )
   async create(
@@ -171,11 +196,8 @@ export class PostsController {
 
     for (let i = 0; i < uploadedImages.length; i++) {
       const image = uploadedImages[i];
-      const ext = (image.mimetype?.split('/')[1] || 'bin').replace(
-        /[^a-z0-9]/gi,
-        '',
-      );
-      const key = `posts/${userId}-${Date.now()}-${i}.${ext}`;
+      const ext = safeImageExt(image.originalname, image.mimetype) || '.jpg';
+      const key = `posts/${userId}-${Date.now()}-${i}${ext}`;
       const imageUrl = await uploadToR2(
         key,
         image.buffer,

@@ -22,11 +22,13 @@ export default function ImageLightbox({
     Math.min(Math.max(initialIndex, 0), Math.max(images.length - 1, 0)),
   );
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const touchStartXRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
 
   const hasMultipleImages = images.length > 1;
   const activeImage = images[activeIndex];
+  const activeImageUrl = fileUrl(activeImage?.url);
 
   const showPreviousImage = () => {
     if (!hasMultipleImages) return;
@@ -76,6 +78,16 @@ export default function ImageLightbox({
       Math.min(Math.max(initialIndex, 0), Math.max(images.length - 1, 0)),
     );
   }, [images.length, initialIndex]);
+
+  useEffect(() => {
+    setLoadError(null);
+    if (!activeImageUrl) return;
+
+    console.debug("Post image viewer imageUrl", {
+      imageUrl: activeImageUrl,
+      rawImageUrl: activeImage?.url,
+    });
+  }, [activeImage?.url, activeImageUrl]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -189,21 +201,58 @@ export default function ImageLightbox({
           animation: "fwLightboxScale 180ms ease-out",
         }}
       >
-        <img
-          src={fileUrl(activeImage.url)}
-          alt="Post image"
-          draggable={false}
-          style={{
-            display: "block",
-            maxWidth: "100%",
-            maxHeight: "100%",
-            width: "auto",
-            height: "auto",
-            objectFit: "contain",
-            userSelect: "none",
-            boxShadow: "0 18px 70px rgba(0,0,0,0.42)",
-          }}
-        />
+        {loadError ? (
+          <div
+            style={{
+              maxWidth: 520,
+              padding: 18,
+              borderRadius: 16,
+              border: "1px solid rgba(255,255,255,0.22)",
+              background: "rgba(0,0,0,0.42)",
+              color: "#fff",
+              textAlign: "center",
+              lineHeight: 1.45,
+            }}
+          >
+            <div style={{ fontSize: 16, fontWeight: 900 }}>
+              Image could not be loaded
+            </div>
+            <div style={{ marginTop: 8, fontSize: 12, opacity: 0.82, overflowWrap: "anywhere" }}>
+              {loadError}
+            </div>
+          </div>
+        ) : (
+          <img
+            src={activeImageUrl}
+            alt="Post image"
+            draggable={false}
+            onLoad={(event) => {
+              const image = event.currentTarget;
+              console.debug("Post image viewer loaded", {
+                imageUrl: activeImageUrl,
+                naturalWidth: image.naturalWidth,
+                naturalHeight: image.naturalHeight,
+              });
+            }}
+            onError={() => {
+              console.error("Post image viewer failed to load", {
+                imageUrl: activeImageUrl,
+                rawImageUrl: activeImage.url,
+              });
+              setLoadError(activeImageUrl || "Empty image URL");
+            }}
+            style={{
+              display: "block",
+              maxWidth: "100%",
+              maxHeight: "100%",
+              width: "auto",
+              height: "auto",
+              objectFit: "contain",
+              userSelect: "none",
+              boxShadow: "0 18px 70px rgba(0,0,0,0.42)",
+            }}
+          />
+        )}
 
         <button
           type="button"
