@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { fileUrl } from "../api/fileUrl";
 
 type LightboxImage = {
@@ -167,7 +168,7 @@ export default function ImageLightbox({
 
   if (!activeImage) return null;
 
-  return (
+  return createPortal(
     <div
       onClick={onClose}
       role="presentation"
@@ -401,6 +402,7 @@ export default function ImageLightbox({
           </>
         ) : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
