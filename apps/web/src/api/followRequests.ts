@@ -14,6 +14,14 @@ export type FollowRequestItem = {
   createdAt?: string;
 };
 
+export type SentFollowRequestItem = {
+  followingId: string;
+  followingHandle: string;
+  followingName?: string | null;
+  followingAvatarUrl?: string | null;
+  createdAt?: string;
+};
+
 function requireToken(token: string | null | undefined): string {
   const t = (token ?? "").trim();
   if (!t) {
@@ -67,6 +75,29 @@ export async function fetchFollowRequests(
   }
 
   return (await res.json()) as FollowRequestItem[];
+}
+
+/** GET /users/me/follow-requests/sent */
+export async function fetchSentFollowRequests(
+  token: string | null | undefined,
+  opts?: { signal?: AbortSignal },
+) {
+  const t = requireToken(token);
+
+  const res = await safeFetch(`${API_BASE}/users/me/follow-requests/sent`, {
+    headers: authHeaders(t),
+    signal: opts?.signal,
+  });
+
+  if (res.status === 401 || res.status === 403) {
+    throw new Error("Unauthorized. Please login again.");
+  }
+
+  if (!res.ok) {
+    throw new Error(await readError(res));
+  }
+
+  return (await res.json()) as SentFollowRequestItem[];
 }
 
 /** POST /users/me/follow-requests/:followerId/accept */

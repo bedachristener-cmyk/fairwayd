@@ -4,11 +4,15 @@ import { useAuth } from "../auth/AuthContext";
 import {
   acceptFollowRequest,
   fetchFollowRequests,
+  fetchSentFollowRequests,
   rejectFollowRequest,
   type FollowRequestItem,
+  type SentFollowRequestItem,
 } from "../api/followRequests";
 import { fileUrl } from "../api/fileUrl";
 import { friendlyApiErrorMessage } from "../api/client";
+import MobilePageHeader from "../components/MobilePageHeader";
+import { EmptyState } from "../components/PolishStates";
 
 function Avatar({
   url,
@@ -100,7 +104,9 @@ function getRequestIntroFields(x: FollowRequestItem) {
 export default function FollowRequestsPage() {
   const { token } = useAuth() as any;
   const isMobile = window.innerWidth <= 720;
+  const [activeTab, setActiveTab] = useState<"incoming" | "sent">("incoming");
   const [items, setItems] = useState<FollowRequestItem[]>([]);
+  const [sentItems, setSentItems] = useState<SentFollowRequestItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -111,6 +117,7 @@ export default function FollowRequestsPage() {
   const load = useCallback(async () => {
     if (!token) {
       setItems([]);
+      setSentItems([]);
       setErr("Your session has expired. Please login again.");
       setLoading(false);
       return;
@@ -120,14 +127,23 @@ export default function FollowRequestsPage() {
     setErr(null);
 
     try {
-      const data = await fetchFollowRequests(token);
-      const list = Array.isArray(data)
-        ? data
-        : Array.isArray((data as any)?.items)
-          ? (data as any).items
+      const [incomingData, sentData] = await Promise.all([
+        fetchFollowRequests(token),
+        fetchSentFollowRequests(token),
+      ]);
+      const incomingList = Array.isArray(incomingData)
+        ? incomingData
+        : Array.isArray((incomingData as any)?.items)
+          ? (incomingData as any).items
+          : [];
+      const sentList = Array.isArray(sentData)
+        ? sentData
+        : Array.isArray((sentData as any)?.items)
+          ? (sentData as any).items
           : [];
 
-      setItems(list);
+      setItems(incomingList);
+      setSentItems(sentList);
     } catch (e: any) {
       setErr(friendlyApiErrorMessage(e, "Could not load follow requests."));
     } finally {
@@ -140,6 +156,7 @@ export default function FollowRequestsPage() {
   }, [load]);
 
   const pendingCount = useMemo(() => items.length, [items]);
+  const sentCount = useMemo(() => sentItems.length, [sentItems]);
   const selectedRequest = useMemo(
     () => items.find((x) => x.followerId === selectedRequestId) ?? null,
     [items, selectedRequestId],
@@ -195,71 +212,41 @@ export default function FollowRequestsPage() {
         overflowX: "hidden",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          gap: 12,
-          flexWrap: "wrap",
-        }}
-      >
-        <div
-          style={{
-            minWidth: 0,
-            display: "grid",
-            gap: 4,
-            flex: 1,
-          }}
-        >
-          <div
+      <MobilePageHeader
+        title="Follow Requests"
+        subtitle={
+          activeTab === "incoming"
+            ? "People who want to follow you."
+            : "People you requested to follow."
+        }
+        action={
+          <button
+            type="button"
+            onClick={load}
+            disabled={loading}
             style={{
-              fontSize: 18,
-              fontWeight: 900,
+              minHeight: 40,
+              padding: "0 12px",
+              borderRadius: 999,
+              border: "1px solid var(--border)",
+              background: "var(--card)",
               color: "var(--text)",
-              lineHeight: 1.2,
+              fontWeight: 800,
+              fontSize: 12,
+              cursor: loading ? "default" : "pointer",
+              opacity: loading ? 0.68 : 1,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              flexShrink: 0,
             }}
           >
-            Follow Requests
-          </div>
-
-          <div
-            style={{
-              fontSize: 13,
-              color: "var(--sub)",
-              lineHeight: 1.4,
-            }}
-          >
-            {pendingCount} open
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={load}
-          disabled={loading}
-          style={{
-            height: 34,
-            padding: "0 12px",
-            borderRadius: 999,
-            border: "1px solid var(--border)",
-            background: "var(--card)",
-            color: "var(--text)",
-            fontWeight: 800,
-            fontSize: 12,
-            cursor: loading ? "default" : "pointer",
-            opacity: loading ? 0.68 : 1,
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 6,
-            flexShrink: 0,
-          }}
-        >
-          <RefreshCw size={14} strokeWidth={2.2} />
-          {loading ? "Refreshing..." : "Refresh"}
-        </button>
-      </div>
+            <RefreshCw size={14} strokeWidth={2.2} />
+            {loading ? "Refreshing..." : "Refresh"}
+          </button>
+        }
+      />
 
       {err ? (
         <div
@@ -275,6 +262,54 @@ export default function FollowRequestsPage() {
           }}
         >
           {err}
+        </div>
+      ) : null}
+
+      {!selectedRequest ? (
+        <div
+          style={{
+            display: "flex",
+            gap: 6,
+            background: "var(--bg)",
+            padding: 4,
+            borderRadius: 12,
+            border: "1px solid var(--border)",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setActiveTab("incoming")}
+            style={{
+              flex: 1,
+              height: 36,
+              borderRadius: 10,
+              border: "none",
+              cursor: "pointer",
+              fontWeight: 800,
+              background:
+                activeTab === "incoming" ? "var(--card)" : "transparent",
+              color: "var(--text)",
+            }}
+          >
+            Incoming {pendingCount > 0 ? `(${pendingCount})` : ""}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("sent")}
+            style={{
+              flex: 1,
+              height: 36,
+              borderRadius: 10,
+              border: "none",
+              cursor: "pointer",
+              fontWeight: 800,
+              background: activeTab === "sent" ? "var(--card)" : "transparent",
+              color: "var(--text)",
+            }}
+          >
+            Sent {sentCount > 0 ? `(${sentCount})` : ""}
+          </button>
         </div>
       ) : null}
 
@@ -493,7 +528,7 @@ export default function FollowRequestsPage() {
             );
           })()}
         </div>
-      ) : (
+      ) : activeTab === "incoming" ? (
       <div
         style={{
           borderTop: "1px solid var(--border)",
@@ -512,15 +547,11 @@ export default function FollowRequestsPage() {
             Loading...
           </div>
         ) : items.length === 0 ? (
-          <div
-            style={{
-              padding: "14px 12px",
-              color: "var(--sub)",
-              fontSize: 13,
-            }}
-          >
-            No open requests.
-          </div>
+          <EmptyState
+            title="No incoming requests"
+            body="When golfers request to follow you, they will appear here."
+            style={{ margin: 12 }}
+          />
         ) : (
           items.map((x, index) => {
             const handle = getRequestHandle(x);
@@ -627,6 +658,112 @@ export default function FollowRequestsPage() {
           })
         )}
       </div>
+      ) : (
+        <div
+          style={{
+            borderTop: "1px solid var(--border)",
+            borderBottom: "1px solid var(--border)",
+            background: "var(--card)",
+          }}
+        >
+          {loading ? (
+            <div
+              style={{
+                padding: "14px 12px",
+                color: "var(--sub)",
+                fontSize: 13,
+              }}
+            >
+              Loading...
+            </div>
+          ) : sentItems.length === 0 ? (
+            <EmptyState
+              title="No pending requests"
+              body="Follow requests you send will appear here."
+              style={{ margin: 12 }}
+            />
+          ) : (
+            sentItems.map((x, index) => {
+              const handle =
+                x.followingHandle ||
+                x.followingName ||
+                x.followingId.slice(0, 8);
+              const label = x.followingName ? x.followingName : `@${handle}`;
+
+              return (
+                <div
+                  key={x.followingId}
+                  style={{
+                    width: "100%",
+                    maxWidth: "100%",
+                    boxSizing: "border-box",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 12,
+                    padding: "14px 12px",
+                    overflow: "hidden",
+                    borderBottom:
+                      index === sentItems.length - 1
+                        ? "none"
+                        : "1px solid var(--border)",
+                    color: "var(--text)",
+                  }}
+                >
+                  <Avatar url={x.followingAvatarUrl} handle={handle} />
+
+                  <div
+                    style={{
+                      minWidth: 0,
+                      flex: 1,
+                      display: "grid",
+                      gap: 3,
+                      maxWidth: "100%",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 800,
+                        color: "var(--text)",
+                        lineHeight: 1.2,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {label}
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "var(--sub)",
+                        lineHeight: 1.35,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      @{handle}
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "var(--sub)",
+                        lineHeight: 1.35,
+                      }}
+                    >
+                      {x.createdAt
+                        ? new Date(x.createdAt).toLocaleString()
+                        : "Request sent"}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
       )}
     </div>
   );

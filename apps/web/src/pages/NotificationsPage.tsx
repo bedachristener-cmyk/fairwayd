@@ -9,7 +9,8 @@ import {
   markNotificationRead,
   type NotificationItem,
 } from "../api/notifications";
-import { NotificationRowsSkeleton } from "../components/PolishStates";
+import MobilePageHeader from "../components/MobilePageHeader";
+import { EmptyState, NotificationRowsSkeleton } from "../components/PolishStates";
 
 type NotificationEntry = {
   id: string;
@@ -19,56 +20,6 @@ type NotificationEntry = {
   icon: React.ReactNode;
   badge?: string;
 };
-
-type ActivityPreviewItem = {
-  id: string;
-  title: string;
-  subtitle: string;
-  time: string;
-  icon: string;
-  unread?: boolean;
-};
-
-const activityPreviewItems: ActivityPreviewItem[] = [
-  {
-    id: "follow-request-updates",
-    title: "Follow request updates will appear here",
-    subtitle: "Requests, approvals, and network changes will stay clearly grouped.",
-    time: "Preview",
-    icon: "👥",
-    unread: true,
-  },
-  {
-    id: "destination-notes",
-    title: "New local notes from followed destinations",
-    subtitle: "Useful destination advice can surface without becoming a noisy feed.",
-    time: "Soon",
-    icon: "⛳",
-    unread: true,
-  },
-  {
-    id: "trip-updates",
-    title: "Trip invite updates",
-    subtitle: "Accepted invites and planning changes can land here.",
-    time: "Soon",
-    icon: "✈️",
-  },
-  {
-    id: "useful-tip-reactions",
-    title: "Useful reactions to your tips",
-    subtitle: "Helpful community feedback can be shown without social noise.",
-    time: "Soon",
-    icon: "💡",
-    unread: true,
-  },
-  {
-    id: "followed-destination-posts",
-    title: "New posts from destinations you follow",
-    subtitle: "Destination activity can be summarized when this becomes live.",
-    time: "Soon",
-    icon: "📍",
-  },
-];
 
 function ActivityGlyph({ icon }: { icon: string }) {
   return (
@@ -367,60 +318,27 @@ export default function NotificationsPage() {
         overflowX: "hidden",
       }}
     >
-      <div
-        style={{
-          minWidth: 0,
-          display: "grid",
-          gap: 8,
-          padding: "4px 2px 0",
-        }}
-      >
-        <div
-          style={{
-            width: "fit-content",
-            minHeight: 28,
-            padding: "0 10px",
-            borderRadius: 999,
-            border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-            background: "color-mix(in srgb, var(--muted) 72%, transparent)",
-            color: "var(--sub)",
-            fontSize: 11,
-            fontWeight: 900,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          <Bell size={13} strokeWidth={2.4} />
-          Activity
-        </div>
-
-        <div
-          style={{
-            fontSize: 28,
-            fontWeight: 900,
-            color: "var(--text)",
-            lineHeight: 1.05,
-            letterSpacing: "-0.045em",
-          }}
-        >
-          Notifications
-        </div>
-
-        <div
-          style={{
-            maxWidth: 420,
-            fontSize: 14,
-            color: "var(--sub)",
-            lineHeight: 1.5,
-          }}
-        >
-          Follow requests, useful tips, trip updates, and destination activity
-          will collect here.
-        </div>
-      </div>
+      <MobilePageHeader
+        title="Notifications"
+        subtitle="Follow requests, useful tips, trip updates, and destination activity will collect here."
+        action={
+          <div
+            aria-hidden="true"
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 14,
+              border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+              background: "color-mix(in srgb, var(--muted) 72%, transparent)",
+              color: "var(--sub)",
+              display: "grid",
+              placeItems: "center",
+            }}
+          >
+            <Bell size={17} strokeWidth={2.4} />
+          </div>
+        }
+      />
 
       <section style={sectionStyle}>
         <div style={sectionHeaderStyle}>
@@ -754,13 +672,13 @@ export default function NotificationsPage() {
       {!hasRealNotifications ? (
         <section style={sectionStyle}>
           <div style={sectionHeaderStyle}>
-            <h2 style={sectionTitleStyle}>Activity preview</h2>
+            <h2 style={sectionTitleStyle}>Recent notifications</h2>
             <p style={sectionSubtitleStyle}>
               {notificationsLoading
                 ? "Checking for live notifications..."
                 : notificationsError
-                  ? "Live notifications are unavailable, so this preview remains visible."
-                  : "Coming soon examples only. These rows show the planned shape, not real account activity."}
+                  ? "Notifications are unavailable right now."
+                  : "Likes, comments and follows will appear here."}
             </p>
           </div>
 
@@ -774,113 +692,17 @@ export default function NotificationsPage() {
               <NotificationRowsSkeleton count={3} />
             ) : null}
 
-            {!notificationsLoading || !auth?.token ? activityPreviewItems.map((item, index) => (
-              <div
-                key={item.id}
+            {!notificationsLoading || !auth?.token ? (
+              <EmptyState
+                title="You're all caught up"
+                body="New likes, comments and follows will appear here."
                 style={{
-                  position: "relative",
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 12,
-                  padding: "13px 14px",
-                  borderBottom:
-                    index === activityPreviewItems.length - 1
-                      ? "none"
-                      : "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                  background: item.unread
-                    ? "color-mix(in srgb, var(--green) 7%, transparent)"
-                    : "transparent",
+                  margin: 14,
+                  boxShadow: "none",
+                  background: "var(--bg)",
                 }}
-              >
-                <div
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 14,
-                    border: "1px solid var(--border)",
-                    background: "var(--bg)",
-                    color: item.unread ? "var(--text)" : "var(--sub)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <ActivityGlyph icon={item.icon} />
-                </div>
-
-                <div
-                  style={{
-                    minWidth: 0,
-                    flex: 1,
-                    display: "grid",
-                    gap: 4,
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      minWidth: 0,
-                    }}
-                  >
-                    {item.unread ? (
-                      <span
-                        aria-hidden="true"
-                        style={{
-                          width: 7,
-                          height: 7,
-                          borderRadius: 999,
-                          background: "var(--green)",
-                          boxShadow:
-                            "0 0 0 3px color-mix(in srgb, var(--green) 16%, transparent)",
-                          flexShrink: 0,
-                        }}
-                      />
-                    ) : null}
-
-                    <div
-                      style={{
-                        minWidth: 0,
-                        color: "var(--text)",
-                        fontSize: 13,
-                        lineHeight: 1.25,
-                        fontWeight: item.unread ? 900 : 800,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {item.title}
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      color: "var(--sub)",
-                      fontSize: 12,
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    {item.subtitle}
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    color: "var(--sub)",
-                    fontSize: 11,
-                    lineHeight: 1.2,
-                    fontWeight: 800,
-                    flexShrink: 0,
-                    paddingTop: 2,
-                  }}
-                >
-                  {item.time}
-                </div>
-              </div>
-            )) : null}
+              />
+            ) : null}
           </div>
         </section>
       ) : null}

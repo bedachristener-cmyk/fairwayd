@@ -1,8 +1,7 @@
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import MobilePageHeader from "../components/MobilePageHeader";
 
 export default function PrivacySecurityPage() {
-  const nav = useNavigate();
   const { logout } = useAuth();
 
   const cardStyle: React.CSSProperties = {
@@ -22,14 +21,6 @@ export default function PrivacySecurityPage() {
     fontWeight: 800,
     color: "var(--text)",
     margin: 0,
-  };
-
-  const titleStyle: React.CSSProperties = {
-    fontSize: 26,
-    fontWeight: 900,
-    lineHeight: 1.1,
-    margin: 0,
-    color: "var(--text)",
   };
 
   const textStyle: React.CSSProperties = {
@@ -113,37 +104,10 @@ export default function PrivacySecurityPage() {
         gap: 14,
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          flexWrap: "wrap",
-        }}
-      >
-        <button
-          onClick={() => nav(-1)}
-          style={{
-            border: "1px solid var(--border)",
-            background: "var(--card)",
-            color: "var(--text)",
-            borderRadius: 12,
-            padding: "10px 12px",
-            fontSize: 14,
-            fontWeight: 800,
-            cursor: "pointer",
-          }}
-        >
-          ← Back
-        </button>
-
-        <div style={{ minWidth: 0 }}>
-          <h1 style={titleStyle}>Privacy & Security</h1>
-          <p style={textStyle}>
-            Manage account visibility and review future safety controls.
-          </p>
-        </div>
-      </div>
+      <MobilePageHeader
+        title="Privacy & Security"
+        subtitle="Manage account visibility and review future safety controls."
+      />
 
       <section style={cardStyle}>
         <h2 style={sectionTitleStyle}>1. Account Privacy</h2>

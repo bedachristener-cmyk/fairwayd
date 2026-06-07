@@ -22,6 +22,7 @@ import {
   CalendarDays,
   Settings,
   User,
+  UserPlus,
   Users,
   X,
 } from "lucide-react";
@@ -84,6 +85,12 @@ type MainMenuItem = {
   danger?: boolean;
   disabled?: boolean;
   isActive?: boolean;
+};
+
+type MainMenuGroup = {
+  key: string;
+  label: string;
+  items: MainMenuItem[];
 };
 
 export default function TopRail() {
@@ -549,6 +556,14 @@ export default function TopRail() {
       isActive: location.pathname === "/friends",
     },
     {
+      key: "follow-requests",
+      label: "Follow Requests",
+      subtitle: t("follow_requests_activity"),
+      icon: <UserPlus size={18} strokeWidth={2.2} />,
+      action: () => navigateFromMenu("/follow-requests"),
+      isActive: location.pathname === "/follow-requests",
+    },
+    {
       key: "destinations",
       label: t("destinations"),
       subtitle: t("golf_by_country"),
@@ -668,6 +683,48 @@ export default function TopRail() {
       isActive: false,
     },
   ];
+
+  const mainMenuItemByKey = new globalThis.Map(
+    mainMenuItems.map((item) => [item.key, item]),
+  );
+
+  const mainMenuGroups: MainMenuGroup[] = [
+    {
+      key: "social",
+      label: "Social",
+      items: ["feed", "friends", "follow-requests", "notifications"]
+        .map((key) => mainMenuItemByKey.get(key))
+        .filter((item): item is MainMenuItem => Boolean(item)),
+    },
+    {
+      key: "golf",
+      label: "Golf",
+      items: ["trips", "map", "destinations", "suggest-course"]
+        .map((key) => mainMenuItemByKey.get(key))
+        .filter((item): item is MainMenuItem => Boolean(item)),
+    },
+    {
+      key: "account",
+      label: "Account",
+      items: ["profile", "privacy", "settings", "logout"]
+        .map((key) => mainMenuItemByKey.get(key))
+        .filter((item): item is MainMenuItem => Boolean(item)),
+    },
+    {
+      key: "support",
+      label: "Support",
+      items: ["help", "feedback"]
+        .map((key) => mainMenuItemByKey.get(key))
+        .filter((item): item is MainMenuItem => Boolean(item)),
+    },
+    {
+      key: "admin",
+      label: "Admin",
+      items: ["admin"]
+        .map((key) => mainMenuItemByKey.get(key))
+        .filter((item): item is MainMenuItem => Boolean(item)),
+    },
+  ].filter((group) => group.items.length > 0);
 
   const renderDrawerMenuItem = (item: MainMenuItem, nested = false) => (
     <button
@@ -1378,16 +1435,22 @@ export default function TopRail() {
                 gap: 6,
               }}
             >
-              {mainMenuItems.map((item) => (
-                <div key={item.key} style={{ display: "grid", gap: 4 }}>
-                  {renderDrawerMenuItem(item)}
-                  {item.children && (adminMenuExpanded || item.isActive) ? (
-                    <div style={{ display: "grid", gap: 4 }}>
-                      {item.children.map((child) =>
-                        renderDrawerMenuItem(child, true),
-                      )}
+              {mainMenuGroups.map((group) => (
+                <div key={group.key} style={{ display: "grid", gap: 4 }}>
+                  <div style={drawerSectionLabel}>{group.label}</div>
+
+                  {group.items.map((item) => (
+                    <div key={item.key} style={{ display: "grid", gap: 4 }}>
+                      {renderDrawerMenuItem(item)}
+                      {item.children && (adminMenuExpanded || item.isActive) ? (
+                        <div style={{ display: "grid", gap: 4 }}>
+                          {item.children.map((child) =>
+                            renderDrawerMenuItem(child, true),
+                          )}
+                        </div>
+                      ) : null}
                     </div>
-                  ) : null}
+                  ))}
                 </div>
               ))}
             </div>
@@ -1820,6 +1883,16 @@ const drawerListItem: CSSProperties = {
   cursor: "pointer",
   transition:
     "background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease",
+};
+
+const drawerSectionLabel: CSSProperties = {
+  padding: "12px 12px 4px",
+  color: "var(--sub)",
+  fontSize: 11,
+  fontWeight: 900,
+  lineHeight: 1,
+  textTransform: "uppercase",
+  letterSpacing: "0.08em",
 };
 
 const menuItem: CSSProperties = {
