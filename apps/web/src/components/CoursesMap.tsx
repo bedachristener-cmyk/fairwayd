@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import L from "leaflet";
 import {
   MapContainer,
@@ -371,6 +371,7 @@ export default function CoursesMap() {
 
   const userPos = useGeolocation();
   const nav = useNavigate();
+  const location = useLocation();
 
   const { isAuthenticated } = useAuth();
   const { setSelectedCourse } = useSelectedCourse();
@@ -392,6 +393,7 @@ export default function CoursesMap() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [mapRef, setMapRef] = useState<L.Map | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   (window as any).__activeCourseId = activeCourseId ?? highlightedCourseId;
 
   const isMobile = typeof window !== "undefined" && window.innerWidth <= 980;
@@ -402,6 +404,14 @@ export default function CoursesMap() {
   const courseIdFromUrl = useMemo(() => {
     return null;
   }, []);
+
+  const mapQuery = useMemo(
+    () => new URLSearchParams(location.search),
+    [location.search],
+  );
+
+  const shouldOpenCourseSearch = mapQuery.get("search") === "courses";
+  const shouldCenterNearby = mapQuery.get("nearby") === "true";
 
   const mapTileUrl =
     "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
@@ -462,6 +472,24 @@ export default function CoursesMap() {
       })
       .catch((e: any) => setLoadError(e?.message ?? String(e)));
   }, []);
+
+  useEffect(() => {
+    if (!shouldOpenCourseSearch) return;
+
+    setSearchOpen(true);
+    window.setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 0);
+  }, [shouldOpenCourseSearch]);
+
+  useEffect(() => {
+    if (!shouldCenterNearby) return;
+    if (!mapRef || !hasValidUserPos || userLat === null || userLon === null) {
+      return;
+    }
+
+    mapRef.setView([userLat, userLon], 13, { animate: true });
+  }, [hasValidUserPos, mapRef, shouldCenterNearby, userLat, userLon]);
 
   const handleSelectCourse = useCallback(
     (courseId: string) => {
@@ -530,6 +558,7 @@ export default function CoursesMap() {
             }}
           >
             <input
+              ref={searchInputRef}
               value={searchQuery}
               onChange={(event) => {
                 setSearchQuery(event.target.value);

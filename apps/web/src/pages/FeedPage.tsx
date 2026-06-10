@@ -197,11 +197,13 @@ function Card({
 }
 
 function NewUserFeedWelcomeCard({
+  onDiscoverNearby,
   onSearchCourses,
   onExploreMap,
   onCompleteProfile,
   isMobile,
 }: {
+  onDiscoverNearby: () => void;
   onSearchCourses: () => void;
   onExploreMap: () => void;
   onCompleteProfile: () => void;
@@ -276,15 +278,22 @@ function NewUserFeedWelcomeCard({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: isMobile ? "1fr" : "repeat(3, max-content)",
+          gridTemplateColumns: isMobile ? "1fr" : "repeat(4, max-content)",
           gap: 10,
           alignItems: "center",
         }}
       >
         <button
           type="button"
-          onClick={onSearchCourses}
+          onClick={onDiscoverNearby}
           style={primaryButtonStyle}
+        >
+          Discover nearby courses
+        </button>
+        <button
+          type="button"
+          onClick={onSearchCourses}
+          style={secondaryButtonStyle}
         >
           Search courses
         </button>
@@ -2528,6 +2537,7 @@ export default function FeedPage() {
             {!feedLoading && posts.length === 0 ? (
               <NewUserFeedWelcomeCard
                 isMobile={isMobile}
+                onDiscoverNearby={() => nav("/map?nearby=true")}
                 onSearchCourses={() => nav("/map?search=courses")}
                 onExploreMap={() => nav("/map")}
                 onCompleteProfile={() => nav("/profile")}
