@@ -1,14 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useParams } from "react-router-dom";
 import L from "leaflet";
 import {
   CalendarDays,
+  CirclePlus,
   CheckSquare,
   ChevronRight,
+  ChevronDown,
   FileText,
+  Link2,
   MapPinned,
+  PenLine,
   Route,
+  UserRoundPlus,
   WalletCards,
   type LucideIcon,
 } from "lucide-react";
@@ -29,6 +34,7 @@ import {
   type OrganizerTripCostsResponse,
   type TripCostCategory,
   type TripCostMember,
+  type MyTripCostRow,
   type TripCostRow,
 } from "../api/tripCosts";
 import { useAuth } from "../auth/AuthContext";
@@ -1325,20 +1331,14 @@ function formatActivityDate(value?: string | null) {
   }).format(date);
 }
 
-function activityIcon(type: TripActivityType) {
-  if (type === "DOCUMENT_UPLOADED" || type === "DOCUMENT_DELETED") return "ðŸ“„";
-  if (
-    type === "ITEM_CREATED" ||
-    type === "ITEM_UPDATED" ||
-    type === "ITEM_DELETED"
-  ) {
-    return "ðŸ§¾";
-  }
-  if (type === "MEMBER_ADDED") return "ðŸ‘¤";
-  if (type === "INVITE_CREATED") return "ðŸ”—";
-  return "âœï¸";
+function activityIcon(type: TripActivityType): LucideIcon {
+  if (type === "DOCUMENT_UPLOADED" || type === "DOCUMENT_DELETED") return FileText;
+  if (type === "ITEM_CREATED") return CirclePlus;
+  if (type === "ITEM_UPDATED" || type === "ITEM_DELETED") return PenLine;
+  if (type === "MEMBER_ADDED") return UserRoundPlus;
+  if (type === "INVITE_CREATED") return Link2;
+  return CheckSquare;
 }
-
 function formatTime(item: TripItem) {
   if (item.startTime) return item.startTime;
   if (!item.startsAt) return "";
@@ -2165,6 +2165,29 @@ function tripCostMemberDisplayName(member?: TripCostMember | null) {
 function tripCostDateLabel(row: TripCostRow) {
   if (!row.date) return "";
   return formatDateLabel(row.date.slice(0, 10));
+}
+
+function tripCostDetailPlace(row: {
+  locationName?: string | null;
+  provider?: string | null;
+  tripItemType?: string | null;
+}) {
+  return (
+    row.locationName?.trim() ||
+    row.provider?.trim() ||
+    row.tripItemType?.trim() ||
+    ""
+  );
+}
+
+function tripCostBalanceMessage(row: MyTripCostRow, baseCurrency: string) {
+  if (row.netBalance > 0) {
+    return `Others owe you ${formatMoney(row.netBalance, baseCurrency)}`;
+  }
+  if (row.netBalance < 0) {
+    return `You owe ${formatMoney(Math.abs(row.netBalance), baseCurrency)}`;
+  }
+  return "You are settled up on this cost.";
 }
 
 function effectiveParticipants(item: TripItem, members: TripMember[]) {
@@ -3755,6 +3778,7 @@ export default function TripDetailPage() {
   const [myCostsData, setMyCostsData] = useState<MyTripCostsResponse | null>(null);
   const [myCostsLoading, setMyCostsLoading] = useState(false);
   const [myCostsErr, setMyCostsErr] = useState<string | null>(null);
+  const [expandedMyCostId, setExpandedMyCostId] = useState<string | null>(null);
   const [organizerCostsData, setOrganizerCostsData] =
     useState<OrganizerTripCostsResponse | null>(null);
   const [organizerCostsLoading, setOrganizerCostsLoading] = useState(false);
@@ -3765,6 +3789,8 @@ export default function TripDetailPage() {
     myMembership?.role === "OWNER" || myMembership?.role === "ADMIN";
   const canAddTripItems = Boolean(myMembership);
   const canUploadTripDocuments = Boolean(myMembership);
+  const myCostsCurrency = myCostsData?.baseCurrency || trip?.baseCurrency?.trim() || "CHF";
+  const myCostsBalancePreview = myCostsData?.summary.balancePreview ?? 0;
 
   function canEditTripItem(item: TripItem) {
     if (canEditTrip) return true;
@@ -6833,6 +6859,52 @@ export default function TripDetailPage() {
           </div>
 
           <div style={{ display: "grid", gap: 10 }}>
+            <div
+              style={{
+                padding: "10px 12px",
+                borderRadius: 16,
+                background: "color-mix(in srgb, var(--bg) 74%, var(--card))",
+                border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                display: "grid",
+                gap: 6,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  flexWrap: "wrap",
+                }}
+              >
+                <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
+                  <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
+                    {myCostsBalancePreview > 0
+                      ? `Others owe you ${formatMoney(myCostsBalancePreview, myCostsCurrency)}`
+                      : myCostsBalancePreview < 0
+                        ? `You owe ${formatMoney(Math.abs(myCostsBalancePreview), myCostsCurrency)}`
+                        : "You are settled up."}
+                  </div>
+                  <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+                    {myCostsBalancePreview !== 0
+                      ? "This is your personal balance across costs where you are involved."
+                      : "Your paid amounts and personal share currently cancel out."}
+                  </div>
+                </div>
+                <div
+                  style={{
+                    color: "var(--text)",
+                    fontSize: 14,
+                    fontWeight: 950,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {formatMoney(Math.abs(myCostsBalancePreview), myCostsCurrency)}
+                </div>
+              </div>
+            </div>
+
             {tripCostCategories.map((category) => {
               const rows = (myCostsData?.costs ?? []).filter(
                 (row) => row.category === category,
@@ -6844,56 +6916,303 @@ export default function TripDetailPage() {
                   <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
                     {category}
                   </div>
-                  {rows.map((row) => (
-                    <div
-                      key={row.costId}
-                      style={{
-                        display: "grid",
-                        gap: 5,
-                        padding: "9px 10px",
-                        borderRadius: 14,
-                        background: "color-mix(in srgb, var(--bg) 72%, var(--card))",
-                        border:
-                          "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                      }}
-                    >
+                  {rows.map((row) => {
+                    const isExpanded = expandedMyCostId === row.costId;
+                    const payerLabel =
+                      row.paidByMemberId === myMembership?.id
+                        ? "you"
+                        : tripCostMemberDisplayName(row.paidBy);
+
+                    return (
                       <div
+                        key={row.costId}
                         style={{
-                          display: "flex",
-                          alignItems: "flex-start",
-                          justifyContent: "space-between",
-                          gap: 10,
+                          display: "grid",
+                          gap: 6,
+                          padding: "9px 10px",
+                          borderRadius: 14,
+                          background: "color-mix(in srgb, var(--bg) 72%, var(--card))",
+                          border:
+                            "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
                         }}
                       >
-                        <div style={{ minWidth: 0, display: "grid", gap: 2 }}>
-                          <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
-                            {row.tripItemTitle}
-                          </span>
-                          <span style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.3 }}>
-                            {row.label}
-                            {tripCostDateLabel(row) ? ` · ${tripCostDateLabel(row)}` : ""}
-                          </span>
-                        </div>
-                        <span
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedMyCostId((current) =>
+                              current === row.costId ? null : row.costId,
+                            )
+                          }
                           style={{
-                            color: "var(--text)",
-                            fontSize: 13,
-                            fontWeight: 950,
-                            whiteSpace: "nowrap",
+                            all: "unset",
+                            cursor: "pointer",
+                            display: "grid",
+                            gap: 5,
                           }}
                         >
-                          {formatMoney(row.personalShare, myCostsData?.baseCurrency || baseCurrency)}
-                        </span>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "flex-start",
+                              justifyContent: "space-between",
+                              gap: 10,
+                            }}
+                          >
+                            <div style={{ minWidth: 0, display: "grid", gap: 2 }}>
+                              <span
+                                style={{
+                                  color: "var(--text)",
+                                  fontSize: 13,
+                                  fontWeight: 950,
+                                  overflowWrap: "anywhere",
+                                }}
+                              >
+                                {row.tripItemTitle}
+                              </span>
+                              <span
+                                style={{
+                                  color: "var(--sub)",
+                                  fontSize: 12,
+                                  lineHeight: 1.3,
+                                }}
+                              >
+                                {row.label}
+                                {tripCostDateLabel(row) ? ` - ${tripCostDateLabel(row)}` : ""}
+                              </span>
+                            </div>
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                flexShrink: 0,
+                              }}
+                            >
+                              <span
+                                style={{
+                                  color: "var(--text)",
+                                  fontSize: 13,
+                                  fontWeight: 950,
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {formatMoney(row.personalShare, myCostsCurrency)}
+                              </span>
+                              <ChevronDown
+                                size={16}
+                                strokeWidth={2.4}
+                                style={{
+                                  color: "var(--sub)",
+                                  transform: isExpanded ? "rotate(180deg)" : "none",
+                                  transition: "transform 140ms ease",
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+                            Paid by {payerLabel} - shared with {row.participantCount}{" "}
+                            {row.participantCount === 1 ? "person" : "people"}
+                            {row.netBalance !== 0
+                              ? ` - ${tripCostBalanceMessage(row, myCostsCurrency)}`
+                              : ""}
+                          </div>
+                        </button>
+
+                        {isExpanded ? (
+                          <div
+                            style={{
+                              display: "grid",
+                              gap: 8,
+                              paddingTop: 8,
+                              borderTop:
+                                "1px solid color-mix(in srgb, var(--border) 74%, transparent)",
+                            }}
+                          >
+                            <div style={{ display: "grid", gap: 6 }}>
+                              {[
+                                ["What", row.tripItemTitle],
+                                ["Type", row.tripItemType || row.category],
+                                [
+                                  "When",
+                                  row.itemDate
+                                    ? formatDateLabel(row.itemDate.slice(0, 10))
+                                    : row.date
+                                      ? formatDateLabel(row.date.slice(0, 10))
+                                      : "",
+                                ],
+                                ["Where", tripCostDetailPlace(row)],
+                                ["Amount", formatMoney(row.totalBaseAmount, myCostsCurrency)],
+                                ["Paid by", payerLabel === "you" ? "You" : payerLabel],
+                                ["My share", formatMoney(row.personalShare, myCostsCurrency)],
+                                ["Paid by me", formatMoney(row.paidByMe, myCostsCurrency)],
+                                [
+                                  "Balance preview",
+                                  row.netBalance > 0
+                                    ? `+ ${formatMoney(row.netBalance, myCostsCurrency)}`
+                                    : row.netBalance < 0
+                                      ? `- ${formatMoney(Math.abs(row.netBalance), myCostsCurrency)}`
+                                      : formatMoney(0, myCostsCurrency),
+                                ],
+                              ]
+                                .filter(([, value]) => Boolean(value))
+                                .map(([label, value]) => (
+                                  <div
+                                    key={String(label)}
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "flex-start",
+                                      justifyContent: "space-between",
+                                      gap: 10,
+                                    }}
+                                  >
+                                    <span
+                                      style={{
+                                        color: "var(--sub)",
+                                        fontSize: 12,
+                                        fontWeight: 900,
+                                      }}
+                                    >
+                                      {label}
+                                    </span>
+                                    <span
+                                      style={{
+                                        color: "var(--text)",
+                                        fontSize: 12,
+                                        fontWeight: 900,
+                                        textAlign: "right",
+                                        overflowWrap: "anywhere",
+                                      }}
+                                    >
+                                      {value}
+                                    </span>
+                                  </div>
+                                ))}
+                            </div>
+
+                            {row.participantShares.length > 0 ? (
+                              <div style={{ display: "grid", gap: 6 }}>
+                                <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 900 }}>
+                                  Participants
+                                </div>
+                                <div style={{ display: "grid", gap: 4 }}>
+                                  {row.participantShares.map((entry) => (
+                                    <div
+                                      key={entry.member.id}
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        gap: 10,
+                                      }}
+                                    >
+                                      <span
+                                        style={{
+                                          color: "var(--text)",
+                                          fontSize: 12,
+                                          fontWeight: 900,
+                                        }}
+                                      >
+                                        {tripCostMemberDisplayName(entry.member)}
+                                      </span>
+                                      <span
+                                        style={{
+                                          color: "var(--text)",
+                                          fontSize: 12,
+                                          fontWeight: 900,
+                                        }}
+                                      >
+                                        {formatMoney(entry.amount, myCostsCurrency)}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : null}
+
+                            {row.owedToMe.length > 0 ? (
+                              <div style={{ display: "grid", gap: 6 }}>
+                                <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 900 }}>
+                                  Others owe you
+                                </div>
+                                <div style={{ display: "grid", gap: 4 }}>
+                                  {row.owedToMe.map((entry) => (
+                                    <div
+                                      key={entry.member.id}
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        gap: 10,
+                                      }}
+                                    >
+                                      <span
+                                        style={{
+                                          color: "var(--text)",
+                                          fontSize: 12,
+                                          fontWeight: 900,
+                                        }}
+                                      >
+                                        {tripCostMemberDisplayName(entry.member)}
+                                      </span>
+                                      <span
+                                        style={{
+                                          color: "var(--text)",
+                                          fontSize: 12,
+                                          fontWeight: 900,
+                                        }}
+                                      >
+                                        {formatMoney(entry.amount, myCostsCurrency)}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : null}
+
+                            {row.iOwe.length > 0 ? (
+                              <div style={{ display: "grid", gap: 6 }}>
+                                <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 900 }}>
+                                  I owe
+                                </div>
+                                <div style={{ display: "grid", gap: 4 }}>
+                                  {row.iOwe.map((entry) => (
+                                    <div
+                                      key={entry.member.id}
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        gap: 10,
+                                      }}
+                                    >
+                                      <span
+                                        style={{
+                                          color: "var(--text)",
+                                          fontSize: 12,
+                                          fontWeight: 900,
+                                        }}
+                                      >
+                                        {tripCostMemberDisplayName(entry.member)}
+                                      </span>
+                                      <span
+                                        style={{
+                                          color: "var(--text)",
+                                          fontSize: 12,
+                                          fontWeight: 900,
+                                        }}
+                                      >
+                                        {formatMoney(entry.amount, myCostsCurrency)}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </div>
-                      <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
-                        Paid by {tripCostMemberDisplayName(row.paidBy)} · shared with{" "}
-                        {row.participantCount} {row.participantCount === 1 ? "person" : "people"}
-                        {row.paidAmount > 0
-                          ? ` · you paid ${formatMoney(row.paidAmount, myCostsData?.baseCurrency || baseCurrency)}`
-                          : ""}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               );
             })}
@@ -7233,6 +7552,9 @@ export default function TripDetailPage() {
                   ...sectionMutedCardStyle,
                 }}
               >
+                {(() => {
+                  const ActivityIcon = activityIcon(entry.type);
+                  return (
                 <div
                   aria-hidden="true"
                   style={{
@@ -7243,11 +7565,12 @@ export default function TripDetailPage() {
                     background: "color-mix(in srgb, var(--card) 88%, var(--bg))",
                     display: "grid",
                     placeItems: "center",
-                    fontSize: 15,
                   }}
                 >
-                  {activityIcon(entry.type)}
+                  <ActivityIcon size={16} strokeWidth={2.4} />
                 </div>
+                  );
+                })()}
                 <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
                   <div style={{ ...compactLabelTextStyle, overflowWrap: "anywhere" }}>
                     {entry.message}
@@ -11222,3 +11545,4 @@ export default function TripDetailPage() {
     </div>
   );
 }
+

@@ -71,6 +71,7 @@ export type BudgetV3RichItem = {
   startsAt?: Date | string | null;
   startTime?: string | null;
   locationName?: string | null;
+  provider?: string | null;
   createdByUserId?: string | null;
   course?: {
     name?: string | null;
@@ -117,6 +118,23 @@ export type BudgetV3CostRow = {
   paidAmount: number;
 };
 
+export type BudgetV3CostMemberAmount = {
+  member: BudgetV3Member;
+  amount: number;
+};
+
+export type BudgetV3MyCostRow = BudgetV3CostRow & {
+  locationName?: string | null;
+  provider?: string | null;
+  itemDate?: string | null;
+  itemStartTime?: string | null;
+  participantShares: BudgetV3CostMemberAmount[];
+  owedToMe: BudgetV3CostMemberAmount[];
+  iOwe: BudgetV3CostMemberAmount[];
+  netBalance: number;
+  paidByMe: number;
+};
+
 export type BudgetV3GroupedSummary = Record<BudgetV3Category, number>;
 
 export type BudgetV3MyCostsSummary = {
@@ -130,7 +148,7 @@ export type BudgetV3MyCostsResponse = {
   tripId: string;
   baseCurrency: string;
   memberId: string;
-  costs: BudgetV3CostRow[];
+  costs: BudgetV3MyCostRow[];
   summary: BudgetV3MyCostsSummary;
 };
 
@@ -367,6 +385,85 @@ function costRow(
   };
 }
 
+function itemDateValue(item: BudgetV3RichItem) {
+  const value = item.date ?? item.startsAt;
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
+}
+
+function itemStartTimeValue(item: BudgetV3RichItem) {
+  return item.startTime?.trim() || null;
+}
+
+function buildCostMemberAmounts(
+  memberIds: string[],
+  members: BudgetV3Member[],
+  amount: number,
+  cost: BudgetV3RichCost,
+): BudgetV3CostMemberAmount[] {
+  const membersById = memberById(members);
+  return memberIds
+    .map((id) => {
+      const member =
+        cost.participants?.find((candidate) => candidate.tripMemberId === id)
+          ?.tripMember ?? membersById.get(id);
+      if (!member) return null;
+      return {
+        member,
+        amount: roundedMoney(amount),
+      };
+    })
+    .filter((row): row is BudgetV3CostMemberAmount => Boolean(row));
+}
+
+function buildMyCostRow(
+  item: BudgetV3RichItem,
+  cost: BudgetV3RichCost,
+  members: BudgetV3Member[],
+  baseCurrency: string,
+  currentMemberId: string,
+): BudgetV3MyCostRow {
+  const share = calculateCostShare(cost, baseCurrency);
+  const row = costRow(item, cost, members, baseCurrency, currentMemberId);
+  const participantShares = buildCostMemberAmounts(
+    share.participantMemberIds,
+    members,
+    share.personalShare,
+    cost,
+  );
+  const isPayer = cost.paidByMemberId === currentMemberId;
+  const paidByMe = isPayer ? share.totalBaseAmount : 0;
+  const owedToMe = isPayer
+    ? participantShares.filter(
+        (entry) => entry.member.id !== currentMemberId,
+      )
+    : [];
+  const iOwe =
+    !isPayer && row.personalShare > 0 && cost.paidByMemberId
+      ? buildCostMemberAmounts(
+          [cost.paidByMemberId],
+          members,
+          row.personalShare,
+          cost,
+        )
+      : [];
+
+  return {
+    ...row,
+    locationName: item.locationName?.trim() || null,
+    provider: item.course?.name?.trim() || item.provider?.trim() || null,
+    itemDate: itemDateValue(item),
+    itemStartTime: itemStartTimeValue(item),
+    participantShares,
+    owedToMe,
+    iOwe,
+    netBalance: roundedMoney(paidByMe - row.personalShare),
+    paidByMe,
+  };
+}
+
 function addGroupedValue(
   grouped: BudgetV3GroupedSummary,
   category: BudgetV3Category,
@@ -383,7 +480,7 @@ export function buildMyCostsSummary(params: {
   members: BudgetV3Member[];
   items: BudgetV3RichItem[];
 }): BudgetV3MyCostsResponse {
-  const costs: BudgetV3CostRow[] = [];
+  const costs: BudgetV3MyCostRow[] = [];
   const groupedByCategory = emptyGroupedSummary();
 
   for (const item of params.items) {
@@ -391,10 +488,9 @@ export function buildMyCostsSummary(params: {
       const participantIds = participantMemberIdsForCost(cost);
       const isParticipant = participantIds.includes(params.currentMemberId);
       const isPayer = cost.paidByMemberId === params.currentMemberId;
-      const isCreator = item.createdByUserId === params.currentUserId;
-      if (!isParticipant && !isPayer && !isCreator) continue;
+      if (!isParticipant && !isPayer) continue;
 
-      const row = costRow(
+      const row = buildMyCostRow(
         item,
         cost,
         params.members,
@@ -410,7 +506,7 @@ export function buildMyCostsSummary(params: {
     costs.reduce((sum, cost) => sum + cost.personalShare, 0),
   );
   const totalPaidByMe = roundedMoney(
-    costs.reduce((sum, cost) => sum + cost.paidAmount, 0),
+    costs.reduce((sum, cost) => sum + cost.paidByMe, 0),
   );
 
   return {

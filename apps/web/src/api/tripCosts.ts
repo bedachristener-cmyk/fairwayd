@@ -19,6 +19,11 @@ export type TripCostMember = {
   } | null;
 };
 
+export type TripCostMemberAmount = {
+  member: TripCostMember;
+  amount: number;
+};
+
 export type TripCostRow = {
   tripItemId: string;
   tripItemTitle: string;
@@ -41,13 +46,25 @@ export type TripCostRow = {
   paidAmount: number;
 };
 
+export type MyTripCostRow = TripCostRow & {
+  locationName?: string | null;
+  provider?: string | null;
+  itemDate?: string | null;
+  itemStartTime?: string | null;
+  participantShares: TripCostMemberAmount[];
+  owedToMe: TripCostMemberAmount[];
+  iOwe: TripCostMemberAmount[];
+  netBalance: number;
+  paidByMe: number;
+};
+
 export type TripCostGroupedSummary = Record<TripCostCategory, number>;
 
 export type MyTripCostsResponse = {
   tripId: string;
   baseCurrency: string;
   memberId: string;
-  costs: TripCostRow[];
+  costs: MyTripCostRow[];
   summary: {
     totalPersonalShare: number;
     totalPaidByMe: number;
