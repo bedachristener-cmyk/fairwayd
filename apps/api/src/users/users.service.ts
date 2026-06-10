@@ -83,6 +83,8 @@ const userProfileSelect = {
   favoriteGolfDestinationPrivacy: true,
   termsAcceptedAt: true,
   termsVersion: true,
+  privacyAcceptedAt: true,
+  privacyVersion: true,
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.UserSelect;
@@ -114,6 +116,8 @@ export class UsersService {
       data: {
         termsAcceptedAt: new Date(),
         termsVersion,
+        privacyAcceptedAt: new Date(),
+        privacyVersion: 'v1',
       },
       select: userProfileSelect,
     });

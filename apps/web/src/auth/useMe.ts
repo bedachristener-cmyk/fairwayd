@@ -20,6 +20,8 @@ export type Me = {
   favoriteGolfDestinationPrivacy?: FieldPrivacy;
   termsAcceptedAt: string | null;
   termsVersion: string | null;
+  privacyAcceptedAt?: string | null;
+  privacyVersion?: string | null;
   createdAt?: string;
   updatedAt?: string;
 };

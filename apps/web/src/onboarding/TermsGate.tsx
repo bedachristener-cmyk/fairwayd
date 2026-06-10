@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { apiPostJson } from "../api";
 
 export default function TermsGate({
@@ -28,9 +29,8 @@ export default function TermsGate({
     >
       <h1 style={{ fontSize: 28, marginBottom: 8 }}>Terms & Conditions</h1>
       <p style={{ opacity: 0.85, lineHeight: 1.5 }}>
-        Bitte akzeptiere die Terms & Conditions, bevor du Fairwayd benutzen
-        kannst. (Platzhaltertext – später ersetzen wir das durch dein echtes
-        Dokument.)
+        Please accept the Fairwayd Terms & Conditions and Privacy Policy before
+        continuing.
       </p>
 
       <div
@@ -42,11 +42,21 @@ export default function TermsGate({
         }}
       >
         <div style={{ fontSize: 13, opacity: 0.9, lineHeight: 1.6 }}>
-          <p>- Du bist verantwortlich für Inhalte, die du postest.</p>
-          <p>- Bilder müssen deine Rechte respektieren.</p>
           <p>
-            - Wir können Terms updaten; dann brauchst du ggf. eine neue
-            Zustimmung.
+            Fairwayd is a golf travel and social planning platform. You are
+            responsible for your account, the content you post, and confirming
+            important travel or course information directly with providers.
+          </p>
+          <p>
+            Read the{" "}
+            <Link to="/terms" style={{ fontWeight: 800, color: "inherit" }}>
+              Terms & Conditions
+            </Link>{" "}
+            and{" "}
+            <Link to="/privacy" style={{ fontWeight: 800, color: "inherit" }}>
+              Privacy Policy
+            </Link>
+            .
           </p>
         </div>
 

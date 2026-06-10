@@ -11,12 +11,17 @@ import { Prisma } from '@prisma/client';
 import { OAuth2Client } from 'google-auth-library';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { createHash, randomBytes } from 'node:crypto';
+import { randomInt } from 'node:crypto';
 import { MailService } from './mail.service';
 import * as bcrypt from 'bcryptjs';
 
 type OAuthProvider = 'GOOGLE' | 'APPLE' | 'FACEBOOK';
 
 const MIN_HANDLE_LENGTH = 3;
+const CURRENT_TERMS_VERSION = 'v1';
+const CURRENT_PRIVACY_VERSION = 'v1';
+const EMAIL_VERIFICATION_TTL_MS = 15 * 60 * 1000;
+const EMAIL_VERIFICATION_MAX_ATTEMPTS = 5;
 
 function safePrefix(value: string | null | undefined) {
   const normalized = String(value ?? '').trim();
@@ -209,6 +214,13 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
+    if (!user.emailVerifiedAt) {
+      throw new UnauthorizedException({
+        code: 'EMAIL_NOT_VERIFIED',
+        message: 'EMAIL_NOT_VERIFIED',
+      });
+    }
+
     const ok = await this.verifyPassword(password, user.password);
     if (!ok) {
       throw new UnauthorizedException('Invalid email or password');
@@ -222,11 +234,15 @@ export class AuthService {
     email?: string;
     password?: string;
     passwordConfirm?: string;
+    acceptedTerms?: boolean;
+    acceptedPrivacy?: boolean;
   }) {
     const name = String(params.name ?? '').trim();
     const email = this.normalizeEmail(String(params.email ?? ''));
     const password = String(params.password ?? '');
     const passwordConfirm = String(params.passwordConfirm ?? '');
+    const acceptedTerms = params.acceptedTerms === true;
+    const acceptedPrivacy = params.acceptedPrivacy === true;
 
     if (name.length < 2) {
       throw new BadRequestException('Name must be at least 2 characters');
@@ -236,6 +252,9 @@ export class AuthService {
     }
     if (password !== passwordConfirm) {
       throw new BadRequestException('Passwords do not match');
+    }
+    if (!acceptedTerms || !acceptedPrivacy) {
+      throw new BadRequestException('Terms and Privacy Policy must be accepted');
     }
 
     const existing = await this.prisma.user.findUnique({
@@ -256,12 +275,19 @@ export class AuthService {
           name,
           handle: null,
           avatarUrl: null,
-          termsAcceptedAt: null,
-          termsVersion: null,
+          termsAcceptedAt: new Date(),
+          termsVersion: CURRENT_TERMS_VERSION,
+          privacyAcceptedAt: new Date(),
+          privacyVersion: CURRENT_PRIVACY_VERSION,
         },
       });
 
-      return this.issueJwtResponse(user);
+      await this.createAndSendEmailVerificationCode(user.id, email);
+
+      return {
+        requiresEmailVerification: true,
+        email,
+      };
     } catch (e) {
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&
@@ -272,6 +298,92 @@ export class AuthService {
 
       throw e;
     }
+  }
+
+  async verifyEmailCode(emailInput: string, codeInput: string) {
+    const email = this.normalizeEmail(emailInput);
+    const code = this.normalizeVerificationCode(codeInput);
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Invalid verification code');
+    }
+
+    if (user.emailVerifiedAt) {
+      return this.issueJwtResponse(user);
+    }
+
+    const row = await this.prisma.emailVerificationCode.findFirst({
+      where: {
+        userId: user.id,
+        usedAt: null,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!row) {
+      throw new BadRequestException('Invalid verification code');
+    }
+
+    if (row.attempts >= EMAIL_VERIFICATION_MAX_ATTEMPTS) {
+      throw new BadRequestException('Too many verification attempts');
+    }
+
+    if (row.expiresAt.getTime() <= Date.now()) {
+      throw new BadRequestException('Verification code expired');
+    }
+
+    const expectedHash = this.hashEmailVerificationCode(user.id, code);
+    if (expectedHash !== row.codeHash) {
+      await this.prisma.emailVerificationCode.update({
+        where: { id: row.id },
+        data: { attempts: { increment: 1 } },
+      });
+      throw new BadRequestException('Invalid verification code');
+    }
+
+    const verifiedUser = await this.prisma.$transaction(async (tx) => {
+      await tx.emailVerificationCode.update({
+        where: { id: row.id },
+        data: { usedAt: new Date() },
+      });
+
+      return tx.user.update({
+        where: { id: user.id },
+        data: { emailVerifiedAt: new Date() },
+      });
+    });
+
+    return this.issueJwtResponse(verifiedUser);
+  }
+
+  async resendEmailVerificationCode(emailInput: string) {
+    const email = this.normalizeEmail(emailInput);
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      return { ok: true };
+    }
+
+    if (user.emailVerifiedAt) {
+      return { ok: true, alreadyVerified: true };
+    }
+
+    await this.prisma.emailVerificationCode.updateMany({
+      where: {
+        userId: user.id,
+        usedAt: null,
+      },
+      data: { usedAt: new Date() },
+    });
+
+    await this.createAndSendEmailVerificationCode(user.id, email);
+    return { ok: true };
   }
 
   async setPassword(userId: string, passwordInput: string) {
@@ -356,7 +468,14 @@ export class AuthService {
         where: { email: row.email },
       });
 
-      if (existing) return existing;
+      if (existing) {
+        if (existing.emailVerifiedAt) return existing;
+
+        return tx.user.update({
+          where: { id: existing.id },
+          data: { emailVerifiedAt: new Date() },
+        });
+      }
 
       return tx.user.create({
         data: {
@@ -365,6 +484,7 @@ export class AuthService {
           handle: await this.generateEmailHandle(row.email, tx),
           name: null,
           avatarUrl: null,
+          emailVerifiedAt: new Date(),
           termsAcceptedAt: null,
           termsVersion: null,
         },
@@ -413,6 +533,7 @@ export class AuthService {
             handle: null,
             name: profile.name ?? null,
             avatarUrl: profile.avatarUrl ?? null,
+            emailVerifiedAt: profile.email ? new Date() : null,
             termsAcceptedAt: null,
             termsVersion: null,
             accounts: {
@@ -430,6 +551,8 @@ export class AuthService {
         if (!user.name && profile.name) patch.name = profile.name;
         if (!user.avatarUrl && profile.avatarUrl)
           patch.avatarUrl = profile.avatarUrl;
+        if (profile.email && !user.emailVerifiedAt)
+          patch.emailVerifiedAt = new Date();
 
         if (Object.keys(patch).length > 0) {
           user = await this.prisma.user.update({
@@ -456,6 +579,7 @@ export class AuthService {
     handle?: string | null;
     name?: string | null;
     avatarUrl?: string | null;
+    emailVerifiedAt?: Date | null;
     termsAcceptedAt?: Date | null;
     termsVersion?: string | null;
   }) {
@@ -470,6 +594,7 @@ export class AuthService {
         handle: user.handle,
         name: user.name,
         avatarUrl: user.avatarUrl,
+        emailVerifiedAt: user.emailVerifiedAt ?? null,
         termsAcceptedAt: user.termsAcceptedAt ?? null,
         termsVersion: user.termsVersion ?? null,
       },
@@ -488,6 +613,55 @@ export class AuthService {
 
   private hashMagicToken(token: string) {
     return createHash('sha256').update(token).digest('hex');
+  }
+
+  private generateEmailVerificationCode() {
+    return randomInt(100000, 1000000).toString();
+  }
+
+  private normalizeVerificationCode(codeInput: string) {
+    const code = String(codeInput ?? '').replace(/\D/g, '');
+    if (code.length !== 6) {
+      throw new BadRequestException('Invalid verification code');
+    }
+    return code;
+  }
+
+  private hashEmailVerificationCode(userId: string, code: string) {
+    return createHash('sha256').update(`${userId}:${code}`).digest('hex');
+  }
+
+  private async createAndSendEmailVerificationCode(userId: string, email: string) {
+    const code = this.generateEmailVerificationCode();
+
+    await this.prisma.emailVerificationCode.create({
+      data: {
+        userId,
+        codeHash: this.hashEmailVerificationCode(userId, code),
+        expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS),
+      },
+    });
+
+    try {
+      return await this.mail.sendVerificationCode(email, code);
+    } catch (err) {
+      const safeDetail = err instanceof Error ? err.message : String(err);
+
+      console.error('[EmailVerification] Mail send failed', {
+        message: safeDetail,
+      });
+
+      if (process.env.NODE_ENV === 'production') {
+        throw new ServiceUnavailableException(
+          'Could not send verification code. Please try again later.',
+        );
+      }
+
+      throw new ServiceUnavailableException({
+        message: 'Could not send verification code',
+        detail: safeDetail,
+      });
+    }
   }
 
   async hashPassword(password: string) {

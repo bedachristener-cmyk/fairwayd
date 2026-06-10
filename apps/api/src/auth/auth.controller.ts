@@ -169,6 +169,8 @@ export class AuthController {
       email?: string;
       password?: string;
       passwordConfirm?: string;
+      acceptedTerms?: boolean;
+      acceptedPrivacy?: boolean;
     },
   ) {
     const name = String(body?.name ?? '').trim();
@@ -191,16 +193,22 @@ export class AuthController {
       if (password !== passwordConfirm) {
         throw new BadRequestException('Passwords do not match');
       }
+      if (body?.acceptedTerms !== true || body?.acceptedPrivacy !== true) {
+        throw new BadRequestException(
+          'Terms and Privacy Policy must be accepted',
+        );
+      }
 
       const result = await this.auth.registerWithPassword({
         name,
         email,
         password,
         passwordConfirm,
+        acceptedTerms: body.acceptedTerms,
+        acceptedPrivacy: body.acceptedPrivacy,
       });
 
       console.log('[Auth] register success', {
-        userId: result.user.id,
         email,
       });
 
@@ -211,6 +219,25 @@ export class AuthController {
       });
       throw e;
     }
+  }
+
+  @Post('verify-email')
+  async verifyEmail(@Body() body: { email?: string; code?: string }) {
+    const email = body?.email;
+    const code = body?.code;
+
+    if (!email || !code) {
+      throw new BadRequestException('Missing email or code');
+    }
+
+    return this.auth.verifyEmailCode(email, code);
+  }
+
+  @Post('resend-verification-code')
+  async resendVerificationCode(@Body() body: { email?: string }) {
+    const email = body?.email;
+    if (!email) throw new BadRequestException('Missing email');
+    return this.auth.resendEmailVerificationCode(email);
   }
 
   @UseGuards(JwtAuthGuard)

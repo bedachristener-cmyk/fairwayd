@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import GoogleLoginButton from "../auth/oauth/GoogleLoginButton";
 import { API_BASE } from "../api/base";
@@ -11,14 +11,21 @@ export default function LoginPanel() {
   const loc = useLocation();
   const { login } = useAuth();
 
-  const [mode, setMode] = useState<"signin" | "register">("signin");
+  const [mode, setMode] = useState<"signin" | "register" | "verify">(
+    "signin",
+  );
   const [msg, setMsg] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
   const [passwordBusy, setPasswordBusy] = useState(false);
   const [registerBusy, setRegisterBusy] = useState(false);
+  const [verifyBusy, setVerifyBusy] = useState(false);
+  const [resendBusy, setResendBusy] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
   const googleConfigured = useMemo(() => {
@@ -53,9 +60,11 @@ export default function LoginPanel() {
           ? data.message.join(", ")
           : typeof data?.message === "string"
             ? data.message
-            : typeof data?.error === "string"
-              ? data.error
-              : text;
+            : typeof data?.code === "string"
+              ? data.code
+              : typeof data?.error === "string"
+                ? data.error
+                : text;
       } catch {
         message = text;
       }
@@ -81,7 +90,13 @@ export default function LoginPanel() {
       });
 
       if (!res.ok) {
-        throw new Error(await readApiError(res, "Invalid email or password"));
+        const apiError = await readApiError(res, "Invalid email or password");
+        if (/EMAIL_NOT_VERIFIED/i.test(apiError)) {
+          setVerificationEmail(value);
+          setMode("verify");
+          throw new Error("Please verify your email before signing in.");
+        }
+        throw new Error(apiError);
       }
 
       const data = await res.json();
@@ -123,6 +138,10 @@ export default function LoginPanel() {
       setMsg("Passwords do not match");
       return;
     }
+    if (!acceptedLegal) {
+      setMsg("Please accept the Terms & Conditions and Privacy Policy.");
+      return;
+    }
 
     try {
       setRegisterBusy(true);
@@ -136,6 +155,8 @@ export default function LoginPanel() {
           email: cleanEmail,
           password,
           passwordConfirm,
+          acceptedTerms: acceptedLegal,
+          acceptedPrivacy: acceptedLegal,
         }),
       });
 
@@ -151,13 +172,11 @@ export default function LoginPanel() {
         throw new Error(apiError);
       }
 
-      const data = await res.json();
-      const token = typeof data?.token === "string" ? data.token : "";
-      if (!token) {
-        throw new Error("Could not create account");
-      }
-
-      onLoggedIn(token);
+      await res.json().catch(() => null);
+      setVerificationEmail(cleanEmail);
+      setVerificationCode("");
+      setMode("verify");
+      setMsg("Check your email for a 6-digit verification code.");
     } catch (err) {
       setMsg(
         err instanceof Error
@@ -166,6 +185,78 @@ export default function LoginPanel() {
       );
     } finally {
       setRegisterBusy(false);
+    }
+  };
+
+  const verifyAccount = async () => {
+    const cleanEmail = verificationEmail.trim() || email.trim();
+    const code = verificationCode.trim();
+    if (verifyBusy) return;
+
+    if (!cleanEmail || !code) {
+      setMsg("Enter the verification code from your email.");
+      return;
+    }
+
+    try {
+      setVerifyBusy(true);
+      setMsg(null);
+
+      const res = await fetch(`${API_BASE}/auth/verify-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail, code }),
+      });
+
+      if (!res.ok) {
+        throw new Error(await readApiError(res, "Could not verify account"));
+      }
+
+      const data = await res.json();
+      const token = typeof data?.token === "string" ? data.token : "";
+      if (!token) {
+        throw new Error("Could not verify account");
+      }
+
+      onLoggedIn(token);
+    } catch (err) {
+      setMsg(
+        err instanceof Error
+          ? err.message
+          : "Could not verify account",
+      );
+    } finally {
+      setVerifyBusy(false);
+    }
+  };
+
+  const resendVerificationCode = async () => {
+    const cleanEmail = verificationEmail.trim() || email.trim();
+    if (!cleanEmail || resendBusy) return;
+
+    try {
+      setResendBusy(true);
+      setMsg(null);
+
+      const res = await fetch(`${API_BASE}/auth/resend-verification-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail }),
+      });
+
+      if (!res.ok) {
+        throw new Error(await readApiError(res, "Could not resend code"));
+      }
+
+      setMsg("A new verification code has been sent.");
+    } catch (err) {
+      setMsg(
+        err instanceof Error
+          ? err.message
+          : "Could not resend code",
+      );
+    } finally {
+      setResendBusy(false);
     }
   };
 
@@ -347,7 +438,7 @@ export default function LoginPanel() {
             Create account
           </button>
         </>
-      ) : (
+      ) : mode === "register" ? (
         <div
           style={{
             display: "grid",
@@ -397,14 +488,43 @@ export default function LoginPanel() {
             style={inputStyle}
           />
 
+          <label
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 8,
+              color: "#111",
+              fontSize: 12,
+              lineHeight: 1.35,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={acceptedLegal}
+              onChange={(e) => setAcceptedLegal(e.target.checked)}
+              style={{ marginTop: 2 }}
+            />
+            <span>
+              I accept the{" "}
+              <Link to="/terms" style={{ color: "#111", fontWeight: 900 }}>
+                Terms & Conditions
+              </Link>{" "}
+              and{" "}
+              <Link to="/privacy" style={{ color: "#111", fontWeight: 900 }}>
+                Privacy Policy
+              </Link>
+              .
+            </span>
+          </label>
+
           <button
             type="button"
-            disabled={registerBusy}
+            disabled={registerBusy || !acceptedLegal}
             onClick={registerAccount}
             style={{
               ...primaryButtonStyle,
-              opacity: registerBusy ? 0.6 : 1,
-              cursor: registerBusy ? "default" : "pointer",
+              opacity: registerBusy || !acceptedLegal ? 0.6 : 1,
+              cursor: registerBusy || !acceptedLegal ? "default" : "pointer",
             }}
           >
             {registerBusy ? "Creating account..." : "Register account"}
@@ -419,6 +539,77 @@ export default function LoginPanel() {
             style={linkButtonStyle}
           >
             Already have an account? Sign in
+          </button>
+        </div>
+      ) : (
+        <div
+          style={{
+            display: "grid",
+            gap: 10,
+          }}
+        >
+          <div style={{ fontSize: 13, fontWeight: 900, color: "#111" }}>
+            Verify your email
+          </div>
+          <div style={{ fontSize: 13, color: "rgba(0,0,0,0.68)", lineHeight: 1.4 }}>
+            Enter the 6-digit code sent to {verificationEmail || email}.
+          </div>
+
+          <input
+            type="text"
+            inputMode="numeric"
+            value={verificationCode}
+            onChange={(e) =>
+              setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+            }
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void verifyAccount();
+            }}
+            placeholder="123456"
+            autoComplete="one-time-code"
+            style={{
+              ...inputStyle,
+              textAlign: "center",
+              letterSpacing: 6,
+              fontWeight: 900,
+            }}
+          />
+
+          <button
+            type="button"
+            disabled={verifyBusy || verificationCode.trim().length !== 6}
+            onClick={verifyAccount}
+            style={{
+              ...primaryButtonStyle,
+              opacity:
+                verifyBusy || verificationCode.trim().length !== 6 ? 0.6 : 1,
+              cursor:
+                verifyBusy || verificationCode.trim().length !== 6
+                  ? "default"
+                  : "pointer",
+            }}
+          >
+            {verifyBusy ? "Verifying..." : "Verify account"}
+          </button>
+
+          <button
+            type="button"
+            disabled={resendBusy}
+            onClick={resendVerificationCode}
+            style={linkButtonStyle}
+          >
+            {resendBusy ? "Sending..." : "Send a new code"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMode("signin");
+              setMsg(null);
+            }}
+            style={linkButtonStyle}
+          >
+            Back to sign in
           </button>
         </div>
       )}
