@@ -65,10 +65,10 @@ export default function TermsPage() {
         <section style={sectionStyle}>
           <h2>User Content</h2>
           <p>
-            You remain responsible for posts, images, reviews, trip details,
-            and other content you upload. Only upload content you have the right
-            to share. By posting content, you allow Fairwayd to display it as
-            part of the service.
+            You remain responsible for posts, images, reviews, trip details, and
+            other content you upload. Only upload content you have the right to
+            share. By posting content, you allow Fairwayd to display it as part
+            of the service.
           </p>
         </section>
 
@@ -95,9 +95,7 @@ export default function TermsPage() {
 
         <section style={sectionStyle}>
           <h2>Contact</h2>
-          <p>
-            For legal or account questions, contact: legal@fairwayd.example.
-          </p>
+          <p>For legal or account questions, contact: legal@fairwayd.golf.</p>
         </section>
       </div>
     </main>

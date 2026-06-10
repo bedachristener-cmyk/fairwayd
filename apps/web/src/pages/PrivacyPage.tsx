@@ -38,18 +38,17 @@ export default function PrivacyPage() {
           <h2>What Fairwayd Is</h2>
           <p>
             Fairwayd is a golf travel and social planning platform. We use the
-            data needed to run accounts, profiles, course discovery, posts,
-            trip planning, and related service messages.
+            data needed to run accounts, profiles, course discovery, posts, trip
+            planning, and related service messages.
           </p>
         </section>
 
         <section style={sectionStyle}>
           <h2>Account Data</h2>
           <p>
-            We collect account information such as name, email address,
-            password hash for email/password accounts, login provider details
-            for OAuth accounts, email verification status, and legal acceptance
-            records.
+            We collect account information such as name, email address, password
+            hash for email/password accounts, login provider details for OAuth
+            accounts, email verification status, and legal acceptance records.
           </p>
         </section>
 
@@ -104,7 +103,7 @@ export default function PrivacyPage() {
           <h2>Contact</h2>
           <p>
             For privacy questions or account requests, contact:
-            privacy@fairwayd.example.
+            privacy@fairwayd.golf.
           </p>
         </section>
       </div>
