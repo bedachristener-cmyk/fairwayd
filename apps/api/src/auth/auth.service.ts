@@ -22,6 +22,11 @@ const CURRENT_TERMS_VERSION = 'v1';
 const CURRENT_PRIVACY_VERSION = 'v1';
 const EMAIL_VERIFICATION_TTL_MS = 15 * 60 * 1000;
 const EMAIL_VERIFICATION_MAX_ATTEMPTS = 5;
+const PASSWORD_RESET_TTL_MS = 15 * 60 * 1000;
+const PASSWORD_RESET_MAX_ATTEMPTS = 5;
+const FORGOT_PASSWORD_RESPONSE = {
+  message: 'If an account exists for this email, we sent a reset code.',
+};
 
 function safePrefix(value: string | null | undefined) {
   const normalized = String(value ?? '').trim();
@@ -239,16 +244,13 @@ export class AuthService {
   }) {
     const name = String(params.name ?? '').trim();
     const email = this.normalizeEmail(String(params.email ?? ''));
-    const password = String(params.password ?? '');
+    const password = this.validatePassword(params.password ?? '');
     const passwordConfirm = String(params.passwordConfirm ?? '');
     const acceptedTerms = params.acceptedTerms === true;
     const acceptedPrivacy = params.acceptedPrivacy === true;
 
     if (name.length < 2) {
       throw new BadRequestException('Name must be at least 2 characters');
-    }
-    if (password.length < 8) {
-      throw new BadRequestException('Password must be at least 8 characters');
     }
     if (password !== passwordConfirm) {
       throw new BadRequestException('Passwords do not match');
@@ -386,11 +388,136 @@ export class AuthService {
     return { ok: true };
   }
 
-  async setPassword(userId: string, passwordInput: string) {
-    const password = String(passwordInput ?? '');
-    if (!password) {
-      throw new BadRequestException('Missing password');
+  async forgotPassword(emailInput: string) {
+    const email = this.normalizeEmail(emailInput);
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user?.password) {
+      return FORGOT_PASSWORD_RESPONSE;
     }
+
+    await this.prisma.passwordResetCode.updateMany({
+      where: {
+        userId: user.id,
+        usedAt: null,
+      },
+      data: { usedAt: new Date() },
+    });
+
+    try {
+      await this.createAndSendPasswordResetCode(user.id, email, user.name);
+    } catch (err) {
+      console.error('[PasswordReset] Failed to send reset code', {
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
+
+    return FORGOT_PASSWORD_RESPONSE;
+  }
+
+  async resetPassword(emailInput: string, codeInput: string, newPasswordInput: string) {
+    const email = this.normalizeEmail(emailInput);
+    const code = this.normalizeVerificationCode(codeInput);
+    const newPassword = this.validatePassword(newPasswordInput);
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user?.password) {
+      throw new BadRequestException('Invalid or expired reset code');
+    }
+
+    const row = await this.prisma.passwordResetCode.findFirst({
+      where: {
+        userId: user.id,
+        usedAt: null,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!row) {
+      throw new BadRequestException('Invalid or expired reset code');
+    }
+
+    if (row.attempts >= PASSWORD_RESET_MAX_ATTEMPTS) {
+      throw new BadRequestException('Too many reset attempts');
+    }
+
+    if (row.expiresAt.getTime() <= Date.now()) {
+      throw new BadRequestException('Reset code expired');
+    }
+
+    const expectedHash = this.hashPasswordResetCode(user.id, code);
+    if (expectedHash !== row.codeHash) {
+      await this.prisma.passwordResetCode.update({
+        where: { id: row.id },
+        data: { attempts: { increment: 1 } },
+      });
+      throw new BadRequestException('Invalid reset code');
+    }
+
+    const hash = await this.hashPassword(newPassword);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.passwordResetCode.update({
+        where: { id: row.id },
+        data: { usedAt: new Date() },
+      });
+
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          password: hash,
+          emailVerifiedAt: user.emailVerifiedAt ?? new Date(),
+        },
+      });
+    });
+
+    return { success: true };
+  }
+
+  async changePassword(
+    userId: string,
+    currentPasswordInput: string,
+    newPasswordInput: string,
+  ) {
+    const currentPassword = String(currentPasswordInput ?? '');
+    const newPassword = this.validatePassword(newPasswordInput);
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    if (!user.password) {
+      throw new BadRequestException(
+        'This account uses Google Sign-In. Password management is not available.',
+      );
+    }
+
+    const ok = await this.verifyPassword(currentPassword, user.password);
+    if (!ok) {
+      throw new UnauthorizedException('Wrong current password');
+    }
+
+    const hash = await this.hashPassword(newPassword);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { password: hash },
+    });
+
+    return { success: true };
+  }
+
+  async setPassword(userId: string, passwordInput: string) {
+    const password = this.validatePassword(passwordInput);
 
     const hash = await this.hashPassword(password);
 
@@ -631,6 +758,23 @@ export class AuthService {
     return createHash('sha256').update(`${userId}:${code}`).digest('hex');
   }
 
+  private validatePassword(passwordInput: string) {
+    const password = String(passwordInput ?? '');
+    if (!password.trim()) {
+      throw new BadRequestException('Password is required');
+    }
+    if (password.length < 8) {
+      throw new BadRequestException('Password must be at least 8 characters');
+    }
+    return password;
+  }
+
+  private hashPasswordResetCode(userId: string, code: string) {
+    return createHash('sha256')
+      .update(`password-reset:${userId}:${code}`)
+      .digest('hex');
+  }
+
   private async createAndSendEmailVerificationCode(userId: string, email: string) {
     const code = this.generateEmailVerificationCode();
 
@@ -659,6 +803,43 @@ export class AuthService {
 
       throw new ServiceUnavailableException({
         message: 'Could not send verification code',
+        detail: safeDetail,
+      });
+    }
+  }
+
+  private async createAndSendPasswordResetCode(
+    userId: string,
+    email: string,
+    name?: string | null,
+  ) {
+    const code = this.generateEmailVerificationCode();
+
+    await this.prisma.passwordResetCode.create({
+      data: {
+        userId,
+        codeHash: this.hashPasswordResetCode(userId, code),
+        expiresAt: new Date(Date.now() + PASSWORD_RESET_TTL_MS),
+      },
+    });
+
+    try {
+      return await this.mail.sendPasswordResetCode(email, code, name);
+    } catch (err) {
+      const safeDetail = err instanceof Error ? err.message : String(err);
+
+      console.error('[PasswordReset] Mail send failed', {
+        message: safeDetail,
+      });
+
+      if (process.env.NODE_ENV === 'production') {
+        throw new ServiceUnavailableException(
+          'Could not send reset code. Please try again later.',
+        );
+      }
+
+      throw new ServiceUnavailableException({
+        message: 'Could not send reset code',
         detail: safeDetail,
       });
     }

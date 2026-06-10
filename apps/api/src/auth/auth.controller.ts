@@ -240,6 +240,51 @@ export class AuthController {
     return this.auth.resendEmailVerificationCode(email);
   }
 
+  @Post('forgot-password')
+  async forgotPassword(@Body() body: { email?: string }) {
+    const email = body?.email;
+    if (!email) throw new BadRequestException('Missing email');
+    return this.auth.forgotPassword(email);
+  }
+
+  @Post('reset-password')
+  async resetPassword(
+    @Body()
+    body: {
+      email?: string;
+      code?: string;
+      newPassword?: string;
+    },
+  ) {
+    const email = body?.email;
+    const code = body?.code;
+    const newPassword = body?.newPassword;
+
+    if (!email || !code || !newPassword) {
+      throw new BadRequestException('Missing email, code or new password');
+    }
+
+    return this.auth.resetPassword(email, code, newPassword);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('change-password')
+  async changePassword(
+    @Req() req: any,
+    @Body() body: { currentPassword?: string; newPassword?: string },
+  ) {
+    const userId = req?.user?.userId ?? req?.user?.id ?? req?.user?.sub;
+    const currentPassword = body?.currentPassword;
+    const newPassword = body?.newPassword;
+
+    if (!userId) throw new BadRequestException('Missing user id');
+    if (!currentPassword || !newPassword) {
+      throw new BadRequestException('Missing current or new password');
+    }
+
+    return this.auth.changePassword(userId, currentPassword, newPassword);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Post('set-password')
   async setPassword(@Req() req: any, @Body() body: { password?: string }) {

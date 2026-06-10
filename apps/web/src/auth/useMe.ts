@@ -22,6 +22,7 @@ export type Me = {
   termsVersion: string | null;
   privacyAcceptedAt?: string | null;
   privacyVersion?: string | null;
+  hasPasswordLogin?: boolean;
   createdAt?: string;
   updatedAt?: string;
 };

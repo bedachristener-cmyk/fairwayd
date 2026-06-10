@@ -11,9 +11,9 @@ export default function LoginPanel() {
   const loc = useLocation();
   const { login } = useAuth();
 
-  const [mode, setMode] = useState<"signin" | "register" | "verify">(
-    "signin",
-  );
+  const [mode, setMode] = useState<
+    "signin" | "register" | "verify" | "forgotPassword" | "resetPassword"
+  >("signin");
   const [msg, setMsg] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -22,10 +22,16 @@ export default function LoginPanel() {
   const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetCode, setResetCode] = useState("");
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetPasswordConfirm, setResetPasswordConfirm] = useState("");
   const [passwordBusy, setPasswordBusy] = useState(false);
   const [registerBusy, setRegisterBusy] = useState(false);
   const [verifyBusy, setVerifyBusy] = useState(false);
   const [resendBusy, setResendBusy] = useState(false);
+  const [forgotBusy, setForgotBusy] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
   const googleConfigured = useMemo(() => {
@@ -260,6 +266,96 @@ export default function LoginPanel() {
     }
   };
 
+  const requestPasswordReset = async () => {
+    const cleanEmail = (resetEmail || email).trim();
+    if (forgotBusy) return;
+
+    if (!cleanEmail) {
+      setMsg("Email is required");
+      return;
+    }
+
+    try {
+      setForgotBusy(true);
+      setMsg(null);
+
+      const res = await fetch(`${API_BASE}/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail }),
+      });
+
+      if (!res.ok) {
+        throw new Error(await readApiError(res, "Could not send reset code"));
+      }
+
+      setResetEmail(cleanEmail);
+      setResetCode("");
+      setResetPassword("");
+      setResetPasswordConfirm("");
+      setMode("resetPassword");
+      setMsg("If an account exists for this email, we sent a reset code.");
+    } catch (err) {
+      setMsg(
+        err instanceof Error
+          ? err.message
+          : "Could not send reset code",
+      );
+    } finally {
+      setForgotBusy(false);
+    }
+  };
+
+  const submitPasswordReset = async () => {
+    const cleanEmail = resetEmail.trim();
+    if (resetBusy) return;
+
+    if (!cleanEmail || !resetCode.trim()) {
+      setMsg("Enter your email and reset code.");
+      return;
+    }
+    if (resetPassword.length < 8) {
+      setMsg("New password must be at least 8 characters.");
+      return;
+    }
+    if (resetPassword !== resetPasswordConfirm) {
+      setMsg("Passwords do not match.");
+      return;
+    }
+
+    try {
+      setResetBusy(true);
+      setMsg(null);
+
+      const res = await fetch(`${API_BASE}/auth/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: cleanEmail,
+          code: resetCode,
+          newPassword: resetPassword,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(await readApiError(res, "Could not reset password"));
+      }
+
+      setPassword("");
+      setEmail(cleanEmail);
+      setMode("signin");
+      setMsg("Password reset. You can sign in now.");
+    } catch (err) {
+      setMsg(
+        err instanceof Error
+          ? err.message
+          : "Could not reset password",
+      );
+    } finally {
+      setResetBusy(false);
+    }
+  };
+
   const inputStyle: CSSProperties = {
     width: "100%",
     boxSizing: "border-box",
@@ -390,6 +486,22 @@ export default function LoginPanel() {
               }}
             >
               {passwordBusy ? "Signing in..." : "Sign in"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setResetEmail(email.trim());
+                setMode("forgotPassword");
+                setMsg(null);
+              }}
+              style={{
+                ...linkButtonStyle,
+                justifySelf: "start",
+                padding: "2px 0",
+              }}
+            >
+              Forgot password?
             </button>
           </div>
 
@@ -554,7 +666,7 @@ export default function LoginPanel() {
             Already have an account? Sign in
           </button>
         </div>
-      ) : (
+      ) : mode === "verify" ? (
         <div
           style={{
             display: "grid",
@@ -623,6 +735,160 @@ export default function LoginPanel() {
             style={linkButtonStyle}
           >
             Back to sign in
+          </button>
+        </div>
+      ) : mode === "forgotPassword" ? (
+        <div
+          style={{
+            display: "grid",
+            gap: 10,
+          }}
+        >
+          <div style={{ fontSize: 13, fontWeight: 900, color: "#111" }}>
+            Forgot password
+          </div>
+          <div
+            style={{
+              fontSize: 13,
+              color: "rgba(0,0,0,0.68)",
+              lineHeight: 1.4,
+            }}
+          >
+            Enter your email and we will send a reset code if the account
+            exists.
+          </div>
+
+          <input
+            type="email"
+            value={resetEmail}
+            onChange={(e) => setResetEmail(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void requestPasswordReset();
+            }}
+            placeholder="you@example.com"
+            autoComplete="email"
+            style={inputStyle}
+          />
+
+          <button
+            type="button"
+            disabled={forgotBusy || !resetEmail.trim()}
+            onClick={requestPasswordReset}
+            style={{
+              ...primaryButtonStyle,
+              opacity: forgotBusy || !resetEmail.trim() ? 0.6 : 1,
+              cursor: forgotBusy || !resetEmail.trim() ? "default" : "pointer",
+            }}
+          >
+            {forgotBusy ? "Sending..." : "Send reset code"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMode("signin");
+              setMsg(null);
+            }}
+            style={linkButtonStyle}
+          >
+            Back to sign in
+          </button>
+        </div>
+      ) : (
+        <div
+          style={{
+            display: "grid",
+            gap: 10,
+          }}
+        >
+          <div style={{ fontSize: 13, fontWeight: 900, color: "#111" }}>
+            Reset password
+          </div>
+
+          <input
+            type="email"
+            value={resetEmail}
+            onChange={(e) => setResetEmail(e.target.value)}
+            placeholder="you@example.com"
+            autoComplete="email"
+            style={inputStyle}
+          />
+
+          <input
+            type="text"
+            inputMode="numeric"
+            value={resetCode}
+            onChange={(e) =>
+              setResetCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+            }
+            placeholder="Reset code"
+            autoComplete="one-time-code"
+            style={inputStyle}
+          />
+
+          <input
+            type="password"
+            value={resetPassword}
+            onChange={(e) => setResetPassword(e.target.value)}
+            placeholder="New password"
+            autoComplete="new-password"
+            style={inputStyle}
+          />
+
+          <input
+            type="password"
+            value={resetPasswordConfirm}
+            onChange={(e) => setResetPasswordConfirm(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void submitPasswordReset();
+            }}
+            placeholder="Confirm new password"
+            autoComplete="new-password"
+            style={inputStyle}
+          />
+
+          <button
+            type="button"
+            disabled={
+              resetBusy ||
+              !resetEmail.trim() ||
+              resetCode.trim().length !== 6 ||
+              !resetPassword ||
+              !resetPasswordConfirm
+            }
+            onClick={submitPasswordReset}
+            style={{
+              ...primaryButtonStyle,
+              opacity:
+                resetBusy ||
+                !resetEmail.trim() ||
+                resetCode.trim().length !== 6 ||
+                !resetPassword ||
+                !resetPasswordConfirm
+                  ? 0.6
+                  : 1,
+              cursor:
+                resetBusy ||
+                !resetEmail.trim() ||
+                resetCode.trim().length !== 6 ||
+                !resetPassword ||
+                !resetPasswordConfirm
+                  ? "default"
+                  : "pointer",
+            }}
+          >
+            {resetBusy ? "Resetting..." : "Reset password"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMode("forgotPassword");
+              setMsg(null);
+            }}
+            style={linkButtonStyle}
+          >
+            Send a new code
           </button>
         </div>
       )}

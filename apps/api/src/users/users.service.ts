@@ -103,15 +103,22 @@ export class UsersService {
   async getMe(userId: string) {
     const me = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: userProfileSelect,
+      select: {
+        ...userProfileSelect,
+        password: true,
+      },
     });
 
     if (!me) throw new NotFoundException('User not found');
-    return me;
+    const { password, ...safeMe } = me;
+    return {
+      ...safeMe,
+      hasPasswordLogin: !!password,
+    };
   }
 
   async acceptTerms(userId: string, termsVersion: string) {
-    return this.prisma.user.update({
+    const user = await this.prisma.user.update({
       where: { id: userId },
       data: {
         termsAcceptedAt: new Date(),
@@ -119,8 +126,17 @@ export class UsersService {
         privacyAcceptedAt: new Date(),
         privacyVersion: 'v1',
       },
-      select: userProfileSelect,
+      select: {
+        ...userProfileSelect,
+        password: true,
+      },
     });
+
+    const { password, ...safeUser } = user;
+    return {
+      ...safeUser,
+      hasPasswordLogin: !!password,
+    };
   }
 
   async updateProfile(
