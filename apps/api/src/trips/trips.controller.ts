@@ -165,6 +165,16 @@ export class TripsController {
     return this.tripsService.findActivity(tripId, req.user.id);
   }
 
+  @Get(':tripId/my-costs')
+  findMyCosts(@Param('tripId') tripId: string, @Req() req: any) {
+    return this.tripsService.findMyCosts(tripId, req.user.id);
+  }
+
+  @Get(':tripId/organizer-costs')
+  findOrganizerCosts(@Param('tripId') tripId: string, @Req() req: any) {
+    return this.tripsService.findOrganizerCosts(tripId, req.user.id);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string, @Req() req: any) {
     return this.tripsService.findOne(id, req.user.id);

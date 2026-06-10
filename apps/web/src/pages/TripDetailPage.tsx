@@ -22,6 +22,15 @@ import {
 } from "react-leaflet";
 import { API_BASE } from "../api/base";
 import { friendlyApiErrorMessage } from "../api/client";
+import {
+  getMyTripCosts,
+  getOrganizerTripCosts,
+  type MyTripCostsResponse,
+  type OrganizerTripCostsResponse,
+  type TripCostCategory,
+  type TripCostMember,
+  type TripCostRow,
+} from "../api/tripCosts";
 import { useAuth } from "../auth/AuthContext";
 import { fileUrl } from "../api/fileUrl";
 import { TripCardsSkeleton } from "../components/PolishStates";
@@ -237,12 +246,6 @@ type CostSummaryCategory =
   | "Car Rental"
   | "Restaurant"
   | "Activity";
-
-type CostSummary = {
-  categories: Record<CostSummaryCategory, number>;
-  total: number;
-  missingExchangeRateCount: number;
-};
 
 type CostSummaryDrilldown = {
   mode: "member" | "group";
@@ -922,14 +925,14 @@ function shouldIgnoreTripSwipe(target: EventTarget | null) {
 function itemIcon(type?: string | null) {
   const value = String(type ?? "").toLowerCase();
 
-  if (value === "flight" || value === "flights") return "✈️";
-  if (value === "golf_round" || value === "course") return "⛳";
-  if (value === "hotel") return "🏨";
-  if (value === "transfer" || value === "transport") return "🚗";
-  if (value === "car_rental") return "🚙";
-  if (value === "restaurant") return "🍽";
-  if (value === "free_day") return "🌴";
-  return "📝";
+  if (value === "flight" || value === "flights") return "âœˆï¸";
+  if (value === "golf_round" || value === "course") return "â›³";
+  if (value === "hotel") return "ðŸ¨";
+  if (value === "transfer" || value === "transport") return "ðŸš—";
+  if (value === "car_rental") return "ðŸš™";
+  if (value === "restaurant") return "ðŸ½";
+  if (value === "free_day") return "ðŸŒ´";
+  return "ðŸ“";
 }
 
 function itemDateValue(item: TripItem) {
@@ -1323,17 +1326,17 @@ function formatActivityDate(value?: string | null) {
 }
 
 function activityIcon(type: TripActivityType) {
-  if (type === "DOCUMENT_UPLOADED" || type === "DOCUMENT_DELETED") return "📄";
+  if (type === "DOCUMENT_UPLOADED" || type === "DOCUMENT_DELETED") return "ðŸ“„";
   if (
     type === "ITEM_CREATED" ||
     type === "ITEM_UPDATED" ||
     type === "ITEM_DELETED"
   ) {
-    return "🧾";
+    return "ðŸ§¾";
   }
-  if (type === "MEMBER_ADDED") return "👤";
-  if (type === "INVITE_CREATED") return "🔗";
-  return "✏️";
+  if (type === "MEMBER_ADDED") return "ðŸ‘¤";
+  if (type === "INVITE_CREATED") return "ðŸ”—";
+  return "âœï¸";
 }
 
 function formatTime(item: TripItem) {
@@ -1701,10 +1704,10 @@ function nextUpFlightRoute(item: TripItem) {
   const origin = airportCodeOrName(item.locationName);
   const destination = airportCodeOrName(item.address);
 
-  if (origin && destination) return `${origin} → ${destination}`;
-  if (origin) return `${origin} → Arrival airport missing`;
-  if (destination) return `Departure airport missing → ${destination}`;
-  return "Departure airport → Arrival airport missing";
+  if (origin && destination) return `${origin} â†’ ${destination}`;
+  if (origin) return `${origin} â†’ Arrival airport missing`;
+  if (destination) return `Departure airport missing â†’ ${destination}`;
+  return "Departure airport â†’ Arrival airport missing";
 }
 
 function nextUpFlightTiming(item: TripItem) {
@@ -1715,7 +1718,7 @@ function nextUpFlightTiming(item: TripItem) {
     .filter(Boolean)
     .join(" ");
 
-  if (start && end) return `${start} → ${end}`;
+  if (start && end) return `${start} â†’ ${end}`;
   return start || end;
 }
 
@@ -1747,7 +1750,7 @@ function compactItemWhenLine(item: TripItem, displayKey?: string) {
       item.endDate ? compactDateLabel(dayKeyFromValue(item.endDate)) : "",
     ]
       .filter(Boolean)
-      .join(" → ");
+      .join(" â†’ ");
     const checkIn = item.startTime?.trim() || "14:00";
     const checkOut = item.endTime?.trim() || "11:00";
     return [
@@ -1788,7 +1791,7 @@ function compactItemWhereLine(item: TripItem) {
     if (isCarRentalItem(item)) {
       return `Pickup ${item.locationName.trim()} · Return ${item.address.trim()}`;
     }
-    return `${item.locationName.trim()} → ${item.address.trim()}`;
+    return `${item.locationName.trim()} â†’ ${item.address.trim()}`;
   }
 
   return item.locationName?.trim() || item.address?.trim() || "";
@@ -2150,6 +2153,20 @@ function memberDisplayName(member?: TripMember | null) {
   );
 }
 
+function tripCostMemberDisplayName(member?: TripCostMember | null) {
+  return (
+    member?.displayName ||
+    member?.user?.name ||
+    member?.user?.handle ||
+    "Fairwayd member"
+  );
+}
+
+function tripCostDateLabel(row: TripCostRow) {
+  if (!row.date) return "";
+  return formatDateLabel(row.date.slice(0, 10));
+}
+
 function effectiveParticipants(item: TripItem, members: TripMember[]) {
   if (item.expenseType === "PERSONAL") {
     const payerId = item.paidByMemberId || item.paidByMember?.id;
@@ -2340,31 +2357,15 @@ function costLabelPlaceholderForItemType(type?: string | null) {
   return examples.length === 1 ? examples[0] : examples.join(", ");
 }
 
-const costSummaryCategories: CostSummaryCategory[] = [
+const tripCostCategories: TripCostCategory[] = [
+  "Flights",
+  "Hotels",
   "Golf",
-  "Hotel",
-  "Flight",
   "Transport",
-  "Car Rental",
-  "Restaurant",
-  "Activity",
+  "Restaurants",
+  "Activities",
+  "Other",
 ];
-
-function emptyCostSummary(): CostSummary {
-  return {
-    categories: {
-      Golf: 0,
-      Hotel: 0,
-      Flight: 0,
-      Transport: 0,
-      "Car Rental": 0,
-      Restaurant: 0,
-      Activity: 0,
-    },
-    total: 0,
-    missingExchangeRateCount: 0,
-  };
-}
 
 function costSummaryCategory(type?: string | null): CostSummaryCategory | null {
   const value = String(type ?? "").toLowerCase();
@@ -3751,6 +3752,13 @@ export default function TripDetailPage() {
   const [activity, setActivity] = useState<TripActivity[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityErr, setActivityErr] = useState<string | null>(null);
+  const [myCostsData, setMyCostsData] = useState<MyTripCostsResponse | null>(null);
+  const [myCostsLoading, setMyCostsLoading] = useState(false);
+  const [myCostsErr, setMyCostsErr] = useState<string | null>(null);
+  const [organizerCostsData, setOrganizerCostsData] =
+    useState<OrganizerTripCostsResponse | null>(null);
+  const [organizerCostsLoading, setOrganizerCostsLoading] = useState(false);
+  const [organizerCostsErr, setOrganizerCostsErr] = useState<string | null>(null);
 
   const myMembership = trip?.members?.find((member) => member.userId === user?.id);
   const canEditTrip =
@@ -3912,10 +3920,106 @@ export default function TripDetailPage() {
     }
   }
 
+  async function refreshCostViews() {
+    if (!token || !tripId) return;
+
+    try {
+      const myData = await getMyTripCosts(tripId, token);
+      setMyCostsData(myData);
+      setMyCostsErr(null);
+    } catch (error) {
+      setMyCostsErr(friendlyApiErrorMessage(error, "Failed to load my costs."));
+    }
+
+    if (canEditTrip) {
+      try {
+        const organizerData = await getOrganizerTripCosts(tripId, token);
+        setOrganizerCostsData(organizerData);
+        setOrganizerCostsErr(null);
+      } catch (error) {
+        setOrganizerCostsErr(
+          friendlyApiErrorMessage(error, "Failed to load organizer costs."),
+        );
+      }
+    }
+  }
+
   useEffect(() => {
     loadTrip();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, tripId]);
+
+  useEffect(() => {
+    if (!token || !tripId) {
+      setMyCostsData(null);
+      setMyCostsErr(null);
+      return;
+    }
+
+    const activeToken = token;
+    const activeTripId = tripId;
+    let cancelled = false;
+
+    async function loadMyCosts() {
+      try {
+        setMyCostsLoading(true);
+        setMyCostsErr(null);
+        const data = await getMyTripCosts(activeTripId, activeToken);
+        if (!cancelled) setMyCostsData(data);
+      } catch (error) {
+        if (!cancelled) {
+          setMyCostsData(null);
+          setMyCostsErr(
+            friendlyApiErrorMessage(error, "Failed to load my costs."),
+          );
+        }
+      } finally {
+        if (!cancelled) setMyCostsLoading(false);
+      }
+    }
+
+    void loadMyCosts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, tripId]);
+
+  useEffect(() => {
+    if (!token || !tripId || !canEditTrip) {
+      setOrganizerCostsData(null);
+      setOrganizerCostsErr(null);
+      return;
+    }
+
+    const activeToken = token;
+    const activeTripId = tripId;
+    let cancelled = false;
+
+    async function loadOrganizerCosts() {
+      try {
+        setOrganizerCostsLoading(true);
+        setOrganizerCostsErr(null);
+        const data = await getOrganizerTripCosts(activeTripId, activeToken);
+        if (!cancelled) setOrganizerCostsData(data);
+      } catch (error) {
+        if (!cancelled) {
+          setOrganizerCostsData(null);
+          setOrganizerCostsErr(
+            friendlyApiErrorMessage(error, "Failed to load organizer costs."),
+          );
+        }
+      } finally {
+        if (!cancelled) setOrganizerCostsLoading(false);
+      }
+    }
+
+    void loadOrganizerCosts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canEditTrip, token, tripId]);
 
   useEffect(() => {
     setCheckedChecklistIds(tripId ? readTravelChecklist(tripId) : new Set());
@@ -4395,6 +4499,7 @@ export default function TripDetailPage() {
       setBudgetDrafts([]);
       setExpandedBudgetCostId(null);
       await loadTrip();
+      await refreshCostViews();
     } catch (e: any) {
       setErr(e?.message ?? "Failed to save costs");
     } finally {
@@ -5523,62 +5628,6 @@ export default function TripDetailPage() {
   }, [trip?.items, trip?.members]);
 
   const baseCurrency = trip?.baseCurrency?.trim() || "CHF";
-  const myCostsSummary = useMemo<CostSummary>(() => {
-    const summary = emptyCostSummary();
-    const currentMemberId = myMembership?.id;
-    if (!currentMemberId) return summary;
-
-    for (const item of trip?.items ?? []) {
-      const category = costSummaryCategory(item.type);
-      if (!category) continue;
-      for (const cost of item.costs ?? []) {
-        const participantIds = costParticipantIds(cost, trip?.members ?? []);
-        if (!participantIds.includes(currentMemberId)) continue;
-
-        const converted = memberCostShareInBaseCurrency(
-          cost,
-          baseCurrency,
-          participantIds.length,
-        );
-        if (converted.missingExchangeRate) {
-          summary.missingExchangeRateCount += 1;
-          continue;
-        }
-
-        summary.categories[category] += converted.amount;
-        summary.total += converted.amount;
-      }
-    }
-
-    return summary;
-  }, [baseCurrency, myMembership?.id, trip?.items, trip?.members]);
-
-  const tripCostOverview = useMemo<CostSummary>(() => {
-    const summary = emptyCostSummary();
-
-    for (const item of trip?.items ?? []) {
-      const category = costSummaryCategory(item.type);
-      if (!category) continue;
-      for (const cost of item.costs ?? []) {
-        const participantIds = costParticipantIds(cost, trip?.members ?? []);
-        const converted = totalCostAmountInBaseCurrency(
-          cost,
-          baseCurrency,
-          participantIds.length,
-        );
-        if (converted.missingExchangeRate) {
-          summary.missingExchangeRateCount += 1;
-          continue;
-        }
-
-        summary.categories[category] += converted.amount;
-        summary.total += converted.amount;
-      }
-    }
-
-    return summary;
-  }, [baseCurrency, trip?.items, trip?.members]);
-
   function costSummaryDetailRows(
     mode: CostSummaryDrilldown["mode"],
     category: CostSummaryCategory,
@@ -5888,22 +5937,6 @@ export default function TripDetailPage() {
     { label: "Group/shared costs", value: budgetSummary.sharedTotal },
     { label: "Personal costs", value: budgetSummary.personalTotal },
   ];
-  const isTripCreator = Boolean(
-    user?.id &&
-      ((trip?.createdByUserId && trip.createdByUserId === user.id) ||
-        (trip?.createdById && trip.createdById === user.id)),
-  );
-  const myCostRows = costSummaryCategories.map((category) => ({
-    category,
-    label: costSummaryCategoryLabel(category),
-    value: myCostsSummary.categories[category],
-  }));
-  const tripCostRows = costSummaryCategories.map((category) => ({
-    category,
-    label: costSummaryCategoryLabel(category),
-    value: tripCostOverview.categories[category],
-  }));
-
   const filteredDocuments = useMemo(() => {
     if (documentCategoryFilter === "ALL") return documents;
 
@@ -6715,100 +6748,166 @@ export default function TripDetailPage() {
             }}
           >
             <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
-              <div style={sectionTitleTextStyle}>My estimated share</div>
+              <div style={sectionTitleTextStyle}>My Costs</div>
               <div style={sectionSubtitleTextStyle}>
-                Your estimated part of the trip costs in {baseCurrency}
+                Secure view of costs where you are involved
               </div>
             </div>
-            <div
+            <button
+              type="button"
+              onClick={() => void refreshCostViews()}
+              disabled={myCostsLoading}
               style={{
-                display: "grid",
-                gap: 1,
-                textAlign: "right",
-                minWidth: 112,
+                minHeight: 32,
+                padding: "0 12px",
+                borderRadius: 999,
+                border: "1px solid var(--border)",
+                background: "var(--bg)",
+                color: "var(--text)",
+                fontSize: 12,
+                fontWeight: 900,
+                cursor: myCostsLoading ? "default" : "pointer",
               }}
             >
-              <span style={{ color: "var(--sub)", fontSize: 11, fontWeight: 900 }}>
-                Estimated total
-              </span>
-              <span style={{ color: "var(--text)", fontSize: 17, fontWeight: 950 }}>
-                {formatMoney(myCostsSummary.total, baseCurrency)}
-              </span>
-            </div>
+              {myCostsLoading ? "Loading..." : "Refresh"}
+            </button>
           </div>
 
-          <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
-            These are your estimated shares based on selected participants.
-          </div>
-
-          {myCostsSummary.missingExchangeRateCount > 0 ? (
+          {myCostsErr ? (
             <div
               style={{
-                color: "var(--sub)",
+                color: "var(--danger)",
                 fontSize: 12,
                 lineHeight: 1.35,
                 padding: "7px 9px",
                 borderRadius: 12,
-                background: "color-mix(in srgb, var(--warning) 10%, var(--card))",
-                border:
-                  "1px solid color-mix(in srgb, var(--warning) 24%, var(--border))",
+                background: "var(--danger-soft)",
+                border: "1px solid color-mix(in srgb, var(--danger) 32%, var(--border))",
               }}
             >
-              Some foreign currency costs need an exchange rate.
+              {myCostsErr}
             </div>
           ) : null}
 
-          <div style={{ display: "grid", gap: 6 }}>
-            {myCostRows.map((row) => (
-              <button
-                type="button"
-                key={row.label}
-                onClick={() =>
-                  setCostSummaryDrilldown({
-                    mode: "member",
-                    category: row.category,
-                  })
-                }
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+              gap: 8,
+            }}
+          >
+            {[
+              {
+                label: "My share",
+                value: myCostsData?.summary.totalPersonalShare ?? 0,
+              },
+              {
+                label: "Paid by me",
+                value: myCostsData?.summary.totalPaidByMe ?? 0,
+              },
+              {
+                label: "Balance preview",
+                value: myCostsData?.summary.balancePreview ?? 0,
+              },
+            ].map((stat) => (
+              <div
+                key={stat.label}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 10,
-                  width: "100%",
-                  padding: "7px 9px",
-                  borderRadius: 12,
-                  background: "color-mix(in srgb, var(--bg) 72%, var(--card))",
-                  border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                  color: "var(--text)",
-                  cursor: "pointer",
-                  textAlign: "left",
+                  minWidth: 0,
+                  padding: "9px 10px",
+                  borderRadius: 14,
+                  background: "var(--bg)",
+                  border: "1px solid var(--border)",
+                  display: "grid",
+                  gap: 2,
                 }}
               >
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                  <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
-                    {row.label}
-                  </span>
+                <span style={{ color: "var(--sub)", fontSize: 11, fontWeight: 900 }}>
+                  {stat.label}
                 </span>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, flex: "0 0 auto" }}>
-                  <span
-                    style={{
-                      color: "var(--text)",
-                      fontSize: 12,
-                      fontWeight: 950,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {formatMoney(row.value, baseCurrency)}
-                  </span>
-                  <ChevronRight size={14} aria-hidden="true" />
+                <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
+                  {formatMoney(stat.value, myCostsData?.baseCurrency || baseCurrency)}
                 </span>
-              </button>
+              </div>
             ))}
+          </div>
+
+          <div style={{ display: "grid", gap: 10 }}>
+            {tripCostCategories.map((category) => {
+              const rows = (myCostsData?.costs ?? []).filter(
+                (row) => row.category === category,
+              );
+              if (rows.length === 0) return null;
+
+              return (
+                <div key={category} style={{ display: "grid", gap: 6 }}>
+                  <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
+                    {category}
+                  </div>
+                  {rows.map((row) => (
+                    <div
+                      key={row.costId}
+                      style={{
+                        display: "grid",
+                        gap: 5,
+                        padding: "9px 10px",
+                        borderRadius: 14,
+                        background: "color-mix(in srgb, var(--bg) 72%, var(--card))",
+                        border:
+                          "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          justifyContent: "space-between",
+                          gap: 10,
+                        }}
+                      >
+                        <div style={{ minWidth: 0, display: "grid", gap: 2 }}>
+                          <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
+                            {row.tripItemTitle}
+                          </span>
+                          <span style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.3 }}>
+                            {row.label}
+                            {tripCostDateLabel(row) ? ` · ${tripCostDateLabel(row)}` : ""}
+                          </span>
+                        </div>
+                        <span
+                          style={{
+                            color: "var(--text)",
+                            fontSize: 13,
+                            fontWeight: 950,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {formatMoney(row.personalShare, myCostsData?.baseCurrency || baseCurrency)}
+                        </span>
+                      </div>
+                      <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+                        Paid by {tripCostMemberDisplayName(row.paidBy)} · shared with{" "}
+                        {row.participantCount} {row.participantCount === 1 ? "person" : "people"}
+                        {row.paidAmount > 0
+                          ? ` · you paid ${formatMoney(row.paidAmount, myCostsData?.baseCurrency || baseCurrency)}`
+                          : ""}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+
+            {!myCostsLoading && !myCostsErr && (myCostsData?.costs.length ?? 0) === 0 ? (
+              <div style={{ color: "var(--sub)", fontSize: 13, lineHeight: 1.4 }}>
+                No costs are assigned to you yet.
+              </div>
+            ) : null}
           </div>
         </section>
       ) : null}
 
-      {isTripCreator ? (
+      {canEditTrip ? (
         <section
           style={{
             ...overviewAnchorStyle,
@@ -6817,28 +6916,31 @@ export default function TripDetailPage() {
           }}
         >
           <div style={{ display: "grid", gap: 2 }}>
-            <div style={sectionTitleTextStyle}>Organizer Tools</div>
-            <div style={sectionSubtitleTextStyle}>Group cost overview</div>
+            <div style={sectionTitleTextStyle}>Organizer Costs</div>
+            <div style={sectionSubtitleTextStyle}>
+              {organizerCostsLoading
+                ? "Loading organizer cost summary..."
+                : "All trip costs for OWNER and ADMIN members"}
+            </div>
           </div>
 
           <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
-            These are all recorded group costs. Payback tracking is not included yet.
+            This is a preview summary, not a final settlement.
           </div>
 
-          {tripCostOverview.missingExchangeRateCount > 0 ? (
+          {organizerCostsErr ? (
             <div
               style={{
-                color: "var(--sub)",
+                color: "var(--danger)",
                 fontSize: 12,
                 lineHeight: 1.35,
                 padding: "7px 9px",
                 borderRadius: 12,
-                background: "color-mix(in srgb, var(--warning) 10%, var(--card))",
-                border:
-                  "1px solid color-mix(in srgb, var(--warning) 24%, var(--border))",
+                background: "var(--danger-soft)",
+                border: "1px solid color-mix(in srgb, var(--danger) 32%, var(--border))",
               }}
             >
-              Some foreign currency costs are not converted yet.
+              {organizerCostsErr}
             </div>
           ) : null}
 
@@ -6855,7 +6957,7 @@ export default function TripDetailPage() {
             }}
           >
             <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
-              Total group costs
+              Total trip cost
             </span>
             <span
               style={{
@@ -6865,42 +6967,68 @@ export default function TripDetailPage() {
                 whiteSpace: "nowrap",
               }}
             >
-              {formatMoney(tripCostOverview.total, baseCurrency)}
+              {formatMoney(
+                organizerCostsData?.summary.totalTripCost ?? 0,
+                organizerCostsData?.baseCurrency || baseCurrency,
+              )}
             </span>
           </div>
 
-          <div style={{ display: "grid", gap: 6 }}>
-            {tripCostRows.map((row) => (
-              <button
-                type="button"
-                key={row.label}
-                onClick={() =>
-                  setCostSummaryDrilldown({
-                    mode: "group",
-                    category: row.category,
-                  })
-                }
+          <div style={{ display: "grid", gap: 8 }}>
+            <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
+              Paid by summary
+            </div>
+            {(organizerCostsData?.summary.paidBySummary ?? []).map((row) => (
+              <div
+                key={row.member.id}
                 style={{
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
                   gap: 10,
-                  width: "100%",
-                  padding: "7px 9px",
+                  padding: "8px 10px",
                   borderRadius: 12,
                   background: "color-mix(in srgb, var(--bg) 72%, var(--card))",
                   border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                  color: "var(--text)",
-                  cursor: "pointer",
-                  textAlign: "left",
                 }}
               >
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                  <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
-                    {row.label}
-                  </span>
+                <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
+                  {tripCostMemberDisplayName(row.member)}
                 </span>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, flex: "0 0 auto" }}>
+                <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
+                  {formatMoney(row.totalPaid, organizerCostsData?.baseCurrency || baseCurrency)}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: "grid", gap: 8 }}>
+            <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
+              Balance preview
+            </div>
+            {(organizerCostsData?.summary.balancePreview ?? []).map((row) => (
+              <div
+                key={row.member.id}
+                style={{
+                  display: "grid",
+                  gap: 5,
+                  padding: "8px 10px",
+                  borderRadius: 12,
+                  background: "color-mix(in srgb, var(--bg) 72%, var(--card))",
+                  border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
+                  }}
+                >
+                  <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
+                    {tripCostMemberDisplayName(row.member)}
+                  </span>
                   <span
                     style={{
                       color: "var(--text)",
@@ -6909,16 +7037,15 @@ export default function TripDetailPage() {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {formatMoney(row.value, baseCurrency)}
+                    {formatMoney(row.balance, organizerCostsData?.baseCurrency || baseCurrency)}
                   </span>
-                  <ChevronRight size={14} aria-hidden="true" />
-                </span>
-              </button>
+                </div>
+                <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+                  Paid {formatMoney(row.paid, organizerCostsData?.baseCurrency || baseCurrency)} · share{" "}
+                  {formatMoney(row.expectedShare, organizerCostsData?.baseCurrency || baseCurrency)}
+                </div>
+              </div>
             ))}
-          </div>
-
-          <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
-            Payback overview coming later.
           </div>
         </section>
       ) : null}
@@ -8972,7 +9099,7 @@ export default function TripDetailPage() {
                   }
                   style={{ width: 16, height: 16, flex: "0 0 auto" }}
                 />
-                <span>Private document – only visible to me</span>
+                <span>Private document - only visible to me</span>
               </label>
 
               <button

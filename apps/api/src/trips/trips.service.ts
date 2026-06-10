@@ -26,6 +26,10 @@ import { UpdateTripMemberDto } from './dto/update-trip-member.dto';
 import { UpdateTripItemDto } from './dto/update-trip-item.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
 import { TripItemCostDto } from './dto/trip-item-cost.dto';
+import {
+  buildMyCostsSummary,
+  buildOrganizerCostsSummary,
+} from './budget-v3';
 
 function startsAtFromDto(date?: string, startTime?: string) {
   if (!date) return undefined;
@@ -341,7 +345,16 @@ export class TripsService {
 
     return trips.map((trip) => ({
       ...trip,
-      items: this.filterTripItemsDocumentsForUser(trip.items, userId),
+      items: this.filterTripItemsForUser(
+        trip.items,
+        userId,
+        trip.members.find((member) => member.userId === userId)?.id,
+        trip.members.some(
+          (member) =>
+            member.userId === userId &&
+            (member.role === TripRole.OWNER || member.role === TripRole.ADMIN),
+        ),
+      ),
     }));
   }
 
@@ -381,8 +394,39 @@ export class TripsService {
 
     return {
       ...trip,
-      items: this.filterTripItemsDocumentsForUser(trip.items, userId),
+      items: this.filterTripItemsForUser(
+        trip.items,
+        userId,
+        membership.id,
+        membership.role === TripRole.OWNER || membership.role === TripRole.ADMIN,
+      ),
     };
+  }
+
+  async findMyCosts(tripId: string, userId: string) {
+    const membership = await this.assertIsTripMember(tripId, userId);
+    const trip = await this.findTripWithCostsOrThrow(tripId);
+
+    return buildMyCostsSummary({
+      tripId: trip.id,
+      baseCurrency: trip.baseCurrency?.trim() || 'CHF',
+      currentMemberId: membership.id,
+      currentUserId: userId,
+      members: trip.members,
+      items: trip.items,
+    });
+  }
+
+  async findOrganizerCosts(tripId: string, userId: string) {
+    await this.assertCanModifyTrip(tripId, userId);
+    const trip = await this.findTripWithCostsOrThrow(tripId);
+
+    return buildOrganizerCostsSummary({
+      tripId: trip.id,
+      baseCurrency: trip.baseCurrency?.trim() || 'CHF',
+      members: trip.members,
+      items: trip.items,
+    });
   }
 
   async getOrCreateInvite(tripId: string, userId: string) {
@@ -1672,6 +1716,32 @@ export class TripsService {
     return uniqueIds;
   }
 
+  private filterTripItemsForUser<T extends {
+    createdByUserId?: string | null;
+    costs?: any[];
+    documentLinks?: any[];
+  }>(
+    items: T[],
+    userId: string,
+    tripMemberId?: string,
+    canSeeAllCosts = false,
+  ) {
+    return items.map((item) => {
+      const itemWithDocuments = this.filterTripItemDocumentsForUser(item, userId);
+
+      if (!Array.isArray(itemWithDocuments.costs) || canSeeAllCosts) {
+        return itemWithDocuments;
+      }
+
+      return {
+        ...itemWithDocuments,
+        costs: itemWithDocuments.costs.filter((cost) =>
+          this.isCostVisibleToMember(cost, itemWithDocuments, userId, tripMemberId),
+        ),
+      };
+    });
+  }
+
   private filterTripItemsDocumentsForUser<T extends { documentLinks?: any[] }>(
     items: T[],
     userId: string,
@@ -1695,6 +1765,45 @@ export class TripsService {
         );
       }),
     };
+  }
+
+  private isCostVisibleToMember(
+    cost: {
+      paidByMemberId?: string | null;
+      participants?: { tripMemberId?: string | null }[];
+    },
+    item: { createdByUserId?: string | null },
+    userId: string,
+    tripMemberId?: string,
+  ) {
+    if (item.createdByUserId === userId) return true;
+    if (!tripMemberId) return false;
+    if (cost.paidByMemberId === tripMemberId) return true;
+    return (cost.participants ?? []).some(
+      (participant) => participant.tripMemberId === tripMemberId,
+    );
+  }
+
+  private async findTripWithCostsOrThrow(tripId: string) {
+    const trip = await this.prisma.trip.findUnique({
+      where: { id: tripId },
+      include: {
+        members: {
+          orderBy: { createdAt: 'asc' },
+          include: tripMemberInclude,
+        },
+        items: {
+          orderBy: tripItemOrderBy,
+          include: tripItemInclude,
+        },
+      },
+    });
+
+    if (!trip) {
+      throw new NotFoundException('Trip not found');
+    }
+
+    return trip;
   }
 
 
