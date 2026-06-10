@@ -150,6 +150,81 @@ export class AuthController {
     return this.auth.verifyEmailLogin(token);
   }
 
+  @Post('password-login')
+  async passwordLogin(@Body() body: { email?: string; password?: string }) {
+    const email = body?.email;
+    const password = body?.password;
+    if (!email || !password) {
+      throw new BadRequestException('Missing email or password');
+    }
+
+    return this.auth.loginWithPassword(email, password);
+  }
+
+  @Post('register')
+  async register(
+    @Body()
+    body: {
+      name?: string;
+      email?: string;
+      password?: string;
+      passwordConfirm?: string;
+    },
+  ) {
+    const name = String(body?.name ?? '').trim();
+    const email = String(body?.email ?? '').trim().toLowerCase();
+    const password = String(body?.password ?? '');
+    const passwordConfirm = String(body?.passwordConfirm ?? '');
+
+    console.log('[Auth] register attempt', { email });
+
+    try {
+      if (name.length < 2) {
+        throw new BadRequestException('Name must be at least 2 characters');
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        throw new BadRequestException('Invalid email');
+      }
+      if (password.length < 8) {
+        throw new BadRequestException('Password must be at least 8 characters');
+      }
+      if (password !== passwordConfirm) {
+        throw new BadRequestException('Passwords do not match');
+      }
+
+      const result = await this.auth.registerWithPassword({
+        name,
+        email,
+        password,
+        passwordConfirm,
+      });
+
+      console.log('[Auth] register success', {
+        userId: result.user.id,
+        email,
+      });
+
+      return result;
+    } catch (e: any) {
+      console.log('[Auth] register failed', {
+        message: e?.message ?? String(e),
+      });
+      throw e;
+    }
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('set-password')
+  async setPassword(@Req() req: any, @Body() body: { password?: string }) {
+    const userId = req?.user?.userId ?? req?.user?.id ?? req?.user?.sub;
+    const password = body?.password;
+
+    if (!userId) throw new BadRequestException('Missing user id');
+    if (!password) throw new BadRequestException('Missing password');
+
+    return this.auth.setPassword(userId, password);
+  }
+
   /**
    * Dev-only login (local/dev environments)
    */

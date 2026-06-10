@@ -1,22 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
+import type { CSSProperties } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import GoogleLoginButton from "../auth/oauth/GoogleLoginButton";
 import { API_BASE } from "../api/base";
-import {
-  POST_LOGIN_NEXT_KEY,
-  validPostLoginNext,
-} from "../auth/postLoginNext";
+import { validPostLoginNext } from "../auth/postLoginNext";
 
 export default function LoginPanel() {
   const nav = useNavigate();
   const loc = useLocation();
   const { login } = useAuth();
 
+  const [mode, setMode] = useState<"signin" | "register">("signin");
   const [msg, setMsg] = useState<string | null>(null);
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [emailBusy, setEmailBusy] = useState(false);
-  const [emailSuccess, setEmailSuccess] = useState(false);
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [passwordBusy, setPasswordBusy] = useState(false);
+  const [registerBusy, setRegisterBusy] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
   const googleConfigured = useMemo(() => {
@@ -40,54 +42,164 @@ export default function LoginPanel() {
     nav(next ?? "/feed", { replace: true });
   };
 
-  const requestEmailLogin = async () => {
-    const value = email.trim();
-    if (!value || emailBusy) return;
+  const readApiError = async (res: Response, fallback: string) => {
+    const text = await res.text().catch(() => "");
+    let message = "";
 
-    try {
-      setEmailBusy(true);
-      setMsg(null);
-      setEmailSuccess(false);
-      const next = validPostLoginNext(new URLSearchParams(loc.search).get("next"));
-      if (next) {
-        localStorage.setItem(POST_LOGIN_NEXT_KEY, next);
-      }
-
-      const res = await fetch(`${API_BASE}/auth/email/request`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: value }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        const message = Array.isArray(data?.message)
+    if (text) {
+      try {
+        const data = JSON.parse(text);
+        message = Array.isArray(data?.message)
           ? data.message.join(", ")
           : typeof data?.message === "string"
             ? data.message
-            : "Could not send login link. Please try again.";
-        const detail =
-          typeof data?.detail === "string" && data.detail.trim()
-            ? data.detail.trim()
-            : "";
+            : typeof data?.error === "string"
+              ? data.error
+              : text;
+      } catch {
+        message = text;
+      }
+    }
 
-        if (detail && import.meta.env.DEV) {
-          throw new Error(`${message}: ${detail}`);
-        }
+    return message
+      ? `${fallback}: ${message} (${res.status})`
+      : `${fallback} (${res.status})`;
+  };
 
-        throw new Error(message);
+  const passwordLogin = async () => {
+    const value = email.trim();
+    if (!value || !password || passwordBusy) return;
+
+    try {
+      setPasswordBusy(true);
+      setMsg(null);
+
+      const res = await fetch(`${API_BASE}/auth/password-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: value, password }),
+      });
+
+      if (!res.ok) {
+        throw new Error(await readApiError(res, "Invalid email or password"));
       }
 
-      setEmailSuccess(true);
+      const data = await res.json();
+      const token = typeof data?.token === "string" ? data.token : "";
+      if (!token) {
+        throw new Error("Invalid email or password");
+      }
+
+      onLoggedIn(token);
     } catch (err) {
       setMsg(
         err instanceof Error
           ? err.message
-          : "Could not send login link. Please try again.",
+          : "Invalid email or password",
       );
     } finally {
-      setEmailBusy(false);
+      setPasswordBusy(false);
     }
+  };
+
+  const registerAccount = async () => {
+    const cleanName = name.trim();
+    const cleanEmail = email.trim();
+    if (registerBusy) return;
+
+    if (!cleanName) {
+      setMsg("Name is required");
+      return;
+    }
+    if (!cleanEmail) {
+      setMsg("Email is required");
+      return;
+    }
+    if (password.length < 8) {
+      setMsg("Password must be at least 8 characters");
+      return;
+    }
+    if (password !== passwordConfirm) {
+      setMsg("Passwords do not match");
+      return;
+    }
+
+    try {
+      setRegisterBusy(true);
+      setMsg(null);
+
+      const res = await fetch(`${API_BASE}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: cleanName,
+          email: cleanEmail,
+          password,
+          passwordConfirm,
+        }),
+      });
+
+      if (!res.ok) {
+        const apiError = await readApiError(res, "Could not create account");
+
+        if (res.status === 409 || /already registered/i.test(apiError)) {
+          throw new Error(
+            "This email is already registered. Please sign in instead.",
+          );
+        }
+
+        throw new Error(apiError);
+      }
+
+      const data = await res.json();
+      const token = typeof data?.token === "string" ? data.token : "";
+      if (!token) {
+        throw new Error("Could not create account");
+      }
+
+      onLoggedIn(token);
+    } catch (err) {
+      setMsg(
+        err instanceof Error
+          ? err.message
+          : "Could not create account",
+      );
+    } finally {
+      setRegisterBusy(false);
+    }
+  };
+
+  const inputStyle: CSSProperties = {
+    width: "100%",
+    boxSizing: "border-box",
+    border: "1px solid rgba(0,0,0,0.14)",
+    borderRadius: 12,
+    padding: "11px 12px",
+    font: "inherit",
+    color: "#111",
+    background: "white",
+  };
+
+  const primaryButtonStyle: CSSProperties = {
+    width: "100%",
+    padding: "11px 12px",
+    borderRadius: 999,
+    border: "1px solid rgba(0,0,0,0.18)",
+    background: "#111",
+    color: "white",
+    fontWeight: 900,
+  };
+
+  const linkButtonStyle: CSSProperties = {
+    border: 0,
+    background: "transparent",
+    color: "#111",
+    font: "inherit",
+    fontSize: 13,
+    fontWeight: 900,
+    padding: "8px 0",
+    cursor: "pointer",
+    textDecoration: "underline",
   };
 
   return (
@@ -100,7 +212,7 @@ export default function LoginPanel() {
       }}
     >
       <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 8 }}>
-        build {import.meta.env.MODE} / {window.location.origin}
+        build {import.meta.env.MODE} / {window.location.origin} / api {API_BASE}
       </div>
 
       {msg && (
@@ -119,120 +231,197 @@ export default function LoginPanel() {
         </div>
       )}
 
-      {/* Remember me */}
-      <label
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          marginBottom: 12,
-          opacity: 0.85,
-        }}
-      >
-        <input
-          type="checkbox"
-          checked={rememberMe}
-          onChange={(e) => setRememberMe(e.target.checked)}
-        />
-        <span style={{ fontSize: 12 }}>
-          Angemeldet bleiben (auf fremden PCs deaktivieren)
-        </span>
-      </label>
-
-      {googleConfigured ? (
+      {mode === "signin" ? (
         <>
-          <div style={{ marginBottom: 12 }}>
+          <div
+            style={{
+              display: "grid",
+              gap: 10,
+            }}
+          >
+            <div style={{ fontSize: 13, fontWeight: 900, color: "#111" }}>
+              Sign in with email
+            </div>
+
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void passwordLogin();
+              }}
+              placeholder="you@example.com"
+              autoComplete="email"
+              style={inputStyle}
+            />
+
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void passwordLogin();
+              }}
+              placeholder="Password"
+              autoComplete="current-password"
+              style={inputStyle}
+            />
+
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                opacity: 0.85,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
+              <span style={{ fontSize: 12 }}>
+                Angemeldet bleiben (auf fremden PCs deaktivieren)
+              </span>
+            </label>
+
+            <button
+              type="button"
+              disabled={passwordBusy || !email.trim() || !password}
+              onClick={passwordLogin}
+              style={{
+                ...primaryButtonStyle,
+                opacity: passwordBusy || !email.trim() || !password ? 0.6 : 1,
+                cursor:
+                  passwordBusy || !email.trim() || !password
+                    ? "default"
+                    : "pointer",
+              }}
+            >
+              {passwordBusy ? "Signing in..." : "Sign in"}
+            </button>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr auto 1fr",
+              alignItems: "center",
+              gap: 12,
+              margin: "16px 0",
+              color: "rgba(0,0,0,0.52)",
+              fontSize: 12,
+              fontWeight: 800,
+            }}
+          >
+            <div style={{ height: 1, background: "rgba(0,0,0,0.10)" }} />
+            <div>or</div>
+            <div style={{ height: 1, background: "rgba(0,0,0,0.10)" }} />
+          </div>
+
+          {googleConfigured ? (
             <GoogleLoginButton
               onToken={(token: string) => onLoggedIn(token)}
               onError={(m: string) => setMsg(m || null)}
             />
-          </div>
+          ) : (
+            <>
+              <div style={{ fontSize: 13, opacity: 0.85 }}>
+                Google Login ist nicht konfiguriert.
+              </div>
+              <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>
+                Setze <strong>VITE_GOOGLE_CLIENT_ID</strong> im Web (Vercel /
+                .env), dann erscheint der Google Button.
+              </div>
+            </>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              setMode("register");
+              setMsg(null);
+            }}
+            style={{ ...linkButtonStyle, marginTop: 10 }}
+          >
+            Create account
+          </button>
         </>
       ) : (
-        <>
-          <div style={{ fontSize: 13, opacity: 0.85 }}>
-            Google Login ist nicht konfiguriert.
-          </div>
-          <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>
-            Setze <strong>VITE_GOOGLE_CLIENT_ID</strong> im Web (Vercel / .env),
-            dann erscheint der Google Button.
-          </div>
-        </>
-      )}
-
-      <div
-        style={{
-          marginTop: 14,
-          paddingTop: 14,
-          borderTop: "1px solid rgba(0,0,0,0.10)",
-          display: "grid",
-          gap: 10,
-        }}
-      >
-        <div style={{ fontSize: 13, fontWeight: 900, color: "#111" }}>
-          Continue with email
-        </div>
-
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => {
-            setEmail(e.target.value);
-            setEmailSuccess(false);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") void requestEmailLogin();
-          }}
-          placeholder="you@example.com"
-          autoComplete="email"
+        <div
           style={{
-            width: "100%",
-            boxSizing: "border-box",
-            border: "1px solid rgba(0,0,0,0.14)",
-            borderRadius: 12,
-            padding: "11px 12px",
-            font: "inherit",
-            color: "#111",
-            background: "white",
-          }}
-        />
-
-        <button
-          type="button"
-          disabled={emailBusy || !email.trim()}
-          onClick={requestEmailLogin}
-          style={{
-            width: "100%",
-            padding: "11px 12px",
-            borderRadius: 999,
-            border: "1px solid rgba(0,0,0,0.18)",
-            background: "#111",
-            color: "white",
-            opacity: emailBusy || !email.trim() ? 0.6 : 1,
-            cursor: emailBusy || !email.trim() ? "default" : "pointer",
-            fontWeight: 900,
+            display: "grid",
+            gap: 10,
           }}
         >
-          {emailBusy ? "Sending..." : "Send login link"}
-        </button>
+          <div style={{ fontSize: 13, fontWeight: 900, color: "#111" }}>
+            Register account
+          </div>
 
-        {emailSuccess ? (
-          <div
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Name"
+            autoComplete="name"
+            style={inputStyle}
+          />
+
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            autoComplete="email"
+            style={inputStyle}
+          />
+
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
+            autoComplete="new-password"
+            style={inputStyle}
+          />
+
+          <input
+            type="password"
+            value={passwordConfirm}
+            onChange={(e) => setPasswordConfirm(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void registerAccount();
+            }}
+            placeholder="Repeat password"
+            autoComplete="new-password"
+            style={inputStyle}
+          />
+
+          <button
+            type="button"
+            disabled={registerBusy}
+            onClick={registerAccount}
             style={{
-              border: "1px solid rgba(0,0,0,0.10)",
-              background: "rgba(0,0,0,0.04)",
-              borderRadius: 12,
-              padding: 10,
-              fontSize: 13,
-              fontWeight: 800,
-              color: "#111",
-              lineHeight: 1.35,
+              ...primaryButtonStyle,
+              opacity: registerBusy ? 0.6 : 1,
+              cursor: registerBusy ? "default" : "pointer",
             }}
           >
-            Check your email for a login link
-          </div>
-        ) : null}
-      </div>
+            {registerBusy ? "Creating account..." : "Register account"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMode("signin");
+              setMsg(null);
+            }}
+            style={linkButtonStyle}
+          >
+            Already have an account? Sign in
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -10,7 +10,7 @@ import CourseDropdown, { type CourseLite } from "../components/CourseDropdown";
 import PostCard from "../components/PostCard";
 import CommentModal from "../components/CommentModal";
 import BackToTopButton from "../components/BackToTopButton";
-import { EmptyState, FeedCardsSkeleton } from "../components/PolishStates";
+import { FeedCardsSkeleton } from "../components/PolishStates";
 import { useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
@@ -191,6 +191,117 @@ function Card({
         }}
       >
         {children}
+      </div>
+    </div>
+  );
+}
+
+function NewUserFeedWelcomeCard({
+  onSearchCourses,
+  onExploreMap,
+  onCompleteProfile,
+  isMobile,
+}: {
+  onSearchCourses: () => void;
+  onExploreMap: () => void;
+  onCompleteProfile: () => void;
+  isMobile: boolean;
+}) {
+  const primaryButtonStyle: React.CSSProperties = {
+    minHeight: 44,
+    borderRadius: 999,
+    border: "1px solid var(--text)",
+    background: "var(--text)",
+    color: "var(--bg)",
+    fontSize: 14,
+    fontWeight: 900,
+    cursor: "pointer",
+    padding: "11px 16px",
+  };
+
+  const secondaryButtonStyle: React.CSSProperties = {
+    minHeight: 44,
+    borderRadius: 999,
+    border: "1px solid var(--border)",
+    background: "var(--bg)",
+    color: "var(--text)",
+    fontSize: 14,
+    fontWeight: 850,
+    cursor: "pointer",
+    padding: "11px 16px",
+  };
+
+  return (
+    <div
+      style={{
+        margin: isMobile ? "0 12px" : 0,
+        padding: isMobile ? 18 : 22,
+        borderRadius: isMobile ? 20 : 24,
+        border: "1px solid color-mix(in srgb, var(--border) 76%, transparent)",
+        background:
+          "linear-gradient(145deg, color-mix(in srgb, var(--card) 96%, var(--bg) 4%), var(--card))",
+        color: "var(--text)",
+        boxShadow: "0 14px 34px rgba(0,0,0,0.07)",
+        display: "grid",
+        gap: 14,
+      }}
+    >
+      <div style={{ display: "grid", gap: 7 }}>
+        <div style={{ fontSize: isMobile ? 20 : 22, fontWeight: 950 }}>
+          Welcome to Fairwayd
+        </div>
+        <div
+          style={{
+            color: "var(--sub)",
+            fontSize: 14,
+            lineHeight: 1.45,
+            maxWidth: 520,
+          }}
+        >
+          Your feed is empty because you don&rsquo;t follow anyone or any course
+          yet.
+        </div>
+        <div
+          style={{
+            color: "var(--sub)",
+            fontSize: 14,
+            lineHeight: 1.45,
+            maxWidth: 520,
+          }}
+        >
+          Start by following your first course to build your golf feed.
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: isMobile ? "1fr" : "repeat(3, max-content)",
+          gap: 10,
+          alignItems: "center",
+        }}
+      >
+        <button
+          type="button"
+          onClick={onSearchCourses}
+          style={primaryButtonStyle}
+        >
+          Search courses
+        </button>
+        <button
+          type="button"
+          onClick={onExploreMap}
+          style={secondaryButtonStyle}
+        >
+          Explore map
+        </button>
+        <button
+          type="button"
+          onClick={onCompleteProfile}
+          style={secondaryButtonStyle}
+        >
+          Complete profile
+        </button>
       </div>
     </div>
   );
@@ -2414,28 +2525,12 @@ export default function FeedPage() {
               <FeedCardsSkeleton count={2} />
             ) : null}
 
-            {!feedLoading && filteredPosts.length === 0 ? (
-              <EmptyState
-                title="No golf moments yet."
-                body={t("feed_empty_text")}
-                action={
-                  <button
-                    type="button"
-                    onClick={() => nav("/map")}
-                    style={{
-                      padding: "8px 14px",
-                      borderRadius: 999,
-                      border: "1px solid var(--border)",
-                      background: "var(--bg)",
-                      color: "var(--text)",
-                      cursor: "pointer",
-                      fontSize: 13,
-                      fontWeight: 800,
-                    }}
-                  >
-                    {t("discover_courses")}
-                  </button>
-                }
+            {!feedLoading && posts.length === 0 ? (
+              <NewUserFeedWelcomeCard
+                isMobile={isMobile}
+                onSearchCourses={() => nav("/map?search=courses")}
+                onExploreMap={() => nav("/map")}
+                onCompleteProfile={() => nav("/profile")}
               />
             ) : null}
 

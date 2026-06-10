@@ -3,6 +3,7 @@ import {
   Injectable,
   ConflictException,
   ServiceUnavailableException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -11,6 +12,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { createHash, randomBytes } from 'node:crypto';
 import { MailService } from './mail.service';
+import * as bcrypt from 'bcryptjs';
 
 type OAuthProvider = 'GOOGLE' | 'APPLE' | 'FACEBOOK';
 
@@ -189,6 +191,103 @@ export class AuthService {
         termsVersion: (user as any).termsVersion ?? null,
       },
     };
+  }
+
+  async loginWithPassword(emailInput: string, passwordInput: string) {
+    const email = this.normalizeEmail(emailInput);
+    const password = String(passwordInput ?? '');
+
+    if (!password) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user?.password) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    const ok = await this.verifyPassword(password, user.password);
+    if (!ok) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    return this.issueJwtResponse(user);
+  }
+
+  async registerWithPassword(params: {
+    name?: string;
+    email?: string;
+    password?: string;
+    passwordConfirm?: string;
+  }) {
+    const name = String(params.name ?? '').trim();
+    const email = this.normalizeEmail(String(params.email ?? ''));
+    const password = String(params.password ?? '');
+    const passwordConfirm = String(params.passwordConfirm ?? '');
+
+    if (name.length < 2) {
+      throw new BadRequestException('Name must be at least 2 characters');
+    }
+    if (password.length < 8) {
+      throw new BadRequestException('Password must be at least 8 characters');
+    }
+    if (password !== passwordConfirm) {
+      throw new BadRequestException('Passwords do not match');
+    }
+
+    const existing = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existing) {
+      throw new ConflictException('Email already registered');
+    }
+
+    const hash = await this.hashPassword(password);
+
+    try {
+      const user = await this.prisma.user.create({
+        data: {
+          email,
+          password: hash,
+          name,
+          handle: null,
+          avatarUrl: null,
+          termsAcceptedAt: null,
+          termsVersion: null,
+        },
+      });
+
+      return this.issueJwtResponse(user);
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new ConflictException('Email already registered');
+      }
+
+      throw e;
+    }
+  }
+
+  async setPassword(userId: string, passwordInput: string) {
+    const password = String(passwordInput ?? '');
+    if (!password) {
+      throw new BadRequestException('Missing password');
+    }
+
+    const hash = await this.hashPassword(password);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password: hash },
+    });
+
+    return { success: true };
   }
 
   async requestEmailLogin(emailInput: string) {
@@ -389,6 +488,14 @@ export class AuthService {
 
   private hashMagicToken(token: string) {
     return createHash('sha256').update(token).digest('hex');
+  }
+
+  async hashPassword(password: string) {
+    return bcrypt.hash(password, 12);
+  }
+
+  async verifyPassword(password: string, hash: string) {
+    return bcrypt.compare(password, hash);
   }
 
   getGoogleNativeRedirectUri() {
