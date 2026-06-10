@@ -492,19 +492,33 @@ export default function LoginPanel() {
             style={{
               display: "flex",
               alignItems: "flex-start",
-              gap: 8,
+              gap: 10,
               color: "#111",
               fontSize: 12,
               lineHeight: 1.35,
+              border: "1px solid rgba(0,0,0,0.14)",
+              borderRadius: 12,
+              padding: "10px 11px",
+              background: "rgba(0,0,0,0.025)",
+              cursor: "pointer",
             }}
           >
             <input
               type="checkbox"
               checked={acceptedLegal}
               onChange={(e) => setAcceptedLegal(e.target.checked)}
-              style={{ marginTop: 2 }}
+              required
+              style={{
+                width: 18,
+                height: 18,
+                margin: 0,
+                marginTop: 1,
+                flex: "0 0 auto",
+                accentColor: "#111",
+                cursor: "pointer",
+              }}
             />
-            <span>
+            <span style={{ minWidth: 0 }}>
               I accept the{" "}
               <Link to="/terms" style={{ color: "#111", fontWeight: 900 }}>
                 Terms & Conditions
@@ -513,7 +527,6 @@ export default function LoginPanel() {
               <Link to="/privacy" style={{ color: "#111", fontWeight: 900 }}>
                 Privacy Policy
               </Link>
-              .
             </span>
           </label>
 
