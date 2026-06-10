@@ -577,6 +577,118 @@ body.is-pwa-standalone {
   color: var(--danger);
 }
 
+.fw-auth-card {
+  color: var(--text);
+  background: color-mix(in srgb, var(--card) 94%, var(--bg)) !important;
+  border-color: color-mix(in srgb, var(--border) 86%, transparent) !important;
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+}
+
+.fw-auth-input {
+  min-height: 46px;
+  border-radius: 14px !important;
+  border: 1px solid var(--border) !important;
+  background: color-mix(in srgb, var(--card) 96%, var(--bg)) !important;
+  color: var(--text) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    background 0.16s ease;
+}
+
+.fw-auth-input::placeholder {
+  color: color-mix(in srgb, var(--sub) 78%, transparent);
+}
+
+.fw-auth-input:focus {
+  border-color: color-mix(in srgb, var(--accent) 72%, var(--border)) !important;
+  box-shadow:
+    0 0 0 3px var(--accent-soft),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.fw-auth-code-input {
+  font-size: 20px !important;
+}
+
+.fw-auth-primary {
+  transition:
+    background 0.16s ease,
+    transform 0.16s ease,
+    opacity 0.16s ease;
+}
+
+.fw-auth-primary:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+.fw-auth-link {
+  color: var(--accent-strong) !important;
+  text-decoration: none !important;
+}
+
+.fw-auth-link:focus-visible,
+.fw-auth-inline-link:focus-visible {
+  outline: 3px solid var(--accent-soft);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+.fw-auth-inline-link {
+  color: var(--accent-strong);
+  text-decoration: none;
+}
+
+.fw-auth-check-row {
+  min-height: 32px;
+  color: var(--sub);
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.fw-auth-check-row input,
+.fw-auth-legal input {
+  accent-color: var(--accent);
+}
+
+.fw-auth-legal {
+  color: var(--text);
+  font-size: 12.5px;
+  line-height: 1.38;
+  border: 1px solid color-mix(in srgb, var(--border) 86%, transparent);
+  border-radius: 14px;
+  padding: 11px 12px;
+  background: color-mix(in srgb, var(--muted) 42%, transparent);
+}
+
+.fw-auth-message {
+  padding: 11px 12px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.fw-auth-message--error {
+  color: #7f1d1d;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+}
+
+.fw-auth-message--success {
+  color: #064e3b;
+  background: #ecfdf5;
+  border: 1px solid #86efac;
+}
+
+.fw-auth-google {
+  display: flex;
+  justify-content: center;
+}
+
 .fw-course-popup .leaflet-popup-content-wrapper {
   background: transparent !important;
   box-shadow: none !important;

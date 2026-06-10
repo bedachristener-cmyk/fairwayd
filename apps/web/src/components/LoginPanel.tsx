@@ -34,6 +34,15 @@ export default function LoginPanel() {
   const [resetBusy, setResetBusy] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
+  const cleanEmail = email.trim();
+  const canRegister =
+    name.trim().length > 0 &&
+    cleanEmail.length > 0 &&
+    password.length >= 8 &&
+    passwordConfirm.length > 0 &&
+    password === passwordConfirm &&
+    acceptedLegal;
+
   const googleConfigured = useMemo(() => {
     // Vite ersetzt das zur Build-Zeit; wenn es fehlt, ist Google Login nicht konfiguriert
     return !!import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -81,6 +90,24 @@ export default function LoginPanel() {
       : `${fallback} (${res.status})`;
   };
 
+  const readableMessage = (value: string) => {
+    if (/EMAIL_NOT_VERIFIED/i.test(value)) {
+      return "Please verify your email before signing in.";
+    }
+    if (/invalid email or password/i.test(value)) {
+      return "Invalid email or password.";
+    }
+    if (/invalid|expired|attempt/i.test(value) && /code/i.test(value)) {
+      return "Invalid or expired code.";
+    }
+    return value.replace(/\s+\(\d{3}\)$/, ".");
+  };
+
+  const isPositiveMessage = (value: string) =>
+    /sent|check your email|reset\.|new verification code|can sign in/i.test(
+      value,
+    );
+
   const passwordLogin = async () => {
     const value = email.trim();
     if (!value || !password || passwordBusy) return;
@@ -114,9 +141,9 @@ export default function LoginPanel() {
       onLoggedIn(token);
     } catch (err) {
       setMsg(
-        err instanceof Error
-          ? err.message
-          : "Invalid email or password",
+        readableMessage(
+          err instanceof Error ? err.message : "Invalid email or password",
+        ),
       );
     } finally {
       setPasswordBusy(false);
@@ -185,9 +212,9 @@ export default function LoginPanel() {
       setMsg("Check your email for a 6-digit verification code.");
     } catch (err) {
       setMsg(
-        err instanceof Error
-          ? err.message
-          : "Could not create account",
+        readableMessage(
+          err instanceof Error ? err.message : "Could not create account",
+        ),
       );
     } finally {
       setRegisterBusy(false);
@@ -227,9 +254,9 @@ export default function LoginPanel() {
       onLoggedIn(token);
     } catch (err) {
       setMsg(
-        err instanceof Error
-          ? err.message
-          : "Could not verify account",
+        readableMessage(
+          err instanceof Error ? err.message : "Could not verify account",
+        ),
       );
     } finally {
       setVerifyBusy(false);
@@ -257,9 +284,9 @@ export default function LoginPanel() {
       setMsg("A new verification code has been sent.");
     } catch (err) {
       setMsg(
-        err instanceof Error
-          ? err.message
-          : "Could not resend code",
+        readableMessage(
+          err instanceof Error ? err.message : "Could not resend code",
+        ),
       );
     } finally {
       setResendBusy(false);
@@ -297,9 +324,9 @@ export default function LoginPanel() {
       setMsg("If an account exists for this email, we sent a reset code.");
     } catch (err) {
       setMsg(
-        err instanceof Error
-          ? err.message
-          : "Could not send reset code",
+        readableMessage(
+          err instanceof Error ? err.message : "Could not send reset code",
+        ),
       );
     } finally {
       setForgotBusy(false);
@@ -347,9 +374,9 @@ export default function LoginPanel() {
       setMsg("Password reset. You can sign in now.");
     } catch (err) {
       setMsg(
-        err instanceof Error
-          ? err.message
-          : "Could not reset password",
+        readableMessage(
+          err instanceof Error ? err.message : "Could not reset password",
+        ),
       );
     } finally {
       setResetBusy(false);
@@ -359,59 +386,85 @@ export default function LoginPanel() {
   const inputStyle: CSSProperties = {
     width: "100%",
     boxSizing: "border-box",
-    border: "1px solid rgba(0,0,0,0.14)",
-    borderRadius: 12,
-    padding: "11px 12px",
+    border: "1px solid var(--border)",
+    borderRadius: 14,
+    padding: "12px 13px",
     font: "inherit",
-    color: "#111",
-    background: "white",
+    fontSize: 16,
+    color: "var(--text)",
+    background: "var(--card)",
+    outline: "none",
   };
 
   const primaryButtonStyle: CSSProperties = {
     width: "100%",
-    padding: "11px 12px",
-    borderRadius: 999,
-    border: "1px solid rgba(0,0,0,0.18)",
-    background: "#111",
-    color: "white",
+    minHeight: 46,
+    padding: "12px 14px",
+    borderRadius: "var(--fw-pill-radius)",
+    border: "1px solid transparent",
+    background: "var(--fw-pill-cta-bg)",
+    color: "var(--fw-pill-cta-text)",
     fontWeight: 900,
+    fontSize: 15,
+    boxShadow: "var(--fw-pill-shadow)",
   };
 
   const linkButtonStyle: CSSProperties = {
     border: 0,
     background: "transparent",
-    color: "#111",
+    color: "var(--accent-strong)",
     font: "inherit",
-    fontSize: 13,
-    fontWeight: 900,
-    padding: "8px 0",
+    fontSize: 14,
+    fontWeight: 800,
+    padding: "6px 0",
     cursor: "pointer",
-    textDecoration: "underline",
+    textDecoration: "none",
+  };
+
+  const fieldGroupStyle: CSSProperties = {
+    display: "grid",
+    gap: 10,
+  };
+
+  const titleStyle: CSSProperties = {
+    margin: 0,
+    color: "var(--text)",
+    fontSize: 22,
+    lineHeight: 1.1,
+    fontWeight: 950,
+    letterSpacing: 0,
+  };
+
+  const helpTextStyle: CSSProperties = {
+    margin: 0,
+    fontSize: 13,
+    color: "var(--sub)",
+    lineHeight: 1.45,
   };
 
   return (
     <div
+      className="fw-auth-card fw-surface-card"
       style={{
-        background: "white",
-        borderRadius: 20,
-        boxShadow: "0 2px 14px rgba(0,0,0,0.06)",
         padding: 18,
       }}
     >
-      <div style={{ fontSize: 11, opacity: 0.5, marginBottom: 8 }}>
-        build {import.meta.env.MODE} / {window.location.origin} / api {API_BASE}
-      </div>
+      {import.meta.env.DEV ? (
+        <div style={{ fontSize: 11, opacity: 0.55, marginBottom: 8 }}>
+          build {import.meta.env.MODE} / {window.location.origin} / api{" "}
+          {API_BASE}
+        </div>
+      ) : null}
 
       {msg && (
         <div
+          className={
+            isPositiveMessage(msg)
+              ? "fw-auth-message fw-auth-message--success"
+              : "fw-auth-message fw-auth-message--error"
+          }
           style={{
-            marginBottom: 10,
-            padding: 10,
-            borderRadius: 12,
-            background: "rgba(255,0,0,0.06)",
-            border: "1px solid rgba(255,0,0,0.18)",
-            fontSize: 13,
-            fontWeight: 700,
+            marginBottom: 12,
           }}
         >
           {msg}
@@ -421,16 +474,17 @@ export default function LoginPanel() {
       {mode === "signin" ? (
         <>
           <div
-            style={{
-              display: "grid",
-              gap: 10,
-            }}
+            style={fieldGroupStyle}
           >
-            <div style={{ fontSize: 13, fontWeight: 900, color: "#111" }}>
-              Sign in with email
+            <div style={{ display: "grid", gap: 6 }}>
+              <h2 style={titleStyle}>Sign in to Fairwayd</h2>
+              <p style={helpTextStyle}>
+                Use your email and password, or continue with Google.
+              </p>
             </div>
 
             <input
+              className="fw-auth-input"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -443,6 +497,7 @@ export default function LoginPanel() {
             />
 
             <input
+              className="fw-auth-input"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -455,11 +510,11 @@ export default function LoginPanel() {
             />
 
             <label
+              className="fw-auth-check-row"
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 8,
-                opacity: 0.85,
+                gap: 10,
               }}
             >
               <input
@@ -467,12 +522,11 @@ export default function LoginPanel() {
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
               />
-              <span style={{ fontSize: 12 }}>
-                Angemeldet bleiben (auf fremden PCs deaktivieren)
-              </span>
+              <span>Remember me</span>
             </label>
 
             <button
+              className="fw-auth-primary"
               type="button"
               disabled={passwordBusy || !email.trim() || !password}
               onClick={passwordLogin}
@@ -489,6 +543,7 @@ export default function LoginPanel() {
             </button>
 
             <button
+              className="fw-auth-link"
               type="button"
               onClick={() => {
                 setResetEmail(email.trim());
@@ -512,21 +567,23 @@ export default function LoginPanel() {
               alignItems: "center",
               gap: 12,
               margin: "16px 0",
-              color: "rgba(0,0,0,0.52)",
+              color: "var(--sub)",
               fontSize: 12,
               fontWeight: 800,
             }}
           >
-            <div style={{ height: 1, background: "rgba(0,0,0,0.10)" }} />
+            <div style={{ height: 1, background: "var(--border)" }} />
             <div>or</div>
-            <div style={{ height: 1, background: "rgba(0,0,0,0.10)" }} />
+            <div style={{ height: 1, background: "var(--border)" }} />
           </div>
 
           {googleConfigured ? (
-            <GoogleLoginButton
-              onToken={(token: string) => onLoggedIn(token)}
-              onError={(m: string) => setMsg(m || null)}
-            />
+            <div className="fw-auth-google">
+              <GoogleLoginButton
+                onToken={(token: string) => onLoggedIn(token)}
+                onError={(m: string) => setMsg(m || null)}
+              />
+            </div>
           ) : (
             <>
               <div style={{ fontSize: 13, opacity: 0.85 }}>
@@ -540,6 +597,7 @@ export default function LoginPanel() {
           )}
 
           <button
+            className="fw-auth-link"
             type="button"
             onClick={() => {
               setMode("register");
@@ -552,16 +610,17 @@ export default function LoginPanel() {
         </>
       ) : mode === "register" ? (
         <div
-          style={{
-            display: "grid",
-            gap: 10,
-          }}
+          style={fieldGroupStyle}
         >
-          <div style={{ fontSize: 13, fontWeight: 900, color: "#111" }}>
-            Register account
+          <div style={{ display: "grid", gap: 6 }}>
+            <h2 style={titleStyle}>Create your Fairwayd account</h2>
+            <p style={helpTextStyle}>
+              Join Fairwayd with email and password.
+            </p>
           </div>
 
           <input
+            className="fw-auth-input"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -571,6 +630,7 @@ export default function LoginPanel() {
           />
 
           <input
+            className="fw-auth-input"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -580,6 +640,7 @@ export default function LoginPanel() {
           />
 
           <input
+            className="fw-auth-input"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -589,6 +650,7 @@ export default function LoginPanel() {
           />
 
           <input
+            className="fw-auth-input"
             type="password"
             value={passwordConfirm}
             onChange={(e) => setPasswordConfirm(e.target.value)}
@@ -601,17 +663,11 @@ export default function LoginPanel() {
           />
 
           <label
+            className="fw-auth-legal"
             style={{
               display: "flex",
               alignItems: "flex-start",
               gap: 10,
-              color: "#111",
-              fontSize: 12,
-              lineHeight: 1.35,
-              border: "1px solid rgba(0,0,0,0.14)",
-              borderRadius: 12,
-              padding: "10px 11px",
-              background: "rgba(0,0,0,0.025)",
               cursor: "pointer",
             }}
           >
@@ -626,36 +682,46 @@ export default function LoginPanel() {
                 margin: 0,
                 marginTop: 1,
                 flex: "0 0 auto",
-                accentColor: "#111",
+                accentColor: "var(--accent)",
                 cursor: "pointer",
               }}
             />
             <span style={{ minWidth: 0 }}>
               I accept the{" "}
-              <Link to="/terms" style={{ color: "#111", fontWeight: 900 }}>
+              <Link
+                to="/terms"
+                className="fw-auth-inline-link"
+                style={{ fontWeight: 900 }}
+              >
                 Terms & Conditions
               </Link>{" "}
               and{" "}
-              <Link to="/privacy" style={{ color: "#111", fontWeight: 900 }}>
+              <Link
+                to="/privacy"
+                className="fw-auth-inline-link"
+                style={{ fontWeight: 900 }}
+              >
                 Privacy Policy
               </Link>
             </span>
           </label>
 
           <button
+            className="fw-auth-primary"
             type="button"
-            disabled={registerBusy || !acceptedLegal}
+            disabled={registerBusy || !canRegister}
             onClick={registerAccount}
             style={{
               ...primaryButtonStyle,
-              opacity: registerBusy || !acceptedLegal ? 0.6 : 1,
-              cursor: registerBusy || !acceptedLegal ? "default" : "pointer",
+              opacity: registerBusy || !canRegister ? 0.6 : 1,
+              cursor: registerBusy || !canRegister ? "default" : "pointer",
             }}
           >
             {registerBusy ? "Creating account..." : "Register account"}
           </button>
 
           <button
+            className="fw-auth-link"
             type="button"
             onClick={() => {
               setMode("signin");
@@ -668,19 +734,17 @@ export default function LoginPanel() {
         </div>
       ) : mode === "verify" ? (
         <div
-          style={{
-            display: "grid",
-            gap: 10,
-          }}
+          style={fieldGroupStyle}
         >
-          <div style={{ fontSize: 13, fontWeight: 900, color: "#111" }}>
-            Verify your email
-          </div>
-          <div style={{ fontSize: 13, color: "rgba(0,0,0,0.68)", lineHeight: 1.4 }}>
-            Enter the 6-digit code sent to {verificationEmail || email}.
+          <div style={{ display: "grid", gap: 6 }}>
+            <h2 style={titleStyle}>Verify your email</h2>
+            <p style={helpTextStyle}>
+              Enter the 6-digit code sent to {verificationEmail || email}.
+            </p>
           </div>
 
           <input
+            className="fw-auth-input fw-auth-code-input"
             type="text"
             inputMode="numeric"
             value={verificationCode}
@@ -701,6 +765,7 @@ export default function LoginPanel() {
           />
 
           <button
+            className="fw-auth-primary"
             type="button"
             disabled={verifyBusy || verificationCode.trim().length !== 6}
             onClick={verifyAccount}
@@ -718,15 +783,17 @@ export default function LoginPanel() {
           </button>
 
           <button
+            className="fw-auth-link"
             type="button"
             disabled={resendBusy}
             onClick={resendVerificationCode}
             style={linkButtonStyle}
           >
-            {resendBusy ? "Sending..." : "Send a new code"}
+            {resendBusy ? "Sending..." : "Resend code"}
           </button>
 
           <button
+            className="fw-auth-link"
             type="button"
             onClick={() => {
               setMode("signin");
@@ -739,26 +806,18 @@ export default function LoginPanel() {
         </div>
       ) : mode === "forgotPassword" ? (
         <div
-          style={{
-            display: "grid",
-            gap: 10,
-          }}
+          style={fieldGroupStyle}
         >
-          <div style={{ fontSize: 13, fontWeight: 900, color: "#111" }}>
-            Forgot password
-          </div>
-          <div
-            style={{
-              fontSize: 13,
-              color: "rgba(0,0,0,0.68)",
-              lineHeight: 1.4,
-            }}
-          >
-            Enter your email and we will send a reset code if the account
-            exists.
+          <div style={{ display: "grid", gap: 6 }}>
+            <h2 style={titleStyle}>Reset your password</h2>
+            <p style={helpTextStyle}>
+              Enter your email and we will send a reset code if the account
+              exists.
+            </p>
           </div>
 
           <input
+            className="fw-auth-input"
             type="email"
             value={resetEmail}
             onChange={(e) => setResetEmail(e.target.value)}
@@ -771,6 +830,7 @@ export default function LoginPanel() {
           />
 
           <button
+            className="fw-auth-primary"
             type="button"
             disabled={forgotBusy || !resetEmail.trim()}
             onClick={requestPasswordReset}
@@ -784,6 +844,7 @@ export default function LoginPanel() {
           </button>
 
           <button
+            className="fw-auth-link"
             type="button"
             onClick={() => {
               setMode("signin");
@@ -796,16 +857,17 @@ export default function LoginPanel() {
         </div>
       ) : (
         <div
-          style={{
-            display: "grid",
-            gap: 10,
-          }}
+          style={fieldGroupStyle}
         >
-          <div style={{ fontSize: 13, fontWeight: 900, color: "#111" }}>
-            Reset password
+          <div style={{ display: "grid", gap: 6 }}>
+            <h2 style={titleStyle}>Enter reset code</h2>
+            <p style={helpTextStyle}>
+              Use the 6-digit code from your email and choose a new password.
+            </p>
           </div>
 
           <input
+            className="fw-auth-input"
             type="email"
             value={resetEmail}
             onChange={(e) => setResetEmail(e.target.value)}
@@ -815,6 +877,7 @@ export default function LoginPanel() {
           />
 
           <input
+            className="fw-auth-input"
             type="text"
             inputMode="numeric"
             value={resetCode}
@@ -827,6 +890,7 @@ export default function LoginPanel() {
           />
 
           <input
+            className="fw-auth-input"
             type="password"
             value={resetPassword}
             onChange={(e) => setResetPassword(e.target.value)}
@@ -836,6 +900,7 @@ export default function LoginPanel() {
           />
 
           <input
+            className="fw-auth-input"
             type="password"
             value={resetPasswordConfirm}
             onChange={(e) => setResetPasswordConfirm(e.target.value)}
@@ -848,6 +913,7 @@ export default function LoginPanel() {
           />
 
           <button
+            className="fw-auth-primary"
             type="button"
             disabled={
               resetBusy ||
@@ -881,6 +947,7 @@ export default function LoginPanel() {
           </button>
 
           <button
+            className="fw-auth-link"
             type="button"
             onClick={() => {
               setMode("forgotPassword");
