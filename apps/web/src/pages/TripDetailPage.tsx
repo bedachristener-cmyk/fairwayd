@@ -2181,6 +2181,9 @@ function tripCostDetailPlace(row: {
 }
 
 function tripCostBalanceMessage(row: MyTripCostRow, baseCurrency: string) {
+  if (row.paymentMode === "EACH_PAYS_OWN") {
+    return `Your part ${formatMoney(row.personalShare, baseCurrency)} - everyone pays own part`;
+  }
   if (row.netBalance > 0) {
     return `Others owe you ${formatMoney(row.netBalance, baseCurrency)}`;
   }
@@ -2218,11 +2221,40 @@ function expenseTypeLabel(item: TripItem) {
 }
 
 function costModeLabel(item: TripItem) {
-  return item.costMode === "PER_PERSON" ? "Per person" : "Total";
+  return item.costMode === "PER_PERSON"
+    ? "Amount is per person"
+    : "Amount is total and will be split";
 }
 
 function costModeText(mode?: CostMode | null) {
-  return mode === "PER_PERSON" ? "per person" : "total";
+  return mode === "PER_PERSON"
+    ? "amount is per person"
+    : "amount is total and will be split";
+}
+
+function costModeOptionLabel(mode: CostMode) {
+  return mode === "PER_PERSON"
+    ? "Amount is per person"
+    : "Amount is total and will be split";
+}
+
+function budgetDraftShareHelperText(draft: BudgetCostDraft) {
+  const amount = optionalNumber(draft.amount);
+  const participantCount = draft.participantMemberIds.length;
+  if (amount === undefined || amount <= 0) {
+    return draft.costMode === "PER_PERSON"
+      ? "Enter the amount one selected person pays."
+      : "Enter the total amount to split between selected people.";
+  }
+  if (draft.costMode === "PER_PERSON") {
+    return `${formatMoney(amount, draft.currency)} per selected person`;
+  }
+  if (participantCount <= 0) {
+    return `${formatMoney(amount, draft.currency)} shared by selected people`;
+  }
+  return `${formatMoney(amount, draft.currency)} shared by ${participantCount} ${
+    participantCount === 1 ? "person" : "people"
+  } = ${formatMoney(amount / participantCount, draft.currency)} each`;
 }
 
 function defaultCostModeForItemType(type?: string | null): CostMode {
@@ -2588,6 +2620,7 @@ function TripItemBudgetSection({
                   : "paid by one member";
             const participantCount = draft.participantMemberIds.length;
             const needsExchangeRate = draftNeedsExchangeRate(draft, baseCurrency);
+            const shareHelperText = budgetDraftShareHelperText(draft);
 
             return (
               <div
@@ -2684,6 +2717,9 @@ function TripItemBudgetSection({
                   >
                     Delete
                   </button>
+                </div>
+                <div style={{ color: "var(--sub)", fontSize: 11, lineHeight: 1.3 }}>
+                  {shareHelperText}
                 </div>
               </div>
             );
@@ -6918,6 +6954,7 @@ export default function TripDetailPage() {
                   </div>
                   {rows.map((row) => {
                     const isExpanded = expandedMyCostId === row.costId;
+                    const isEachPaysOwn = row.paymentMode === "EACH_PAYS_OWN";
                     const payerLabel =
                       row.paidByMemberId === myMembership?.id
                         ? "you"
@@ -7010,11 +7047,18 @@ export default function TripDetailPage() {
                             </div>
                           </div>
                           <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
-                            Paid by {payerLabel} - shared with {row.participantCount}{" "}
-                            {row.participantCount === 1 ? "person" : "people"}
-                            {row.netBalance !== 0
-                              ? ` - ${tripCostBalanceMessage(row, myCostsCurrency)}`
-                              : ""}
+                            {isEachPaysOwn
+                              ? `Your part ${formatMoney(
+                                  row.personalShare,
+                                  myCostsCurrency,
+                                )} - everyone pays own part`
+                              : `Paid by ${payerLabel} - shared with ${row.participantCount} ${
+                                  row.participantCount === 1 ? "person" : "people"
+                                }${
+                                  row.netBalance !== 0
+                                    ? ` - ${tripCostBalanceMessage(row, myCostsCurrency)}`
+                                    : ""
+                                }`}
                           </div>
                         </button>
 
@@ -7042,12 +7086,30 @@ export default function TripDetailPage() {
                                 ],
                                 ["Where", tripCostDetailPlace(row)],
                                 ["Amount", formatMoney(row.totalBaseAmount, myCostsCurrency)],
-                                ["Paid by", payerLabel === "you" ? "You" : payerLabel],
+                                [
+                                  "Payment",
+                                  isEachPaysOwn ? "Everyone pays own part" : "",
+                                ],
+                                [
+                                  "Paid by",
+                                  isEachPaysOwn
+                                    ? ""
+                                    : payerLabel === "you"
+                                      ? "You"
+                                      : payerLabel,
+                                ],
                                 ["My share", formatMoney(row.personalShare, myCostsCurrency)],
-                                ["Paid by me", formatMoney(row.paidByMe, myCostsCurrency)],
+                                [
+                                  "Paid by me",
+                                  isEachPaysOwn
+                                    ? ""
+                                    : formatMoney(row.paidByMe, myCostsCurrency),
+                                ],
                                 [
                                   "Balance preview",
-                                  row.netBalance > 0
+                                  isEachPaysOwn
+                                    ? ""
+                                    : row.netBalance > 0
                                     ? `+ ${formatMoney(row.netBalance, myCostsCurrency)}`
                                     : row.netBalance < 0
                                       ? `- ${formatMoney(Math.abs(row.netBalance), myCostsCurrency)}`
@@ -10923,6 +10985,7 @@ export default function TripDetailPage() {
                       ? `paid by ${memberDisplayName(draftPaidBy)}`
                       : "paid by one member";
                 const needsExchangeRate = draftNeedsExchangeRate(draft, baseCurrency);
+                const shareHelperText = budgetDraftShareHelperText(draft);
                 return (
                   <section
                     key={draft.localId}
@@ -11053,10 +11116,11 @@ export default function TripDetailPage() {
                         </div>
 
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-                          {[
-                            { value: "PER_PERSON" as CostMode, label: "Per person" },
-                            { value: "TOTAL" as CostMode, label: "Total" },
-                          ].map((option) => {
+                          {(["TOTAL", "PER_PERSON"] as CostMode[]).map((mode) => {
+                            const option = {
+                              value: mode,
+                              label: costModeOptionLabel(mode),
+                            };
                             const selected = draft.costMode === option.value;
                             return (
                               <button
@@ -11067,17 +11131,25 @@ export default function TripDetailPage() {
                                 }
                                 className="fw-pill fw-pill--meta"
                                 style={{
-                                  height: 32,
+                                  minHeight: 32,
+                                  height: "auto",
+                                  paddingTop: 7,
+                                  paddingBottom: 7,
                                   cursor: "pointer",
                                   borderColor: selected ? "var(--accent-strong)" : "var(--border)",
                                   background: selected ? "var(--accent-soft)" : "transparent",
                                   color: selected ? "var(--text)" : "var(--sub)",
+                                  whiteSpace: "normal",
+                                  lineHeight: 1.2,
                                 }}
                               >
                                 {option.label}
                               </button>
                             );
                           })}
+                        </div>
+                        <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+                          {shareHelperText}
                         </div>
 
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>

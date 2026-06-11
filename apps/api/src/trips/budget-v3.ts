@@ -433,15 +433,19 @@ function buildMyCostRow(
     share.personalShare,
     cost,
   );
+  const createsPayback =
+    (cost.paymentMode ?? TripItemPaymentMode.PAID_BY_ONE) ===
+      TripItemPaymentMode.PAID_BY_ONE &&
+    Boolean(cost.paidByMemberId);
   const isPayer = cost.paidByMemberId === currentMemberId;
-  const paidByMe = isPayer ? share.totalBaseAmount : 0;
-  const owedToMe = isPayer
+  const paidByMe = createsPayback && isPayer ? share.totalBaseAmount : 0;
+  const owedToMe = createsPayback && isPayer
     ? participantShares.filter(
         (entry) => entry.member.id !== currentMemberId,
       )
     : [];
   const iOwe =
-    !isPayer && row.personalShare > 0 && cost.paidByMemberId
+    createsPayback && !isPayer && row.personalShare > 0 && cost.paidByMemberId
       ? buildCostMemberAmounts(
           [cost.paidByMemberId],
           members,
@@ -459,7 +463,7 @@ function buildMyCostRow(
     participantShares,
     owedToMe,
     iOwe,
-    netBalance: roundedMoney(paidByMe - row.personalShare),
+    netBalance: createsPayback ? roundedMoney(paidByMe - row.personalShare) : 0,
     paidByMe,
   };
 }
@@ -517,7 +521,9 @@ export function buildMyCostsSummary(params: {
     summary: {
       totalPersonalShare,
       totalPaidByMe,
-      balancePreview: roundedMoney(totalPaidByMe - totalPersonalShare),
+      balancePreview: roundedMoney(
+        costs.reduce((sum, cost) => sum + cost.netBalance, 0),
+      ),
       groupedByCategory,
     },
   };
@@ -664,6 +670,10 @@ export function calculateBudgetV3Summary(costs: BudgetV3Cost[]): BudgetV3Summary
 
     if (createsPayback && cost.paidByMemberId) {
       addBalance(rows, cost.paidByMemberId, { paid: total });
+    } else {
+      for (const tripMemberId of participantMemberIds) {
+        addBalance(rows, tripMemberId, { paid: perParticipantShare });
+      }
     }
 
     allocations.push({
