@@ -1,8 +1,10 @@
 import { TripItemCostMode, TripItemPaymentMode } from '@prisma/client';
 import {
   buildMyCostsSummary,
+  calculateCostShare,
   calculateBudgetV3Summary,
   type BudgetV3Member,
+  type BudgetV3RichCost,
   type BudgetV3RichItem,
 } from './budget-v3';
 
@@ -45,6 +47,41 @@ function golfCost(
 }
 
 describe('budget v3 shared cost handling', () => {
+  function sharedGreenfeeCost(costMode: TripItemCostMode): BudgetV3RichCost {
+    return {
+      id: 'greenfee-1',
+      label: 'Greenfee',
+      amount: 480,
+      currency: 'CHF',
+      costMode,
+      paymentMode: TripItemPaymentMode.EACH_PAYS_OWN,
+      participants: members.map((member) => ({
+        tripMemberId: member.id,
+        tripMember: member,
+      })),
+    };
+  }
+
+  it('calculates total 480 split across 4 as 120 each', () => {
+    const share = calculateCostShare(
+      sharedGreenfeeCost(TripItemCostMode.TOTAL),
+      'CHF',
+    );
+
+    expect(share.personalShare).toBe(120);
+    expect(share.totalBaseAmount).toBe(480);
+  });
+
+  it('calculates per-person 480 across 4 as 480 each and 1920 total', () => {
+    const share = calculateCostShare(
+      sharedGreenfeeCost(TripItemCostMode.PER_PERSON),
+      'CHF',
+    );
+
+    expect(share.personalShare).toBe(480);
+    expect(share.totalBaseAmount).toBe(1920);
+  });
+
   it('splits a total cost with everyone paying their own part without debt wording data', () => {
     const summary = buildMyCostsSummary({
       tripId: 'trip-1',

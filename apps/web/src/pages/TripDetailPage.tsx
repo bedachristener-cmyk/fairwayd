@@ -2222,39 +2222,95 @@ function expenseTypeLabel(item: TripItem) {
 
 function costModeLabel(item: TripItem) {
   return item.costMode === "PER_PERSON"
-    ? "Amount is per person"
-    : "Amount is total and will be split";
+    ? "Amount per person"
+    : "Total amount to split";
 }
 
 function costModeText(mode?: CostMode | null) {
   return mode === "PER_PERSON"
-    ? "amount is per person"
-    : "amount is total and will be split";
+    ? "amount per person"
+    : "total amount to split";
 }
 
 function costModeOptionLabel(mode: CostMode) {
-  return mode === "PER_PERSON"
-    ? "Amount is per person"
-    : "Amount is total and will be split";
+  return mode === "PER_PERSON" ? "Amount per person" : "Total amount to split";
+}
+
+function budgetDraftSplitAmounts(draft: BudgetCostDraft) {
+  const amount = optionalNumber(draft.amount);
+  const participantCount = Math.max(draft.participantMemberIds.length, 0);
+  if (amount === undefined || amount <= 0 || participantCount <= 0) {
+    return { amount, participantCount, eachPerson: 0, totalCost: 0 };
+  }
+  return {
+    amount,
+    participantCount,
+    eachPerson:
+      draft.costMode === "PER_PERSON" ? amount : amount / participantCount,
+    totalCost:
+      draft.costMode === "PER_PERSON" ? amount * participantCount : amount,
+  };
 }
 
 function budgetDraftShareHelperText(draft: BudgetCostDraft) {
-  const amount = optionalNumber(draft.amount);
-  const participantCount = draft.participantMemberIds.length;
+  const { amount, participantCount, eachPerson, totalCost } =
+    budgetDraftSplitAmounts(draft);
   if (amount === undefined || amount <= 0) {
     return draft.costMode === "PER_PERSON"
-      ? "Enter the amount one selected person pays."
-      : "Enter the total amount to split between selected people.";
-  }
-  if (draft.costMode === "PER_PERSON") {
-    return `${formatMoney(amount, draft.currency)} per selected person`;
+      ? "Example: CHF 120 per selected person = CHF 480 total for 4 people."
+      : "Example: CHF 480 shared by 4 people = CHF 120 each.";
   }
   if (participantCount <= 0) {
-    return `${formatMoney(amount, draft.currency)} shared by selected people`;
+    return draft.costMode === "PER_PERSON"
+      ? `${formatMoney(amount, draft.currency)} per selected person`
+      : `${formatMoney(amount, draft.currency)} shared by selected people`;
   }
-  return `${formatMoney(amount, draft.currency)} shared by ${participantCount} ${
+  if (draft.costMode === "PER_PERSON") {
+    return `Example: ${formatMoney(
+      eachPerson,
+      draft.currency,
+    )} per selected person = ${formatMoney(totalCost, draft.currency)} total for ${
+      participantCount
+    } ${participantCount === 1 ? "person" : "people"}.`;
+  }
+  return `Example: ${formatMoney(amount, draft.currency)} shared by ${participantCount} ${
     participantCount === 1 ? "person" : "people"
-  } = ${formatMoney(amount / participantCount, draft.currency)} each`;
+  } = ${formatMoney(eachPerson, draft.currency)} each.`;
+}
+
+function budgetDraftPreviewText(draft: BudgetCostDraft) {
+  const { amount, participantCount, eachPerson, totalCost } =
+    budgetDraftSplitAmounts(draft);
+  if (amount === undefined || amount <= 0 || participantCount <= 0) return null;
+  return {
+    eachPerson: `Each person: ${formatMoney(eachPerson, draft.currency)}`,
+    totalCost: `Total cost: ${formatMoney(totalCost, draft.currency)}`,
+  };
+}
+
+function budgetDraftCostModeWarning(draft: BudgetCostDraft) {
+  const { amount, participantCount } = budgetDraftSplitAmounts(draft);
+  if (
+    draft.paymentMode === "EACH_PAYS_OWN" &&
+    draft.costMode === "PER_PERSON" &&
+    participantCount > 1
+  ) {
+    if (amount !== undefined && amount >= 300) {
+      return "High per-person amount for a shared cost. Did you mean total amount?";
+    }
+    return "You selected Amount per person. Each selected person will be charged the full entered amount.";
+  }
+  return "";
+}
+
+function tripCostShareSourceText(row: MyTripCostRow, baseCurrency: string) {
+  if (row.costMode === "PER_PERSON") {
+    return `Your part ${formatMoney(row.personalShare, baseCurrency)} - amount per person`;
+  }
+  return `Your part ${formatMoney(
+    row.personalShare,
+    baseCurrency,
+  )} - split from ${formatMoney(row.totalBaseAmount, baseCurrency)} total`;
 }
 
 function defaultCostModeForItemType(type?: string | null): CostMode {
@@ -2621,6 +2677,8 @@ function TripItemBudgetSection({
             const participantCount = draft.participantMemberIds.length;
             const needsExchangeRate = draftNeedsExchangeRate(draft, baseCurrency);
             const shareHelperText = budgetDraftShareHelperText(draft);
+            const splitPreview = budgetDraftPreviewText(draft);
+            const costModeWarning = budgetDraftCostModeWarning(draft);
 
             return (
               <div
@@ -2721,6 +2779,34 @@ function TripItemBudgetSection({
                 <div style={{ color: "var(--sub)", fontSize: 11, lineHeight: 1.3 }}>
                   {shareHelperText}
                 </div>
+                {splitPreview ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 6,
+                    }}
+                  >
+                    <span className="fw-pill fw-pill--meta">
+                      {splitPreview.eachPerson}
+                    </span>
+                    <span className="fw-pill fw-pill--meta">
+                      {splitPreview.totalCost}
+                    </span>
+                  </div>
+                ) : null}
+                {costModeWarning ? (
+                  <div
+                    style={{
+                      color: "var(--danger)",
+                      fontSize: 11,
+                      lineHeight: 1.3,
+                      fontWeight: 850,
+                    }}
+                  >
+                    {costModeWarning}
+                  </div>
+                ) : null}
               </div>
             );
           })}
@@ -4310,6 +4396,12 @@ export default function TripDetailPage() {
   }
 
   function newBudgetDraft(item: TripItem): BudgetCostDraft {
+    const participantMemberIds = defaultBudgetParticipantIds(item);
+    const paymentMode = defaultPaymentModeForItemType(item.type);
+    const costMode =
+      paymentMode === "EACH_PAYS_OWN" && participantMemberIds.length > 1
+        ? "TOTAL"
+        : defaultCostModeForItemType(item.type);
     return {
       localId: `new-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       label: "",
@@ -4317,10 +4409,10 @@ export default function TripDetailPage() {
       currency: trip?.baseCurrency || item.currency || "CHF",
       exchangeRate: "",
       baseAmount: "",
-      costMode: defaultCostModeForItemType(item.type),
-      paymentMode: defaultPaymentModeForItemType(item.type),
+      costMode,
+      paymentMode,
       paidByMemberId: defaultBudgetPaidByMemberId(),
-      participantMemberIds: defaultBudgetParticipantIds(item),
+      participantMemberIds,
     };
   }
 
@@ -6955,6 +7047,7 @@ export default function TripDetailPage() {
                   {rows.map((row) => {
                     const isExpanded = expandedMyCostId === row.costId;
                     const isEachPaysOwn = row.paymentMode === "EACH_PAYS_OWN";
+                    const shareSourceText = tripCostShareSourceText(row, myCostsCurrency);
                     const payerLabel =
                       row.paidByMemberId === myMembership?.id
                         ? "you"
@@ -7048,19 +7141,39 @@ export default function TripDetailPage() {
                           </div>
                           <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
                             {isEachPaysOwn
-                              ? `Your part ${formatMoney(
-                                  row.personalShare,
-                                  myCostsCurrency,
-                                )} - everyone pays own part`
+                              ? `${shareSourceText} - everyone pays own part`
                               : `Paid by ${payerLabel} - shared with ${row.participantCount} ${
                                   row.participantCount === 1 ? "person" : "people"
                                 }${
                                   row.netBalance !== 0
-                                    ? ` - ${tripCostBalanceMessage(row, myCostsCurrency)}`
-                                    : ""
+                                    ? ` - ${shareSourceText} - ${tripCostBalanceMessage(
+                                        row,
+                                        myCostsCurrency,
+                                      )}`
+                                    : ` - ${shareSourceText}`
                                 }`}
+                            {row.paymentMode === "EACH_PAYS_OWN" &&
+                            row.costMode === "PER_PERSON" &&
+                            row.participantCount > 1
+                              ? " - Check cost mode"
+                              : ""}
                           </div>
                         </button>
+
+                        {row.paymentMode === "EACH_PAYS_OWN" &&
+                        row.costMode === "PER_PERSON" &&
+                        row.participantCount > 1 ? (
+                          <div
+                            style={{
+                              color: "var(--danger)",
+                              fontSize: 12,
+                              lineHeight: 1.35,
+                              fontWeight: 850,
+                            }}
+                          >
+                            High per-person amount for a shared cost. Did you mean total amount?
+                          </div>
+                        ) : null}
 
                         {isExpanded ? (
                           <div
@@ -10986,6 +11099,8 @@ export default function TripDetailPage() {
                       : "paid by one member";
                 const needsExchangeRate = draftNeedsExchangeRate(draft, baseCurrency);
                 const shareHelperText = budgetDraftShareHelperText(draft);
+                const splitPreview = budgetDraftPreviewText(draft);
+                const costModeWarning = budgetDraftCostModeWarning(draft);
                 return (
                   <section
                     key={draft.localId}
@@ -11151,6 +11266,40 @@ export default function TripDetailPage() {
                         <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
                           {shareHelperText}
                         </div>
+                        {splitPreview ? (
+                          <div
+                            style={{
+                              display: "flex",
+                              flexWrap: "wrap",
+                              gap: 7,
+                            }}
+                          >
+                            <span className="fw-pill fw-pill--meta">
+                              {splitPreview.eachPerson}
+                            </span>
+                            <span className="fw-pill fw-pill--meta">
+                              {splitPreview.totalCost}
+                            </span>
+                          </div>
+                        ) : null}
+                        {costModeWarning ? (
+                          <div
+                            style={{
+                              padding: "8px 9px",
+                              borderRadius: 12,
+                              border:
+                                "1px solid color-mix(in srgb, var(--danger) 28%, var(--border))",
+                              background:
+                                "color-mix(in srgb, var(--danger) 9%, var(--card))",
+                              color: "var(--danger)",
+                              fontSize: 12,
+                              lineHeight: 1.35,
+                              fontWeight: 850,
+                            }}
+                          >
+                            {costModeWarning}
+                          </div>
+                        ) : null}
 
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
                           {[
