@@ -2190,7 +2190,73 @@ function tripCostBalanceMessage(row: MyTripCostRow, baseCurrency: string) {
   if (row.netBalance < 0) {
     return `You owe ${formatMoney(Math.abs(row.netBalance), baseCurrency)}`;
   }
-  return "You are settled up on this cost.";
+  return "You are balanced on this cost.";
+}
+
+function aggregateTripCostMemberAmounts(
+  entries: Array<{ member: TripCostMember; amount: number }>,
+) {
+  const rows = new Map<string, { member: TripCostMember; amount: number }>();
+  for (const entry of entries) {
+    const current = rows.get(entry.member.id);
+    rows.set(entry.member.id, {
+      member: current?.member ?? entry.member,
+      amount: (current?.amount ?? 0) + entry.amount,
+    });
+  }
+  return Array.from(rows.values())
+    .map((row) => ({ ...row, amount: Math.round(row.amount * 100) / 100 }))
+    .filter((row) => row.amount > 0)
+    .sort((a, b) =>
+      tripCostMemberDisplayName(a.member).localeCompare(
+        tripCostMemberDisplayName(b.member),
+      ),
+    );
+}
+
+function myCostsOwedToMeBreakdown(data?: MyTripCostsResponse | null) {
+  return aggregateTripCostMemberAmounts(
+    (data?.costs ?? []).flatMap((row) => row.owedToMe),
+  );
+}
+
+function myCostsIOweBreakdown(data?: MyTripCostsResponse | null) {
+  return aggregateTripCostMemberAmounts(
+    (data?.costs ?? []).flatMap((row) => row.iOwe),
+  );
+}
+
+function tripCostPaymentModeText(row: Pick<TripCostRow, "paymentMode">) {
+  return row.paymentMode === "EACH_PAYS_OWN"
+    ? "Everyone pays own part"
+    : "One member paid";
+}
+
+function organizerCostPerPersonShare(row: TripCostRow) {
+  return row.participantCount > 0
+    ? row.totalBaseAmount / row.participantCount
+    : 0;
+}
+
+function organizerCostOwedRows(row: TripCostRow) {
+  if (row.paymentMode !== "PAID_BY_ONE" || !row.paidByMemberId || !row.paidBy) {
+    return [];
+  }
+  const share = organizerCostPerPersonShare(row);
+  if (share <= 0) return [];
+  return row.participants
+    .filter((member) => member.id !== row.paidByMemberId)
+    .map((member) => ({
+      member,
+      paidBy: row.paidBy as TripCostMember,
+      amount: share,
+    }));
+}
+
+function organizerBalanceText(balance: number, currency: string) {
+  if (balance > 0) return `gets back ${formatMoney(balance, currency)}`;
+  if (balance < 0) return `owes ${formatMoney(Math.abs(balance), currency)}`;
+  return "balanced";
 }
 
 function effectiveParticipants(item: TripItem, members: TripMember[]) {
@@ -3905,6 +3971,7 @@ export default function TripDetailPage() {
     useState<OrganizerTripCostsResponse | null>(null);
   const [organizerCostsLoading, setOrganizerCostsLoading] = useState(false);
   const [organizerCostsErr, setOrganizerCostsErr] = useState<string | null>(null);
+  const [expandedOrganizerCostId, setExpandedOrganizerCostId] = useState<string | null>(null);
 
   const myMembership = trip?.members?.find((member) => member.userId === user?.id);
   const canEditTrip =
@@ -3913,6 +3980,10 @@ export default function TripDetailPage() {
   const canUploadTripDocuments = Boolean(myMembership);
   const myCostsCurrency = myCostsData?.baseCurrency || trip?.baseCurrency?.trim() || "CHF";
   const myCostsBalancePreview = myCostsData?.summary.balancePreview ?? 0;
+  const myCostsOwedToMe = myCostsOwedToMeBreakdown(myCostsData);
+  const myCostsIOwe = myCostsIOweBreakdown(myCostsData);
+  const organizerCostsCurrency =
+    organizerCostsData?.baseCurrency || trip?.baseCurrency?.trim() || "CHF";
 
   function canEditTripItem(item: TripItem) {
     if (canEditTrip) return true;
@@ -6960,7 +7031,7 @@ export default function TripDetailPage() {
                 value: myCostsData?.summary.totalPaidByMe ?? 0,
               },
               {
-                label: "Balance preview",
+                label: "Balance",
                 value: myCostsData?.summary.balancePreview ?? 0,
               },
             ].map((stat) => (
@@ -7012,7 +7083,7 @@ export default function TripDetailPage() {
                       ? `Others owe you ${formatMoney(myCostsBalancePreview, myCostsCurrency)}`
                       : myCostsBalancePreview < 0
                         ? `You owe ${formatMoney(Math.abs(myCostsBalancePreview), myCostsCurrency)}`
-                        : "You are settled up."}
+                        : "You are balanced."}
                   </div>
                   <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
                     {myCostsBalancePreview !== 0
@@ -7032,6 +7103,74 @@ export default function TripDetailPage() {
                 </div>
               </div>
             </div>
+
+            {myCostsOwedToMe.length > 0 || myCostsIOwe.length > 0 ? (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                  gap: 8,
+                }}
+              >
+                {[
+                  { title: "Who owes you", rows: myCostsOwedToMe },
+                  { title: "You owe", rows: myCostsIOwe },
+                ]
+                  .filter((group) => group.rows.length > 0)
+                  .map((group) => (
+                    <div
+                      key={group.title}
+                      style={{
+                        display: "grid",
+                        gap: 6,
+                        padding: "9px 10px",
+                        borderRadius: 14,
+                        background: "color-mix(in srgb, var(--bg) 72%, var(--card))",
+                        border:
+                          "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                      }}
+                    >
+                      <div style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
+                        {group.title}
+                      </div>
+                      <div style={{ display: "grid", gap: 4 }}>
+                        {group.rows.map((entry) => (
+                          <div
+                            key={entry.member.id}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              gap: 10,
+                            }}
+                          >
+                            <span
+                              style={{
+                                color: "var(--text)",
+                                fontSize: 12,
+                                fontWeight: 850,
+                                overflowWrap: "anywhere",
+                              }}
+                            >
+                              {tripCostMemberDisplayName(entry.member)}
+                            </span>
+                            <span
+                              style={{
+                                color: "var(--text)",
+                                fontSize: 12,
+                                fontWeight: 950,
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {formatMoney(entry.amount, myCostsCurrency)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            ) : null}
 
             {tripCostCategories.map((category) => {
               const rows = (myCostsData?.costs ?? []).filter(
@@ -7198,10 +7337,10 @@ export default function TripDetailPage() {
                                       : "",
                                 ],
                                 ["Where", tripCostDetailPlace(row)],
-                                ["Amount", formatMoney(row.totalBaseAmount, myCostsCurrency)],
+                                ["Total cost", formatMoney(row.totalBaseAmount, myCostsCurrency)],
                                 [
-                                  "Payment",
-                                  isEachPaysOwn ? "Everyone pays own part" : "",
+                                  "Payment mode",
+                                  tripCostPaymentModeText(row),
                                 ],
                                 [
                                   "Paid by",
@@ -7219,7 +7358,7 @@ export default function TripDetailPage() {
                                     : formatMoney(row.paidByMe, myCostsCurrency),
                                 ],
                                 [
-                                  "Balance preview",
+                                  "Balance",
                                   isEachPaysOwn
                                     ? ""
                                     : row.netBalance > 0
@@ -7304,6 +7443,12 @@ export default function TripDetailPage() {
                               </div>
                             ) : null}
 
+                            {isEachPaysOwn ? (
+                              <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+                                Everyone pays own part
+                              </div>
+                            ) : null}
+
                             {row.owedToMe.length > 0 ? (
                               <div style={{ display: "grid", gap: 6 }}>
                                 <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 900 }}>
@@ -7327,7 +7472,7 @@ export default function TripDetailPage() {
                                           fontWeight: 900,
                                         }}
                                       >
-                                        {tripCostMemberDisplayName(entry.member)}
+                                        {tripCostMemberDisplayName(entry.member)} owes you
                                       </span>
                                       <span
                                         style={{
@@ -7347,7 +7492,7 @@ export default function TripDetailPage() {
                             {row.iOwe.length > 0 ? (
                               <div style={{ display: "grid", gap: 6 }}>
                                 <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 900 }}>
-                                  I owe
+                                  You owe
                                 </div>
                                 <div style={{ display: "grid", gap: 4 }}>
                                   {row.iOwe.map((entry) => (
@@ -7367,7 +7512,7 @@ export default function TripDetailPage() {
                                           fontWeight: 900,
                                         }}
                                       >
-                                        {tripCostMemberDisplayName(entry.member)}
+                                        You owe {tripCostMemberDisplayName(entry.member)}
                                       </span>
                                       <span
                                         style={{
@@ -7410,16 +7555,12 @@ export default function TripDetailPage() {
           }}
         >
           <div style={{ display: "grid", gap: 2 }}>
-            <div style={sectionTitleTextStyle}>Organizer Costs</div>
+            <div style={sectionTitleTextStyle}>Trip Cost Sheet</div>
             <div style={sectionSubtitleTextStyle}>
               {organizerCostsLoading
-                ? "Loading organizer cost summary..."
-                : "All trip costs for OWNER and ADMIN members"}
+                ? "Loading trip cost sheet..."
+                : "Full cost overview for OWNER and ADMIN members"}
             </div>
-          </div>
-
-          <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
-            This is a preview summary, not a final settlement.
           </div>
 
           {organizerCostsErr ? (
@@ -7498,15 +7639,15 @@ export default function TripDetailPage() {
 
           <div style={{ display: "grid", gap: 8 }}>
             <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
-              Balance preview
+              Member balance summary
             </div>
             {(organizerCostsData?.summary.balancePreview ?? []).map((row) => (
               <div
                 key={row.member.id}
                 style={{
                   display: "grid",
-                  gap: 5,
-                  padding: "8px 10px",
+                  gap: 7,
+                  padding: "9px 10px",
                   borderRadius: 12,
                   background: "color-mix(in srgb, var(--bg) 72%, var(--card))",
                   border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
@@ -7520,26 +7661,283 @@ export default function TripDetailPage() {
                     gap: 10,
                   }}
                 >
-                  <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
-                    {tripCostMemberDisplayName(row.member)}
-                  </span>
-                  <span
-                    style={{
-                      color: "var(--text)",
+                    <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
+                      {tripCostMemberDisplayName(row.member)}
+                    </span>
+                    <span
+                      style={{
+                      color: row.balance < 0 ? "var(--danger)" : "var(--text)",
                       fontSize: 12,
                       fontWeight: 950,
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {formatMoney(row.balance, organizerCostsData?.baseCurrency || baseCurrency)}
+                    {organizerBalanceText(row.balance, organizerCostsCurrency)}
                   </span>
                 </div>
-                <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
-                  Paid {formatMoney(row.paid, organizerCostsData?.baseCurrency || baseCurrency)} · share{" "}
-                  {formatMoney(row.expectedShare, organizerCostsData?.baseCurrency || baseCurrency)}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                    gap: 6,
+                  }}
+                >
+                  {[
+                    ["Paid", row.paid],
+                    ["Share", row.expectedShare],
+                    ["Balance", Math.abs(row.balance)],
+                  ].map(([label, value]) => (
+                    <div
+                      key={String(label)}
+                      style={{
+                        minWidth: 0,
+                        display: "grid",
+                        gap: 2,
+                        padding: "6px 7px",
+                        borderRadius: 10,
+                        background: "var(--bg)",
+                        border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                      }}
+                    >
+                      <span style={{ color: "var(--sub)", fontSize: 10, fontWeight: 900 }}>
+                        {label}
+                      </span>
+                      <span style={{ color: "var(--text)", fontSize: 11, fontWeight: 950 }}>
+                        {formatMoney(Number(value), organizerCostsCurrency)}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}
+          </div>
+
+          <div style={{ display: "grid", gap: 8 }}>
+            <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
+              All trip costs
+            </div>
+            {(organizerCostsData?.costs ?? []).map((row) => {
+              const isExpanded = expandedOrganizerCostId === row.costId;
+              const perPersonShare = organizerCostPerPersonShare(row);
+              const owedRows = organizerCostOwedRows(row);
+              const paidByLabel =
+                row.paymentMode === "EACH_PAYS_OWN"
+                  ? "Everyone pays own part"
+                  : tripCostMemberDisplayName(row.paidBy);
+              const paymentSummary =
+                row.paymentMode === "EACH_PAYS_OWN"
+                  ? "everyone pays own part"
+                  : `paid by ${paidByLabel}`;
+
+              return (
+                <div
+                  key={row.costId}
+                  style={{
+                    display: "grid",
+                    gap: 6,
+                    padding: "9px 10px",
+                    borderRadius: 12,
+                    background: "color-mix(in srgb, var(--bg) 72%, var(--card))",
+                    border:
+                      "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExpandedOrganizerCostId((current) =>
+                        current === row.costId ? null : row.costId,
+                      )
+                    }
+                    style={{
+                      all: "unset",
+                      cursor: "pointer",
+                      display: "grid",
+                      gap: 5,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        justifyContent: "space-between",
+                        gap: 10,
+                      }}
+                    >
+                      <div style={{ minWidth: 0, display: "grid", gap: 2 }}>
+                        <span
+                          style={{
+                            color: "var(--text)",
+                            fontSize: 12,
+                            fontWeight: 950,
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {row.tripItemTitle}
+                        </span>
+                        <span style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.3 }}>
+                          {row.label}
+                          {tripCostDateLabel(row) ? ` - ${tripCostDateLabel(row)}` : ""}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 7,
+                          flexShrink: 0,
+                        }}
+                      >
+                        <span
+                          style={{
+                            color: "var(--text)",
+                            fontSize: 12,
+                            fontWeight: 950,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {formatMoney(row.totalBaseAmount, organizerCostsCurrency)}
+                        </span>
+                        <ChevronDown
+                          size={16}
+                          strokeWidth={2.4}
+                          style={{
+                            color: "var(--sub)",
+                            transform: isExpanded ? "rotate(180deg)" : "none",
+                            transition: "transform 140ms ease",
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+                      {row.category} - {paymentSummary} - shared with {row.participantCount}{" "}
+                      {row.participantCount === 1 ? "person" : "people"} - each{" "}
+                      {formatMoney(perPersonShare, organizerCostsCurrency)}
+                    </div>
+                  </button>
+
+                  {isExpanded ? (
+                    <div
+                      style={{
+                        display: "grid",
+                        gap: 8,
+                        paddingTop: 8,
+                        borderTop:
+                          "1px solid color-mix(in srgb, var(--border) 74%, transparent)",
+                      }}
+                    >
+                      <div style={{ display: "grid", gap: 6 }}>
+                        {[
+                          ["Date", tripCostDateLabel(row)],
+                          ["Category", row.category],
+                          ["Total cost", formatMoney(row.totalBaseAmount, organizerCostsCurrency)],
+                          ["Paid by", paidByLabel],
+                          ["Payment mode", tripCostPaymentModeText(row)],
+                          ["Shared with", `${row.participantCount} ${row.participantCount === 1 ? "person" : "people"}`],
+                          ["Per-person share", formatMoney(perPersonShare, organizerCostsCurrency)],
+                        ]
+                          .filter(([, value]) => Boolean(value))
+                          .map(([label, value]) => (
+                            <div
+                              key={String(label)}
+                              style={{
+                                display: "flex",
+                                alignItems: "flex-start",
+                                justifyContent: "space-between",
+                                gap: 10,
+                              }}
+                            >
+                              <span style={{ color: "var(--sub)", fontSize: 12, fontWeight: 900 }}>
+                                {label}
+                              </span>
+                              <span
+                                style={{
+                                  color: "var(--text)",
+                                  fontSize: 12,
+                                  fontWeight: 900,
+                                  textAlign: "right",
+                                  overflowWrap: "anywhere",
+                                }}
+                              >
+                                {value}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+
+                      <div style={{ display: "grid", gap: 6 }}>
+                        <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 900 }}>
+                          Participants
+                        </div>
+                        {row.participants.map((member) => (
+                          <div
+                            key={member.id}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              gap: 10,
+                            }}
+                          >
+                            <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
+                              {tripCostMemberDisplayName(member)}
+                            </span>
+                            <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
+                              {formatMoney(perPersonShare, organizerCostsCurrency)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {row.paymentMode === "EACH_PAYS_OWN" ? (
+                        <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+                          Everyone pays own part
+                        </div>
+                      ) : owedRows.length > 0 ? (
+                        <div style={{ display: "grid", gap: 6 }}>
+                          <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 900 }}>
+                            Who owes whom
+                          </div>
+                          {owedRows.map((entry) => (
+                            <div
+                              key={entry.member.id}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: 10,
+                              }}
+                            >
+                              <span
+                                style={{
+                                  color: "var(--text)",
+                                  fontSize: 12,
+                                  fontWeight: 900,
+                                  overflowWrap: "anywhere",
+                                }}
+                              >
+                                {tripCostMemberDisplayName(entry.member)} owes{" "}
+                                {tripCostMemberDisplayName(entry.paidBy)}
+                              </span>
+                              <span
+                                style={{
+                                  color: "var(--text)",
+                                  fontSize: 12,
+                                  fontWeight: 950,
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {formatMoney(entry.amount, organizerCostsCurrency)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
         </section>
       ) : null}
