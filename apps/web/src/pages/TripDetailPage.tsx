@@ -8,11 +8,18 @@ import {
   CheckSquare,
   ChevronRight,
   ChevronDown,
+  Car,
   FileText,
+  Flag,
+  Hotel,
   Link2,
+  MapPin,
   MapPinned,
   PenLine,
+  Plane,
   Route,
+  Sun,
+  UtensilsCrossed,
   UserRoundPlus,
   WalletCards,
   type LucideIcon,
@@ -928,17 +935,19 @@ function shouldIgnoreTripSwipe(target: EventTarget | null) {
   );
 }
 
-function itemIcon(type?: string | null) {
+function itemIcon(type?: string | null): LucideIcon {
   const value = String(type ?? "").toLowerCase();
 
-  if (value === "flight" || value === "flights") return "âœˆï¸";
-  if (value === "golf_round" || value === "course") return "â›³";
-  if (value === "hotel") return "ðŸ¨";
-  if (value === "transfer" || value === "transport") return "ðŸš—";
-  if (value === "car_rental") return "ðŸš™";
-  if (value === "restaurant") return "ðŸ½";
-  if (value === "free_day") return "ðŸŒ´";
-  return "ðŸ“";
+  if (value === "flight" || value === "flights") return Plane;
+  if (value === "golf_round" || value === "course") return Flag;
+  if (value === "hotel") return Hotel;
+  if (value === "transfer" || value === "transport" || value === "car_rental") {
+    return Car;
+  }
+  if (value === "restaurant") return UtensilsCrossed;
+  if (value === "activity") return MapPin;
+  if (value === "free_day") return Sun;
+  return FileText;
 }
 
 function itemDateValue(item: TripItem) {
@@ -1810,6 +1819,7 @@ function TripItemCardHeader({
   const dateBlock = eventDateBlockParts(displayKey || dateKey(item));
   const typeLabel = itemTypeLabel(item.type).toUpperCase();
   const title = tripItemHeaderTitle(item);
+  const Icon = itemIcon(item.type);
   const titleStyle: React.CSSProperties = {
     appearance: "none",
     WebkitAppearance: "none",
@@ -1886,9 +1896,7 @@ function TripItemCardHeader({
             minWidth: 0,
           }}
         >
-          <span aria-hidden="true" style={{ fontSize: 14, lineHeight: 1 }}>
-            {itemIcon(item.type)}
-          </span>
+          <Icon aria-hidden="true" size={14} strokeWidth={2.5} />
           <span
             style={{
               color: accent.headerSubText,
@@ -2226,6 +2234,14 @@ function myCostsIOweBreakdown(data?: MyTripCostsResponse | null) {
   );
 }
 
+function totalTripCostMemberAmounts(
+  entries: Array<{ amount: number }>,
+) {
+  return Math.round(
+    entries.reduce((sum, entry) => sum + entry.amount, 0) * 100,
+  ) / 100;
+}
+
 function tripCostPaymentModeText(row: Pick<TripCostRow, "paymentMode">) {
   return row.paymentMode === "EACH_PAYS_OWN"
     ? "Everyone pays own part"
@@ -2254,9 +2270,57 @@ function organizerCostOwedRows(row: TripCostRow) {
 }
 
 function organizerBalanceText(balance: number, currency: string) {
-  if (balance > 0) return `gets back ${formatMoney(balance, currency)}`;
-  if (balance < 0) return `owes ${formatMoney(Math.abs(balance), currency)}`;
-  return "balanced";
+  if (balance > 0) return `should receive ${formatMoney(balance, currency)}`;
+  if (balance < 0) return `still owes ${formatMoney(Math.abs(balance), currency)}`;
+  return "no money owed";
+}
+
+function organizerSettlementPreviewRows(
+  rows: OrganizerTripCostsResponse["summary"]["balancePreview"],
+) {
+  const payers = rows
+    .filter((row) => row.balance < -0.005)
+    .map((row) => ({
+      member: row.member,
+      amount: Math.abs(row.balance),
+    }))
+    .sort((a, b) => b.amount - a.amount);
+  const receivers = rows
+    .filter((row) => row.balance > 0.005)
+    .map((row) => ({
+      member: row.member,
+      amount: row.balance,
+    }))
+    .sort((a, b) => b.amount - a.amount);
+  const transfers: Array<{
+    from: TripCostMember;
+    to: TripCostMember;
+    amount: number;
+  }> = [];
+  let payerIndex = 0;
+  let receiverIndex = 0;
+
+  while (payerIndex < payers.length && receiverIndex < receivers.length) {
+    const payer = payers[payerIndex];
+    const receiver = receivers[receiverIndex];
+    const amount = Math.min(payer.amount, receiver.amount);
+
+    if (amount > 0.005) {
+      transfers.push({
+        from: payer.member,
+        to: receiver.member,
+        amount: Math.round(amount * 100) / 100,
+      });
+    }
+
+    payer.amount -= amount;
+    receiver.amount -= amount;
+
+    if (payer.amount <= 0.005) payerIndex += 1;
+    if (receiver.amount <= 0.005) receiverIndex += 1;
+  }
+
+  return transfers;
 }
 
 function effectiveParticipants(item: TripItem, members: TripMember[]) {
@@ -3982,8 +4046,13 @@ export default function TripDetailPage() {
   const myCostsBalancePreview = myCostsData?.summary.balancePreview ?? 0;
   const myCostsOwedToMe = myCostsOwedToMeBreakdown(myCostsData);
   const myCostsIOwe = myCostsIOweBreakdown(myCostsData);
+  const myCostsTotalToReceive = totalTripCostMemberAmounts(myCostsOwedToMe);
+  const myCostsTotalToPay = totalTripCostMemberAmounts(myCostsIOwe);
   const organizerCostsCurrency =
     organizerCostsData?.baseCurrency || trip?.baseCurrency?.trim() || "CHF";
+  const organizerSettlementPreview = organizerSettlementPreviewRows(
+    organizerCostsData?.summary.balancePreview ?? [],
+  );
 
   function canEditTripItem(item: TripItem) {
     if (canEditTrip) return true;
@@ -7023,15 +7092,16 @@ export default function TripDetailPage() {
           >
             {[
               {
-                label: "My share",
-                value: myCostsData?.summary.totalPersonalShare ?? 0,
-              },
-              {
-                label: "Paid by me",
+                label: "I paid",
                 value: myCostsData?.summary.totalPaidByMe ?? 0,
               },
               {
-                label: "Balance",
+                label: "My trip cost",
+                value: myCostsData?.summary.totalPersonalShare ?? 0,
+              },
+              {
+                label:
+                  myCostsBalancePreview >= 0 ? "I should receive" : "I still owe",
                 value: myCostsData?.summary.balancePreview ?? 0,
               },
             ].map((stat) => (
@@ -7051,7 +7121,7 @@ export default function TripDetailPage() {
                   {stat.label}
                 </span>
                 <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
-                  {formatMoney(stat.value, myCostsData?.baseCurrency || baseCurrency)}
+                  {formatMoney(Math.abs(stat.value), myCostsData?.baseCurrency || baseCurrency)}
                 </span>
               </div>
             ))}
@@ -7080,15 +7150,15 @@ export default function TripDetailPage() {
                 <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
                   <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
                     {myCostsBalancePreview > 0
-                      ? `Others owe you ${formatMoney(myCostsBalancePreview, myCostsCurrency)}`
+                      ? `I should receive ${formatMoney(myCostsBalancePreview, myCostsCurrency)}`
                       : myCostsBalancePreview < 0
-                        ? `You owe ${formatMoney(Math.abs(myCostsBalancePreview), myCostsCurrency)}`
-                        : "You are balanced."}
+                        ? `I still owe ${formatMoney(Math.abs(myCostsBalancePreview), myCostsCurrency)}`
+                        : "No money owed either way."}
                   </div>
                   <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
                     {myCostsBalancePreview !== 0
-                      ? "This is your personal balance across costs where you are involved."
-                      : "Your paid amounts and personal share currently cancel out."}
+                      ? "Across the costs where you are involved."
+                      : "Your paid amount and your own trip cost match."}
                   </div>
                 </div>
                 <div
@@ -7113,8 +7183,18 @@ export default function TripDetailPage() {
                 }}
               >
                 {[
-                  { title: "Who owes you", rows: myCostsOwedToMe },
-                  { title: "You owe", rows: myCostsIOwe },
+                  {
+                    title: "Who owes you",
+                    totalLabel: "Total to receive",
+                    total: myCostsTotalToReceive,
+                    rows: myCostsOwedToMe,
+                  },
+                  {
+                    title: "You owe",
+                    totalLabel: "Total to pay",
+                    total: myCostsTotalToPay,
+                    rows: myCostsIOwe,
+                  },
                 ]
                   .filter((group) => group.rows.length > 0)
                   .map((group) => (
@@ -7132,6 +7212,31 @@ export default function TripDetailPage() {
                     >
                       <div style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
                         {group.title}
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 10,
+                          paddingBottom: 4,
+                          borderBottom:
+                            "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                        }}
+                      >
+                        <span style={{ color: "var(--sub)", fontSize: 11, fontWeight: 900 }}>
+                          {group.totalLabel}
+                        </span>
+                        <span
+                          style={{
+                            color: "var(--text)",
+                            fontSize: 12,
+                            fontWeight: 950,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {formatMoney(group.total, myCostsCurrency)}
+                        </span>
                       </div>
                       <div style={{ display: "grid", gap: 4 }}>
                         {group.rows.map((entry) => (
@@ -7326,8 +7431,8 @@ export default function TripDetailPage() {
                           >
                             <div style={{ display: "grid", gap: 6 }}>
                               {[
-                                ["What", row.tripItemTitle],
-                                ["Type", row.tripItemType || row.category],
+                                ["Cost", row.label],
+                                ["Item", row.tripItemTitle],
                                 [
                                   "When",
                                   row.itemDate
@@ -7339,34 +7444,14 @@ export default function TripDetailPage() {
                                 ["Where", tripCostDetailPlace(row)],
                                 ["Total cost", formatMoney(row.totalBaseAmount, myCostsCurrency)],
                                 [
-                                  "Payment mode",
-                                  tripCostPaymentModeText(row),
-                                ],
-                                [
                                   "Paid by",
                                   isEachPaysOwn
-                                    ? ""
+                                    ? "Everyone pays own part"
                                     : payerLabel === "you"
                                       ? "You"
                                       : payerLabel,
                                 ],
-                                ["My share", formatMoney(row.personalShare, myCostsCurrency)],
-                                [
-                                  "Paid by me",
-                                  isEachPaysOwn
-                                    ? ""
-                                    : formatMoney(row.paidByMe, myCostsCurrency),
-                                ],
-                                [
-                                  "Balance",
-                                  isEachPaysOwn
-                                    ? ""
-                                    : row.netBalance > 0
-                                    ? `+ ${formatMoney(row.netBalance, myCostsCurrency)}`
-                                    : row.netBalance < 0
-                                      ? `- ${formatMoney(Math.abs(row.netBalance), myCostsCurrency)}`
-                                      : formatMoney(0, myCostsCurrency),
-                                ],
+                                ["Your share", formatMoney(row.personalShare, myCostsCurrency)],
                               ]
                                 .filter(([, value]) => Boolean(value))
                                 .map(([label, value]) => (
@@ -7444,15 +7529,20 @@ export default function TripDetailPage() {
                             ) : null}
 
                             {isEachPaysOwn ? (
-                              <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
-                                Everyone pays own part
+                              <div style={{ display: "grid", gap: 5 }}>
+                                <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 900 }}>
+                                  Result
+                                </div>
+                                <div style={{ color: "var(--text)", fontSize: 12, lineHeight: 1.35, fontWeight: 900 }}>
+                                  Everyone pays own part
+                                </div>
                               </div>
                             ) : null}
 
                             {row.owedToMe.length > 0 ? (
                               <div style={{ display: "grid", gap: 6 }}>
                                 <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 900 }}>
-                                  Others owe you
+                                  Result
                                 </div>
                                 <div style={{ display: "grid", gap: 4 }}>
                                   {row.owedToMe.map((entry) => (
@@ -7492,7 +7582,7 @@ export default function TripDetailPage() {
                             {row.iOwe.length > 0 ? (
                               <div style={{ display: "grid", gap: 6 }}>
                                 <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 900 }}>
-                                  You owe
+                                  Result
                                 </div>
                                 <div style={{ display: "grid", gap: 4 }}>
                                   {row.iOwe.map((entry) => (
@@ -7639,7 +7729,7 @@ export default function TripDetailPage() {
 
           <div style={{ display: "grid", gap: 8 }}>
             <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
-              Member balance summary
+              Member Cost Overview
             </div>
             {(organizerCostsData?.summary.balancePreview ?? []).map((row) => (
               <div
@@ -7684,8 +7774,11 @@ export default function TripDetailPage() {
                 >
                   {[
                     ["Paid", row.paid],
-                    ["Share", row.expectedShare],
-                    ["Balance", Math.abs(row.balance)],
+                    ["Own trip cost", row.expectedShare],
+                    [
+                      row.balance >= 0 ? "Should receive" : "Still owes",
+                      Math.abs(row.balance),
+                    ],
                   ].map(([label, value]) => (
                     <div
                       key={String(label)}
@@ -7710,6 +7803,63 @@ export default function TripDetailPage() {
                 </div>
               </div>
             ))}
+          </div>
+
+          <div style={{ display: "grid", gap: 8 }}>
+            <div style={{ display: "grid", gap: 2 }}>
+              <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
+                Who owes what
+              </div>
+              <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+                Preview only. No payment tracking or invoices.
+              </div>
+            </div>
+            {organizerSettlementPreview.length > 0 ? (
+              <div style={{ display: "grid", gap: 6 }}>
+                {organizerSettlementPreview.map((transfer, index) => (
+                  <div
+                    key={`${transfer.from.id}-${transfer.to.id}-${index}`}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 10,
+                      padding: "8px 10px",
+                      borderRadius: 12,
+                      background: "color-mix(in srgb, var(--bg) 72%, var(--card))",
+                      border:
+                        "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                    }}
+                  >
+                    <span
+                      style={{
+                        color: "var(--text)",
+                        fontSize: 12,
+                        fontWeight: 900,
+                        overflowWrap: "anywhere",
+                      }}
+                    >
+                      {tripCostMemberDisplayName(transfer.from)} {"->"}{" "}
+                      {tripCostMemberDisplayName(transfer.to)}
+                    </span>
+                    <span
+                      style={{
+                        color: "var(--text)",
+                        fontSize: 12,
+                        fontWeight: 950,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {formatMoney(transfer.amount, organizerCostsCurrency)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+                No one owes money based on the current cost setup.
+              </div>
+            )}
           </div>
 
           <div style={{ display: "grid", gap: 8 }}>
@@ -10849,8 +10999,11 @@ export default function TripDetailPage() {
                       >
                         {[
                           ["Paid", row.paid],
-                          ["Share", row.share],
-                          ["Balance", row.balance],
+                          ["Own trip cost", row.share],
+                          [
+                            row.balance >= 0 ? "Should receive" : "Still owes",
+                            Math.abs(row.balance),
+                          ],
                         ].map(([label, value]) => (
                           <div key={String(label)} style={{ minWidth: 0, display: "grid", gap: 2 }}>
                             <span style={compactMetaTextStyle}>

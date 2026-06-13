@@ -1,6 +1,7 @@
 import { TripItemCostMode, TripItemPaymentMode } from '@prisma/client';
 import {
   buildMyCostsSummary,
+  buildOrganizerCostsSummary,
   calculateCostShare,
   calculateBudgetV3Summary,
   type BudgetV3Member,
@@ -173,5 +174,27 @@ describe('budget v3 shared cost handling', () => {
     expect(summary.amountToPay).toBe(0);
     expect(summary.amountToReceive).toBe(0);
     expect(summary.balances.every((row) => row.balance === 0)).toBe(true);
+  });
+
+  it('marks everyone-pays-own organizer rows as paid by each participant', () => {
+    const summary = buildOrganizerCostsSummary({
+      tripId: 'trip-1',
+      baseCurrency: 'CHF',
+      members,
+      items: golfCost(
+        TripItemCostMode.TOTAL,
+        TripItemPaymentMode.EACH_PAYS_OWN,
+      ),
+    });
+
+    expect(summary.summary.balancePreview).toHaveLength(4);
+    expect(
+      summary.summary.balancePreview.every(
+        (row) =>
+          row.paid === 120 &&
+          row.expectedShare === 120 &&
+          row.balance === 0,
+      ),
+    ).toBe(true);
   });
 });

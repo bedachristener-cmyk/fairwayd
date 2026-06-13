@@ -555,11 +555,19 @@ export function buildOrganizerCostsSummary(params: {
       }
 
       const participantIds = participantMemberIdsForCost(cost);
+      const perParticipantShare =
+        row.totalBaseAmount / Math.max(participantIds.length, 1);
       for (const tripMemberId of participantIds) {
         shares.set(
           tripMemberId,
-          roundedMoney((shares.get(tripMemberId) ?? 0) + row.totalBaseAmount / Math.max(participantIds.length, 1)),
+          roundedMoney((shares.get(tripMemberId) ?? 0) + perParticipantShare),
         );
+        if (row.paymentMode === TripItemPaymentMode.EACH_PAYS_OWN) {
+          paidBy.set(
+            tripMemberId,
+            roundedMoney((paidBy.get(tripMemberId) ?? 0) + perParticipantShare),
+          );
+        }
       }
     }
   }
