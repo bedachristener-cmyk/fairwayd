@@ -1713,10 +1713,10 @@ function nextUpFlightRoute(item: TripItem) {
   const origin = airportCodeOrName(item.locationName);
   const destination = airportCodeOrName(item.address);
 
-  if (origin && destination) return `${origin} â†’ ${destination}`;
-  if (origin) return `${origin} â†’ Arrival airport missing`;
-  if (destination) return `Departure airport missing â†’ ${destination}`;
-  return "Departure airport â†’ Arrival airport missing";
+  if (origin && destination) return `${origin} -> ${destination}`;
+  if (origin) return `${origin} -> Arrival airport missing`;
+  if (destination) return `Departure airport missing -> ${destination}`;
+  return "Departure airport -> Arrival airport missing";
 }
 
 function nextUpFlightTiming(item: TripItem) {
@@ -1727,7 +1727,7 @@ function nextUpFlightTiming(item: TripItem) {
     .filter(Boolean)
     .join(" ");
 
-  if (start && end) return `${start} â†’ ${end}`;
+  if (start && end) return `${start} -> ${end}`;
   return start || end;
 }
 
@@ -1759,7 +1759,7 @@ function compactItemWhenLine(item: TripItem, displayKey?: string) {
       item.endDate ? compactDateLabel(dayKeyFromValue(item.endDate)) : "",
     ]
       .filter(Boolean)
-      .join(" â†’ ");
+      .join(" -> ");
     const checkIn = item.startTime?.trim() || "14:00";
     const checkOut = item.endTime?.trim() || "11:00";
     return [
@@ -1800,7 +1800,7 @@ function compactItemWhereLine(item: TripItem) {
     if (isCarRentalItem(item)) {
       return `Pickup ${item.locationName.trim()} · Return ${item.address.trim()}`;
     }
-    return `${item.locationName.trim()} â†’ ${item.address.trim()}`;
+    return `${item.locationName.trim()} -> ${item.address.trim()}`;
   }
 
   return item.locationName?.trim() || item.address?.trim() || "";
@@ -7086,7 +7086,7 @@ export default function TripDetailPage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(104px, 1fr))",
               gap: 8,
             }}
           >
@@ -7135,42 +7135,66 @@ export default function TripDetailPage() {
                 background: "color-mix(in srgb, var(--bg) 74%, var(--card))",
                 border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
                 display: "grid",
-                gap: 6,
+                gap: 8,
               }}
             >
+              {[
+                ["Others owe you", myCostsTotalToReceive],
+                ["You owe others", myCostsTotalToPay],
+              ].map(([label, value]) => (
+                <div
+                  key={String(label)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
+                  }}
+                >
+                  <span style={{ color: "var(--sub)", fontSize: 12, fontWeight: 900 }}>
+                    {label}
+                  </span>
+                  <span
+                    style={{
+                      color: "var(--text)",
+                      fontSize: 13,
+                      fontWeight: 950,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {formatMoney(Number(value), myCostsCurrency)}
+                  </span>
+                </div>
+              ))}
               <div
                 style={{
                   display: "flex",
-                  alignItems: "flex-start",
+                  alignItems: "center",
                   justifyContent: "space-between",
                   gap: 10,
-                  flexWrap: "wrap",
+                  paddingTop: 7,
+                  borderTop:
+                    "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
                 }}
               >
-                <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
-                  <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
-                    {myCostsBalancePreview > 0
-                      ? `I should receive ${formatMoney(myCostsBalancePreview, myCostsCurrency)}`
-                      : myCostsBalancePreview < 0
-                        ? `I still owe ${formatMoney(Math.abs(myCostsBalancePreview), myCostsCurrency)}`
-                        : "No money owed either way."}
-                  </div>
-                  <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
-                    {myCostsBalancePreview !== 0
-                      ? "Across the costs where you are involved."
-                      : "Your paid amount and your own trip cost match."}
-                  </div>
-                </div>
-                <div
+                <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
+                  Net result
+                </span>
+                <span
                   style={{
-                    color: "var(--text)",
-                    fontSize: 14,
+                    color: myCostsBalancePreview < 0 ? "var(--danger)" : "var(--text)",
+                    fontSize: 13,
                     fontWeight: 950,
-                    whiteSpace: "nowrap",
+                    textAlign: "right",
+                    overflowWrap: "anywhere",
                   }}
                 >
-                  {formatMoney(Math.abs(myCostsBalancePreview), myCostsCurrency)}
-                </div>
+                  {myCostsBalancePreview > 0
+                    ? `You should receive ${formatMoney(myCostsBalancePreview, myCostsCurrency)}`
+                    : myCostsBalancePreview < 0
+                      ? `You still owe ${formatMoney(Math.abs(myCostsBalancePreview), myCostsCurrency)}`
+                      : "No money owed either way"}
+                </span>
               </div>
             </div>
 
@@ -7224,13 +7248,13 @@ export default function TripDetailPage() {
                             "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
                         }}
                       >
-                        <span style={{ color: "var(--sub)", fontSize: 11, fontWeight: 900 }}>
+                        <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
                           {group.totalLabel}
                         </span>
                         <span
                           style={{
                             color: "var(--text)",
-                            fontSize: 12,
+                            fontSize: 14,
                             fontWeight: 950,
                             whiteSpace: "nowrap",
                           }}
@@ -7430,6 +7454,9 @@ export default function TripDetailPage() {
                             }}
                           >
                             <div style={{ display: "grid", gap: 6 }}>
+                              <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 900 }}>
+                                Cost
+                              </div>
                               {[
                                 ["Cost", row.label],
                                 ["Item", row.tripItemTitle],
@@ -7700,112 +7727,6 @@ export default function TripDetailPage() {
           </div>
 
           <div style={{ display: "grid", gap: 8 }}>
-            <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
-              Paid by summary
-            </div>
-            {(organizerCostsData?.summary.paidBySummary ?? []).map((row) => (
-              <div
-                key={row.member.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 10,
-                  padding: "8px 10px",
-                  borderRadius: 12,
-                  background: "color-mix(in srgb, var(--bg) 72%, var(--card))",
-                  border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                }}
-              >
-                <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
-                  {tripCostMemberDisplayName(row.member)}
-                </span>
-                <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
-                  {formatMoney(row.totalPaid, organizerCostsData?.baseCurrency || baseCurrency)}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ display: "grid", gap: 8 }}>
-            <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
-              Member Cost Overview
-            </div>
-            {(organizerCostsData?.summary.balancePreview ?? []).map((row) => (
-              <div
-                key={row.member.id}
-                style={{
-                  display: "grid",
-                  gap: 7,
-                  padding: "9px 10px",
-                  borderRadius: 12,
-                  background: "color-mix(in srgb, var(--bg) 72%, var(--card))",
-                  border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 10,
-                  }}
-                >
-                    <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
-                      {tripCostMemberDisplayName(row.member)}
-                    </span>
-                    <span
-                      style={{
-                      color: row.balance < 0 ? "var(--danger)" : "var(--text)",
-                      fontSize: 12,
-                      fontWeight: 950,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {organizerBalanceText(row.balance, organizerCostsCurrency)}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                    gap: 6,
-                  }}
-                >
-                  {[
-                    ["Paid", row.paid],
-                    ["Own trip cost", row.expectedShare],
-                    [
-                      row.balance >= 0 ? "Should receive" : "Still owes",
-                      Math.abs(row.balance),
-                    ],
-                  ].map(([label, value]) => (
-                    <div
-                      key={String(label)}
-                      style={{
-                        minWidth: 0,
-                        display: "grid",
-                        gap: 2,
-                        padding: "6px 7px",
-                        borderRadius: 10,
-                        background: "var(--bg)",
-                        border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                      }}
-                    >
-                      <span style={{ color: "var(--sub)", fontSize: 10, fontWeight: 900 }}>
-                        {label}
-                      </span>
-                      <span style={{ color: "var(--text)", fontSize: 11, fontWeight: 950 }}>
-                        {formatMoney(Number(value), organizerCostsCurrency)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ display: "grid", gap: 8 }}>
             <div style={{ display: "grid", gap: 2 }}>
               <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
                 Who owes what
@@ -7860,6 +7781,127 @@ export default function TripDetailPage() {
                 No one owes money based on the current cost setup.
               </div>
             )}
+          </div>
+
+          <div style={{ display: "grid", gap: 8 }}>
+            <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
+              Member Cost Overview
+            </div>
+            {(organizerCostsData?.summary.balancePreview ?? []).map((row) => (
+              <div
+                key={row.member.id}
+                style={{
+                  display: "grid",
+                  gap: 7,
+                  padding: "9px 10px",
+                  borderRadius: 12,
+                  background: "color-mix(in srgb, var(--bg) 72%, var(--card))",
+                  border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
+                  }}
+                >
+                  <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
+                    {tripCostMemberDisplayName(row.member)}
+                  </span>
+                  <span
+                    style={{
+                      color: row.balance < 0 ? "var(--danger)" : "var(--text)",
+                      fontSize: 12,
+                      fontWeight: 950,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {organizerBalanceText(row.balance, organizerCostsCurrency)}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                    gap: 6,
+                  }}
+                >
+                  {[
+                    { label: "Paid", value: formatMoney(row.paid, organizerCostsCurrency) },
+                    {
+                      label: "Own trip cost",
+                      value: formatMoney(row.expectedShare, organizerCostsCurrency),
+                    },
+                    {
+                      label: "Net result",
+                      value: organizerBalanceText(row.balance, organizerCostsCurrency),
+                      wide: true,
+                    },
+                  ].map((item) => (
+                    <div
+                      key={item.label}
+                      style={{
+                        minWidth: 0,
+                        display: "grid",
+                        gap: 2,
+                        padding: item.wide ? "8px 9px" : "6px 7px",
+                        borderRadius: 10,
+                        background: "var(--bg)",
+                        border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                        gridColumn: item.wide ? "1 / -1" : undefined,
+                      }}
+                    >
+                      <span style={{ color: "var(--sub)", fontSize: 10, fontWeight: 900 }}>
+                        {item.label}
+                      </span>
+                      <span
+                        style={{
+                          color:
+                            item.wide && row.balance < 0
+                              ? "var(--danger)"
+                              : "var(--text)",
+                          fontSize: item.wide ? 12 : 11,
+                          fontWeight: 950,
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {item.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: "grid", gap: 8 }}>
+            <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
+              Paid by summary
+            </div>
+            {(organizerCostsData?.summary.paidBySummary ?? []).map((row) => (
+              <div
+                key={row.member.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  padding: "8px 10px",
+                  borderRadius: 12,
+                  background: "color-mix(in srgb, var(--bg) 72%, var(--card))",
+                  border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                }}
+              >
+                <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
+                  {tripCostMemberDisplayName(row.member)}
+                </span>
+                <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
+                  {formatMoney(row.totalPaid, organizerCostsData?.baseCurrency || baseCurrency)}
+                </span>
+              </div>
+            ))}
           </div>
 
           <div style={{ display: "grid", gap: 8 }}>
@@ -7977,6 +8019,9 @@ export default function TripDetailPage() {
                       }}
                     >
                       <div style={{ display: "grid", gap: 6 }}>
+                        <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 900 }}>
+                          Cost
+                        </div>
                         {[
                           ["Date", tripCostDateLabel(row)],
                           ["Category", row.category],
@@ -8040,13 +8085,18 @@ export default function TripDetailPage() {
                       </div>
 
                       {row.paymentMode === "EACH_PAYS_OWN" ? (
-                        <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
-                          Everyone pays own part
+                        <div style={{ display: "grid", gap: 5 }}>
+                          <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 900 }}>
+                            Result
+                          </div>
+                          <div style={{ color: "var(--text)", fontSize: 12, lineHeight: 1.35, fontWeight: 900 }}>
+                            Everyone pays own part
+                          </div>
                         </div>
                       ) : owedRows.length > 0 ? (
                         <div style={{ display: "grid", gap: 6 }}>
                           <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 900 }}>
-                            Who owes whom
+                            Result
                           </div>
                           {owedRows.map((entry) => (
                             <div
