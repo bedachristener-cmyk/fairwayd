@@ -16,8 +16,27 @@ export type DestinationInfo = {
     text: string;
   }[];
   featuredRegions?: {
-    label: string;
+    label?: string;
+    title?: string;
+    name?: string;
     query: string;
+    slug?: string;
+    // Use only trusted local photos. Omit for premium text-only region cards.
+    image?: string;
+    description?: string;
+    courseCount?: number;
+    queryAliases?: string[];
+    featuredCourseSelectors?: {
+      query: string;
+      badge?: string;
+      reason?: string;
+    }[];
+  }[];
+  featuredCourseSelectors?: {
+    query: string;
+    badge?: string;
+    reason?: string;
+    region?: string;
   }[];
   highlights?: {
     label: string;
@@ -38,6 +57,20 @@ export type DestinationInfo = {
 
 export const DESTINATION_INFO: Record<string, DestinationInfo> = {
   thailand: {
+    // Local AI-generated destination-level visual; not assigned to a specific region or course.
+    heroImage: "/destinations/thailand/thailand-golf-destination.jpg",
+    overviewDescription:
+      "Thailand blends tropical resort golf, city-access clubs, beach regions, mountain escapes, and warm hospitality into one of Asia's most complete golf travel experiences.",
+    galleryTitle: "Thailand Gallery",
+    gallerySubtitle:
+      "A destination-level visual preview of tropical fairways, resort golf atmosphere, and warm-weather travel.",
+    galleryImages: [
+      {
+        src: "/destinations/thailand/thailand-golf-destination.jpg",
+        alt: "Thailand destination-level golf travel visual",
+        caption: "Fairwayd destination visual - not a specific course.",
+      },
+    ],
     bestTime: [
       {
         label: "Nov – Feb",
@@ -102,27 +135,211 @@ export const DESTINATION_INFO: Record<string, DestinationInfo> = {
         text: "Humidity can be high, so hydrate before and during the round.",
       },
     ],
+    featuredCourseSelectors: [
+      {
+        query: "Black Mountain Golf Club",
+        badge: "Resort Pick",
+        region: "Hua Hin",
+        reason: "Iconic Thailand golf with mountain views and resort feel.",
+      },
+      {
+        query: "Siam Country Club (Old Course)",
+        badge: "Premium Club",
+        region: "Pattaya",
+        reason: "One of Thailand's most recognised golf destinations.",
+      },
+      {
+        query: "Red Mountain Golf Club",
+        badge: "Island Golf",
+        region: "Phuket",
+        reason: "Dramatic Phuket golf carved through former tin-mine terrain.",
+      },
+    ],
     featuredRegions: [
       {
-        label: "Hua Hin",
+        title: "Hua Hin",
         query: "Hua Hin",
+        slug: "hua-hin",
+        // Verified regional travel image: Hua Hin coastline and resort skyline.
+        image: "/destinations/regions/thailand-hua-hin-hotels.jpg",
+        description:
+          "Beach golf destination with relaxed resort rhythm and easy multi-round stays.",
+        queryAliases: [
+          "Hua Hin",
+          "Cha-am",
+          "Phetchaburi",
+          "Prachuap Khiri Khan",
+        ],
+        featuredCourseSelectors: [
+          {
+            query: "Black Mountain Golf Club",
+            badge: "Resort Pick",
+            reason: "Signature Hua Hin golf with mountain views and resort energy.",
+          },
+          {
+            query: "Pineapple Valley Golf Club (ex Banyan)",
+            badge: "Scenic Pick",
+            reason: "Former Banyan hillside golf with a relaxed coastal-base feel.",
+          },
+        ],
       },
       {
-        label: "Phuket",
-        query: "Phuket",
-      },
-      {
-        label: "Pattaya",
+        title: "Pattaya",
         query: "Pattaya",
+        slug: "pattaya",
+        image: "/destinations/regions/thailand-pattaya.jpg",
+        description:
+          "Thailand's golf capital, with dense course choice near the coast.",
+        queryAliases: [
+          "Pattaya",
+          "Chonburi",
+          "Bang Lamung",
+          "Si Racha",
+          "Sattahip",
+          "Rayong",
+        ],
+        featuredCourseSelectors: [
+          {
+            query: "Siam Country Club (Old Course)",
+            badge: "Premium Club",
+            reason: "A recognised Pattaya flagship with major-event pedigree.",
+          },
+          {
+            query: "Chee Chan Golf Resort",
+            badge: "Signature Pick",
+            reason: "A distinctive Pattaya-area course set below the Khao Chi Chan hillside.",
+          },
+          {
+            query: "Laem Chabang International",
+            badge: "Resort Pick",
+            reason: "Large-scale Chonburi golf with a classic destination feel.",
+          },
+          {
+            query: "Siam Country Club (Rolling Hills)",
+            badge: "Premium Club",
+            reason: "A newer Siam Country Club destination course in the Pattaya golf corridor.",
+          },
+        ],
       },
       {
-        label: "Chiang Mai",
+        title: "Phuket",
+        query: "Phuket",
+        slug: "phuket",
+        // Verified regional travel image: Phuket coast and Andaman Sea.
+        image: "/destinations/regions/thailand-phuket-aerial.jpg",
+        description:
+          "Island golf experience pairing resort rounds with beach and sea air.",
+        queryAliases: ["Phuket", "Phang Nga"],
+        featuredCourseSelectors: [
+          {
+            query: "Red Mountain Golf Club",
+            badge: "Island Golf",
+            reason: "Dramatic Phuket golf carved through former tin-mine terrain.",
+          },
+          {
+            query: "Blue Canyon Country Club (Canyon)",
+            badge: "Classic Pick",
+            reason: "One of Phuket's best-known club settings near the island gateway.",
+          },
+        ],
+      },
+      {
+        title: "Chiang Mai",
         query: "Chiang Mai",
+        slug: "chiang-mai",
+        image: "/destinations/regions/thailand-chiang-mai.jpg",
+        description:
+          "Mountain golf with cooler mornings, northern culture, and scenic backdrops.",
+        queryAliases: ["Chiang Mai", "Lamphun"],
+        featuredCourseSelectors: [
+          {
+            query: "Alpine Golf Resort Chiang Mai",
+            badge: "Resort Pick",
+            reason: "Northern resort golf with mountain air and destination scale.",
+          },
+          {
+            query: "Chiang Mai Highlands Golf Resort",
+            badge: "Scenic Pick",
+            reason: "A strong mountain-region pick for a dedicated Chiang Mai golf stay.",
+          },
+        ],
+      },
+      {
+        title: "Bangkok",
+        query: "Bangkok",
+        slug: "bangkok",
+        image: "/destinations/regions/thailand-bangkok.jpg",
+        description:
+          "City golf base with premium clubs, easy airport access, and strong nightlife.",
+        queryAliases: [
+          "Bangkok",
+          "Pathum Thani",
+          "Samut Prakan",
+          "Nakhon Pathom",
+          "Nonthaburi",
+          "Ayutthaya",
+        ],
+        featuredCourseSelectors: [
+          {
+            query: "Thai Country Club",
+            badge: "Premium Club",
+            reason: "A benchmark Bangkok-area private club for premium golf trips.",
+          },
+          {
+            query: "Alpine Golf & Sports Club",
+            badge: "Championship Pick",
+            reason: "One of the strongest city-access tests in the Bangkok area.",
+          },
+          {
+            query: "Amata Spring Country Club",
+            badge: "Premium Club",
+            reason: "A high-profile Bangkok-area club with elite tournament feel.",
+          },
+          {
+            query: "Nikanti Golf Club",
+            badge: "Modern Pick",
+            reason: "A polished visitor-friendly option with a distinctive routing concept.",
+          },
+        ],
+      },
+      {
+        title: "Khao Yai",
+        query: "Khao Yai",
+        slug: "khao-yai",
+        image: "/destinations/regions/thailand-khao-yai.jpg",
+        description:
+          "Mountain golf, national park scenery, and cooler resort stays.",
+        queryAliases: ["Khao Yai", "Nakhon Ratchasima", "Pak Chong"],
+        featuredCourseSelectors: [
+          {
+            query: "Toscana Valley Country Club",
+            badge: "Resort Pick",
+            reason: "A signature Khao Yai resort setting with mountain scenery.",
+          },
+          {
+            query: "Rancho Charnvee Resort & Country Club",
+            badge: "Resort Pick",
+            reason: "A relaxed Pak Chong resort base for cooler Khao Yai golf.",
+          },
+        ],
       },
     ],
   },
 
   vietnam: {
+    heroImage: "/destinations/vietnam/vietnam-hero.jpg",
+    overviewDescription:
+      "Vietnam pairs coastal resort golf, city bases, northern culture, and limestone-bay scenery into a fast-growing Southeast Asian golf trip.",
+    galleryTitle: "Vietnam Gallery",
+    gallerySubtitle:
+      "A travel preview of Vietnam's coast, cities, lakes, and bay scenery.",
+    galleryImages: [
+      {
+        src: "/destinations/vietnam/vietnam-hero.jpg",
+        alt: "Ha Long Bay limestone islands in Vietnam",
+        caption: "Ha Long Bay travel scenery - destination-level visual.",
+      },
+    ],
     bestTime: [
       {
         label: "Nov – Apr",
@@ -175,9 +392,74 @@ export const DESTINATION_INFO: Record<string, DestinationInfo> = {
         text: "Use arranged transfers for easier course access outside cities.",
       },
     ],
+    featuredRegions: [
+      {
+        title: "Da Nang",
+        query: "Da Nang",
+        slug: "da-nang",
+        image: "/destinations/regions/vietnam-da-nang.jpg",
+        description:
+          "Central coast base with beaches, resort stays, and easy access to the golf corridor.",
+        queryAliases: ["Da Nang", "Danang", "Hoi An", "Dien Ban", "Hue"],
+      },
+      {
+        title: "Ho Chi Minh City",
+        query: "Ho Chi Minh",
+        slug: "ho-chi-minh-city",
+        image: "/destinations/regions/vietnam-ho-chi-minh-city.jpg",
+        description:
+          "Urban golf access, skyline stays, and southern Vietnam energy between rounds.",
+        queryAliases: [
+          "Ho Chi Minh",
+          "Saigon",
+          "Binh Duong",
+          "Nhon Trach",
+          "Vung Tau",
+        ],
+      },
+      {
+        title: "Hanoi",
+        query: "Hanoi",
+        slug: "hanoi",
+        image: "/destinations/regions/vietnam-hanoi.jpg",
+        description:
+          "Northern city culture, lake scenery, and golf trips with cooler seasonal contrast.",
+        queryAliases: [
+          "Hanoi",
+          "Vinh Phuc",
+          "Hai Duong",
+          "Hoa Binh",
+          "Ha Nam",
+          "Bac Giang",
+        ],
+      },
+      {
+        title: "Ha Long Bay",
+        query: "Ha Long",
+        slug: "ha-long-bay",
+        image: "/destinations/regions/vietnam-ha-long-bay.jpg",
+        description:
+          "Limestone bay scenery and coastal travel atmosphere for northern golf itineraries.",
+        queryAliases: ["Ha Long", "Halong", "Quang Ninh"],
+      },
+    ],
   },
 
   portugal: {
+    // Local AI-generated destination-level visual; not assigned to a specific region or course.
+    heroImage: "/destinations/portugal/portugal-golf-destination.jpg",
+    overviewDescription:
+      "Portugal is a polished golf-travel classic, pairing Atlantic light, resort bases, coastal courses, city breaks, and year-round playability.",
+    galleryTitle: "Portugal Gallery",
+    gallerySubtitle:
+      "A destination-level visual preview of Atlantic golf, coastal light, and resort-travel atmosphere.",
+    galleryImages: [
+      {
+        src: "/destinations/portugal/portugal-golf-destination.jpg",
+        alt: "Portugal destination-level golf travel visual",
+        caption: "Fairwayd destination visual - not a specific course.",
+      },
+    ],
     bestTime: [
       {
         label: "Mar – Jun",
@@ -234,9 +516,89 @@ export const DESTINATION_INFO: Record<string, DestinationInfo> = {
         text: "Popular resort courses can be busy, so early tee times help.",
       },
     ],
+    featuredRegions: [
+      {
+        title: "Algarve",
+        query: "Algarve",
+        slug: "algarve",
+        image: "/destinations/regions/portugal-algarve.jpg",
+        description: "Portugal's classic golf coast with resort bases and year-round appeal.",
+        queryAliases: [
+          "Algarve",
+          "Vilamoura",
+          "Almancil",
+          "Lagos",
+          "Albufeira",
+          "Tavira",
+          "Portimão",
+          "Portimao",
+          "Carvoeiro",
+          "Quinta do Lago",
+        ],
+      },
+      {
+        title: "Lisbon Coast",
+        query: "Lisbon",
+        slug: "lisbon-coast",
+        // Verified regional travel image: Cabo da Roca coastline near Lisbon.
+        image: "/destinations/regions/portugal-lisbon-cabo-da-roca.jpg",
+        description: "City break and championship golf, with beaches and culture close by.",
+        queryAliases: [
+          "Lisbon",
+          "Lisboa",
+          "Cascais",
+          "Estoril",
+          "Sintra",
+          "Belas",
+          "Charneca da Caparica",
+          "Turcifal",
+          "Obidos",
+          "Óbidos",
+        ],
+      },
+      {
+        title: "Porto & North",
+        query: "Porto",
+        slug: "porto-north",
+        // Verified regional travel image: Douro valley wine landscape.
+        image: "/destinations/regions/portugal-porto-north-douro.jpg",
+        description: "Wine country, northern scenery, and quieter golf-trip rhythm.",
+        queryAliases: [
+          "Porto",
+          "Norte",
+          "Povoa de Varzim",
+          "Póvoa de Varzim",
+          "Ponte de Lima",
+          "Vila Nova de Gaia",
+          "Espinho",
+          "Vidago",
+        ],
+      },
+      {
+        title: "Madeira",
+        query: "Madeira",
+        slug: "madeira",
+        image: "/destinations/regions/portugal-madeira.jpg",
+        description: "Atlantic island golf with dramatic views and resort-style stays.",
+        queryAliases: ["Madeira", "Funchal", "Porto Santo", "Machico"],
+      },
+    ],
   },
 
   spain: {
+    heroImage: "/destinations/spain/spain-hero.jpg",
+    overviewDescription:
+      "Spain blends winter-sun golf, Mediterranean coasts, city breaks, island escapes, and relaxed resort travel across several strong golf regions.",
+    galleryTitle: "Spain Gallery",
+    gallerySubtitle:
+      "A visual preview of Spanish coast, culture, cities, and island travel.",
+    galleryImages: [
+      {
+        src: "/destinations/spain/spain-hero.jpg",
+        alt: "Sagrada Familia in Barcelona, Spain",
+        caption: "Barcelona cultural travel scenery - destination-level visual.",
+      },
+    ],
     bestTime: [
       {
         label: "Spring",
@@ -293,9 +655,88 @@ export const DESTINATION_INFO: Record<string, DestinationInfo> = {
         text: "Barcelona and Madrid can pair golf with short urban stays.",
       },
     ],
+    featuredRegions: [
+      {
+        title: "Costa del Sol",
+        query: "Costa del Sol",
+        slug: "costa-del-sol",
+        image: "/destinations/regions/spain-costa-del-sol.jpg",
+        description:
+          "Spain's classic winter-sun golf coast with resort towns and marina energy.",
+        queryAliases: [
+          "Costa del Sol",
+          "Marbella",
+          "Estepona",
+          "Mijas",
+          "Málaga",
+          "Malaga",
+          "Sotogrande",
+          "San Roque",
+          "Benahavís",
+          "Benalmádena",
+          "Casares",
+        ],
+      },
+      {
+        title: "Barcelona & Catalonia",
+        query: "Barcelona",
+        slug: "barcelona-catalonia",
+        image: "/destinations/regions/spain-barcelona.jpg",
+        description:
+          "City culture, Mediterranean stays, and golf access around Catalonia.",
+        queryAliases: [
+          "Barcelona",
+          "Catalonia",
+          "Catalunya",
+          "Katalonien",
+          "Girona",
+          "Tarragona",
+          "Platja d'Aro",
+        ],
+      },
+      {
+        title: "Madrid",
+        query: "Madrid",
+        slug: "madrid",
+        image: "/destinations/regions/spain-madrid.jpg",
+        description:
+          "Capital-city golf base with urban energy, history, and inland course variety.",
+        queryAliases: ["Madrid", "Alcobendas", "Algete"],
+      },
+      {
+        title: "Mallorca",
+        query: "Mallorca",
+        slug: "mallorca",
+        image: "/destinations/regions/spain-mallorca.jpg",
+        description:
+          "Island golf rhythm with coves, coast roads, resort stays, and sea air.",
+        queryAliases: [
+          "Mallorca",
+          "Balearen",
+          "Balearic",
+          "Palma",
+          "Llucmajor",
+          "Santa Ponsa",
+          "Pollença",
+        ],
+      },
+    ],
   },
 
   turkey: {
+    heroImage: "/destinations/turkey/turkey-hero.jpg",
+    overviewDescription:
+      "Turkey combines Belek resort golf, Mediterranean coastline, Istanbul culture, and dramatic interior landscapes into a strong value golf-travel destination.",
+    galleryTitle: "Turkey Gallery",
+    gallerySubtitle:
+      "A visual preview of Turkish coast, culture, resort travel, and landscapes.",
+    galleryImages: [
+      {
+        src: "/destinations/turkey/turkey-hero.jpg",
+        alt: "Cappadocia landscape in Turkey",
+        caption: "Cappadocia travel scenery - destination-level visual.",
+      },
+    ],
     bestTime: [
       {
         label: "Mar – May",
@@ -352,9 +793,57 @@ export const DESTINATION_INFO: Record<string, DestinationInfo> = {
         text: "Turkey works well for training camps and larger golf groups.",
       },
     ],
+    featuredRegions: [
+      {
+        title: "Belek",
+        query: "Belek",
+        slug: "belek",
+        image: "/destinations/regions/turkey-belek.jpg",
+        description:
+          "All-in-one Mediterranean resort golf with short transfers and warm-season stays.",
+        queryAliases: ["Belek", "Antalya", "Serik", "Kadriye"],
+      },
+      {
+        title: "Istanbul",
+        query: "Istanbul",
+        slug: "istanbul",
+        image: "/destinations/regions/turkey-istanbul.jpg",
+        description:
+          "Culture-first city break with Bosphorus scenery and golf reachable from the city.",
+      },
+      {
+        title: "Cappadocia",
+        query: "Cappadocia",
+        slug: "cappadocia",
+        image: "/destinations/regions/turkey-cappadocia.jpg",
+        description:
+          "Iconic inland landscapes for pairing golf travel with a memorable add-on stay.",
+      },
+      {
+        title: "Aegean Coast",
+        query: "Izmir",
+        slug: "aegean-coast",
+        image: "/destinations/regions/turkey-aegean-coast.jpg",
+        description:
+          "Sea views, relaxed coastal towns, and a softer resort rhythm around Izmir.",
+      },
+    ],
   },
 
   "united-arab-emirates": {
+    heroImage: "/destinations/united-arab-emirates/united-arab-emirates-hero.jpg",
+    overviewDescription:
+      "The United Arab Emirates offers polished winter golf, luxury city stays, desert scenery, championship venues, and easy high-service transfers.",
+    galleryTitle: "United Arab Emirates Gallery",
+    gallerySubtitle:
+      "A visual preview of skyline stays, desert mountains, mosques, and oasis travel.",
+    galleryImages: [
+      {
+        src: "/destinations/united-arab-emirates/united-arab-emirates-hero.jpg",
+        alt: "Dubai skyline in the United Arab Emirates",
+        caption: "Dubai skyline travel scenery - destination-level visual.",
+      },
+    ],
     bestTime: [
       {
         label: "Nov – Mar",
@@ -411,9 +900,62 @@ export const DESTINATION_INFO: Record<string, DestinationInfo> = {
         text: "Dubai and Abu Dhabi focus on high-service championship golf.",
       },
     ],
+    featuredRegions: [
+      {
+        title: "Dubai",
+        query: "Dubai",
+        slug: "dubai",
+        image: "/destinations/regions/united-arab-emirates-dubai.jpg",
+        description:
+          "Luxury skyline base with championship golf, resort hotels, and winter sun.",
+      },
+      {
+        title: "Abu Dhabi",
+        query: "Abu Dhabi",
+        slug: "abu-dhabi",
+        image: "/destinations/regions/united-arab-emirates-abu-dhabi.jpg",
+        description:
+          "Capital golf stays with cultural landmarks, premium service, and island resorts.",
+      },
+      {
+        title: "Ras Al Khaimah",
+        query: "Ras Al Khaimah",
+        slug: "ras-al-khaimah",
+        image: "/destinations/regions/united-arab-emirates-ras-al-khaimah.jpg",
+        description:
+          "Mountain and desert scenery with resort stays beyond the Dubai corridor.",
+      },
+      {
+        title: "Al Ain",
+        query: "Al Ain",
+        slug: "al-ain",
+        image: "/destinations/regions/united-arab-emirates-al-ain.jpg",
+        description:
+          "Oasis atmosphere, inland heritage, and a quieter contrast to the coast.",
+      },
+    ],
   },
 
   switzerland: {
+    // Verified local golf photo from Crans-Montana, used at destination level and for Valais.
+    heroImage: "/destinations/switzerland-crans-montana.jpg",
+    overviewDescription:
+      "Switzerland turns golf into a scenic alpine travel experience, with mountain air, lake regions, premium clubs, and a short but memorable summer season.",
+    galleryTitle: "Switzerland Gallery",
+    gallerySubtitle:
+      "A verified local golf visual preview of alpine fairways and mountain scenery.",
+    galleryImages: [
+      {
+        src: "/destinations/switzerland-crans-montana.jpg",
+        alt: "Crans-Montana golf course in Valais, Switzerland",
+        caption: "Verified local golf photo from Crans-Montana, Valais.",
+      },
+      {
+        src: "/destinations/switzerland-crans-montana.png",
+        alt: "Crans-Montana golf course in Valais, Switzerland",
+        caption: "Verified local golf photo from Crans-Montana, Valais.",
+      },
+    ],
     bestTime: [
       {
         label: "May – Sep",
@@ -470,9 +1012,90 @@ export const DESTINATION_INFO: Record<string, DestinationInfo> = {
         text: "Many Swiss rounds are as much about scenery as score.",
       },
     ],
+    featuredRegions: [
+      {
+        title: "Valais",
+        query: "Valais",
+        slug: "valais",
+        // Verified local asset: Crans-Montana golf is in Valais.
+        image: "/destinations/switzerland-crans-montana.jpg",
+        description: "Alpine golf with mountain views, sunny valleys, and resort stays.",
+        queryAliases: [
+          "Valais",
+          "Wallis",
+          "VS",
+          "Crans-Montana",
+          "Leuk",
+          "Randa",
+          "Sierre",
+          "Sion",
+        ],
+      },
+      {
+        title: "Graubünden",
+        query: "Graubünden",
+        slug: "graubuenden",
+        image: "/destinations/regions/switzerland-graubuenden.jpg",
+        description: "Resort golf in the Alps with fresh air and high-country scenery.",
+        queryAliases: [
+          "Graubünden",
+          "Graubuenden",
+          "GraubÃ¼nden",
+          "Grisons",
+          "GR",
+          "Engadin",
+          "St. Moritz",
+          "Davos",
+          "Arosa",
+          "Klosters",
+          "Alvaneu",
+          "Domat/Ems",
+        ],
+      },
+      {
+        title: "Lake Geneva",
+        query: "Lake Geneva",
+        slug: "lake-geneva",
+        image: "/destinations/regions/switzerland-lake-geneva.jpg",
+        description: "Classic Swiss golf with lakeside stays, vineyards, and polished clubs.",
+        queryAliases: [
+          "Lake Geneva",
+          "Geneva",
+          "Genève",
+          "Vaud",
+          "VD",
+          "GE",
+          "Lausanne",
+          "Montreux",
+          "Chéserex",
+          "Epalinges",
+        ],
+      },
+      {
+        title: "Ticino",
+        query: "Ticino",
+        slug: "ticino",
+        image: "/destinations/regions/switzerland-ticino.jpg",
+        description: "Mediterranean golf feeling with palm-lined towns and mild southern air.",
+        queryAliases: ["Ticino", "TI", "Lugano", "Locarno", "Ascona", "Magliaso"],
+      },
+    ],
   },
 
   germany: {
+    heroImage: "/destinations/germany/germany-hero.jpg",
+    overviewDescription:
+      "Germany offers city-access golf, forest and parkland variety, polished club culture, and easy regional travel through strong transport links.",
+    galleryTitle: "Germany Gallery",
+    gallerySubtitle:
+      "A visual preview of German cities, forests, northern waterways, and regional travel.",
+    galleryImages: [
+      {
+        src: "/destinations/germany/germany-hero.jpg",
+        alt: "Brandenburg Gate in Berlin, Germany",
+        caption: "Berlin cultural travel scenery - destination-level visual.",
+      },
+    ],
     bestTime: [
       {
         label: "Apr – Jun",
@@ -529,9 +1152,88 @@ export const DESTINATION_INFO: Record<string, DestinationInfo> = {
         text: "Expect parkland, forest, and resort layouts depending on region.",
       },
     ],
+    featuredRegions: [
+      {
+        title: "Munich & Bavaria",
+        query: "Munich",
+        slug: "munich-bavaria",
+        image: "/destinations/regions/germany-munich-bavaria.jpg",
+        description:
+          "Southern city base with alpine day-trip energy, traditional clubs, and resort access.",
+        queryAliases: [
+          "Munich",
+          "München",
+          "Bavaria",
+          "Bayern",
+          "Bad Griesbach",
+          "Oberstaufen",
+          "Bad Kissingen",
+          "Dachau",
+          "Wolfratshausen",
+        ],
+      },
+      {
+        title: "Hamburg & North",
+        query: "Hamburg",
+        slug: "hamburg-north",
+        image: "/destinations/regions/germany-hamburg-north.jpg",
+        description:
+          "Northern waterways, port-city stays, and parkland golf with a polished club feel.",
+        queryAliases: [
+          "Hamburg",
+          "HH",
+          "Schleswig-Holstein",
+          "Niedersachsen",
+          "Lower Saxony",
+          "SH",
+          "NI",
+          "Mecklenburg",
+          "MV",
+        ],
+      },
+      {
+        title: "Black Forest",
+        query: "Black Forest",
+        slug: "black-forest",
+        image: "/destinations/regions/germany-black-forest.jpg",
+        description:
+          "Forest scenery, spa towns, and quieter golf-trip pacing in southwest Germany.",
+        queryAliases: [
+          "Black Forest",
+          "Schwarzwald",
+          "Freiburg",
+          "Baden-Baden",
+          "Bad Bellingen",
+          "Bad Liebenzell",
+          "Kirchzarten",
+        ],
+      },
+      {
+        title: "Berlin & Brandenburg",
+        query: "Berlin",
+        slug: "berlin-brandenburg",
+        image: "/destinations/regions/germany-berlin-brandenburg.jpg",
+        description:
+          "Capital culture, lakeside escapes, and golf access across Brandenburg.",
+        queryAliases: ["Berlin", "Brandenburg", "BB", "Bad Saarow", "Potsdam"],
+      },
+    ],
   },
 
   austria: {
+    heroImage: "/destinations/austria/austria-hero.jpg",
+    overviewDescription:
+      "Austria is a warm-season golf destination built around alpine valleys, lake regions, city culture, wellness stays, and compact scenic routes.",
+    galleryTitle: "Austria Gallery",
+    gallerySubtitle:
+      "A visual preview of Austrian cities, lakes, mountains, and alpine travel.",
+    galleryImages: [
+      {
+        src: "/destinations/austria/austria-hero.jpg",
+        alt: "Vienna skyline across the Danube in Austria",
+        caption: "Vienna city travel scenery - destination-level visual.",
+      },
+    ],
     bestTime: [
       {
         label: "May – Sep",
@@ -588,9 +1290,95 @@ export const DESTINATION_INFO: Record<string, DestinationInfo> = {
         text: "Many courses pair well with wellness and outdoor travel.",
       },
     ],
+    featuredRegions: [
+      {
+        title: "Tyrol",
+        query: "Tyrol",
+        slug: "tyrol",
+        image: "/destinations/regions/austria-tyrol.jpg",
+        description:
+          "Alpine golf, mountain air, wellness stays, and high-scenery summer routes.",
+        queryAliases: [
+          "Tyrol",
+          "Tirol",
+          "Kitzbühel",
+          "KitzbÃ¼hel",
+          "Mieming",
+          "Seefeld",
+          "Pertisau",
+          "Kössen",
+          "KÃ¶ssen",
+          "Innsbruck",
+        ],
+      },
+      {
+        title: "Salzburg",
+        query: "Salzburg",
+        slug: "salzburg",
+        image: "/destinations/regions/austria-salzburg.jpg",
+        description:
+          "Historic city culture, nearby lakes, and alpine golf within easy touring distance.",
+        queryAliases: ["Salzburg", "Salzburgerland", "Wals", "Mittersill", "Zell am See"],
+      },
+      {
+        title: "Vienna",
+        query: "Vienna",
+        slug: "vienna",
+        image: "/destinations/regions/austria-vienna.jpg",
+        description:
+          "Capital-city golf access with Danube views, culture, dining, and short-break appeal.",
+        queryAliases: [
+          "Vienna",
+          "Wien",
+          "NÖ",
+          "NÃ–",
+          "Lower Austria",
+          "Niederösterreich",
+          "NiederÃ¶sterreich",
+          "Atzenbrugg",
+          "Himberg",
+          "Hainburg",
+          "Oberwaltersdorf",
+          "Schönborn",
+        ],
+      },
+      {
+        title: "Carinthia",
+        query: "Carinthia",
+        slug: "carinthia",
+        image: "/destinations/regions/austria-carinthia.jpg",
+        description:
+          "Lake golf, southern Austrian warmth, and mountain backdrops for resort stays.",
+        queryAliases: [
+          "Carinthia",
+          "Kärnten",
+          "KÃ¤rnten",
+          "Klagenfurt",
+          "Wörthersee",
+          "WÃ¶rthersee",
+          "Moosburg",
+          "Feldkirchen",
+          "Bad Kleinkirchheim",
+          "Eberndorf",
+        ],
+      },
+    ],
   },
 
   france: {
+    heroImage: "/destinations/france/france-hero.jpg",
+    overviewDescription:
+      "France pairs classic clubs and resort golf with Paris access, Riviera sun, wine regions, chateaux, and strong food-led travel.",
+    galleryTitle: "France Gallery",
+    gallerySubtitle:
+      "A visual preview of French city, coast, wine, and chateau travel.",
+    galleryImages: [
+      {
+        src: "/destinations/france/france-hero.jpg",
+        alt: "Eiffel Tower in Paris, France",
+        caption: "Paris travel scenery - destination-level visual.",
+      },
+    ],
     bestTime: [
       {
         label: "Apr – Jun",
@@ -647,9 +1435,79 @@ export const DESTINATION_INFO: Record<string, DestinationInfo> = {
         text: "Golf trips often pair naturally with regional food and wine.",
       },
     ],
+    featuredRegions: [
+      {
+        title: "Paris Region",
+        query: "Paris",
+        slug: "paris-region",
+        image: "/destinations/regions/france-paris-region.jpg",
+        description:
+          "Classic city-break golf with culture, dining, and historic clubs nearby.",
+        queryAliases: [
+          "Paris",
+          "Île-de-France",
+          "Ile-de-France",
+          "Guyancourt",
+          "Chantilly",
+          "L'Isle-Adam",
+          "Lamorlaye",
+          "Courson",
+          "Bondoufle",
+        ],
+      },
+      {
+        title: "French Riviera",
+        query: "Nice",
+        slug: "french-riviera",
+        image: "/destinations/regions/france-french-riviera.jpg",
+        description:
+          "Mediterranean golf, resort towns, blue-water views, and longer playable seasons.",
+        queryAliases: [
+          "Nice",
+          "Côte d'Azur",
+          "Cote d'Azur",
+          "Provence",
+          "Cannes",
+          "Mougins",
+          "Tourrettes",
+          "Saint-Tropez",
+        ],
+      },
+      {
+        title: "Bordeaux",
+        query: "Bordeaux",
+        slug: "bordeaux",
+        image: "/destinations/regions/france-bordeaux.jpg",
+        description:
+          "Wine-region travel, countryside stays, and golf paired with food and vineyards.",
+        queryAliases: ["Bordeaux", "Médoc", "Medoc", "Le Pian-Médoc", "Le Pian-MÃ©doc"],
+      },
+      {
+        title: "Loire Valley",
+        query: "Loire",
+        slug: "loire-valley",
+        image: "/destinations/regions/france-loire-valley.jpg",
+        description:
+          "Chateau scenery, soft countryside routes, and relaxed multi-stop golf travel.",
+        queryAliases: ["Loire", "Centre-Val de Loire", "Pays de la Loire", "Tours", "Nantes"],
+      },
+    ],
   },
 
   italy: {
+    heroImage: "/destinations/italy/italy-hero.jpg",
+    overviewDescription:
+      "Italy turns golf trips into touring experiences, with lake scenery, Rome access, Tuscan countryside, island coastlines, and food-led travel.",
+    galleryTitle: "Italy Gallery",
+    gallerySubtitle:
+      "A visual preview of Italian lakes, cities, countryside, and coastal travel.",
+    galleryImages: [
+      {
+        src: "/destinations/italy/italy-hero.jpg",
+        alt: "Lake Como in Italy",
+        caption: "Northern Italian lake scenery - destination-level visual.",
+      },
+    ],
     bestTime: [
       {
         label: "Apr – Jun",
@@ -706,9 +1564,92 @@ export const DESTINATION_INFO: Record<string, DestinationInfo> = {
         text: "Expect a mix of resort, countryside, and city-access courses.",
       },
     ],
+    featuredRegions: [
+      {
+        title: "Lake Como & Northern Lakes",
+        query: "Lake",
+        slug: "lake-como-northern-lakes",
+        image: "/destinations/regions/italy-lake-como.jpg",
+        description:
+          "Lake scenery, elegant towns, and northern golf with mountain backdrops.",
+        queryAliases: [
+          "Lake",
+          "Lake Como",
+          "Como",
+          "Lombardei",
+          "Lombardy",
+          "Brescia",
+          "Bergamo",
+          "Varese",
+          "Milano",
+        ],
+      },
+      {
+        title: "Rome & Lazio",
+        query: "Rome",
+        slug: "rome-lazio",
+        image: "/destinations/regions/italy-rome-lazio.jpg",
+        description:
+          "Ancient-city culture, countryside courses, and easy short-break golf access.",
+        queryAliases: ["Rome", "Rom", "Lazio", "Latium", "Castel Gandolfo"],
+      },
+      {
+        title: "Tuscany",
+        query: "Tuscany",
+        slug: "tuscany",
+        image: "/destinations/regions/italy-tuscany.jpg",
+        description:
+          "Rolling hills, wine country, resort stays, and slow-travel golf atmosphere.",
+        queryAliases: [
+          "Tuscany",
+          "Toscana",
+          "Toskana",
+          "Firenze",
+          "Florence",
+          "Siena",
+          "Pisa",
+          "Saturnia",
+          "Porto Ercole",
+          "Tirrenia",
+        ],
+      },
+      {
+        title: "Sicily",
+        query: "Sicily",
+        slug: "sicily",
+        image: "/destinations/regions/italy-sicily.jpg",
+        description:
+          "Island coast, warm-weather travel, vineyards, and Mediterranean resort rhythm.",
+        queryAliases: [
+          "Sicily",
+          "Sicilia",
+          "Sizilien",
+          "Palermo",
+          "Catania",
+          "Sciacca",
+          "Ragusa",
+          "Syrakus",
+          "Syracuse",
+        ],
+      },
+    ],
   },
 
   japan: {
+    // Local AI-generated destination-level visual; not assigned to a specific region or course.
+    heroImage: "/destinations/japan/japan-golf-destination.jpg",
+    overviewDescription:
+      "Japan offers refined golf travel with seasonal contrast, precise service, mountain and forest courses, city escapes, and resort stays.",
+    galleryTitle: "Japan Gallery",
+    gallerySubtitle:
+      "A destination-level visual preview of Japanese golf atmosphere, seasonal landscapes, and refined travel rhythm.",
+    galleryImages: [
+      {
+        src: "/destinations/japan/japan-golf-destination.jpg",
+        alt: "Japan destination-level golf travel visual",
+        caption: "Fairwayd destination visual - not a specific course.",
+      },
+    ],
     bestTime: [
       {
         label: "Mar - May",
@@ -779,20 +1720,54 @@ export const DESTINATION_INFO: Record<string, DestinationInfo> = {
     ],
     featuredRegions: [
       {
-        label: "Tokyo",
-        query: "Tokyo",
-      },
-      {
-        label: "Osaka / Kobe",
-        query: "Osaka",
-      },
-      {
-        label: "Hokkaido",
+        title: "Hokkaido",
         query: "Hokkaido",
+        slug: "hokkaido",
+        image: "/destinations/regions/japan-hokkaido.jpg",
+        description: "Summer golf and wide open fairways with cooler northern air.",
+        queryAliases: ["Hokkaido", "Sapporo", "Niseko"],
       },
       {
-        label: "Okinawa",
+        title: "Kanto",
+        query: "Tokyo",
+        slug: "kanto",
+        image: "/destinations/regions/japan-kanto.jpg",
+        description: "Tokyo area golf escapes for city trips, premium clubs, and short breaks.",
+        queryAliases: [
+          "Kanto",
+          "Tokyo",
+          "Chiba",
+          "Saitama",
+          "Kanagawa",
+          "Ibaraki",
+          "Tochigi",
+          "Gunma",
+        ],
+      },
+      {
+        title: "Kansai",
+        query: "Osaka",
+        slug: "kansai",
+        image: "/destinations/regions/japan-kansai.jpg",
+        description: "Culture, city trips, and golf around Osaka, Kyoto, Kobe, and Nara.",
+        queryAliases: [
+          "Kansai",
+          "Osaka",
+          "Kyoto",
+          "Kobe",
+          "Hyogo",
+          "Nara",
+          "Shiga",
+          "Wakayama",
+        ],
+      },
+      {
+        title: "Okinawa",
         query: "Okinawa",
+        slug: "okinawa",
+        image: "/destinations/regions/japan-okinawa.jpg",
+        description: "Island golf experience with warmer weather and resort-style travel.",
+        queryAliases: ["Okinawa", "Naha"],
       },
     ],
   },
@@ -914,29 +1889,76 @@ export const DESTINATION_INFO: Record<string, DestinationInfo> = {
     ],
     featuredRegions: [
       {
-        label: "Manila",
+        title: "Manila & Tagaytay",
         query: "Metro Manila",
+        slug: "manila-tagaytay",
+        image: "/destinations/regions/philippines-manila-tagaytay.jpg",
+        description: "City access and cooler highland golf for flexible Luzon trips.",
+        queryAliases: [
+          "Metro Manila",
+          "Manila",
+          "Tagaytay",
+          "Cavite",
+          "Laguna",
+          "Rizal",
+          "Batangas",
+          "Antipolo",
+          "Calamba",
+          "Silang",
+          "Laurel",
+          "Lipa",
+          "Binangonan",
+        ],
       },
       {
-        label: "Clark / Luzon",
-        query: "Pampanga",
-      },
-      {
-        label: "Cebu",
+        title: "Cebu",
         query: "Cebu",
+        slug: "cebu",
+        image: "/destinations/regions/philippines-cebu.jpg",
+        description: "Island golf and resort stays with easy links to beach travel.",
+        queryAliases: ["Cebu", "Cebu City", "Lapu-Lapu", "Mactan", "Danao"],
       },
       {
-        label: "Boracay",
-        query: "Aklan",
+        title: "Clark & Subic",
+        query: "Pampanga",
+        slug: "clark-subic",
+        image: "/destinations/regions/philippines-clark-subic.jpg",
+        description: "Easy golf getaway north of Manila with airport and expressway access.",
+        queryAliases: [
+          "Pampanga",
+          "Clark",
+          "Subic",
+          "Zambales",
+          "Bataan",
+          "Tarlac",
+          "Lubao",
+        ],
       },
       {
-        label: "Davao",
+        title: "Davao",
         query: "Davao",
+        slug: "davao",
+        image: "/destinations/regions/philippines-davao.jpg",
+        description: "Warm southern golf destination with a slower tropical pace.",
+        queryAliases: ["Davao", "Davao City", "Bukidnon"],
       },
     ],
   },
 
   "south-africa": {
+    heroImage: "/destinations/south-africa/south-africa-hero.jpg",
+    overviewDescription:
+      "South Africa combines Cape Town and Winelands golf, Garden Route road trips, inland championship courses, warm coastal regions, safari add-ons, and resort escapes.",
+    galleryTitle: "South Africa Gallery",
+    gallerySubtitle:
+      "A visual preview of Cape scenery, wine regions, coast, safari-country landscapes, and resort travel.",
+    galleryImages: [
+      {
+        src: "/destinations/south-africa/south-africa-hero.jpg",
+        alt: "Cape Town and Table Mountain scenery in South Africa",
+        caption: "Cape Town travel scenery - destination-level visual.",
+      },
+    ],
     bestTime: [
       {
         label: "Mar - May",
@@ -1029,39 +2051,76 @@ export const DESTINATION_INFO: Record<string, DestinationInfo> = {
       {
         label: "Cape Town",
         query: "Cape Town",
+        image: "/destinations/regions/south-africa-cape-town.jpg",
+        description:
+          "Iconic mountain-and-ocean base with Winelands access, city stays, and coastal golf energy.",
       },
       {
         label: "Western Cape",
         query: "Western Cape",
+        image: "/destinations/regions/south-africa-western-cape.jpg",
+        description:
+          "Wine estates, mountain scenery, and resort-style golf routes beyond Cape Town.",
       },
       {
         label: "Garden Route",
         query: "Garden Route",
+        image: "/destinations/regions/south-africa-garden-route.jpg",
+        description:
+          "Road-trip golf corridor with lagoons, coastal towns, forests, and premium resort stops.",
       },
       {
         label: "Gauteng",
         query: "Gauteng",
+        image: "/destinations/regions/south-africa-gauteng.jpg",
+        description:
+          "Johannesburg and Pretoria access with inland championship golf and easy business-trip add-ons.",
       },
       {
         label: "KwaZulu-Natal",
         query: "KwaZulu-Natal",
+        image: "/destinations/regions/south-africa-kwazulu-natal.jpg",
+        description:
+          "Warm Indian Ocean coast, Durban energy, and subtropical golf-trip pacing.",
       },
       {
         label: "Mpumalanga",
         query: "Mpumalanga",
+        image: "/destinations/regions/south-africa-mpumalanga.jpg",
+        description:
+          "Escarpment scenery, safari proximity, and dramatic landscapes near Kruger itineraries.",
       },
       {
         label: "Sun City",
         query: "Sun City",
+        image: "/destinations/regions/south-africa-sun-city.jpg",
+        description:
+          "All-in-one resort golf with leisure facilities, tournament pedigree, and bushveld setting.",
       },
       {
         label: "Eastern Cape",
         query: "Eastern Cape",
+        image: "/destinations/regions/south-africa-eastern-cape.jpg",
+        description:
+          "Rugged coast, quieter travel rhythm, and links-style atmosphere for adventurous golf trips.",
       },
     ],
   },
 
   "united-states": {
+    heroImage: "/destinations/united-states/united-states-hero.jpg",
+    overviewDescription:
+      "The United States offers huge golf variety across winter-sun states, desert regions, California coastline, Carolinas golf corridors, and bucket-list resort destinations.",
+    galleryTitle: "United States Gallery",
+    gallerySubtitle:
+      "A visual preview of American coast, desert, resort, and regional travel.",
+    galleryImages: [
+      {
+        src: "/destinations/united-states/united-states-hero.jpg",
+        alt: "Big Sur coastline in California, United States",
+        caption: "California coastal travel scenery - destination-level visual.",
+      },
+    ],
     bestTime: [
       {
         label: "Winter",
@@ -1116,6 +2175,40 @@ export const DESTINATION_INFO: Record<string, DestinationInfo> = {
       {
         label: "Bookings",
         text: "Popular destination courses can require advance booking.",
+      },
+    ],
+    featuredRegions: [
+      {
+        title: "Florida",
+        query: "Florida",
+        slug: "florida",
+        image: "/destinations/regions/united-states-florida.jpg",
+        description:
+          "Winter-sun golf, beach resorts, easy flights, and warm-weather short breaks.",
+      },
+      {
+        title: "Arizona & Scottsdale",
+        query: "Arizona",
+        slug: "arizona-scottsdale",
+        image: "/destinations/regions/united-states-arizona.jpg",
+        description:
+          "Desert golf, dry winter weather, spa resorts, and dramatic Sonoran scenery.",
+      },
+      {
+        title: "California",
+        query: "California",
+        slug: "california",
+        image: "/destinations/regions/united-states-california.jpg",
+        description:
+          "Pacific coastline, premium resort golf, wine country, and city-to-coast itineraries.",
+      },
+      {
+        title: "Carolinas",
+        query: "Myrtle Beach",
+        slug: "carolinas",
+        image: "/destinations/regions/united-states-carolinas.jpg",
+        description:
+          "High-density golf corridors, Atlantic beaches, and relaxed group-trip energy.",
       },
     ],
   },

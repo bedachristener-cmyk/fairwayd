@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../api/base";
@@ -11,6 +11,20 @@ import ImageLightbox from "../components/ImageLightbox";
 import { DestinationRowsSkeleton, EmptyState } from "../components/PolishStates";
 import { DESTINATION_INFO } from "../data/destinationInfo";
 import { t } from "../i18n/strings";
+import {
+  CalendarDays,
+  Car,
+  Check,
+  CloudSun,
+  Flag,
+  Lightbulb,
+  MapPin,
+  Plane,
+  ThumbsUp,
+  UtensilsCrossed,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
 const COUNTRY_NAMES: Record<string, string> = {
   TH: "Thailand",
@@ -39,16 +53,49 @@ function getFlagUrl(countryCode?: string) {
   return `https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`;
 }
 
-const TRAVEL_TIP_ICONS = ["✈️", "🕒", "🌦️", "🚗"];
-const LOCAL_KNOWLEDGE_ICONS = ["💡", "🏌️", "📍", "🍽️"];
+const TRAVEL_TIP_ICONS: LucideIcon[] = [Plane, CalendarDays, CloudSun, Car];
+const LOCAL_KNOWLEDGE_ICONS: LucideIcon[] = [
+  Lightbulb,
+  Flag,
+  MapPin,
+  UtensilsCrossed,
+];
 
 type Course = {
   id: string;
   name: string;
   city?: string;
   region?: string;
+  area?: string;
+  country?: string;
   holes?: number;
   access?: string;
+};
+
+type FeaturedRegion = {
+  label?: string;
+  title?: string;
+  name?: string;
+  query: string;
+  slug?: string;
+  image?: string;
+  description?: string;
+  courseCount?: number;
+  queryAliases?: string[];
+  featuredCourseSelectors?: FeaturedCourseSelector[];
+};
+
+type FeaturedCourseSelector = {
+  query: string;
+  badge?: string;
+  reason?: string;
+  region?: string;
+};
+
+type FeaturedCourse = Course & {
+  featuredBadge?: string;
+  featuredReason?: string;
+  featuredRegion?: string;
 };
 
 type DestinationDetail = {
@@ -121,12 +168,416 @@ function formatTipDate(value: string) {
   });
 }
 
+function featuredRegionTitle(region: FeaturedRegion) {
+  return region.title || region.name || region.label || region.query;
+}
+
+function normalizeCourseSearchValue(value?: string) {
+  return (value || "").trim().toLowerCase();
+}
+
+function regionSearchTerms(region: FeaturedRegion) {
+  return [region.query, ...(region.queryAliases ?? [])]
+    .map(normalizeCourseSearchValue)
+    .filter(Boolean);
+}
+
+function courseSearchFields(course: Course) {
+  return [course.name, course.city, course.region, course.area, course.country]
+    .map(normalizeCourseSearchValue)
+    .filter(Boolean);
+}
+
+function courseFieldMatchesTerm(field: string, term: string) {
+  if (term.length <= 3) return field === term;
+  return field.includes(term);
+}
+
+function courseMatchesRegion(course: Course, region: FeaturedRegion) {
+  const terms = regionSearchTerms(region);
+  if (terms.length === 0) return false;
+  const fields = courseSearchFields(course);
+
+  return terms.some((term) =>
+    fields.some((field) => courseFieldMatchesTerm(field, term)),
+  );
+}
+
+function featuredRegionCourseCount(region: FeaturedRegion, courses: Course[]) {
+  if (typeof region.courseCount === "number") return region.courseCount;
+  const matchedKeys = new Set<string>();
+
+  for (const course of courses) {
+    if (!courseMatchesRegion(course, region)) continue;
+    matchedKeys.add(course.id || normalizeCourseSearchValue(course.name));
+  }
+
+  return matchedKeys.size;
+}
+
+function formatCourseAccess(access?: string) {
+  if (!access) return "";
+
+  return access
+    .toLowerCase()
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function findFeaturedCourseMatch(
+  selector: FeaturedCourseSelector,
+  courses: Course[],
+  usedCourseIds: Set<string>,
+) {
+  const query = normalizeCourseSearchValue(selector.query);
+  if (!query) return undefined;
+
+  const availableCourses = courses.filter((course) => !usedCourseIds.has(course.id));
+  const exactNameMatch = availableCourses.find(
+    (course) => normalizeCourseSearchValue(course.name) === query,
+  );
+  if (exactNameMatch) return exactNameMatch;
+
+  const partialNameMatch = availableCourses.find((course) =>
+    normalizeCourseSearchValue(course.name).includes(query),
+  );
+  if (partialNameMatch) return partialNameMatch;
+
+  return availableCourses.find((course) =>
+    [course.city, course.region]
+      .filter(Boolean)
+      .some((value) => normalizeCourseSearchValue(value).includes(query)),
+  );
+}
+
+function resolveFeaturedCourses(
+  courses: Course[],
+  selectors?: FeaturedCourseSelector[],
+  limit = 3,
+  useFallback = true,
+) {
+  const usedCourseIds = new Set<string>();
+  const resolved: FeaturedCourse[] = [];
+
+  for (const selector of selectors ?? []) {
+    if (resolved.length >= limit) break;
+    const course = findFeaturedCourseMatch(selector, courses, usedCourseIds);
+    if (!course) continue;
+
+    usedCourseIds.add(course.id);
+    resolved.push({
+      ...course,
+      featuredBadge: selector.badge,
+      featuredReason: selector.reason,
+      featuredRegion: selector.region,
+    });
+  }
+
+  if (useFallback) {
+    for (const course of courses) {
+      if (resolved.length >= limit) break;
+      if (usedCourseIds.has(course.id)) continue;
+
+      usedCourseIds.add(course.id);
+      resolved.push(course);
+    }
+  }
+
+  return resolved;
+}
+
+function IconBubble({
+  icon: Icon,
+}: {
+  icon: LucideIcon;
+}) {
+  return (
+    <div
+      style={{
+        width: 28,
+        height: 28,
+        borderRadius: 999,
+        border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+        background: "color-mix(in srgb, var(--card) 88%, var(--green) 4%)",
+        color: "var(--text)",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+      }}
+    >
+      <Icon size={15} strokeWidth={2.3} />
+    </div>
+  );
+}
+
+function CourseMetaChip({
+  icon: Icon,
+  children,
+  muted = false,
+}: {
+  icon: LucideIcon;
+  children: ReactNode;
+  muted?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+        background: muted
+          ? "color-mix(in srgb, var(--muted) 62%, transparent)"
+          : "color-mix(in srgb, var(--card) 72%, transparent)",
+        borderRadius: 999,
+        padding: "5px 8px",
+        color: "var(--text)",
+        fontSize: 12,
+        fontWeight: 750,
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 5,
+        lineHeight: 1.1,
+        whiteSpace: "nowrap",
+      }}
+    >
+      <Icon size={13} strokeWidth={2.3} />
+      <span>{children}</span>
+    </div>
+  );
+}
+
+function FeaturedRegionsSection({
+  regions,
+  courses,
+  isMobile,
+  onSelectRegion,
+}: {
+  regions: FeaturedRegion[];
+  courses: Course[];
+  isMobile: boolean;
+  onSelectRegion: (query: string) => void;
+}) {
+  const [showAllRegions, setShowAllRegions] = useState(false);
+  const hasMoreRegions = regions.length > 4;
+  const shouldRenderRegionImages = regions.every((region) =>
+    Boolean(region.image)
+  );
+  const visibleRegions =
+    hasMoreRegions && !showAllRegions ? regions.slice(0, 4) : regions;
+
+  useEffect(() => {
+    setShowAllRegions(false);
+  }, [regions]);
+
+  return (
+    <div
+      className="fw-atmosphere-card"
+      style={{
+        padding: isMobile ? 18 : 22,
+        borderRadius: 24,
+        border:
+          "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+        background:
+          "linear-gradient(145deg, color-mix(in srgb, var(--card) 96%, var(--bg) 4%), color-mix(in srgb, var(--card) 92%, var(--green) 3%))",
+        boxShadow: "0 14px 34px rgba(0,0,0,0.075)",
+        display: "grid",
+        gap: 14,
+      }}
+    >
+      <div style={{ display: "grid", gap: 4 }}>
+        <div
+          style={{
+            fontSize: isMobile ? 19 : 21,
+            fontWeight: 850,
+            color: "var(--text)",
+          }}
+        >
+          Featured Regions
+        </div>
+        <div
+          style={{
+            fontSize: 13,
+            color: "var(--sub)",
+            lineHeight: 1.45,
+          }}
+        >
+          Start with the most recognizable golf areas for this destination.
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: isMobile
+            ? "1fr"
+            : "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: 10,
+        }}
+      >
+        {visibleRegions.map((region) => {
+          const title = featuredRegionTitle(region);
+          const count = featuredRegionCourseCount(region, courses);
+          const hasImage = shouldRenderRegionImages && Boolean(region.image);
+
+          return (
+            <button
+              key={region.slug || region.query}
+              type="button"
+              onClick={() => onSelectRegion(region.query)}
+              style={{
+                border:
+                  "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                borderRadius: 20,
+                background: hasImage
+                  ? "color-mix(in srgb, var(--muted) 50%, transparent)"
+                  : "linear-gradient(145deg, color-mix(in srgb, var(--card) 94%, var(--green) 4%), color-mix(in srgb, var(--muted) 64%, transparent))",
+                color: "var(--text)",
+                padding: 0,
+                cursor: "pointer",
+                overflow: "hidden",
+                textAlign: "left",
+                display: "grid",
+                minWidth: 0,
+                minHeight: hasImage ? undefined : 164,
+              }}
+            >
+              {hasImage ? (
+                <img
+                  src={region.image}
+                  alt={`${title} golf region`}
+                  loading="lazy"
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    height: isMobile ? 132 : 120,
+                    objectFit: "cover",
+                    background: "var(--card)",
+                  }}
+                />
+              ) : null}
+              <div
+                style={{
+                  padding: hasImage ? "12px 13px 13px" : "15px",
+                  display: "grid",
+                  gap: hasImage ? 7 : 10,
+                  alignContent: hasImage ? "start" : "space-between",
+                }}
+              >
+                {!hasImage ? (
+                  <div
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 999,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "var(--green)",
+                      background:
+                        "color-mix(in srgb, var(--card) 76%, transparent)",
+                      border:
+                        "1px solid color-mix(in srgb, var(--border) 66%, transparent)",
+                    }}
+                  >
+                    <MapPin size={17} strokeWidth={2.4} />
+                  </div>
+                ) : null}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    gap: 10,
+                  }}
+                >
+                  <div
+                    style={{
+                      color: "var(--text)",
+                      fontSize: hasImage ? 15 : 17,
+                      fontWeight: 900,
+                      lineHeight: hasImage ? 1.18 : 1.12,
+                      overflowWrap: "anywhere",
+                    }}
+                  >
+                    {title}
+                  </div>
+                    <div
+                      style={{
+                        border:
+                          "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                        borderRadius: 999,
+                      padding: hasImage ? "4px 7px" : "5px 8px",
+                        color: "var(--sub)",
+                        fontSize: 11,
+                        fontWeight: 850,
+                      whiteSpace: "nowrap",
+                      background:
+                        "color-mix(in srgb, var(--card) 74%, transparent)",
+                    }}
+                  >
+                    {count} {count === 1 ? "course" : "courses"}
+                  </div>
+                </div>
+                <div
+                  style={{
+                  color: "var(--sub)",
+                    fontSize: hasImage ? 13 : 13.5,
+                    lineHeight: hasImage ? 1.4 : 1.48,
+                  }}
+                >
+                  {region.description || `Explore golf around ${title}.`}
+                </div>
+                <div
+                  style={{
+                    color: "var(--green)",
+                    fontSize: 12,
+                    fontWeight: 900,
+                  }}
+                >
+                  Explore region
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {hasMoreRegions ? (
+        <button
+          type="button"
+          onClick={() => setShowAllRegions((value) => !value)}
+          style={{
+            width: isMobile ? "100%" : "fit-content",
+            minHeight: 42,
+            justifySelf: isMobile ? "stretch" : "center",
+            border:
+              "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+            borderRadius: 999,
+            background: "color-mix(in srgb, var(--muted) 62%, transparent)",
+            color: "var(--text)",
+            padding: "10px 14px",
+            fontSize: 13,
+            fontWeight: 900,
+            lineHeight: 1.2,
+            cursor: "pointer",
+          }}
+        >
+          {showAllRegions ? "Show fewer regions" : "Show more regions"}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 export default function DestinationPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { token, logout, user } = useAuth();
   const isMobile = window.innerWidth <= 980;
   const overviewExperienceRef = useRef<HTMLDivElement | null>(null);
+  const courseResultsRef = useRef<HTMLDivElement | null>(null);
+  const pendingRegionScrollRef = useRef(false);
   const galleryTouchStartXRef = useRef<number | null>(null);
   const galleryTouchStartYRef = useRef<number | null>(null);
 
@@ -163,9 +614,12 @@ export default function DestinationPage() {
     null,
   );
 
-  const featuredCourses = (data?.items ?? []).slice(0, 3);
   const featuredPosts = (posts ?? []).slice(0, 2);
   const info = slug ? DESTINATION_INFO[slug] : undefined;
+  const featuredCourses = resolveFeaturedCourses(
+    data?.items ?? [],
+    info?.featuredCourseSelectors,
+  );
   const heroImage = info?.heroImage;
   const galleryImages = info?.galleryImages ?? [];
   const hasMultipleGalleryImages = galleryImages.length > 1;
@@ -733,6 +1187,25 @@ export default function DestinationPage() {
     loadDestinationFollowStatus();
   }, [loadDestinationFollowStatus]);
 
+  useEffect(() => {
+    if (activeTab !== "courses" || !pendingRegionScrollRef.current) return;
+
+    pendingRegionScrollRef.current = false;
+    window.requestAnimationFrame(() => {
+      const target = courseResultsRef.current;
+      if (!target) return;
+
+      const topOffset = isMobile ? 76 : 92;
+      const targetTop =
+        target.getBoundingClientRect().top + window.scrollY - topOffset;
+
+      window.scrollTo({
+        top: Math.max(0, targetTop),
+        behavior: "smooth",
+      });
+    });
+  }, [activeTab, search, isMobile]);
+
   const activeCommentPost =
     posts.find((p) => p.id === activeCommentPostId) ?? null;
 
@@ -755,14 +1228,54 @@ export default function DestinationPage() {
     );
   }
 
-  const filteredItems = (data.items || []).filter((c: Course) => {
-    const q = search.toLowerCase();
-    return (
-      c.name.toLowerCase().includes(q) ||
-      (c.city || "").toLowerCase().includes(q) ||
-      (c.region || "").toLowerCase().includes(q)
-    );
-  });
+  const activeFeaturedRegion =
+    info?.featuredRegions?.find(
+      (region) =>
+        normalizeCourseSearchValue(region.query) ===
+        normalizeCourseSearchValue(search),
+    ) ?? null;
+  const filteredItems = activeFeaturedRegion
+    ? (data.items || []).filter((course) =>
+        courseMatchesRegion(course, activeFeaturedRegion),
+      )
+    : (data.items || []).filter((c: Course) => {
+        const q = normalizeCourseSearchValue(search);
+        if (!q) return true;
+        return courseSearchFields(c).some((field) => field.includes(q));
+      });
+  const activeRegionTitle = activeFeaturedRegion
+    ? featuredRegionTitle(activeFeaturedRegion)
+    : "";
+  const activeRegionFeaturedCourses = activeFeaturedRegion
+    ? resolveFeaturedCourses(
+        data.items || [],
+        activeFeaturedRegion.featuredCourseSelectors,
+        4,
+        false,
+      ).filter((course) => courseMatchesRegion(course, activeFeaturedRegion))
+    : [];
+  const activeRegionFeaturedCourseIds = new Set(
+    activeRegionFeaturedCourses.map((course) => course.id).filter(Boolean),
+  );
+  const activeRegionFeaturedCourseNames = new Set(
+    activeRegionFeaturedCourses.map((course) =>
+      normalizeCourseSearchValue(course.name),
+    ),
+  );
+  const regularFilteredItems =
+    activeRegionFeaturedCourses.length > 0
+      ? filteredItems.filter((course) => {
+          if (activeRegionFeaturedCourseIds.has(course.id)) return false;
+          return !activeRegionFeaturedCourseNames.has(
+            normalizeCourseSearchValue(course.name),
+          );
+        })
+      : filteredItems;
+  const handleSelectFeaturedRegion = (query: string) => {
+    pendingRegionScrollRef.current = true;
+    setSearch(query);
+    setActiveTab("courses");
+  };
 
   return (
     <div className="fw-page">
@@ -772,7 +1285,9 @@ export default function DestinationPage() {
       <div
         className="fw-page-shell"
         style={{
-          padding: isMobile ? 12 : 20,
+          padding: isMobile
+            ? "12px 12px calc(112px + env(safe-area-inset-bottom, 0px))"
+            : 20,
           overflowX: "hidden",
         }}
       >
@@ -789,7 +1304,7 @@ export default function DestinationPage() {
             cursor: "pointer",
           }}
         >
-          ← {t("back_to_destinations")}
+          {"<-"} {t("back_to_destinations")}
         </button>
 
         <div
@@ -1051,7 +1566,16 @@ export default function DestinationPage() {
                           "var(--fw-destination-hero-pill-bg, rgba(0,0,0,0.34))";
                       }}
                     >
-                      ⛳ {data.courseCount} {t("course_plural")}
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <Flag size={14} strokeWidth={2.4} />
+                        {data.courseCount} {t("course_plural")}
+                      </span>
                     </button>
 
                     <div
@@ -1068,7 +1592,8 @@ export default function DestinationPage() {
                         fontWeight: 700,
                       }}
                     >
-                      👥 {destinationFollowerCount}{" "}
+                      <Users size={14} strokeWidth={2.4} />{" "}
+                      {destinationFollowerCount}{" "}
                       {destinationFollowerCount === 1
                         ? t("follower_singular")
                         : t("follower_plural")}
@@ -1131,7 +1656,19 @@ export default function DestinationPage() {
                       {destinationFollowBusy
                         ? t("please_wait")
                         : destinationFollowing
-                          ? `✓ ${t("following_destination")}`
+                          ? (
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: 7,
+                              }}
+                            >
+                              <Check size={15} strokeWidth={2.5} />
+                              {t("following_destination")}
+                            </span>
+                          )
                           : t("follow_destination")}
                     </button>
                   </div>
@@ -1192,7 +1729,7 @@ export default function DestinationPage() {
                       "var(--fw-destination-hero-pill-bg, rgba(0,0,0,0.34))";
                   }}
                 >
-                  🏌️ {t("explore_experience")}
+                  {t("explore_experience")}
                 </button>
               </div>
             </div>
@@ -1540,7 +2077,10 @@ export default function DestinationPage() {
                     color: "var(--text)",
                   }}
                 >
-                  ⛳ {t("best_time_to_play")}
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                    <Flag size={20} strokeWidth={2.4} />
+                    {t("best_time_to_play")}
+                  </span>
                 </div>
 
                 <div
@@ -1589,6 +2129,15 @@ export default function DestinationPage() {
               </div>
             ) : null}
 
+            {info?.featuredRegions?.length ? (
+              <FeaturedRegionsSection
+                regions={info.featuredRegions}
+                courses={data.items ?? []}
+                isMobile={isMobile}
+                onSelectRegion={handleSelectFeaturedRegion}
+              />
+            ) : null}
+
             {info?.highlights?.length ? (
               <div
                 className="fw-atmosphere-card"
@@ -1612,7 +2161,10 @@ export default function DestinationPage() {
                     color: "var(--text)",
                   }}
                 >
-                  📍 {t("highlights")}
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                    <MapPin size={17} strokeWidth={2.4} />
+                    {t("highlights")}
+                  </span>
                 </div>
 
                 <div
@@ -1729,25 +2281,9 @@ export default function DestinationPage() {
                         alignItems: "flex-start",
                       }}
                     >
-                      <div
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: 999,
-                          border:
-                            "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                          background:
-                            "color-mix(in srgb, var(--card) 88%, var(--green) 4%)",
-                          color: "var(--text)",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 14,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {TRAVEL_TIP_ICONS[i % TRAVEL_TIP_ICONS.length]}
-                      </div>
+                      <IconBubble
+                        icon={TRAVEL_TIP_ICONS[i % TRAVEL_TIP_ICONS.length]}
+                      />
                       <div
                         style={{
                           minWidth: 0,
@@ -1839,29 +2375,13 @@ export default function DestinationPage() {
                         alignItems: "flex-start",
                       }}
                     >
-                      <div
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: 999,
-                          border:
-                            "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                          background:
-                            "color-mix(in srgb, var(--card) 88%, var(--green) 4%)",
-                          color: "var(--text)",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 14,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {
+                      <IconBubble
+                        icon={
                           LOCAL_KNOWLEDGE_ICONS[
                             i % LOCAL_KNOWLEDGE_ICONS.length
                           ]
                         }
-                      </div>
+                      />
                       <div
                         style={{
                           minWidth: 0,
@@ -1889,79 +2409,6 @@ export default function DestinationPage() {
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            {info?.featuredRegions?.length ? (
-              <div
-                className="fw-atmosphere-card"
-                style={{
-                  padding: isMobile ? 18 : 22,
-                  borderRadius: 24,
-                  border:
-                    "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                  background:
-                    "linear-gradient(145deg, color-mix(in srgb, var(--card) 96%, var(--bg) 4%), color-mix(in srgb, var(--card) 92%, var(--green) 3%))",
-                  boxShadow: "0 14px 34px rgba(0,0,0,0.075)",
-                  display: "grid",
-                  gap: 14,
-                }}
-              >
-                <div style={{ display: "grid", gap: 4 }}>
-                  <div
-                    style={{
-                      fontSize: isMobile ? 19 : 21,
-                      fontWeight: 850,
-                      color: "var(--text)",
-                    }}
-                  >
-                    Featured Regions
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 13,
-                      color: "var(--sub)",
-                      lineHeight: 1.45,
-                    }}
-                  >
-                    Start with the most recognizable golf areas for this
-                    destination.
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 8,
-                  }}
-                >
-                  {info.featuredRegions.map((region) => (
-                    <button
-                      key={region.query}
-                      type="button"
-                      onClick={() => {
-                        setSearch(region.query);
-                        setActiveTab("courses");
-                      }}
-                      style={{
-                        border:
-                          "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                        borderRadius: 999,
-                        background:
-                          "color-mix(in srgb, var(--muted) 62%, transparent)",
-                        color: "var(--text)",
-                        padding: "9px 12px",
-                        fontSize: 13,
-                        fontWeight: 800,
-                        lineHeight: 1.2,
-                        cursor: "pointer",
-                      }}
-                    >
-                      {region.label}
-                    </button>
                   ))}
                 </div>
               </div>
@@ -2347,9 +2794,7 @@ export default function DestinationPage() {
                                 "background 0.16s ease, border-color 0.16s ease, opacity 0.16s ease",
                             }}
                           >
-                            <span aria-hidden="true" style={{ fontSize: 12 }}>
-                              👍
-                            </span>
+                            <ThumbsUp size={13} strokeWidth={2.3} />
                             <span>
                               Useful
                               {tip.helpfulCount > 0
@@ -2534,8 +2979,7 @@ export default function DestinationPage() {
                       lineHeight: 1.45,
                     }}
                   >
-                    A quick preview of places to play in{" "}
-                    {data.destination?.name || getCountryName(data.country)}.
+                    A curated starting point for this destination.
                   </div>
                 </div>
 
@@ -2607,7 +3051,54 @@ export default function DestinationPage() {
                           minWidth: 0,
                         }}
                       >
-                        <div style={{ display: "grid", gap: 5, minWidth: 0 }}>
+                        <div style={{ display: "grid", gap: 7, minWidth: 0 }}>
+                          {c.featuredBadge || c.featuredRegion ? (
+                            <div
+                              style={{
+                                display: "flex",
+                                flexWrap: "wrap",
+                                gap: 6,
+                                alignItems: "center",
+                              }}
+                            >
+                              {c.featuredBadge ? (
+                                <div
+                                  style={{
+                                    border:
+                                      "1px solid color-mix(in srgb, var(--green) 34%, var(--border))",
+                                    background:
+                                      "color-mix(in srgb, var(--green) 10%, var(--card) 90%)",
+                                    borderRadius: 999,
+                                    padding: "4px 8px",
+                                    color: "var(--green)",
+                                    fontSize: 11,
+                                    fontWeight: 900,
+                                    lineHeight: 1.15,
+                                  }}
+                                >
+                                  {c.featuredBadge}
+                                </div>
+                              ) : null}
+                              {c.featuredRegion ? (
+                                <div
+                                  style={{
+                                    border:
+                                      "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                                    background:
+                                      "color-mix(in srgb, var(--card) 72%, transparent)",
+                                    borderRadius: 999,
+                                    padding: "4px 8px",
+                                    color: "var(--sub)",
+                                    fontSize: 11,
+                                    fontWeight: 850,
+                                    lineHeight: 1.15,
+                                  }}
+                                >
+                                  {c.featuredRegion}
+                                </div>
+                              ) : null}
+                            </div>
+                          ) : null}
                           <div
                             style={{
                               color: "var(--text)",
@@ -2630,6 +3121,18 @@ export default function DestinationPage() {
                           </div>
                         </div>
 
+                        {c.featuredReason ? (
+                          <div
+                            style={{
+                              color: "var(--sub)",
+                              fontSize: 13,
+                              lineHeight: 1.4,
+                            }}
+                          >
+                            {c.featuredReason}
+                          </div>
+                        ) : null}
+
                         <div
                           style={{
                             display: "flex",
@@ -2638,38 +3141,14 @@ export default function DestinationPage() {
                           }}
                         >
                           {c.holes ? (
-                            <div
-                              style={{
-                                border:
-                                  "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                                background:
-                                  "color-mix(in srgb, var(--card) 72%, transparent)",
-                                borderRadius: 999,
-                                padding: "5px 8px",
-                                color: "var(--text)",
-                                fontSize: 12,
-                                fontWeight: 750,
-                              }}
-                            >
+                            <CourseMetaChip icon={Flag}>
                               {c.holes} holes
-                            </div>
+                            </CourseMetaChip>
                           ) : null}
                           {c.access ? (
-                            <div
-                              style={{
-                                border:
-                                  "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                                background:
-                                  "color-mix(in srgb, var(--card) 72%, transparent)",
-                                borderRadius: 999,
-                                padding: "5px 8px",
-                                color: "var(--text)",
-                                fontSize: 12,
-                                fontWeight: 750,
-                              }}
-                            >
-                              {c.access}
-                            </div>
+                            <CourseMetaChip icon={Users}>
+                              {formatCourseAccess(c.access)}
+                            </CourseMetaChip>
                           ) : null}
                         </div>
 
@@ -2890,12 +3369,166 @@ export default function DestinationPage() {
 
         {activeTab === "courses" && (
           <div
+            ref={courseResultsRef}
             style={{
               marginTop: 18,
               display: "grid",
               gap: 12,
             }}
           >
+            {activeRegionFeaturedCourses.length > 0 ? (
+              <div
+                className="fw-atmosphere-card"
+                style={{
+                  padding: isMobile ? 16 : 18,
+                  borderRadius: 24,
+                  border:
+                    "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                  background:
+                    "linear-gradient(145deg, color-mix(in srgb, var(--card) 96%, var(--bg) 4%), color-mix(in srgb, var(--card) 92%, var(--green) 3%))",
+                  boxShadow: "0 14px 34px rgba(0,0,0,0.075)",
+                  display: "grid",
+                  gap: 12,
+                }}
+              >
+                <div style={{ display: "grid", gap: 4 }}>
+                  <div
+                    style={{
+                      color: "var(--text)",
+                      fontSize: isMobile ? 19 : 21,
+                      fontWeight: 850,
+                      lineHeight: 1.15,
+                    }}
+                  >
+                    Featured in {activeRegionTitle}
+                  </div>
+                  <div
+                    style={{
+                      color: "var(--sub)",
+                      fontSize: 13,
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    Curated picks before the full regional course list.
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: isMobile
+                      ? "1fr"
+                      : "repeat(auto-fit, minmax(210px, 1fr))",
+                    gap: 10,
+                  }}
+                >
+                  {activeRegionFeaturedCourses.map((c) => (
+                    <div
+                      key={c.id}
+                      onClick={() => navigate(`/courses/${c.id}`)}
+                      style={{
+                        border:
+                          "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                        borderRadius: 20,
+                        background:
+                          "color-mix(in srgb, var(--muted) 42%, transparent)",
+                        cursor: "pointer",
+                        padding: 14,
+                        display: "grid",
+                        gap: 10,
+                        minWidth: 0,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: 6,
+                          alignItems: "center",
+                        }}
+                      >
+                        {c.featuredBadge ? (
+                          <div
+                            style={{
+                              border:
+                                "1px solid color-mix(in srgb, var(--green) 34%, var(--border))",
+                              background:
+                                "color-mix(in srgb, var(--green) 10%, var(--card) 90%)",
+                              borderRadius: 999,
+                              padding: "4px 8px",
+                              color: "var(--green)",
+                              fontSize: 11,
+                              fontWeight: 900,
+                              lineHeight: 1.15,
+                            }}
+                          >
+                            {c.featuredBadge}
+                          </div>
+                        ) : null}
+                        {c.access ? (
+                          <CourseMetaChip icon={Users}>
+                            {formatCourseAccess(c.access)}
+                          </CourseMetaChip>
+                        ) : null}
+                      </div>
+
+                      <div style={{ display: "grid", gap: 5, minWidth: 0 }}>
+                        <div
+                          style={{
+                            color: "var(--text)",
+                            fontSize: 16,
+                            fontWeight: 850,
+                            lineHeight: 1.2,
+                          }}
+                        >
+                          {c.name}
+                        </div>
+                        <div
+                          style={{
+                            color: "var(--sub)",
+                            fontSize: 13,
+                            lineHeight: 1.35,
+                          }}
+                        >
+                          {[c.city, c.region].filter(Boolean).join(" - ")}
+                        </div>
+                      </div>
+
+                      {c.featuredReason ? (
+                        <div
+                          style={{
+                            color: "var(--sub)",
+                            fontSize: 13,
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          {c.featuredReason}
+                        </div>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        className="fw-pill fw-pill--cta"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          navigate(`/courses/${c.id}`);
+                        }}
+                        style={{
+                          height: 36,
+                          padding: "0 13px",
+                          fontSize: 13,
+                          cursor: "pointer",
+                          width: isMobile ? "100%" : "fit-content",
+                        }}
+                      >
+                        Open Course
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
             {filteredItems.length === 0 ? (
               <div
                 className="fw-atmosphere-card"
@@ -2926,7 +3559,60 @@ export default function DestinationPage() {
                 </div>
               </div>
             ) : (
-              filteredItems.map((c: Course) => {
+              <>
+                {activeFeaturedRegion ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 10,
+                      padding: "0 4px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        color: "var(--text)",
+                        fontSize: isMobile ? 18 : 20,
+                        fontWeight: 850,
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      All {activeRegionTitle} courses
+                    </div>
+                    <div
+                      style={{
+                        color: "var(--sub)",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {regularFilteredItems.length}{" "}
+                      {regularFilteredItems.length === 1 ? "course" : "courses"}
+                    </div>
+                  </div>
+                ) : null}
+
+              {regularFilteredItems.length === 0 ? (
+                <div
+                  className="fw-atmosphere-card"
+                  style={{
+                    padding: 16,
+                    borderRadius: 20,
+                    border:
+                      "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                    background:
+                      "color-mix(in srgb, var(--muted) 58%, transparent)",
+                    color: "var(--sub)",
+                    fontSize: 13,
+                    lineHeight: 1.45,
+                  }}
+                >
+                  All matching courses are included in the featured picks above.
+                </div>
+              ) : (
+              regularFilteredItems.map((c: Course) => {
                 const isCourseFollowed = followedCourseIds.includes(c.id);
                 const isCourseBusy = courseFollowBusyId === c.id;
 
@@ -2969,22 +3655,9 @@ export default function DestinationPage() {
                         boxSizing: "border-box",
                       }}
                     >
-                      <div
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 850,
-                          color: "var(--text)",
-                          background:
-                            "color-mix(in srgb, var(--muted) 70%, transparent)",
-                          border:
-                            "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                          padding: "6px 10px",
-                          borderRadius: 999,
-                          letterSpacing: 0.2,
-                        }}
-                      >
-                        {c.access || t("course")}
-                      </div>
+                      <CourseMetaChip icon={c.access ? Users : Flag} muted>
+                        {c.access ? formatCourseAccess(c.access) : t("course")}
+                      </CourseMetaChip>
                     </div>
 
                     <div
@@ -3014,7 +3687,7 @@ export default function DestinationPage() {
                             lineHeight: 1.35,
                           }}
                         >
-                          {[c.city, c.region].filter(Boolean).join(" ? ")}
+                          {[c.city, c.region].filter(Boolean).join(" - ")}
                         </div>
                       </div>
 
@@ -3028,34 +3701,14 @@ export default function DestinationPage() {
                         }}
                       >
                         {c.holes ? (
-                          <div
-                            style={{
-                              border:
-                                "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                              background:
-                                "color-mix(in srgb, var(--muted) 62%, transparent)",
-                              borderRadius: 999,
-                              padding: "5px 8px",
-                              fontWeight: 750,
-                            }}
-                          >
-                            ? {c.holes}
-                          </div>
+                          <CourseMetaChip icon={Flag} muted>
+                            {c.holes} holes
+                          </CourseMetaChip>
                         ) : null}
                         {c.access ? (
-                          <div
-                            style={{
-                              border:
-                                "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-                              background:
-                                "color-mix(in srgb, var(--muted) 62%, transparent)",
-                              borderRadius: 999,
-                              padding: "5px 8px",
-                              fontWeight: 750,
-                            }}
-                          >
-                            ?? {c.access}
-                          </div>
+                          <CourseMetaChip icon={Users} muted>
+                            {formatCourseAccess(c.access)}
+                          </CourseMetaChip>
                         ) : null}
                       </div>
 
@@ -3119,6 +3772,8 @@ export default function DestinationPage() {
                   </div>
                 );
               })
+              )}
+              </>
             )}
           </div>
         )}
