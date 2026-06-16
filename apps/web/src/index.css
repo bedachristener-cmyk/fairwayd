@@ -754,6 +754,18 @@ body.is-pwa-standalone {
   display: none;
 }
 
+@media (min-width: 981px) {
+  .fw-shell-grid > .fw-desktop-only {
+    position: relative;
+    z-index: 2;
+  }
+
+  .fw-shell-main {
+    position: relative;
+    z-index: 1;
+  }
+}
+
 @media (max-width: 980px) {
   .fw-desktop-only {
     display: none;
