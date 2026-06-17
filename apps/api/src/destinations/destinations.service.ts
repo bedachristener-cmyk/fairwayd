@@ -15,7 +15,9 @@ const DEFAULT_DESTINATIONS = [
   { code: 'FR', name: 'France', slug: 'france' },
   { code: 'IT', name: 'Italy', slug: 'italy' },
   { code: 'JP', name: 'Japan', slug: 'japan' },
+  { code: 'PH', name: 'Philippines', slug: 'philippines' },
   { code: 'US', name: 'United States', slug: 'united-states' },
+  { code: 'ZA', name: 'South Africa', slug: 'south-africa' },
 ];
 
 @Injectable()
@@ -23,19 +25,37 @@ export class DestinationsService {
   constructor(private readonly prisma: PrismaService) {}
 
   private async ensureDefaultDestinations() {
-    await Promise.all(
-      DEFAULT_DESTINATIONS.map((destination) =>
-        this.prisma.destination.upsert({
-          where: { code: destination.code },
-          update: {
-            name: destination.name,
-            slug: destination.slug,
-            isActive: true,
+    try {
+      const existing = await this.prisma.destination.findMany({
+        where: {
+          code: {
+            in: DEFAULT_DESTINATIONS.map((destination) => destination.code),
           },
-          create: destination,
-        }),
-      ),
-    );
+        },
+        select: {
+          code: true,
+        },
+      });
+
+      const existingCodes = new Set(
+        existing.map((destination) => destination.code),
+      );
+      const missingDestinations = DEFAULT_DESTINATIONS.filter(
+        (destination) => !existingCodes.has(destination.code),
+      );
+
+      if (missingDestinations.length === 0) {
+        return;
+      }
+
+      await this.prisma.destination.createMany({
+        data: missingDestinations,
+        skipDuplicates: true,
+      });
+    } catch {
+      // Destination rows are seeded in deploy flows. Read endpoints should not
+      // fail if the runtime database role cannot self-heal missing defaults.
+    }
   }
 
   async findAll(userId?: string) {

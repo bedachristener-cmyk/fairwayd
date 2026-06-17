@@ -14,6 +14,7 @@ import {
   EmptyState,
 } from "../components/PolishStates";
 import { t } from "../i18n/strings";
+import { DESTINATION_INFO } from "../data/destinationInfo";
 
 type CountryItem = {
   country: string;
@@ -71,6 +72,11 @@ const COUNTRY_LABELS: Record<string, string> = {
 
 function getCountryLabel(code: string) {
   return COUNTRY_LABELS[code] || code;
+}
+
+function shouldShowDestination(item: CountryItem) {
+  const code = (item.code || item.country || "").toUpperCase();
+  return !(code === "US" && (item.courseCount || 0) === 0);
 }
 
 type DestinationVisual = {
@@ -204,7 +210,11 @@ const EXPLORE_HERO_IMAGE =
 
 function getDestinationVisual(item: CountryItem): DestinationVisual {
   const slug = item.slug || item.country;
-  return DESTINATION_VISUALS[slug] || DEFAULT_DESTINATION_VISUAL;
+  const base = DESTINATION_VISUALS[slug] || DEFAULT_DESTINATION_VISUAL;
+  const info = DESTINATION_INFO[slug];
+  const localImage = info?.heroImage || info?.galleryImages?.[0]?.src;
+
+  return localImage ? { ...base, image: localImage } : base;
 }
 
 function getFlagUrl(code?: string) {
@@ -583,19 +593,23 @@ export default function DestinationsPage() {
     run();
   }, []);
 
-  const totalCourses = useMemo(() => {
-    return items.reduce((sum, item) => sum + (item.courseCount || 0), 0);
+  const visibleItems = useMemo(() => {
+    return items.filter(shouldShowDestination);
   }, [items]);
 
+  const totalCourses = useMemo(() => {
+    return visibleItems.reduce((sum, item) => sum + (item.courseCount || 0), 0);
+  }, [visibleItems]);
+
   const popularDestinations = useMemo(() => {
-    return [...items]
+    return [...visibleItems]
       .sort((a, b) => {
         const followerDelta = (b.followerCount || 0) - (a.followerCount || 0);
         if (followerDelta !== 0) return followerDelta;
         return (b.courseCount || 0) - (a.courseCount || 0);
       })
       .slice(0, 4);
-  }, [items]);
+  }, [visibleItems]);
 
   const handleToggleDestinationFollow = useCallback(
     async (item: CountryItem) => {
@@ -858,8 +872,8 @@ export default function DestinationsPage() {
                   boxShadow: "0 8px 18px rgba(0,0,0,0.055)",
                 }}
               >
-                {items.length}{" "}
-                {items.length === 1
+                {visibleItems.length}{" "}
+                {visibleItems.length === 1
                   ? t("country_singular")
                   : t("country_plural")}
               </span>
@@ -909,7 +923,7 @@ export default function DestinationsPage() {
 
         {loading ? <DestinationRowsSkeleton count={4} /> : null}
 
-        {!loading && !err && items.length === 0 ? (
+        {!loading && !err && visibleItems.length === 0 ? (
           <EmptyState
             title="No destinations yet"
             body="New golf destinations will appear here once they are available."
@@ -1157,14 +1171,14 @@ export default function DestinationsPage() {
           </section>
         ) : null}
 
-        {!loading && !err && items.length > 0 ? (
+        {!loading && !err && visibleItems.length > 0 ? (
           <div
             style={{
               display: "grid",
               gap: 9,
             }}
           >
-            {items.map((item) => {
+            {visibleItems.map((item) => {
               const slug = item.slug || item.country;
               const isFollowing = followedDestinationSlugs.includes(slug);
               const isBusy = destinationFollowBusySlug === slug;

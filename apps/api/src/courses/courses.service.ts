@@ -7,7 +7,9 @@ export class CoursesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll() {
-    return this.prisma.course.findMany();
+    return this.prisma.course.findMany({
+      where: { active: true },
+    });
   }
 
   async getById(id: string) {

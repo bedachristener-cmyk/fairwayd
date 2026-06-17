@@ -12,7 +12,9 @@ VALUES
   ('fr', 'FR', 'France', 'france', NULL, NULL, true, NOW(), NOW()),
   ('it', 'IT', 'Italy', 'italy', NULL, NULL, true, NOW(), NOW()),
   ('jp', 'JP', 'Japan', 'japan', NULL, NULL, true, NOW(), NOW()),
-  ('us', 'US', 'United States', 'united-states', NULL, NULL, true, NOW(), NOW())
+  ('ph', 'PH', 'Philippines', 'philippines', NULL, NULL, true, NOW(), NOW()),
+  ('us', 'US', 'United States', 'united-states', NULL, NULL, true, NOW(), NOW()),
+  ('za', 'ZA', 'South Africa', 'south-africa', NULL, NULL, true, NOW(), NOW())
 ON CONFLICT ("code")
 DO UPDATE SET
   "name" = EXCLUDED."name",

@@ -17,7 +17,9 @@ async function main() {
     { code: "FR", name: "France", slug: "france" },
     { code: "IT", name: "Italy", slug: "italy" },
     { code: "JP", name: "Japan", slug: "japan" },
+    { code: "PH", name: "Philippines", slug: "philippines" },
     { code: "US", name: "United States", slug: "united-states" },
+    { code: "ZA", name: "South Africa", slug: "south-africa" },
   ];
 
   for (const item of destinations) {
