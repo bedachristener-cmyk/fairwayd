@@ -57,5 +57,5 @@ test("Turkey destination page loads and shows course content", async ({ page }) 
   await expect(page.getByText("Golf destination").first()).toBeVisible();
   await expect(page.getByText("Turkey").first()).toBeVisible();
   await expect(page.getByText("Carya Golf Club")).toBeVisible();
-  await expect(page.getByText("The Montgomerie Maxx Royal")).toBeVisible();
+  await expect(page.getByText("Montgomerie Maxx Royal")).toBeVisible();
 });
