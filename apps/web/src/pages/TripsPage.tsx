@@ -83,6 +83,31 @@ function destinationFlag(destination?: string | null) {
   return "";
 }
 
+function tripItemTypeCounts(items?: TripItem[]) {
+  const counts = {
+    golf: 0,
+    stays: 0,
+    flights: 0,
+  };
+
+  for (const item of items ?? []) {
+    const type = item.type?.toLowerCase() ?? "";
+    if (type.includes("golf") || type.includes("tee") || type.includes("round")) {
+      counts.golf += 1;
+    } else if (
+      type.includes("hotel") ||
+      type.includes("stay") ||
+      type.includes("lodging")
+    ) {
+      counts.stays += 1;
+    } else if (type.includes("flight") || type.includes("air")) {
+      counts.flights += 1;
+    }
+  }
+
+  return counts;
+}
+
 const tripsCacheKey = "fairwayd.trips";
 
 const pageCardStyle: React.CSSProperties = {
@@ -389,7 +414,7 @@ export default function TripsPage() {
         <div className="fw-page-atmosphere-overlay" />
       </div>
       <div
-        className="fw-page-shell"
+        className="fw-page-shell fw-trips-page-shell"
       style={{
         boxSizing: "border-box",
         padding: "8px 14px calc(96px + env(safe-area-inset-bottom, 0px))",
@@ -398,6 +423,7 @@ export default function TripsPage() {
       }}
       >
       <div
+        className="fw-trips-page-header"
         style={{
           display: "flex",
           alignItems: "flex-start",
@@ -410,16 +436,20 @@ export default function TripsPage() {
           marginBottom: 12,
         }}
       >
-        <div style={{ minWidth: 0, flex: "1 1 220px", display: "grid", gap: 1 }}>
-          <div style={pageTitleStyle}>
+        <div
+          className="fw-trips-page-header__copy"
+          style={{ minWidth: 0, flex: "1 1 220px", display: "grid", gap: 1 }}
+        >
+          <div className="fw-trips-page-title" style={pageTitleStyle}>
             {headerText}
           </div>
-          <div style={pageSubtitleStyle}>
+          <div className="fw-trips-page-subtitle" style={pageSubtitleStyle}>
             Golf travel, tee times, stays, flights and shared planning.
           </div>
         </div>
 
         <div
+          className="fw-trips-page-actions"
           style={{
             display: "flex",
             flexWrap: "wrap",
@@ -521,7 +551,10 @@ export default function TripsPage() {
       ) : null}
 
       {trips.length > 0 ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
+        <div
+          className="fw-trips-grid"
+          style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}
+        >
           {trips.map((trip) => {
             const memberCount = trip.members?.length ?? 0;
             const itemCount = trip._count?.items ?? trip.items?.length ?? 0;
@@ -529,10 +562,16 @@ export default function TripsPage() {
             const range = dateRange(trip.items);
             const flag = destinationFlag(trip.destination);
             const coverUrl = fileUrl(trip.coverImageUrl);
+            const itemTypeCounts = tripItemTypeCounts(trip.items);
+            const hasTypedStats =
+              itemTypeCounts.golf > 0 ||
+              itemTypeCounts.stays > 0 ||
+              itemTypeCounts.flights > 0;
 
             return (
               <article
                 key={trip.id}
+                className="fw-trip-card"
                 onClick={() => nav(`/trips/${trip.id}`)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
@@ -559,6 +598,7 @@ export default function TripsPage() {
               >
                 {coverUrl ? (
                   <div
+                    className="fw-trip-card__media"
                     aria-hidden="true"
                       style={{
                         width: 72,
@@ -589,6 +629,7 @@ export default function TripsPage() {
                   </div>
                 ) : (
                   <div
+                    className="fw-trip-card__media fw-trip-card__media--fallback"
                     aria-hidden="true"
                       style={{
                         width: 72,
@@ -613,6 +654,7 @@ export default function TripsPage() {
                 )}
 
                 <div
+                  className="fw-trip-card__body"
                   style={{
                     minWidth: 0,
                     flex: "1 1 auto",
@@ -621,6 +663,7 @@ export default function TripsPage() {
                   }}
                 >
                   <div
+                    className="fw-trip-card__title"
                     style={{
                       color: "var(--text)",
                       fontSize: 16,
@@ -633,6 +676,7 @@ export default function TripsPage() {
                   </div>
 
                   <div
+                    className="fw-trip-card__meta"
                     style={{
                       display: "flex",
                       flexWrap: "wrap",
@@ -650,6 +694,7 @@ export default function TripsPage() {
                   </div>
 
                   <div
+                    className="fw-trip-card__stats"
                     style={{
                       display: "flex",
                       flexWrap: "wrap",
@@ -661,6 +706,19 @@ export default function TripsPage() {
                   >
                     <span>{memberCount} members</span>
                     <span>{itemCount} items</span>
+                    {hasTypedStats ? (
+                      <>
+                        {itemTypeCounts.golf > 0 ? (
+                          <span>{itemTypeCounts.golf} golf</span>
+                        ) : null}
+                        {itemTypeCounts.stays > 0 ? (
+                          <span>{itemTypeCounts.stays} stays</span>
+                        ) : null}
+                        {itemTypeCounts.flights > 0 ? (
+                          <span>{itemTypeCounts.flights} flights</span>
+                        ) : null}
+                      </>
+                    ) : null}
                   </div>
                 </div>
               </article>

@@ -1,9 +1,8 @@
 import { Outlet, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import Sidebar from "./Sidebar";
-import RightRail from "./RightRail";
 import BottomTabs from "./BottomTabs";
 import TopRail from "./TopRail";
+import DesktopShell from "./DesktopShell";
 import InstallAppPrompt from "../pwa/InstallAppPrompt";
 import { useStandaloneMode } from "../pwa/useStandaloneMode";
 import NotificationPermissionPrompt from "../components/NotificationPermissionPrompt";
@@ -26,6 +25,10 @@ export default function AppShell() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  if (!isMobile) {
+    return <DesktopShell />;
+  }
+
   return (
     <div className="fw-shell">
       <TopRail />
@@ -47,10 +50,6 @@ export default function AppShell() {
       ) : (
         <>
           <div className="fw-shell-grid">
-            <div className="fw-desktop-only">
-              <Sidebar />
-            </div>
-
             <main
               className={`fw-shell-main ${isMap ? "fw-shell-main--map" : ""}`}
             >
@@ -58,10 +57,6 @@ export default function AppShell() {
                 <Outlet />
               </div>
             </main>
-
-            <div className="fw-desktop-only">
-              <RightRail />
-            </div>
           </div>
 
           <div className="fw-mobile-only">

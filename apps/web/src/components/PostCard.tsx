@@ -116,7 +116,6 @@ export default function PostCard({
   const [likeBusy, setLikeBusy] = useState(false);
   const [showHeart, setShowHeart] = useState(false);
   const [lastTap, setLastTap] = useState(0);
-  const [hoveredImage, setHoveredImage] = useState<string | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [lightboxImageIndex, setLightboxImageIndex] = useState<number | null>(
     null,
@@ -1226,35 +1225,27 @@ export default function PostCard({
           }}
         >
           {displayedImages.map(({ image: img, index }) => {
-              const isHovered = hoveredImage === img.url;
-
-              return (
-                <div
-                  key={img.url}
-                  onPointerDown={handleImagePointerDown}
-                  onPointerUp={(event) => handleImagePointerUp(event, index)}
-                  onPointerCancel={handleImagePointerCancel}
-                  onClick={suppressImageClick}
-                  onMouseEnter={() => {
-                    if (!isMobile) setHoveredImage(img.url);
-                  }}
-                  onMouseLeave={() => {
-                    if (!isMobile) setHoveredImage(null);
-                  }}
-                  className="fw-post-image-wrap"
-                  style={{
-                    position: "relative",
-                    overflow: "hidden",
-                    borderRadius: 0,
-                    background: "var(--bg)",
-                    minHeight: 60,
-                    border: "none",
-                    boxShadow: "none",
-                    cursor: "pointer",
-                    userSelect: "none",
-                    touchAction: hasMultipleImages ? "pan-y" : "auto",
-                  }}
-                >
+            return (
+              <div
+                key={img.url}
+                onPointerDown={handleImagePointerDown}
+                onPointerUp={(event) => handleImagePointerUp(event, index)}
+                onPointerCancel={handleImagePointerCancel}
+                onClick={suppressImageClick}
+                className="fw-post-image-wrap"
+                style={{
+                  position: "relative",
+                  overflow: "visible",
+                  borderRadius: 0,
+                  background: "transparent",
+                  minHeight: 60,
+                  border: "none",
+                  boxShadow: "none",
+                  cursor: "pointer",
+                  userSelect: "none",
+                  touchAction: hasMultipleImages ? "pan-y" : "auto",
+                }}
+              >
                 <img
                   className="fw-post-img"
                   src={img.resolvedUrl}
@@ -1277,12 +1268,15 @@ export default function PostCard({
                   loading="lazy"
                   style={{
                     width: "100%",
+                    height: "auto",
                     display: "block",
-                    objectFit: "cover",
-                    maxHeight: isMobile ? 320 : 420,
+                    objectFit: "contain",
+                    maxHeight: isMobile
+                      ? "min(80dvh, 720px)"
+                      : "min(80dvh, 860px)",
                     borderRadius: 0,
-                    transform: isHovered ? "scale(1.08)" : "scale(1)",
-                    transition: "transform 180ms ease",
+                    transform: "none",
+                    transition: "none",
                   }}
                 />
 

@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { API_BASE } from "../api/base";
+import { fileUrl } from "../api/fileUrl";
 import { useAuth } from "../auth/AuthContext";
 import CourseRatingSummary from "../components/CourseRatingSummary";
 import PostCard from "../components/PostCard";
+import { DESTINATION_INFO } from "../data/destinationInfo";
 import { getMonetizationLinksForCourse } from "../data/monetization";
+import { useSelectedCourse } from "../state/SelectedCourseContext";
 import {
   saveRating,
   getMyRating,
@@ -43,6 +46,10 @@ type Course = {
   holes?: number | null;
   par?: number | null;
   access?: string | null;
+  description?: string | null;
+  phone?: string | null;
+  postalCode?: string | null;
+  verified?: boolean | null;
 };
 
 type DraftRating = {
@@ -51,6 +58,24 @@ type DraftRating = {
   layout: number;
   scenery: number;
   value: number;
+};
+
+type DesktopSection = "posts" | "reviews" | "photos" | "about";
+
+const DESTINATION_KEY_BY_COUNTRY_CODE: Record<string, string> = {
+  AT: "austria",
+  DE: "germany",
+  ES: "spain",
+  FR: "france",
+  IT: "italy",
+  JP: "japan",
+  PH: "philippines",
+  PT: "portugal",
+  TH: "thailand",
+  TR: "turkey",
+  US: "united-states",
+  ZA: "south-africa",
+  CH: "switzerland",
 };
 
 function clampRating(value: number) {
@@ -297,6 +322,47 @@ function normalizeWebsite(url?: string | null) {
   return `https://${trimmed}`;
 }
 
+function slugifyDestinationKey(value?: string | null) {
+  if (!value) return "";
+
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function formatAccessLabel(access?: string | null) {
+  if (!access) return null;
+
+  return access
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function getCourseHeroImage(course: Course | null, posts: Post[]) {
+  const postImage = posts
+    .flatMap((post) => post.images ?? [])
+    .map((image) => fileUrl(image.url))
+    .find(Boolean);
+
+  if (postImage) return postImage;
+
+  const countryCode = course?.country?.trim().toUpperCase() ?? "";
+  const destinationKey =
+    DESTINATION_KEY_BY_COUNTRY_CODE[countryCode] ??
+    slugifyDestinationKey(course?.country);
+  const destination = destinationKey ? DESTINATION_INFO[destinationKey] : null;
+
+  return (
+    destination?.heroImage ??
+    destination?.galleryImages?.find((image) => image.src)?.src ??
+    "https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?auto=format&fit=crop&w=1600&q=78"
+  );
+}
+
 function createDefaultDraftRating(): DraftRating {
   return {
     overall: 4.0,
@@ -322,6 +388,7 @@ export default function CoursePage() {
   const nav = useNavigate();
   const location = useLocation();
   const { token } = useAuth();
+  const { setSelectedCourse } = useSelectedCourse();
 
   const isMobile = window.innerWidth <= 980;
   const ratingSectionRef = useRef<HTMLElement | null>(null);
@@ -348,6 +415,8 @@ export default function CoursePage() {
     null,
   );
   const [myRating, setMyRating] = useState<MyRating | null>(null);
+  const [desktopSection, setDesktopSection] =
+    useState<DesktopSection>("posts");
   const [draftRating, setDraftRating] = useState<DraftRating>(
     createDefaultDraftRating(),
   );
@@ -415,6 +484,22 @@ export default function CoursePage() {
 
     run();
   }, [courseId, token]);
+
+  useEffect(() => {
+    if (!course?.id) return;
+
+    setSelectedCourse({
+      id: course.id,
+      name: course.name,
+      lat: course.lat,
+      lon: course.lon,
+      city: course.city,
+      country: course.country,
+      website: course.website,
+      holes: course.holes,
+      access: course.access,
+    });
+  }, [course, setSelectedCourse]);
 
   useEffect(() => {
     if (!course?.id) return;
@@ -545,6 +630,119 @@ export default function CoursePage() {
     nav,
   ]);
 
+  const handleFollowToggle = async () => {
+    if (!courseId || !token || followBusy) return;
+
+    try {
+      setFollowBusy(true);
+
+      const res = await fetch(`${API_BASE}/courses/${courseId}/follow`, {
+        method: following ? "DELETE" : "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        throw new Error(`Follow toggle failed: ${res.status}`);
+      }
+
+      setFollowing((prev) => !prev);
+    } catch (err) {
+      console.error("Course follow toggle failed", err);
+    } finally {
+      setFollowBusy(false);
+    }
+  };
+
+  const handleRatingClick = () => {
+    if (!token) {
+      nav("/");
+      return;
+    }
+
+    setShowRatingPanel((prev) => {
+      const next = !prev;
+
+      if (next) {
+        if (myRating) {
+          const nextDraft = mapMyRatingToDraft(myRating);
+          setDraftRating(nextDraft);
+
+          const hasDetailedRatings =
+            myRating.condition != null ||
+            myRating.layout != null ||
+            myRating.scenery != null ||
+            myRating.value != null;
+
+          setShowDetailedRatings(hasDetailedRatings);
+        } else {
+          setDraftRating(createDefaultDraftRating());
+          setShowDetailedRatings(false);
+        }
+      }
+
+      return next;
+    });
+  };
+
+  const handleSaveRating = async () => {
+    if (!course?.id || !token) return;
+
+    try {
+      await saveRating(course.id, token, {
+        overall: showDetailedRatings ? draftAverage : draftRating.overall,
+        condition: showDetailedRatings ? draftRating.condition : null,
+        layout: showDetailedRatings ? draftRating.layout : null,
+        scenery: showDetailedRatings ? draftRating.scenery : null,
+        value: showDetailedRatings ? draftRating.value : null,
+      });
+
+      const updatedSummary = await getRatingSummary(course.id);
+      setRatingSummary(updatedSummary);
+
+      const savedMyRating: MyRating = {
+        overall: showDetailedRatings ? draftAverage : draftRating.overall,
+        condition: showDetailedRatings ? draftRating.condition : null,
+        layout: showDetailedRatings ? draftRating.layout : null,
+        scenery: showDetailedRatings ? draftRating.scenery : null,
+        value: showDetailedRatings ? draftRating.value : null,
+      };
+
+      setMyRating(savedMyRating);
+      setDraftRating(mapMyRatingToDraft(savedMyRating));
+
+      setShowDetailedRatings(
+        savedMyRating.condition != null ||
+          savedMyRating.layout != null ||
+          savedMyRating.scenery != null ||
+          savedMyRating.value != null,
+      );
+      setShowRatingPanel(false);
+      setRatingSaved(true);
+    } catch (err) {
+      console.error("Save rating failed", err);
+      alert("Failed to save rating");
+    }
+  };
+
+  const handleCloseRatingPanel = () => {
+    if (myRating) {
+      setDraftRating(mapMyRatingToDraft(myRating));
+
+      const hasDetailedRatings =
+        myRating.condition != null ||
+        myRating.layout != null ||
+        myRating.scenery != null ||
+        myRating.value != null;
+
+      setShowDetailedRatings(hasDetailedRatings);
+    } else {
+      setDraftRating(createDefaultDraftRating());
+      setShowDetailedRatings(false);
+    }
+
+    setShowRatingPanel(false);
+  };
+
   if (loading) return null;
 
   const locationLine = [course?.city, course?.region, course?.country]
@@ -557,8 +755,491 @@ export default function CoursePage() {
   const metadataPills = [
     course?.holes ? `${course.holes} holes` : null,
     course?.par ? `Par ${course.par}` : null,
-    course?.access ? course.access.replaceAll("_", " ") : null,
+    formatAccessLabel(course?.access),
   ].filter(Boolean);
+  const heroImageUrl = getCourseHeroImage(course, posts);
+  const photoImages = posts
+    .flatMap((post) =>
+      (post.images ?? []).map((image) => ({
+        id: image.id,
+        url: fileUrl(image.url),
+        postId: post.id,
+      })),
+    )
+    .filter((image) => image.url);
+  const hasAbout =
+    !!course?.description ||
+    !!locationLine ||
+    !!course?.holes ||
+    !!course?.par ||
+    !!course?.access ||
+    !!course?.website ||
+    !!course?.phone;
+  const availableDesktopTabs = [
+    { key: "posts" as const, label: "Posts", count: posts.length, show: true },
+    {
+      key: "reviews" as const,
+      label: "Reviews",
+      count: ratingSummary?.count ?? 0,
+      show: !!ratingSummary || !!token || !!myRating,
+    },
+    {
+      key: "photos" as const,
+      label: "Photos",
+      count: photoImages.length,
+      show: photoImages.length > 0,
+    },
+    { key: "about" as const, label: "About", count: 0, show: hasAbout },
+  ].filter((tab) => tab.show);
+  const activeDesktopSection = availableDesktopTabs.some(
+    (tab) => tab.key === desktopSection,
+  )
+    ? desktopSection
+    : "posts";
+
+  const ratingPanel = showRatingPanel && !!token && (
+    <section
+      className="fw-atmosphere-card"
+      ref={ratingPanelRef}
+      style={{
+        padding: 16,
+        borderRadius: 16,
+        background: "var(--card)",
+        border: "1px solid var(--border)",
+        display: "flex",
+        flexDirection: "column",
+        gap: 2,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontSize: 16,
+              fontWeight: 800,
+              color: "var(--text)",
+            }}
+          >
+            {myRating ? "Edit your rating" : "Rate this course"}
+          </div>
+
+          <div
+            style={{
+              marginTop: 6,
+              fontSize: 14,
+              color: "var(--sub)",
+              lineHeight: 1.5,
+            }}
+          >
+            {showDetailedRatings
+              ? myRating
+                ? "Update your detailed rating. Overall is calculated automatically."
+                : "Add detailed ratings. Overall is calculated automatically."
+              : myRating
+                ? "You already rated this course. Adjust your overall rating or add detailed ratings."
+                : "Start with a quick overall rating. Detailed ratings are optional."}
+          </div>
+        </div>
+
+        <div
+          style={{
+            minWidth: 76,
+            textAlign: "right",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 26,
+              fontWeight: 900,
+              lineHeight: 1,
+              color: "var(--text)",
+            }}
+          >
+            {formatRatingValue(draftAverage)}
+          </div>
+
+          <div
+            style={{
+              marginTop: 6,
+            }}
+          >
+            <StarRatingPreview value={draftAverage} />
+          </div>
+        </div>
+      </div>
+
+      <div
+        style={{
+          marginTop: 8,
+          borderTop: "1px solid var(--border)",
+        }}
+      >
+        {!showDetailedRatings && (
+          <RatingSliderRow
+            label="Overall"
+            value={draftRating.overall}
+            onChange={(next) =>
+              setDraftRating((prev) => ({ ...prev, overall: next }))
+            }
+          />
+        )}
+
+        <div
+          style={{
+            paddingTop: 12,
+            display: "flex",
+            justifyContent: "flex-start",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              setShowDetailedRatings((prev) => {
+                const next = !prev;
+
+                if (next) {
+                  setDraftRating((current) => ({
+                    ...current,
+                    condition: current.overall,
+                    layout: current.overall,
+                    scenery: current.overall,
+                    value: current.overall,
+                  }));
+                }
+
+                return next;
+              });
+            }}
+            style={{
+              padding: "8px 12px",
+              borderRadius: 999,
+              border: "1px solid var(--border)",
+              background: "transparent",
+              color: "var(--text)",
+              fontWeight: 700,
+              cursor: "pointer",
+              fontSize: 13,
+            }}
+          >
+            {showDetailedRatings ? "Hide detailed ratings" : "Add detailed ratings"}
+          </button>
+        </div>
+
+        {showDetailedRatings && (
+          <div
+            style={{
+              marginTop: 6,
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <RatingSliderRow
+              label="Condition"
+              value={draftRating.condition}
+              onChange={(next) =>
+                setDraftRating((prev) => ({ ...prev, condition: next }))
+              }
+            />
+
+            <RatingSliderRow
+              label="Layout"
+              value={draftRating.layout}
+              onChange={(next) =>
+                setDraftRating((prev) => ({ ...prev, layout: next }))
+              }
+            />
+
+            <RatingSliderRow
+              label="Scenery"
+              value={draftRating.scenery}
+              onChange={(next) =>
+                setDraftRating((prev) => ({ ...prev, scenery: next }))
+              }
+            />
+
+            <RatingSliderRow
+              label="Value"
+              value={draftRating.value}
+              onChange={(next) =>
+                setDraftRating((prev) => ({ ...prev, value: next }))
+              }
+            />
+          </div>
+        )}
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          flexWrap: "wrap",
+          marginTop: 14,
+        }}
+      >
+        <button
+          type="button"
+          onClick={handleSaveRating}
+          style={{
+            padding: "10px 14px",
+            borderRadius: 999,
+            border: "1px solid var(--border)",
+            background: "var(--card)",
+            color: "var(--text)",
+            fontWeight: 800,
+            cursor: "pointer",
+          }}
+        >
+          {myRating ? "Update rating" : "Save rating"}
+        </button>
+
+        <button type="button" onClick={handleCloseRatingPanel} style={secondaryBtnStyle}>
+          Close
+        </button>
+      </div>
+    </section>
+  );
+
+  if (!isMobile) {
+    return (
+      <div className="fw-course-desktop-v2">
+        <button
+          type="button"
+          className="fw-course-desktop-back"
+          onClick={() => nav("/map")}
+        >
+          Back to map
+        </button>
+
+        <section className="fw-course-desktop-hero" aria-label="Course overview">
+          <img
+            className="fw-course-desktop-hero__image"
+            src={heroImageUrl}
+            alt={course?.name ? `${course.name} golf course` : "Golf course"}
+          />
+        </section>
+
+        <section className="fw-course-desktop-identity">
+          <div className="fw-course-desktop-identity__copy">
+            <div className="fw-course-desktop-eyebrow">Golf course</div>
+            <h1>{course?.name ?? "Course"}</h1>
+            {locationLine ? <p>{locationLine}</p> : null}
+          </div>
+
+          <div className="fw-course-desktop-actions" aria-label="Course actions">
+            <button
+              type="button"
+              className="fw-course-desktop-action fw-course-desktop-action--soft"
+              onClick={() => {
+                if (!course) return;
+
+                nav("/feed", {
+                  state: {
+                    focusCourse: {
+                      id: course.id,
+                      name: course.name,
+                      lat: course.lat,
+                      lon: course.lon,
+                    },
+                  },
+                });
+              }}
+            >
+              Post here
+            </button>
+
+            <button
+              type="button"
+              className={`fw-course-desktop-action ${
+                following ? "fw-course-desktop-action--active" : ""
+              }`}
+              onClick={handleFollowToggle}
+              disabled={followBusy || !token}
+            >
+              {followBusy ? "Saving..." : following ? "Following" : "Follow"}
+            </button>
+
+            {websiteUrl ? (
+              <a
+                href={websiteUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="fw-course-desktop-action"
+              >
+                Website
+              </a>
+            ) : null}
+
+            {directionsUrl ? (
+              <a
+                href={directionsUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="fw-course-desktop-action fw-course-desktop-action--primary"
+              >
+                Directions
+              </a>
+            ) : null}
+          </div>
+
+          {metadataPills.length ? (
+            <div className="fw-course-desktop-meta">
+              {metadataPills.map((label) => (
+                <span key={label}>{label}</span>
+              ))}
+            </div>
+          ) : null}
+
+          {!token ? (
+            <div className="fw-course-desktop-signin">
+              <div>
+                <strong>Sign in for course activity</strong>
+                <span>Follow this course, rate it and join the conversation.</span>
+              </div>
+              <button type="button" onClick={() => nav("/")}>
+                Sign in
+              </button>
+            </div>
+          ) : null}
+        </section>
+
+        <section ref={ratingSectionRef} className="fw-course-desktop-rating">
+          <CourseRatingSummary
+            rating={ratingSummary}
+            canRate={!!token}
+            ctaLabel={
+              showRatingPanel
+                ? "Hide rating form"
+                : myRating
+                  ? "Edit your rating"
+                  : "Rate this course"
+            }
+            onRateClick={handleRatingClick}
+          />
+        </section>
+
+        {ratingSaved && (
+          <div className="fw-course-desktop-status">Rating saved</div>
+        )}
+
+        {ratingPanel}
+
+        <nav className="fw-course-desktop-tabs" aria-label="Course sections">
+          {availableDesktopTabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              className={
+                tab.key === activeDesktopSection
+                  ? "fw-course-desktop-tab fw-course-desktop-tab--active"
+                  : "fw-course-desktop-tab"
+              }
+              onClick={() => setDesktopSection(tab.key)}
+            >
+              <span>{tab.label}</span>
+              {tab.count ? <em>{tab.count}</em> : null}
+            </button>
+          ))}
+        </nav>
+
+        {activeDesktopSection === "posts" ? (
+          <section className="fw-course-desktop-posts">
+            {posts.length === 0 ? (
+              <div className="fw-course-desktop-empty">
+                <strong>
+                  {!token
+                    ? "No public posts available yet"
+                    : "No posts for this course yet"}
+                </strong>
+                <span>Be the first to share something from this course.</span>
+              </div>
+            ) : (
+              posts.map((p) => <PostCard key={p.id} post={p} isMobile={false} />)
+            )}
+          </section>
+        ) : null}
+
+        {activeDesktopSection === "reviews" ? (
+          <section className="fw-course-desktop-section">
+            <CourseRatingSummary
+              rating={ratingSummary}
+              canRate={!!token}
+              ctaLabel={
+                showRatingPanel
+                  ? "Hide rating form"
+                  : myRating
+                    ? "Edit your rating"
+                    : "Rate this course"
+              }
+              onRateClick={handleRatingClick}
+            />
+          </section>
+        ) : null}
+
+        {activeDesktopSection === "photos" ? (
+          <section className="fw-course-desktop-photos">
+            {photoImages.map((image) => (
+              <img
+                key={image.id}
+                src={image.url}
+                alt={course?.name ? `${course.name} post photo` : "Course post"}
+              />
+            ))}
+          </section>
+        ) : null}
+
+        {activeDesktopSection === "about" ? (
+          <section className="fw-course-desktop-about">
+            {course?.description ? <p>{course.description}</p> : null}
+
+            <div className="fw-course-desktop-facts">
+              {locationLine ? (
+                <div>
+                  <span>Location</span>
+                  <strong>{locationLine}</strong>
+                </div>
+              ) : null}
+
+              {course?.holes ? (
+                <div>
+                  <span>Holes</span>
+                  <strong>{course.holes}</strong>
+                </div>
+              ) : null}
+
+              {course?.par ? (
+                <div>
+                  <span>Par</span>
+                  <strong>{course.par}</strong>
+                </div>
+              ) : null}
+
+              {formatAccessLabel(course?.access) ? (
+                <div>
+                  <span>Access</span>
+                  <strong>{formatAccessLabel(course?.access)}</strong>
+                </div>
+              ) : null}
+
+              {course?.phone ? (
+                <div>
+                  <span>Phone</span>
+                  <strong>{course.phone}</strong>
+                </div>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div

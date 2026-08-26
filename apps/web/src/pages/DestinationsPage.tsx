@@ -222,6 +222,163 @@ function getFlagUrl(code?: string) {
   return `https://flagcdn.com/w40/${code.toLowerCase()}.png`;
 }
 
+function getDestinationLabel(item: CountryItem) {
+  return item.name || getCountryLabel(item.code || item.country);
+}
+
+function DestinationMetric({
+  value,
+  label,
+}: {
+  value: number | string;
+  label: string;
+}) {
+  return (
+    <span className="fw-explore-desktop-metric">
+      <strong>{value}</strong>
+      <span>{label}</span>
+    </span>
+  );
+}
+
+function DesktopSectionHeader({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="fw-explore-desktop-section-header">
+      <div>
+        <h2>{title}</h2>
+        <p>{description}</p>
+      </div>
+    </div>
+  );
+}
+
+function DesktopDestinationCard({
+  item,
+  featured = false,
+  isFollowing = false,
+  isBusy = false,
+  onOpen,
+  onFollow,
+}: {
+  item: CountryItem;
+  featured?: boolean;
+  isFollowing?: boolean;
+  isBusy?: boolean;
+  onOpen: () => void;
+  onFollow?: () => void;
+}) {
+  const label = getDestinationLabel(item);
+  const visual = getDestinationVisual(item);
+
+  return (
+    <article
+      className={
+        featured
+          ? "fw-explore-destination-card fw-explore-destination-card--featured"
+          : "fw-explore-destination-card"
+      }
+      onClick={onOpen}
+    >
+      <div className="fw-explore-destination-card__media">
+        <img
+          src={visual.image}
+          alt={`${label} golf destination`}
+          loading="lazy"
+          onError={(event) => {
+            event.currentTarget.style.display = "none";
+          }}
+          style={{
+            objectPosition: visual.objectPosition ?? "center",
+          }}
+        />
+        <span className="fw-explore-destination-card__flag">
+          {item.code ? (
+            <img src={getFlagUrl(item.code)} alt={item.code} />
+          ) : null}
+        </span>
+      </div>
+
+      <div className="fw-explore-destination-card__body">
+        <div className="fw-explore-destination-card__copy">
+          <span>{visual.mood}</span>
+          <h3>{label}</h3>
+          <p>{visual.subtitle}</p>
+        </div>
+
+        <div className="fw-explore-destination-card__meta">
+          <span>{item.courseCount || 0} {t("course_plural")}</span>
+          <span>{item.tipsCount || 0} local notes</span>
+          {(item.followerCount || 0) > 0 ? <span>Trending</span> : null}
+        </div>
+
+        {onFollow ? (
+          <button
+            type="button"
+            className={
+              isFollowing
+                ? "fw-explore-destination-card__follow fw-explore-destination-card__follow--active"
+                : "fw-explore-destination-card__follow"
+            }
+            onClick={(event) => {
+              event.stopPropagation();
+              onFollow();
+            }}
+            disabled={isBusy}
+          >
+            {isBusy ? "Saving..." : isFollowing ? t("following") : t("follow")}
+          </button>
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
+function DesktopFreshTipCard({
+  tip,
+  onOpen,
+}: {
+  tip: FreshTip;
+  onOpen: () => void;
+}) {
+  const author =
+    tip.user?.name ||
+    (tip.user?.handle ? `@${tip.user.handle}` : "Fairwayd golfer");
+
+  return (
+    <button
+      type="button"
+      className="fw-explore-note-card"
+      onClick={onOpen}
+    >
+      <div className="fw-explore-note-card__top">
+        <span className="fw-explore-note-card__flag">
+          <img
+            src={getFlagUrl(tip.destination.code)}
+            alt={tip.destination.code}
+          />
+        </span>
+        <span>
+          <strong>{tip.destination.name}</strong>
+          <em>{author}</em>
+        </span>
+      </div>
+
+      <p>{tip.text}</p>
+
+      <div className="fw-explore-note-card__footer">
+        <span>{tip.destination.code}</span>
+        <span>Useful {tip.helpfulCount || 0}</span>
+      </div>
+    </button>
+  );
+}
+
 function DestinationHeroCard({
   item,
   featured = false,
@@ -712,6 +869,142 @@ export default function DestinationsPage() {
     },
     [token, logout, nav, destinationFollowBusySlug, followedDestinationSlugs],
   );
+
+  const isDesktop =
+    typeof window !== "undefined" ? window.innerWidth >= 981 : false;
+
+  if (isDesktop) {
+    const additionalDestinations = visibleItems.filter((item) => {
+      const slug = item.slug || item.country;
+      return !popularDestinations.some(
+        (popular) => (popular.slug || popular.country) === slug,
+      );
+    });
+    const allDestinationCards =
+      additionalDestinations.length > 0 ? additionalDestinations : visibleItems;
+
+    return (
+      <div className="fw-page fw-explore-desktop-page">
+        <div className="fw-explore-desktop">
+          <section className="fw-explore-desktop-hero">
+            <img src={EXPLORE_HERO_IMAGE} alt="" loading="lazy" />
+            <div className="fw-explore-desktop-hero__content">
+              <span className="fw-explore-desktop-eyebrow">Discovery</span>
+              <h1>Explore golf destinations</h1>
+              <p>
+                Browse countries shaped by memorable courses, local notes, and
+                travel-worthy fairways.
+              </p>
+
+              {!loading && !err ? (
+                <div className="fw-explore-desktop-hero__metrics">
+                  <DestinationMetric
+                    value={visibleItems.length}
+                    label={
+                      visibleItems.length === 1
+                        ? t("country_singular")
+                        : t("country_plural")
+                    }
+                  />
+                  {totalCourses > 0 ? (
+                    <DestinationMetric
+                      value={totalCourses}
+                      label={t("course_plural")}
+                    />
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </section>
+
+          {err ? (
+            <div className="fw-explore-desktop-alert">
+              <strong>{t("error")}:</strong> {err}
+            </div>
+          ) : null}
+
+          {loading ? <DestinationRowsSkeleton count={4} /> : null}
+
+          {!loading && !err && visibleItems.length === 0 ? (
+            <EmptyState
+              title="No destinations yet"
+              body="New golf destinations will appear here once they are available."
+            />
+          ) : null}
+
+          {!loading && !err && popularDestinations.length > 0 ? (
+            <section className="fw-explore-desktop-section">
+              <DesktopSectionHeader
+                title="Popular destinations"
+                description="Places golfers are following and exploring."
+              />
+              <div className="fw-explore-popular-grid">
+                {popularDestinations.map((item) => {
+                  const slug = item.slug || item.country;
+
+                  return (
+                    <DesktopDestinationCard
+                      key={`popular-${slug}`}
+                      item={item}
+                      featured
+                      onOpen={() => nav(`/destinations/${slug}`)}
+                    />
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
+
+          {freshTips.length > 0 ? (
+            <section className="fw-explore-desktop-section">
+              <DesktopSectionHeader
+                title="Fresh local notes"
+                description="Recent practical tips from golfers around the world."
+              />
+              <div className="fw-explore-notes-grid">
+                {freshTips.map((tip) => (
+                  <DesktopFreshTipCard
+                    key={tip.id}
+                    tip={tip}
+                    onOpen={() => nav(`/destinations/${tip.destination.slug}`)}
+                  />
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {!loading && !err && allDestinationCards.length > 0 ? (
+            <section className="fw-explore-desktop-section">
+              <DesktopSectionHeader
+                title="More destinations"
+                description="Browse the full destination list and follow the places on your golf travel radar."
+              />
+              <div className="fw-explore-more-grid">
+                {allDestinationCards.map((item) => {
+                  const slug = item.slug || item.country;
+                  const isFollowing = followedDestinationSlugs.includes(slug);
+                  const isBusy = destinationFollowBusySlug === slug;
+
+                  return (
+                    <DesktopDestinationCard
+                      key={`destination-${slug}`}
+                      item={item}
+                      isFollowing={isFollowing}
+                      isBusy={isBusy}
+                      onOpen={() => nav(`/destinations/${slug}`)}
+                      onFollow={() => handleToggleDestinationFollow(item)}
+                    />
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
+
+          <BackToTopButton />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fw-page">
