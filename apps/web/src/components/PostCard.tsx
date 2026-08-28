@@ -582,6 +582,7 @@ export default function PostCard({
 
   return (
     <div
+      className="fw-post-card"
       ref={rootRef}
       onClick={handleOpenPost}
       style={{

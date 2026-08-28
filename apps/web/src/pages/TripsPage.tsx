@@ -32,10 +32,14 @@ function formatShortDate(value?: string | null) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
 
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
+  const parts = new Intl.DateTimeFormat(undefined, {
     day: "numeric",
-  }).format(date);
+    month: "short",
+  }).formatToParts(date);
+  const day = parts.find((part) => part.type === "day")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+
+  return [day, month].filter(Boolean).join(" ");
 }
 
 function formatCreatedDate(value?: string | null) {
@@ -66,7 +70,7 @@ function dateRange(items?: TripItem[]) {
   const end = formatShortDate(max);
 
   if (!start || !end) return "";
-  return start === end ? start : `${start} - ${end}`;
+  return start === end ? start : `${start} – ${end}`;
 }
 
 function destinationFlag(destination?: string | null) {
@@ -563,10 +567,22 @@ export default function TripsPage() {
             const flag = destinationFlag(trip.destination);
             const coverUrl = fileUrl(trip.coverImageUrl);
             const itemTypeCounts = tripItemTypeCounts(trip.items);
-            const hasTypedStats =
-              itemTypeCounts.golf > 0 ||
-              itemTypeCounts.stays > 0 ||
-              itemTypeCounts.flights > 0;
+            const summaryStats = [
+              `${memberCount} ${memberCount === 1 ? "member" : "members"}`,
+              `${itemCount} ${itemCount === 1 ? "item" : "items"}`,
+            ].join(" · ");
+            const typedStats = [
+              itemTypeCounts.golf > 0
+                ? `${itemTypeCounts.golf} golf`
+                : "",
+              itemTypeCounts.stays > 0
+                ? `${itemTypeCounts.stays} ${itemTypeCounts.stays === 1 ? "stay" : "stays"}`
+                : "",
+              itemTypeCounts.flights > 0
+                ? `${itemTypeCounts.flights} ${itemTypeCounts.flights === 1 ? "flight" : "flights"}`
+                : "",
+            ].filter(Boolean);
+            const typedStatsSummary = typedStats.join(" · ");
 
             return (
               <article
@@ -581,12 +597,17 @@ export default function TripsPage() {
                 }}
                 role="button"
                 tabIndex={0}
+                aria-label={`Open trip ${trip.title}`}
                 style={{
                   padding: 12,
                   ...pageCardStyle,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
+                  borderRadius: 14,
+                  border: "1px solid color-mix(in srgb, var(--border) 68%, transparent)",
+                  boxShadow: "0 8px 20px rgba(0,0,0,0.07)",
+                  display: "grid",
+                  gridTemplateColumns: "40% minmax(0, 1fr)",
+                  alignItems: "stretch",
+                  gap: 10,
                   cursor: "pointer",
                   overflow: "hidden",
                   width: "100%",
@@ -596,22 +617,27 @@ export default function TripsPage() {
                   height: "auto",
                 }}
               >
-                {coverUrl ? (
-                  <div
-                    className="fw-trip-card__media"
-                    aria-hidden="true"
-                      style={{
-                        width: 72,
-                        height: 82,
-                        minWidth: 72,
-                        borderRadius: 14,
-                        overflow: "hidden",
-                        border: "1px solid color-mix(in srgb, var(--border) 76%, transparent)",
-                        background: "transparent",
-                        position: "relative",
-                        boxSizing: "border-box",
-                    }}
-                  >
+                <div
+                  className={
+                    coverUrl
+                      ? "fw-trip-card__media"
+                      : "fw-trip-card__media fw-trip-card__media--fallback"
+                  }
+                  aria-hidden="true"
+                  style={{
+                    minHeight: 92,
+                    borderRadius: "14px 10px 10px 14px",
+                    overflow: "hidden",
+                    border:
+                      "1px solid color-mix(in srgb, var(--border) 76%, transparent)",
+                    background: coverUrl
+                      ? "transparent"
+                      : "linear-gradient(135deg, color-mix(in srgb, var(--accent) 72%, var(--bg)), color-mix(in srgb, var(--sky) 46%, var(--muted)))",
+                    position: "relative",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  {coverUrl ? (
                     <img
                       className="fw-trip-cover-thumb-img"
                       src={coverUrl}
@@ -626,32 +652,17 @@ export default function TripsPage() {
                         display: "block",
                       }}
                     />
-                  </div>
-                ) : (
-                  <div
-                    className="fw-trip-card__media fw-trip-card__media--fallback"
-                    aria-hidden="true"
-                      style={{
-                        width: 72,
-                        height: 82,
-                        minWidth: 72,
-                        borderRadius: 14,
-                        overflow: "hidden",
-                        background:
-                          "linear-gradient(135deg, color-mix(in srgb, var(--accent) 72%, var(--bg)), color-mix(in srgb, var(--sky) 46%, var(--muted)))",
-                        border: "1px solid color-mix(in srgb, var(--border) 76%, transparent)",
-                        display: "grid",
-                        alignContent: "end",
-                        padding: 10,
-                        color: "var(--bg)",
-                        fontSize: 24,
-                        fontWeight: 900,
-                        boxSizing: "border-box",
-                      }}
-                    >
-                    {flag || "Trip"}
-                  </div>
-                )}
+                  ) : (
+                    <>
+                      <span className="fw-trip-card__fallback-mark">
+                        {flag || "Trip"}
+                      </span>
+                      <span className="fw-trip-card__fallback-label">
+                        Trip plan
+                      </span>
+                    </>
+                  )}
+                </div>
 
                 <div
                   className="fw-trip-card__body"
@@ -662,9 +673,10 @@ export default function TripsPage() {
                     gap: 3,
                   }}
                 >
-                  <div
+                  <h2
                     className="fw-trip-card__title"
                     style={{
+                      margin: 0,
                       color: "var(--text)",
                       fontSize: 16,
                       lineHeight: 1.18,
@@ -673,51 +685,44 @@ export default function TripsPage() {
                     }}
                   >
                     {trip.title}
-                  </div>
+                  </h2>
 
                   <div
-                    className="fw-trip-card__meta"
+                    className="fw-trip-card__copy"
                     style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 6,
-                      color: "var(--sub)",
-                      fontSize: 12,
-                      fontWeight: 700,
+                      display: "grid",
+                      gap: 2,
+                      minWidth: 0,
                     }}
                   >
                     {trip.destination ? (
-                      <span>{[flag, trip.destination].filter(Boolean).join(" ")}</span>
+                      <div className="fw-trip-card__destination">
+                        {[flag, trip.destination].filter(Boolean).join(" ")}
+                      </div>
                     ) : null}
-                    {range ? <span>{range}</span> : null}
-                    {!range && created ? <span>Created {created}</span> : null}
+                    {range ? (
+                      <div className="fw-trip-card__dates">{range}</div>
+                    ) : null}
+                    {!range && created ? (
+                      <div className="fw-trip-card__dates">Created {created}</div>
+                    ) : null}
                   </div>
 
                   <div
                     className="fw-trip-card__stats"
                     style={{
-                      display: "flex",
-                      flexWrap: "wrap",
+                      display: "block",
                       gap: 6,
                       color: "var(--sub)",
                       fontSize: 12,
                       fontWeight: 700,
                     }}
                   >
-                    <span>{memberCount} members</span>
-                    <span>{itemCount} items</span>
-                    {hasTypedStats ? (
-                      <>
-                        {itemTypeCounts.golf > 0 ? (
-                          <span>{itemTypeCounts.golf} golf</span>
-                        ) : null}
-                        {itemTypeCounts.stays > 0 ? (
-                          <span>{itemTypeCounts.stays} stays</span>
-                        ) : null}
-                        {itemTypeCounts.flights > 0 ? (
-                          <span>{itemTypeCounts.flights} flights</span>
-                        ) : null}
-                      </>
+                    {summaryStats}
+                    {typedStatsSummary ? (
+                      <span className="fw-trip-card__typed-stats">
+                        {typedStatsSummary}
+                      </span>
                     ) : null}
                   </div>
                 </div>

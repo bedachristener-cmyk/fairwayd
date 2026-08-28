@@ -820,6 +820,394 @@ body.is-pwa-standalone {
   margin: 0;
 }
 
+.fw-feed-desktop-header {
+  display: none;
+}
+
+.fw-feed-page-shell,
+.fw-feed-desktop {
+  --fw-feed-desktop-width: 880px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 980px) {
+  .fw-feed-page-shell,
+  .fw-feed-desktop {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+}
+
+@media (min-width: 981px) {
+  .fw-feed-page-shell {
+    width: min(100%, var(--fw-feed-desktop-width)) !important;
+    max-width: var(--fw-feed-desktop-width) !important;
+    margin: 0 auto 0 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .fw-feed-desktop {
+    width: 100%;
+    max-width: var(--fw-feed-desktop-width);
+    margin: 0 auto 0 0;
+    display: grid;
+    gap: 16px;
+  }
+
+  .fw-feed-desktop-header {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 4px 2px 2px;
+  }
+
+  .fw-feed-desktop-kicker {
+    margin-bottom: 6px;
+    color: var(--green);
+    font-size: 11px;
+    font-weight: 850;
+    letter-spacing: 0;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .fw-feed-desktop-header h1 {
+    margin: 0;
+    color: var(--text);
+    font-size: 30px;
+    font-weight: 880;
+    letter-spacing: 0;
+    line-height: 1.08;
+  }
+
+  .fw-feed-desktop-header p {
+    max-width: 520px;
+    margin: 7px 0 0;
+    color: var(--sub);
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .fw-feed-frame {
+    display: grid !important;
+    gap: 14px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    overflow: visible !important;
+  }
+
+  .fw-feed-composer-sticky {
+    position: static !important;
+    top: auto !important;
+    z-index: auto !important;
+    padding-bottom: 0 !important;
+    overflow: visible !important;
+  }
+
+  .fw-feed-composer {
+    padding: 14px !important;
+    border-radius: 14px !important;
+    background: color-mix(in srgb, var(--card) 98%, var(--bg)) !important;
+    border: 1px solid color-mix(in srgb, var(--border) 84%, transparent) !important;
+    box-shadow: 0 12px 28px rgba(15, 23, 20, 0.05) !important;
+    overflow: visible !important;
+  }
+
+  .fw-feed-composer-trigger > div:first-child {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+  }
+
+  .fw-feed-composer-trigger > div:last-child {
+    background: color-mix(in srgb, var(--bg) 84%, var(--card)) !important;
+    border-color: color-mix(in srgb, var(--border) 74%, transparent) !important;
+    color: color-mix(in srgb, var(--sub) 88%, var(--text)) !important;
+    font-size: 14px !important;
+  }
+
+  .fw-feed-stream {
+    gap: 16px !important;
+    overflow: visible !important;
+  }
+
+  .fw-feed-filters {
+    gap: 8px !important;
+    padding: 0 !important;
+    overflow-x: visible !important;
+  }
+
+  .fw-feed-filters button {
+    padding: 9px 13px !important;
+    font-size: 12px !important;
+  }
+
+  .fw-feed-error {
+    background: color-mix(in srgb, #f97373 10%, var(--card)) !important;
+    border-color: color-mix(in srgb, #f97373 28%, var(--border)) !important;
+  }
+
+  .fw-post-card {
+    padding: 16px !important;
+    border-radius: 18px !important;
+    background: color-mix(in srgb, var(--card) 98%, var(--bg)) !important;
+    border: 1px solid color-mix(in srgb, var(--border) 84%, transparent) !important;
+    box-shadow: 0 12px 28px rgba(15, 23, 20, 0.055) !important;
+    overflow: visible !important;
+  }
+
+  .fw-post-card > div:first-child {
+    padding: 0 !important;
+  }
+
+  .fw-post-card .fw-post-image-wrap {
+    margin-top: 2px;
+    border-radius: 14px !important;
+    overflow: hidden !important;
+    background: transparent !important;
+  }
+
+  .fw-post-card .fw-post-img {
+    width: 100% !important;
+    height: auto !important;
+    max-height: min(80dvh, 860px) !important;
+    object-fit: contain !important;
+    border-radius: 14px !important;
+  }
+}
+
+@media (min-width: 981px) and (max-width: 1199px) {
+  .fw-feed-page-shell,
+  .fw-feed-desktop {
+    --fw-feed-desktop-width: 800px;
+  }
+}
+
+@media (min-width: 1200px) and (max-width: 1599px) {
+  .fw-feed-page-shell,
+  .fw-feed-desktop {
+    --fw-feed-desktop-width: 880px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .fw-feed-page-shell,
+  .fw-feed-desktop {
+    --fw-feed-desktop-width: 1080px;
+  }
+}
+
+@media (min-width: 1800px) {
+  .fw-feed-page-shell,
+  .fw-feed-desktop {
+    --fw-feed-desktop-width: 1240px;
+  }
+}
+
+.fw-trip-hero-edit-button {
+  display: none !important;
+}
+
+.fw-trip-summary-meta-grid {
+  display: none;
+}
+
+@media (min-width: 981px) {
+  .fw-trip-hero-edit-button {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .fw-trip-inline-edit-action {
+    display: none !important;
+  }
+
+  .fw-trip-detail-hero {
+    overflow: hidden !important;
+    border-radius: 22px !important;
+    background: var(--card) !important;
+    border: 1px solid color-mix(in srgb, var(--border) 82%, transparent) !important;
+    box-shadow: 0 14px 34px rgba(15, 23, 20, 0.08) !important;
+  }
+
+  .fw-trip-hero-media {
+    min-height: 0 !important;
+  }
+
+  .fw-trip-hero-image-frame {
+    height: auto !important;
+    aspect-ratio: 3 / 1;
+    min-height: 260px;
+    max-height: 390px;
+    border-radius: 0;
+    background: linear-gradient(135deg, var(--green), var(--muted)) !important;
+  }
+
+  .fw-trip-hero-image {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center !important;
+  }
+
+  .fw-trip-hero-image-overlay {
+    display: none !important;
+  }
+
+  .fw-trip-hero-media > button {
+    top: 16px !important;
+  }
+
+  .fw-trip-hero-media > button:first-of-type {
+    left: 16px !important;
+    height: 34px !important;
+    padding-inline: 13px !important;
+  }
+
+  .fw-trip-hero-edit-button {
+    right: 16px !important;
+    height: 34px !important;
+    padding-inline: 14px !important;
+  }
+
+  .fw-trip-info-panel {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    margin-top: 0 !important;
+    padding: 18px 22px 20px !important;
+    background: color-mix(in srgb, var(--card) 98%, var(--bg)) !important;
+    border: 0 !important;
+    border-top: 1px solid color-mix(in srgb, var(--border) 78%, transparent) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    align-items: flex-start !important;
+    gap: 14px !important;
+  }
+
+  .fw-trip-info-panel > div:first-child {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    row-gap: 16px !important;
+    flex: none !important;
+    width: 100% !important;
+  }
+
+  .fw-trip-info-title {
+    grid-column: 1 / -1;
+    font-size: clamp(28px, 2.2vw, 38px) !important;
+    line-height: 1.05 !important;
+    font-weight: 950 !important;
+    letter-spacing: 0 !important;
+    color: var(--text) !important;
+    text-shadow: none !important;
+  }
+
+  .fw-trip-info-destination {
+    display: none !important;
+  }
+
+  .fw-trip-info-range {
+    display: none !important;
+  }
+
+  .fw-trip-info-counts {
+    display: none !important;
+  }
+
+  .fw-trip-summary-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    column-gap: clamp(42px, 8vw, 132px);
+    row-gap: 14px;
+    width: min(100%, 880px);
+    padding-top: 2px;
+  }
+
+  .fw-trip-summary-meta-column {
+    display: grid;
+    align-content: start;
+    gap: 17px;
+    min-width: 0;
+  }
+
+  .fw-trip-summary-field {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .fw-trip-summary-label {
+    color: color-mix(in srgb, var(--sub) 86%, var(--text));
+    font-size: 11px;
+    font-weight: 850;
+    line-height: 1.15;
+    letter-spacing: 0;
+  }
+
+  .fw-trip-summary-value {
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 850;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  .fw-trip-header-actions {
+    flex: none !important;
+    width: 100% !important;
+    justify-content: flex-start !important;
+    align-content: flex-start !important;
+    gap: 8px !important;
+    opacity: 1 !important;
+    padding-top: 1px !important;
+    background: transparent !important;
+    border: 0 !important;
+  }
+
+  .fw-trip-header-actions button {
+    min-height: 34px !important;
+    height: 34px !important;
+    padding: 0 13px !important;
+    font-size: 12px !important;
+  }
+
+  .fw-trip-action-add {
+    order: 1;
+  }
+
+  .fw-trip-action-invite {
+    order: 2;
+  }
+
+  .fw-trip-action-upload {
+    order: 3;
+  }
+
+  .fw-trip-action-delete {
+    order: 9;
+    margin-left: auto;
+  }
+}
+
+@media (min-width: 981px) and (max-width: 1100px) {
+  .fw-trip-summary-meta-grid {
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+
+  .fw-trip-action-delete {
+    margin-left: 0;
+  }
+}
+
 .fw-desktop-shell__outlet--map {
   height: calc(100dvh - 68px);
   min-height: calc(100dvh - 68px);
@@ -2087,6 +2475,169 @@ body.is-pwa-standalone {
 
 /* ============ TRIPS DESKTOP V2 ============ */
 
+.fw-trip-card {
+  grid-template-columns: 40% minmax(0, 1fr);
+  color: var(--text);
+}
+
+.fw-trip-card__media {
+  position: relative;
+  min-width: 0;
+  min-height: 116px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--muted) 70%, var(--card));
+}
+
+.fw-trip-card__media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.1));
+}
+
+.fw-trip-card__media > img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  display: block;
+  object-fit: cover;
+}
+
+.fw-trip-card__media--fallback {
+  display: grid;
+  align-content: end;
+  gap: 4px;
+  padding: 11px;
+  color: #f8fbf6;
+}
+
+.fw-trip-card__media--fallback::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, transparent 22%, rgba(0, 0, 0, 0.22) 100%),
+    radial-gradient(
+      circle at 18% 18%,
+      color-mix(in srgb, var(--accent-strong) 42%, transparent),
+      transparent 34%
+    );
+}
+
+.fw-trip-card__fallback-mark,
+.fw-trip-card__fallback-label {
+  position: relative;
+  z-index: 1;
+}
+
+.fw-trip-card__fallback-mark {
+  font-size: 22px;
+  font-weight: 950;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.fw-trip-card__fallback-label {
+  color: rgba(248, 251, 246, 0.82);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.fw-trip-card__body {
+  align-content: space-between;
+  padding: 14px 14px 14px 0;
+  box-sizing: border-box;
+}
+
+.fw-trip-card__copy {
+  color: var(--sub);
+}
+
+.fw-trip-card__destination {
+  min-width: 0;
+  color: color-mix(in srgb, var(--text) 88%, var(--sub));
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+}
+
+.fw-trip-card__dates {
+  min-width: 0;
+  color: var(--sub);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.fw-trip-card__typed-stats {
+  display: block;
+  margin-top: 2px;
+}
+
+@media (max-width: 980px) {
+  .fw-trip-card {
+    grid-template-columns: 40% minmax(0, 1fr) !important;
+    min-height: 128px !important;
+    padding: 0 !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    border-radius: 16px !important;
+  }
+
+  .fw-trip-card__media {
+    align-self: stretch;
+    aspect-ratio: auto;
+    height: 100% !important;
+    min-height: 0 !important;
+    border: 0 !important;
+    border-radius: 16px 0 0 16px !important;
+  }
+
+  .fw-trip-card__body {
+    align-content: space-between;
+    gap: 7px !important;
+    padding: 12px 12px 12px 0 !important;
+  }
+
+  .fw-trip-card__title {
+    font-size: 16px !important;
+    line-height: 1.12 !important;
+    font-weight: 950 !important;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .fw-trip-card__copy {
+    gap: 3px !important;
+  }
+
+  .fw-trip-card__stats {
+    align-self: end;
+    color: var(--sub) !important;
+    font-size: 11.5px !important;
+    font-weight: 800 !important;
+    line-height: 1.3 !important;
+    overflow-wrap: anywhere;
+  }
+
+  .fw-shell-main:has(.fw-trips-page-shell),
+  .fw-shell-main:has(.fw-trips-page-shell) .fw-outlet {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
+    border: 0 !important;
+    overflow-x: hidden !important;
+  }
+}
+
 @media (min-width: 981px) {
   .fw-trips-page-shell {
     padding: 4px 0 44px !important;
@@ -2131,11 +2682,15 @@ body.is-pwa-standalone {
 
   .fw-trip-card {
     min-height: 156px !important;
-    padding: 12px !important;
+    padding: 0 !important;
+    display: grid !important;
+    grid-template-columns: minmax(160px, 42%) minmax(0, 1fr) !important;
     align-items: stretch !important;
     gap: 14px !important;
-    border-radius: 16px !important;
-    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.06) !important;
+    border-radius: 18px !important;
+    border-color: color-mix(in srgb, var(--border) 74%, transparent) !important;
+    background: color-mix(in srgb, var(--card) 97%, var(--bg)) !important;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08) !important;
     transition:
       transform 160ms ease,
       border-color 160ms ease,
@@ -2144,30 +2699,35 @@ body.is-pwa-standalone {
 
   .fw-trip-card:hover {
     transform: translateY(-1px);
-    border-color: color-mix(in srgb, var(--green) 30%, var(--border)) !important;
-    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.08) !important;
+    border-color: color-mix(in srgb, var(--green) 34%, var(--border)) !important;
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.11) !important;
   }
 
   .fw-trip-card__media {
-    width: 132px !important;
+    width: auto !important;
     height: auto !important;
-    min-width: 132px !important;
-    min-height: 132px !important;
-    border-radius: 14px !important;
+    min-width: 0 !important;
+    min-height: 156px !important;
+    border: 0 !important;
+    border-radius: 18px 0 0 18px !important;
   }
 
   .fw-trip-card__media--fallback {
+    padding: 14px !important;
+  }
+
+  .fw-trip-card__fallback-mark {
     font-size: 28px !important;
   }
 
   .fw-trip-card__body {
-    align-content: center;
-    gap: 8px !important;
+    align-content: space-between;
+    gap: 10px !important;
   }
 
   .fw-trip-card__title {
-    font-size: 18px !important;
-    line-height: 1.16 !important;
+    font-size: 20px !important;
+    line-height: 1.08 !important;
   }
 
   .fw-trip-card__meta,
@@ -2176,23 +2736,226 @@ body.is-pwa-standalone {
     font-size: 12px !important;
     line-height: 1.35 !important;
   }
+}
 
-  .fw-trip-card__stats span {
-    display: inline-flex;
-    align-items: center;
-    min-height: 24px;
-    padding: 0 8px;
-    border: 1px solid color-mix(in srgb, var(--border) 74%, transparent);
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--muted) 28%, transparent);
-    color: var(--sub);
-    font-weight: 850;
+@media (min-width: 981px) and (max-width: 1179px) {
+  .fw-trip-card {
+    grid-template-columns: minmax(150px, 40%) minmax(0, 1fr) !important;
   }
 }
 
 @media (min-width: 1280px) {
   .fw-trips-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ============ TRIP OVERVIEW ITEM CARDS ============ */
+
+.fw-trip-item-card {
+  display: grid !important;
+  grid-template-columns: minmax(150px, 34%) minmax(0, 1fr);
+  grid-template-areas:
+    "visual body"
+    "visual actions";
+  min-width: 0;
+  min-height: 148px;
+  border-radius: 18px !important;
+  background: color-mix(in srgb, var(--card) 97%, var(--bg)) !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.1) !important;
+  overflow: hidden;
+}
+
+.fw-trip-item-card__header {
+  grid-area: visual;
+  grid-template-columns: minmax(0, 1fr) !important;
+  align-items: start !important;
+  align-content: start !important;
+  min-height: 100%;
+  min-width: 0;
+  padding: 15px !important;
+  border-bottom: 0 !important;
+  gap: 16px !important;
+}
+
+.fw-trip-item-card__date-block span:first-child {
+  letter-spacing: 0 !important;
+}
+
+.fw-trip-item-card__date-block {
+  align-self: start;
+  min-width: 0;
+  gap: 0 !important;
+}
+
+.fw-trip-item-card__date-line {
+  color: #fff !important;
+  font-size: 18px !important;
+  font-weight: 950 !important;
+  line-height: 1.12 !important;
+  letter-spacing: 0 !important;
+  overflow-wrap: anywhere;
+}
+
+.fw-trip-item-card__visual-copy {
+  align-self: start;
+  gap: 7px !important;
+  min-width: 0;
+}
+
+.fw-trip-item-card__type-label {
+  color: rgba(255, 255, 255, 0.76) !important;
+  font-size: 12.5px !important;
+  letter-spacing: 0 !important;
+}
+
+.fw-trip-item-card__visual-copy button,
+.fw-trip-item-card__visual-copy > div:last-child {
+  font-size: 21px !important;
+  line-height: 1.12 !important;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  white-space: normal !important;
+}
+
+.fw-trip-item-card__body {
+  grid-area: body;
+  align-content: center;
+  min-width: 0;
+  padding: 12px 12px 10px !important;
+}
+
+.fw-trip-item-card__meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+
+.fw-trip-item-card__meta-row {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--muted) 34%, transparent);
+}
+
+.fw-trip-item-card__meta-row span {
+  color: var(--sub);
+  font-size: 10.5px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.fw-trip-item-card__meta-row strong {
+  min-width: 0;
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 900;
+  line-height: 1.22;
+  overflow-wrap: anywhere;
+}
+
+.fw-trip-item-card__note {
+  padding: 2px 1px 0;
+}
+
+.fw-trip-item-card__actions {
+  grid-area: actions;
+  align-self: end;
+  border-top: 1px solid color-mix(in srgb, var(--border) 58%, transparent);
+  padding: 9px 12px 12px !important;
+  background: color-mix(in srgb, var(--card) 94%, var(--bg)) !important;
+}
+
+.fw-trip-item-card__actions .fw-pill {
+  min-height: 28px;
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+@media (max-width: 430px) {
+  .fw-trip-item-card {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "visual"
+      "body"
+      "actions";
+    min-height: 0;
+    border-radius: 16px !important;
+  }
+
+  .fw-trip-item-card__header {
+    min-height: 0;
+    padding: 12px !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 34%, transparent) !important;
+  }
+
+  .fw-trip-item-card__date-line {
+    font-size: 17px !important;
+  }
+
+  .fw-trip-item-card__visual-copy button,
+  .fw-trip-item-card__visual-copy > div:last-child {
+    font-size: 19px !important;
+  }
+
+  .fw-trip-item-card__meta-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 7px;
+  }
+
+  .fw-trip-item-card__meta-row {
+    padding: 8px 9px;
+  }
+
+  .fw-trip-item-card__actions {
+    gap: 5px !important;
+  }
+
+  .fw-trip-item-card__actions .fw-pill {
+    min-height: 28px;
+    padding: 5px 9px;
+    font-size: 12px;
+  }
+}
+
+@media (min-width: 431px) and (max-width: 980px) {
+  .fw-trip-item-card {
+    grid-template-columns: minmax(132px, 35%) minmax(0, 1fr);
+    min-height: 142px;
+  }
+
+  .fw-trip-item-card__header {
+    padding: 12px !important;
+    gap: 14px !important;
+  }
+
+  .fw-trip-item-card__meta-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 7px;
+  }
+
+  .fw-trip-item-card__meta-row {
+    padding: 7px 8px;
+  }
+
+  .fw-trip-item-card__date-line {
+    font-size: 16px !important;
+  }
+
+  .fw-trip-item-card__visual-copy button,
+  .fw-trip-item-card__visual-copy > div:last-child {
+    font-size: 18px !important;
+  }
+}
+
+@media (min-width: 1180px) {
+  .fw-trip-item-card {
+    grid-template-columns: minmax(170px, 34%) minmax(0, 1fr);
   }
 }
 

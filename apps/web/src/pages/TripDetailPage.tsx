@@ -1272,6 +1272,19 @@ function eventDateBlockParts(key: string) {
   return { weekday, date: `${day}.${month}` };
 }
 
+function itineraryVisualDateLabel(key: string) {
+  if (key === "unscheduled") return "";
+
+  const date = new Date(`${key}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return new Intl.DateTimeFormat(undefined, {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
 function compactDateLabel(key: string) {
   if (key === "unscheduled") return "";
 
@@ -1773,19 +1786,6 @@ function compactItemWhenLine(item: TripItem, displayKey?: string) {
   return nextUpDateTimeLine(item, displayKey || dateKey(item));
 }
 
-function compactGolfTimingLine(item: TripItem, displayKey?: string) {
-  return [
-    compactDateLabel(displayKey || dateKey(item)),
-    formatTime(item) ? `Tee ${formatTime(item)}` : "",
-    item.departureFromHotelTime?.trim()
-      ? `Depart ${item.departureFromHotelTime.trim()}`
-      : "",
-    expectedGolfEndTime(item) ? `End ${expectedGolfEndTime(item)}` : "",
-  ]
-    .filter(Boolean)
-    .join(" · ");
-}
-
 function compactGolfReturnLine(item: TripItem) {
   return item.returnToHotel?.trim() || "";
 }
@@ -1806,20 +1806,38 @@ function compactItemWhereLine(item: TripItem) {
   return item.locationName?.trim() || item.address?.trim() || "";
 }
 
+function tripItemStayNights(item: TripItem) {
+  const startKey = dateKey(item);
+  const endKey = dayKeyFromValue(item.endDate);
+  if (!startKey || !endKey || startKey === "unscheduled") return "";
+
+  const start = new Date(`${startKey}T00:00:00.000Z`).getTime();
+  const end = new Date(`${endKey}T00:00:00.000Z`).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return "";
+
+  const nights = Math.round((end - start) / 86_400_000);
+  if (nights <= 0) return "";
+  return `${nights} ${nights === 1 ? "night" : "nights"}`;
+}
+
 function TripItemCardHeader({
   item,
   displayKey,
   onTitleClick,
+  variant = "default",
 }: {
   item: TripItem;
   displayKey?: string;
   onTitleClick?: () => void;
+  variant?: "default" | "overview";
 }) {
   const accent = calendarItemAccent(item);
   const dateBlock = eventDateBlockParts(displayKey || dateKey(item));
+  const visualDate = itineraryVisualDateLabel(displayKey || dateKey(item));
   const typeLabel = itemTypeLabel(item.type).toUpperCase();
   const title = tripItemHeaderTitle(item);
   const Icon = itemIcon(item.type);
+  const isOverview = variant === "overview";
   const titleStyle: React.CSSProperties = {
     appearance: "none",
     WebkitAppearance: "none",
@@ -1830,54 +1848,80 @@ function TripItemCardHeader({
     color: accent.headerText,
     cursor: onTitleClick ? "pointer" : "default",
     font: "inherit",
-    fontSize: 15,
+    fontSize: isOverview ? 21 : 15,
     fontWeight: 950,
-    lineHeight: 1.18,
+    lineHeight: isOverview ? 1.12 : 1.18,
     textAlign: "left",
     overflowWrap: "anywhere",
   };
 
   return (
     <div
+      className={isOverview ? "fw-trip-item-card__header" : undefined}
       style={{
-        borderBottom: `1px solid ${accent.border}`,
-        background: accent.header,
-        padding: 12,
+        borderBottom: isOverview ? 0 : `1px solid ${accent.border}`,
+        borderRight: isOverview ? `1px solid ${accent.border}` : undefined,
+        background: isOverview ? accent.header : accent.header,
+        padding: isOverview ? 14 : 12,
         display: "grid",
-        gridTemplateColumns: "50px 1px minmax(0, 1fr)",
-        alignItems: "center",
-        columnGap: 11,
+        gridTemplateColumns: isOverview ? "minmax(0, 1fr)" : "50px 1px minmax(0, 1fr)",
+        alignItems: isOverview ? "start" : "center",
+        alignContent: isOverview ? "start" : undefined,
+        rowGap: isOverview ? 18 : undefined,
+        columnGap: isOverview ? 0 : 11,
       }}
     >
       <div
         aria-hidden="true"
+        className={isOverview ? "fw-trip-item-card__date-block" : undefined}
         style={{
           display: "grid",
           gap: 3,
           justifyItems: "start",
+          alignContent: "center",
+          minHeight: isOverview ? undefined : undefined,
+          borderRadius: undefined,
+          background: undefined,
+          border: undefined,
         }}
       >
-        <span
-          style={{
-            color: accent.headerSubText,
-            fontSize: 10,
-            lineHeight: 1,
-            fontWeight: 950,
-            textTransform: "uppercase",
-          }}
-        >
-          {dateBlock.weekday}
-        </span>
-        <span
-          style={{
-            color: accent.headerText,
-            fontSize: 15,
-            lineHeight: 1,
-            fontWeight: 950,
-          }}
-        >
-          {dateBlock.date}
-        </span>
+        {isOverview ? (
+          <span
+            className="fw-trip-item-card__date-line"
+            style={{
+              color: accent.headerText,
+              fontSize: 18,
+              lineHeight: 1.08,
+              fontWeight: 950,
+            }}
+          >
+            {visualDate}
+          </span>
+        ) : (
+          <>
+            <span
+              style={{
+                color: accent.headerSubText,
+                fontSize: 10,
+                lineHeight: 1,
+                fontWeight: 950,
+                textTransform: "uppercase",
+              }}
+            >
+              {dateBlock.weekday}
+            </span>
+            <span
+              style={{
+                color: accent.headerText,
+                fontSize: 15,
+                lineHeight: 1,
+                fontWeight: 950,
+              }}
+            >
+              {dateBlock.date}
+            </span>
+          </>
+        )}
       </div>
       <div
         aria-hidden="true"
@@ -1885,9 +1929,13 @@ function TripItemCardHeader({
           width: 1,
           alignSelf: "stretch",
           background: "rgba(255,255,255,0.34)",
+          display: isOverview ? "none" : undefined,
         }}
       />
-      <div style={{ minWidth: 0, display: "grid", gap: 4 }}>
+      <div
+        className={isOverview ? "fw-trip-item-card__visual-copy" : undefined}
+        style={{ minWidth: 0, display: "grid", gap: 4 }}
+      >
         <div
           style={{
             display: "flex",
@@ -1896,8 +1944,9 @@ function TripItemCardHeader({
             minWidth: 0,
           }}
         >
-          <Icon aria-hidden="true" size={14} strokeWidth={2.5} />
+          {isOverview ? null : <Icon aria-hidden="true" size={14} strokeWidth={2.5} />}
           <span
+            className={isOverview ? "fw-trip-item-card__type-label" : undefined}
             style={{
               color: accent.headerSubText,
               fontSize: 11,
@@ -6264,15 +6313,113 @@ export default function TripDetailPage() {
     ));
   }
 
+  function renderOverviewMetadataRows(rows: { label: string; value: string }[]) {
+    const visibleRows = rows.filter((row) => row.value.trim());
+    if (visibleRows.length === 0) return null;
+
+    return (
+      <div className="fw-trip-item-card__meta-grid">
+        {visibleRows.map((row) => (
+          <div key={`${row.label}-${row.value}`} className="fw-trip-item-card__meta-row">
+            <span>{row.label}</span>
+            <strong>{row.value}</strong>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  function overviewMetadataRowsForItem(item: TripItem, displayKey?: string) {
+    const startKey = displayKey || dateKey(item);
+    const startDate = compactDateLabel(startKey);
+    const endDate = item.endDate ? compactDateLabel(dayKeyFromValue(item.endDate)) : "";
+    const startTime = formatTime(item);
+    const endTime = item.endTime?.trim() || "";
+    const providerLine = item.provider?.trim() ?? "";
+    const booking = item.bookingRef?.trim() ?? "";
+    const routeOrLocation = compactItemWhereLine(item);
+
+    if (isGolfItem(item)) {
+      const expectedEnd = expectedGolfEndTime(item);
+      const duration = expectedEnd
+        ? `Ends ${expectedEnd}`
+        : formatDurationMinutes(item.roundDurationMinutes);
+      const departure = item.departureFromHotelTime?.trim()
+        ? `Depart ${item.departureFromHotelTime.trim()}`
+        : "";
+
+      return [
+        { label: "Tee time", value: startTime },
+        { label: "Duration", value: duration },
+        { label: "Transfer", value: departure },
+        { label: "After round", value: compactGolfReturnLine(item) },
+      ];
+    }
+
+    if (isFlightItem(item)) {
+      const origin = item.locationName?.trim() ?? "";
+      const destination = item.address?.trim() ?? "";
+      const route = origin && destination ? `${origin} -> ${destination}` : "";
+      const departure = [startDate, startTime].filter(Boolean).join(" ");
+      const arrival = [endDate, endTime].filter(Boolean).join(" ");
+
+      return [
+        { label: "Route", value: route },
+        { label: "Departure", value: departure },
+        { label: "Arrival", value: arrival },
+        { label: "Airline", value: providerLine },
+        { label: "Flight", value: flightNumberText(item) },
+        { label: "Booking", value: booking },
+      ];
+    }
+
+    if (isHotelItem(item)) {
+      return [
+        { label: "Check-in", value: [startDate, startTime].filter(Boolean).join(" ") },
+        { label: "Check-out", value: [endDate, endTime].filter(Boolean).join(" ") },
+        { label: "Stay", value: tripItemStayNights(item) },
+        { label: "Location", value: routeOrLocation },
+        { label: "Booking", value: booking },
+      ];
+    }
+
+    if (isTransportItem(item)) {
+      const pickup = [startDate, startTime].filter(Boolean).join(" ");
+      const returnOrArrival = [endDate, endTime].filter(Boolean).join(" ");
+
+      return [
+        { label: "Pickup", value: pickup },
+        { label: isCarRentalItem(item) ? "Return" : "Arrival", value: returnOrArrival },
+        { label: "Route", value: routeOrLocation },
+        { label: "Provider", value: providerLine },
+        { label: "Booking", value: booking },
+      ];
+    }
+
+    if (isNoteItem(item)) {
+      return [
+        { label: "Date", value: startDate },
+        { label: "Note", value: compactNoteLine(item) },
+      ];
+    }
+
+    return [
+      { label: "When", value: [startDate, formatTimeRange(item)].filter(Boolean).join(" ") },
+      { label: "Where", value: routeOrLocation },
+      { label: "Provider", value: providerLine },
+      { label: "Booking", value: booking },
+    ];
+  }
+
   function renderGolfRoundCompactCard(item: TripItem, key: string, displayKey?: string) {
     const accent = calendarItemAccent(item);
     const canEditCurrentItem = canEditTripItem(item);
-    const returnLine = compactGolfReturnLine(item);
     const courseId = item.course?.id ?? item.courseId;
 
     return (
       <article
         key={key}
+        className="fw-trip-item-card"
         style={{
           display: "grid",
           gap: 0,
@@ -6287,44 +6434,24 @@ export default function TripDetailPage() {
         <TripItemCardHeader
           item={item}
           displayKey={displayKey}
+          variant="overview"
           onTitleClick={courseId ? () => nav(`/courses/${courseId}`) : undefined}
         />
 
         <div
+          className="fw-trip-item-card__body"
           style={{
-            padding: "10px 12px 11px",
+            padding: "12px",
             display: "grid",
-            gap: 6,
+            gap: 10,
             background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
           }}
         >
-          <div
-            style={{
-              color: "var(--text)",
-              fontSize: 13,
-              lineHeight: 1.3,
-              fontWeight: 900,
-              overflowWrap: "anywhere",
-            }}
-          >
-            {compactGolfTimingLine(item, displayKey) || "Tee time TBD"}
-          </div>
-          {returnLine ? (
-            <div
-              style={{
-                color: "var(--sub)",
-                fontSize: 13,
-                lineHeight: 1.3,
-                fontWeight: 850,
-                overflowWrap: "anywhere",
-              }}
-            >
-              {returnLine}
-            </div>
-          ) : null}
+          {renderOverviewMetadataRows(overviewMetadataRowsForItem(item, displayKey))}
         </div>
 
         <div
+          className="fw-trip-item-card__actions"
           style={{
             ...wrappingActionRowStyle,
             gap: 6,
@@ -6449,6 +6576,7 @@ export default function TripDetailPage() {
       {activeView === "overview" ? (
       <>
       <section
+        className="fw-trip-detail-hero"
         style={{
           ...safeSectionStyle,
           overflow: "hidden",
@@ -6461,8 +6589,9 @@ export default function TripDetailPage() {
           boxShadow: "0 18px 46px rgba(0,0,0,0.28)",
         }}
       >
-        <div style={{ position: "relative", minHeight: 118 }}>
+        <div className="fw-trip-hero-media" style={{ position: "relative", minHeight: 118 }}>
           <div
+            className="fw-trip-hero-image-frame"
             style={{
               width: "100%",
               maxWidth: "100%",
@@ -6475,6 +6604,7 @@ export default function TripDetailPage() {
           >
             {trip?.coverImageUrl ? (
               <img
+                className="fw-trip-hero-image"
                 src={fileUrl(trip.coverImageUrl)}
                 alt={trip.title ? `${trip.title} cover` : "Trip cover"}
                 style={{
@@ -6486,6 +6616,7 @@ export default function TripDetailPage() {
               />
             ) : null}
             <div
+              className="fw-trip-hero-image-overlay"
               aria-hidden="true"
               style={{
                 position: "absolute",
@@ -6517,9 +6648,38 @@ export default function TripDetailPage() {
           >
             Back to Trips
           </button>
+          {canEditTrip && !editingTrip ? (
+            <button
+              className="fw-trip-hero-edit-button"
+              type="button"
+              onClick={startTripEdit}
+              disabled={!trip || deletingTrip}
+              style={{
+                position: "absolute",
+                top: 10,
+                right: 10,
+                height: 30,
+                padding: "0 12px",
+                borderRadius: 999,
+                border: "1px solid rgba(255,255,255,0.52)",
+                background: "rgba(255,255,255,0.9)",
+                color: "#102019",
+                cursor: !trip || deletingTrip ? "default" : "pointer",
+                fontWeight: 950,
+                fontSize: 12,
+                backdropFilter: "blur(10px)",
+                boxShadow: "0 8px 22px rgba(0,0,0,0.16)",
+                opacity: !trip || deletingTrip ? 0.55 : 1,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Edit trip
+            </button>
+          ) : null}
         </div>
 
         <div
+          className="fw-trip-info-panel"
           style={{
             ...safeSectionStyle,
             display: "flex",
@@ -6576,6 +6736,54 @@ export default function TripDetailPage() {
                   rows={3}
                   style={{ ...editFieldStyle, resize: "vertical" }}
                 />
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
+                    flexWrap: "wrap",
+                    padding: "9px 10px",
+                    borderRadius: 14,
+                    border: "1px solid var(--border)",
+                    background: "var(--bg)",
+                  }}
+                >
+                  <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "var(--text)",
+                        fontWeight: 950,
+                      }}
+                    >
+                      Cover image
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--sub)" }}>
+                      Replace the trip hero image.
+                    </div>
+                  </div>
+                  <button
+                    className="fw-button-secondary"
+                    type="button"
+                    onClick={() => coverInputRef.current?.click()}
+                    disabled={!trip || deletingTrip || uploadingCover}
+                    style={{
+                      height: 30,
+                      padding: "0 11px",
+                      borderRadius: 999,
+                      cursor:
+                        !trip || deletingTrip || uploadingCover
+                          ? "default"
+                          : "pointer",
+                      fontWeight: 900,
+                      fontSize: 12,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {uploadingCover ? "Uploading..." : "Change cover"}
+                  </button>
+                </div>
                 <div style={wrappingActionRowStyle}>
                   <button
                     type="button"
@@ -6619,6 +6827,7 @@ export default function TripDetailPage() {
             ) : (
               <>
                 <div
+                  className="fw-trip-info-title"
                   style={{
                     fontSize: 19,
                     lineHeight: 1.15,
@@ -6630,19 +6839,53 @@ export default function TripDetailPage() {
                   {trip?.title ?? "Trip"}
                 </div>
 
+                <div className="fw-trip-summary-meta-grid" aria-label="Trip summary">
+                  <div className="fw-trip-summary-meta-column">
+                    <div className="fw-trip-summary-field">
+                      <div className="fw-trip-summary-label">Destination</div>
+                      <div className="fw-trip-summary-value">
+                        {trip?.destination?.trim() || "No destination"}
+                      </div>
+                    </div>
+                    <div className="fw-trip-summary-field">
+                      <div className="fw-trip-summary-label">Members</div>
+                      <div className="fw-trip-summary-value">{memberCount}</div>
+                    </div>
+                  </div>
+                  <div className="fw-trip-summary-meta-column">
+                    <div className="fw-trip-summary-field">
+                      <div className="fw-trip-summary-label">Travel dates</div>
+                      <div className="fw-trip-summary-value">
+                        {tripRange || "No dates set"}
+                      </div>
+                    </div>
+                    <div className="fw-trip-summary-field">
+                      <div className="fw-trip-summary-label">Trip items</div>
+                      <div className="fw-trip-summary-value">{itemCount}</div>
+                    </div>
+                  </div>
+                </div>
+
                 {trip?.destination ? (
-                  <div style={{ fontSize: 13, color: "var(--sub)" }}>
+                  <div
+                    className="fw-trip-info-destination"
+                    style={{ fontSize: 13, color: "var(--sub)" }}
+                  >
                     {trip.destination}
                   </div>
                 ) : null}
 
                 {tripRange ? (
-                  <div style={{ fontSize: 12, color: "var(--text)", fontWeight: 900 }}>
+                  <div
+                    className="fw-trip-info-range"
+                    style={{ fontSize: 12, color: "var(--text)", fontWeight: 900 }}
+                  >
                     {tripRange}
                   </div>
                 ) : null}
 
                 <div
+                  className="fw-trip-info-counts"
                   style={{
                     display: "flex",
                     flexWrap: "wrap",
@@ -6660,9 +6903,11 @@ export default function TripDetailPage() {
           </div>
 
           {canEditTrip || canAddTripItems ? (
-            <div style={{ ...wrappingActionRowStyle, opacity: 0.82 }}>
-              {canEditTrip && !editingTrip ? (
-              <>
+            <div
+              className="fw-trip-header-actions"
+              style={{ ...wrappingActionRowStyle, opacity: 0.82 }}
+            >
+              {canEditTrip ? (
                 <input
                   ref={coverInputRef}
                   type="file"
@@ -6670,8 +6915,11 @@ export default function TripDetailPage() {
                   onChange={(e) => uploadCover(e.target.files?.[0])}
                   style={{ display: "none" }}
                 />
+              ) : null}
+              {canEditTrip && !editingTrip ? (
+              <>
                 <button
-                  className="fw-button-secondary"
+                  className="fw-button-secondary fw-trip-action-upload"
                   type="button"
                   onClick={() => coverInputRef.current?.click()}
                   disabled={!trip || deletingTrip || uploadingCover}
@@ -6691,7 +6939,7 @@ export default function TripDetailPage() {
                   {uploadingCover ? "Uploading..." : "Upload Cover"}
                 </button>
                 <button
-                  className="fw-button-secondary"
+                  className="fw-button-secondary fw-trip-inline-edit-action"
                   type="button"
                   onClick={startTripEdit}
                   disabled={!trip || deletingTrip}
@@ -6699,8 +6947,7 @@ export default function TripDetailPage() {
                     height: 28,
                     padding: "0 9px",
                     borderRadius: 999,
-                    border: "1px solid var(--border)",
-                    ...dangerButtonStyle,
+                    ...secondaryButtonStyle,
                     cursor: !trip || deletingTrip ? "default" : "pointer",
                     fontWeight: 900,
                     fontSize: 11,
@@ -6711,7 +6958,7 @@ export default function TripDetailPage() {
                   Edit Trip
                 </button>
                 <button
-                  className="fw-button-primary"
+                  className="fw-button-primary fw-trip-action-invite"
                   type="button"
                   onClick={openInviteSheet}
                   disabled={!trip || deletingTrip || inviteBusy}
@@ -6731,7 +6978,7 @@ export default function TripDetailPage() {
                   Share / Invite
                 </button>
                 <button
-                  className="fw-button-destructive"
+                  className="fw-button-destructive fw-trip-action-delete"
                   type="button"
                   onClick={openDeleteTripConfirm}
                   disabled={!trip || deletingTrip}
@@ -6751,7 +6998,7 @@ export default function TripDetailPage() {
             ) : null}
             {canAddTripItems ? (
             <button
-              className="fw-button-primary"
+              className="fw-button-primary fw-trip-action-add"
               type="button"
               onClick={() => {
                 if (tripId) nav(`/trips/${tripId}/add-item`);
@@ -6871,28 +7118,13 @@ export default function TripDetailPage() {
                 );
               }
 
-              const routeOrLocation = compactItemWhereLine(item);
-              const flightSummary = isFlightItem(item) ? flightSummaryLine(item) : "";
-              const timingLine = isFlightItem(item)
-                ? nextUpFlightTiming(item)
-                : nextUpDateTimeLine(item, displayKey);
-              const providerLine = item.provider?.trim() ?? "";
-              const compactLines = isFlightItem(item)
-                ? [timingLine, flightSummary]
-                : isGolfItem(item)
-                  ? [compactItemWhenLine(item, displayKey)]
-                  : isHotelItem(item)
-                    ? [compactItemWhenLine(item, displayKey), routeOrLocation]
-                  : isNoteItem(item)
-                    ? [compactNoteLine(item)]
-                  : isTransportItem(item)
-                    ? [timingLine, providerLine]
-                    : [timingLine, routeOrLocation];
               const accent = calendarItemAccent(item);
+              const metadataRows = overviewMetadataRowsForItem(item, displayKey);
 
               return (
                 <article
                   key={`essentials-${item.id}`}
+                  className="fw-trip-item-card"
                   style={{
                     display: "grid",
                     gap: 0,
@@ -6904,35 +7136,26 @@ export default function TripDetailPage() {
                     minWidth: 0,
                   }}
                 >
-                  <TripItemCardHeader item={item} displayKey={displayKey} />
-
-                  {compactLines.some(Boolean) ? (
-                    <div
-                      style={{
-                        padding: "10px 12px 11px",
-                        display: "grid",
-                        gap: 7,
-                        background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
-                      }}
-                    >
-                      {compactLines.filter(Boolean).map((line) => (
-                        <div
-                          key={line}
-                          style={{
-                            color: "var(--text)",
-                            fontSize: 13,
-                            lineHeight: 1.25,
-                            fontWeight: 900,
-                            overflowWrap: "anywhere",
-                          }}
-                        >
-                          {line}
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
+                  <TripItemCardHeader
+                    item={item}
+                    displayKey={displayKey}
+                    variant="overview"
+                  />
 
                   <div
+                    className="fw-trip-item-card__body"
+                    style={{
+                      padding: "12px",
+                      display: "grid",
+                      gap: 10,
+                      background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
+                    }}
+                  >
+                    {renderOverviewMetadataRows(metadataRows)}
+                  </div>
+
+                  <div
+                    className="fw-trip-item-card__actions"
                     style={{
                       ...wrappingActionRowStyle,
                       gap: 6,

@@ -149,14 +149,17 @@ async function resizeImage(file: File): Promise<File> {
 function Card({
   title,
   children,
+  className,
 }: {
   title?: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   const isMobile = window.innerWidth <= 980;
 
   return (
     <div
+      className={className}
       style={{
         background: "var(--bg)",
         borderRadius: isMobile ? 0 : 16,
@@ -1214,7 +1217,7 @@ export default function FeedPage() {
     <>
       <div className="fw-page" style={{ background: "var(--bg)" }}>
         <div
-          className="fw-page-shell"
+          className="fw-page-shell fw-feed-page-shell"
           style={{
             display: "grid",
             gap: 12,
@@ -1227,22 +1230,35 @@ export default function FeedPage() {
             overflowX: "hidden",
           }}
         >
-        {err && (
-          <div
-            style={{
-              padding: 10,
-              borderRadius: 12,
-              background: "rgba(255,0,0,.08)",
-              border: "1px solid var(--border)",
-              fontSize: 13,
-            }}
-          >
-            <strong>{t("error")}:</strong> {err}
-          </div>
-        )}
+          <div className="fw-feed-desktop">
+            <header className="fw-feed-desktop-header">
+              <div>
+                <div className="fw-feed-desktop-kicker">
+                  {t("latest_activity")}
+                </div>
+                <h1>{t("feed")}</h1>
+                <p>Golf moments from courses, friends and destinations.</p>
+              </div>
+            </header>
 
-        <Card>
+            {err && (
+              <div
+                className="fw-feed-error"
+                style={{
+                  padding: 10,
+                  borderRadius: 12,
+                  background: "rgba(255,0,0,.08)",
+                  border: "1px solid var(--border)",
+                  fontSize: 13,
+                }}
+              >
+                <strong>{t("error")}:</strong> {err}
+              </div>
+            )}
+
+            <Card className="fw-feed-frame">
           <div
+            className="fw-feed-composer-sticky"
             style={{
               position: "sticky",
               top: 12,
@@ -1255,8 +1271,9 @@ export default function FeedPage() {
               overflowX: "hidden",
             }}
           >
-            <div style={composerBoxStyle}>
+            <div className="fw-feed-composer" style={composerBoxStyle}>
               <button
+                className="fw-feed-composer-trigger"
                 type="button"
                 onClick={() => {
                   setComposerOpen(true);
@@ -2471,6 +2488,7 @@ export default function FeedPage() {
           </div>
 
           <div
+            className="fw-feed-stream"
             style={{
               display: "grid",
               gap: isMobile ? 16 : 14,
@@ -2485,6 +2503,7 @@ export default function FeedPage() {
             }}
           >
             <div
+              className="fw-feed-filters"
               aria-label="Feed filters"
               style={{
                 display: "flex",
@@ -2609,7 +2628,8 @@ export default function FeedPage() {
               );
             })}
           </div>
-        </Card>
+            </Card>
+          </div>
         </div>
       </div>
 
