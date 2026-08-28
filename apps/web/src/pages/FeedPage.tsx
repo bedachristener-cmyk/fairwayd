@@ -365,6 +365,7 @@ export default function FeedPage() {
   );
 
   const [followedCourseIds, setFollowedCourseIds] = useState<string[]>([]);
+  const [followedUserIds, setFollowedUserIds] = useState<string[]>([]);
   const [courseFollowBusyId, setCourseFollowBusyId] = useState<string | null>(
     null,
   );
@@ -609,6 +610,43 @@ export default function FeedPage() {
     }
   }, [token, logout]);
 
+  const loadFollowedUsers = useCallback(async () => {
+    if (!token) {
+      setFollowedUserIds([]);
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/users/me/following`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        logout();
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(`Failed to load followed users: ${res.status}`);
+      }
+
+      const data = await res.json();
+      const items = Array.isArray(data?.items) ? data.items : [];
+
+      setFollowedUserIds(
+        items
+          .map((row: any) => row?.following?.id ?? row?.followingId)
+          .filter(
+            (id: unknown): id is string =>
+              typeof id === "string" && id.length > 0,
+          ),
+      );
+    } catch (err) {
+      console.error("Failed to load followed users", err);
+      setFollowedUserIds([]);
+    }
+  }, [token, logout]);
+
   const loadFollowedDestinations = useCallback(async () => {
     if (!token) {
       setFollowedDestinationCodes([]);
@@ -686,6 +724,12 @@ export default function FeedPage() {
     if (!token) return;
     loadFollowedCourses();
   }, [loading, token, loadFollowedCourses]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!token) return;
+    loadFollowedUsers();
+  }, [loading, token, loadFollowedUsers]);
 
   useEffect(() => {
     if (loading) return;
@@ -1103,9 +1147,16 @@ export default function FeedPage() {
     }
   };
 
+  const myUserId = me?.id || user?.id || "";
+
   const filteredPosts = useMemo(() => {
     if (feedFilter === "following") {
-      return posts;
+      return posts.filter(
+        (post) =>
+          post.user.id === "me" ||
+          (!!myUserId && post.user.id === myUserId) ||
+          followedUserIds.includes(post.user.id),
+      );
     }
 
     if (feedFilter === "courses") {
@@ -1129,7 +1180,14 @@ export default function FeedPage() {
 
       return bScore - aScore;
     });
-  }, [feedFilter, followedCourseIds, followedDestinationCodes, posts]);
+  }, [
+    feedFilter,
+    followedCourseIds,
+    followedDestinationCodes,
+    followedUserIds,
+    myUserId,
+    posts,
+  ]);
 
   const activeCommentPost =
     posts.find((p) => p.id === activeCommentPostId) ?? null;

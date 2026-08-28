@@ -3,6 +3,7 @@ import { ArrowLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import {
   acceptFollowRequest,
+  cancelSentFollowRequest,
   fetchFollowRequests,
   fetchSentFollowRequests,
   rejectFollowRequest,
@@ -193,6 +194,28 @@ export default function FollowRequestsPage() {
         window.dispatchEvent(new Event("followRequestsUpdated"));
       } catch (e: any) {
         setErr(friendlyApiErrorMessage(e, "Could not reject this request."));
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [token],
+  );
+
+  const onCancelSent = useCallback(
+    async (followingId: string) => {
+      setBusyId(followingId);
+      setErr(null);
+
+      try {
+        await cancelSentFollowRequest(token, followingId);
+        setSentItems((prev) =>
+          prev.filter((x) => x.followingId !== followingId),
+        );
+        window.dispatchEvent(new Event("followRequestsUpdated"));
+      } catch (e: any) {
+        setErr(
+          friendlyApiErrorMessage(e, "Could not cancel this follow request."),
+        );
       } finally {
         setBusyId(null);
       }
@@ -689,6 +712,7 @@ export default function FollowRequestsPage() {
                 x.followingName ||
                 x.followingId.slice(0, 8);
               const label = x.followingName ? x.followingName : `@${handle}`;
+              const isBusy = busyId === x.followingId;
 
               return (
                 <div
@@ -759,6 +783,29 @@ export default function FollowRequestsPage() {
                         : "Request sent"}
                     </div>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => onCancelSent(x.followingId)}
+                    disabled={isBusy}
+                    style={{
+                      minHeight: 32,
+                      padding: "0 11px",
+                      borderRadius: 999,
+                      border: "1px solid var(--border)",
+                      background: "var(--bg)",
+                      color: "var(--text)",
+                      fontSize: 11,
+                      fontWeight: 850,
+                      cursor: isBusy ? "default" : "pointer",
+                      opacity: isBusy ? 0.6 : 1,
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                      alignSelf: "center",
+                    }}
+                  >
+                    {isBusy ? "Canceling..." : "Cancel request"}
+                  </button>
                 </div>
               );
             })

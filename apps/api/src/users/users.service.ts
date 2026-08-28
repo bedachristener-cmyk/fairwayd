@@ -10,6 +10,7 @@ import {
   FieldPrivacy,
   FollowStatus,
   Prisma,
+  Visibility,
 } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -276,7 +277,7 @@ export class UsersService {
   // Profile + posts by handle
   // =========================================================
 
-  async getByHandle(handle: string) {
+  async getByHandle(viewerUserId: string, handle: string) {
     const safeHandle = normalizeHandle(handle);
 
     if (!safeHandle) throw new NotFoundException('User not found');
@@ -304,7 +305,40 @@ export class UsersService {
     });
 
     if (!user) throw new NotFoundException('User not found');
-    return user;
+
+    const isSelf = viewerUserId === user.id;
+    const isAcceptedFollower = isSelf
+      ? false
+      : !!(await this.prisma.follow.findFirst({
+          where: {
+            followerId: viewerUserId,
+            followingId: user.id,
+            status: FollowStatus.ACCEPTED,
+          },
+          select: { id: true },
+        }));
+
+    const canViewField = (privacy: FieldPrivacy) =>
+      isSelf ||
+      privacy === FieldPrivacy.PUBLIC ||
+      (privacy === FieldPrivacy.FOLLOWERS && isAcceptedFollower);
+
+    return {
+      ...user,
+      bio: canViewField(user.bioPrivacy) ? user.bio : null,
+      handicap: canViewField(user.handicapPrivacy) ? user.handicap : null,
+      homeGolfClub: canViewField(user.homeGolfClubPrivacy)
+        ? user.homeGolfClub
+        : null,
+      golfSlogan: canViewField(user.golfSloganPrivacy)
+        ? user.golfSlogan
+        : null,
+      favoriteGolfDestination: canViewField(
+        user.favoriteGolfDestinationPrivacy,
+      )
+        ? user.favoriteGolfDestination
+        : null,
+    };
   }
 
   async findById(id: string) {
@@ -329,11 +363,29 @@ export class UsersService {
     if (!profileUser) throw new NotFoundException('User not found');
 
     const isSelf = viewerUserId === profileUser.id;
+    const isAcceptedFollower = isSelf
+      ? false
+      : !!(await this.prisma.follow.findFirst({
+          where: {
+            followerId: viewerUserId,
+            followingId: profileUser.id,
+            status: FollowStatus.ACCEPTED,
+          },
+          select: { id: true },
+        }));
 
     return this.prisma.post.findMany({
       where: {
         userId: profileUser.id,
-        ...(isSelf ? {} : { visibility: 'PUBLIC' }),
+        ...(isSelf
+          ? {}
+          : {
+              visibility: {
+                in: isAcceptedFollower
+                  ? [Visibility.PUBLIC, Visibility.FOLLOWERS]
+                  : [Visibility.PUBLIC],
+              },
+            }),
       },
       orderBy: { createdAt: 'desc' },
       select: {

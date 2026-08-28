@@ -331,7 +331,9 @@ export class UsersController {
 
   @UseGuards(AuthGuard('jwt'))
   @Get(':handle')
-  async getByHandle(@Param('handle') handle: string) {
-    return this.users.getByHandle(handle);
+  async getByHandle(@Req() req: any, @Param('handle') handle: string) {
+    const userId = req?.user?.userId ?? req?.user?.id;
+    if (!userId) throw new BadRequestException('Missing user id');
+    return this.users.getByHandle(userId, handle);
   }
 }

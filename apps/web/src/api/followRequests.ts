@@ -141,3 +141,24 @@ export async function rejectFollowRequest(
     throw new Error(await readError(res));
   }
 }
+
+/** DELETE /users/id/:id/follow */
+export async function cancelSentFollowRequest(
+  token: string | null | undefined,
+  followingId: string,
+) {
+  const t = requireToken(token);
+
+  const res = await safeFetch(
+    `${API_BASE}/users/id/${encodeURIComponent(followingId)}/follow`,
+    { method: "DELETE", headers: authHeaders(t) },
+  );
+
+  if (res.status === 401 || res.status === 403) {
+    throw new Error("Unauthorized. Please login again.");
+  }
+
+  if (!res.ok) {
+    throw new Error(await readError(res));
+  }
+}
