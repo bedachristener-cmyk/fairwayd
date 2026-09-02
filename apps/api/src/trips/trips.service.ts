@@ -18,6 +18,7 @@ import {
 } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { AddTripMemberDto } from './dto/add-trip-member.dto';
 import { CreateTripItemDto } from './dto/create-trip-item.dto';
 import { CreateTripDto } from './dto/create-trip.dto';
@@ -285,7 +286,10 @@ function manageableTripItemWhereForMembership(
 
 @Injectable()
 export class TripsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   create(userId: string, dto: CreateTripDto) {
     return this.prisma.trip.create({
@@ -808,11 +812,17 @@ export class TripsService {
       return member;
     }
 
+    const memberUserId = requestedUserId;
+
+    if (!memberUserId) {
+      throw new BadRequestException('Trip member requires userId or displayName');
+    }
+
     try {
       const member = await this.prisma.tripMember.create({
         data: {
           tripId,
-          userId: requestedUserId,
+          userId: memberUserId,
           isGuest: false,
           role: cleanTripRole(dto.role),
         },
@@ -824,8 +834,16 @@ export class TripsService {
         userId,
         TripActivityType.MEMBER_ADDED,
         (name) => `${name} added member: ${this.tripMemberDisplayName(member)}`,
-        { memberId: member.id, userId: requestedUserId },
+        { memberId: member.id, userId: memberUserId },
       );
+
+      await this.notifications.createNotification({
+        userId: memberUserId,
+        type: 'trip_member_added',
+        title: 'Added to trip',
+        body: 'Someone added you to a trip.',
+        link: `/trips/${encodeURIComponent(tripId)}`,
+      });
 
       return member;
     } catch (error) {

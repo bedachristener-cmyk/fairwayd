@@ -10,13 +10,17 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { FollowsService } from './follows.service';
+import { UsersService } from '../users/users.service';
 
 @ApiTags('follows')
 @ApiBearerAuth()
 @UseGuards(AuthGuard('jwt'))
 @Controller('follows')
 export class FollowsController {
-  constructor(private readonly follows: FollowsService) {}
+  constructor(
+    private readonly follows: FollowsService,
+    private readonly users: UsersService,
+  ) {}
 
   @Get('requests/count')
   async requestsCount(@Req() req: any) {
@@ -35,7 +39,7 @@ export class FollowsController {
   @Post(':userId')
   async requestFollow(@Req() req: any, @Param('userId') userId: string) {
     const me = req.user.userId;
-    return this.follows.requestFollow(me, userId);
+    return this.users.followUser(me, userId);
   }
 
   @Delete(':userId')

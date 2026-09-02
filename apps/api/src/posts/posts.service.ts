@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, Visibility } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 type CreatePostBody = {
   courseId: string;
@@ -19,7 +20,10 @@ type UpdatePostBody = {
 
 @Injectable()
 export class PostsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   /**
    * Public feed (only PUBLIC posts)
@@ -524,26 +528,51 @@ export class PostsService {
 
     const post = await this.prisma.post.findUnique({
       where: { id: pid },
-      select: { id: true },
+      select: { id: true, userId: true },
     });
 
     if (!post) {
       throw new BadRequestException(`Unknown postId ${pid}`);
     }
 
-    await this.prisma.like.upsert({
+    const existingLike = await this.prisma.like.findUnique({
       where: {
         postId_userId: {
           postId: pid,
           userId: uid,
         },
       },
-      update: {},
-      create: {
-        postId: pid,
-        userId: uid,
-      },
+      select: { id: true },
     });
+
+    if (existingLike) {
+      return { ok: true };
+    }
+
+    try {
+      await this.prisma.like.create({
+        data: {
+          postId: pid,
+          userId: uid,
+        },
+      });
+    } catch (e: any) {
+      if (e?.code === 'P2002') {
+        return { ok: true };
+      }
+
+      throw new BadRequestException(e?.message ?? 'Failed to like post');
+    }
+
+    if (post.userId !== uid) {
+      await this.notifications.createNotification({
+        userId: post.userId,
+        type: 'post_like',
+        title: 'New like',
+        body: 'Someone liked your post.',
+        link: `/feed?postId=${encodeURIComponent(pid)}`,
+      });
+    }
 
     return { ok: true };
   }
@@ -718,17 +747,20 @@ export class PostsService {
 
     const post = await this.prisma.post.findUnique({
       where: { id: pid },
-      select: { id: true },
+      select: { id: true, userId: true },
     });
 
     if (!post) {
       throw new BadRequestException(`Unknown postId ${pid}`);
     }
 
+    let parentComment: { id: string; postId: string; userId: string } | null =
+      null;
+
     if (parent) {
-      const parentComment = await this.prisma.comment.findUnique({
+      parentComment = await this.prisma.comment.findUnique({
         where: { id: parent },
-        select: { id: true, postId: true },
+        select: { id: true, postId: true, userId: true },
       });
 
       if (!parentComment) {
@@ -740,7 +772,7 @@ export class PostsService {
       }
     }
 
-    return this.prisma.comment.create({
+    const comment = await this.prisma.comment.create({
       data: {
         postId: pid,
         userId: uid,
@@ -758,5 +790,27 @@ export class PostsService {
         },
       },
     });
+
+    if (!parent && post.userId !== uid) {
+      await this.notifications.createNotification({
+        userId: post.userId,
+        type: 'post_comment',
+        title: 'New comment',
+        body: 'Someone commented on your post.',
+        link: `/feed?postId=${encodeURIComponent(pid)}`,
+      });
+    }
+
+    if (parentComment && parentComment.userId !== uid) {
+      await this.notifications.createNotification({
+        userId: parentComment.userId,
+        type: 'comment_reply',
+        title: 'New reply',
+        body: 'Someone replied to your comment.',
+        link: `/feed?postId=${encodeURIComponent(pid)}`,
+      });
+    }
+
+    return comment;
   }
 }

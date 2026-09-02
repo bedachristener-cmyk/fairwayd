@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -33,44 +32,6 @@ export class FollowsService {
         },
       },
     });
-  }
-
-  async requestFollow(followerId: string, followingId: string) {
-    if (!followerId || !followingId) {
-      throw new BadRequestException('Missing user ids');
-    }
-    if (followerId === followingId) {
-      throw new BadRequestException('Cannot follow yourself');
-    }
-
-    // create if missing, otherwise return existing (unique constraint)
-    const existing = await this.prisma.follow.findUnique({
-      where: { followerId_followingId: { followerId, followingId } },
-      select: { id: true, status: true },
-    });
-
-    if (existing) return existing;
-
-    const row = await this.prisma.follow.create({
-      data: {
-        followerId,
-        followingId,
-        status: FollowStatus.PENDING,
-      },
-      select: { id: true, status: true },
-    });
-
-    if (row.status === FollowStatus.PENDING) {
-      await this.notifications.createNotification({
-        userId: followingId,
-        type: 'follow_request',
-        title: 'New follow request',
-        body: 'Someone wants to connect with you.',
-        link: '/follow-requests',
-      });
-    }
-
-    return row;
   }
 
   async unfollow(followerId: string, followingId: string) {

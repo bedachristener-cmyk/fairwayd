@@ -73,6 +73,7 @@ export class UsersController {
       homeGolfClub?: string | null;
       golfSlogan?: string | null;
       favoriteGolfDestination?: string | null;
+      privacy?: string;
       bioPrivacy?: string;
       handicapPrivacy?: string;
       homeGolfClubPrivacy?: string;
@@ -96,6 +97,7 @@ export class UsersController {
       homeGolfClub: body?.homeGolfClub,
       golfSlogan: body?.golfSlogan,
       favoriteGolfDestination: body?.favoriteGolfDestination,
+      privacy: body?.privacy,
       bioPrivacy: body?.bioPrivacy,
       handicapPrivacy: body?.handicapPrivacy,
       homeGolfClubPrivacy: body?.homeGolfClubPrivacy,

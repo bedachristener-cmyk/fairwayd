@@ -1,4 +1,9 @@
-import { FieldPrivacy, FollowStatus, Visibility } from '@prisma/client';
+import {
+  AccountPrivacy,
+  FieldPrivacy,
+  FollowStatus,
+  Visibility,
+} from '@prisma/client';
 import { UsersService } from './users.service';
 
 function createService(prismaOverrides: Record<string, any> = {}) {
@@ -53,6 +58,41 @@ const profileUser = {
 };
 
 describe('UsersService social/privacy regressions', () => {
+  describe('updateProfile', () => {
+    it('stores PUBLIC account privacy when requested', async () => {
+      const { prisma, service } = createService();
+      prisma.user.update.mockResolvedValue({ ...profileUser, privacy: 'PUBLIC' });
+
+      await service.updateProfile('profile-user', {
+        handle: 'alyssa',
+        privacy: 'PUBLIC',
+      });
+
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'profile-user' },
+          data: expect.objectContaining({
+            handle: 'alyssa',
+            privacy: AccountPrivacy.PUBLIC,
+          }),
+        }),
+      );
+    });
+
+    it('rejects invalid account privacy values', async () => {
+      const { prisma, service } = createService();
+
+      await expect(
+        service.updateProfile('profile-user', {
+          handle: 'alyssa',
+          privacy: 'FOLLOWERS',
+        }),
+      ).rejects.toThrow('Invalid account privacy');
+
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+  });
+
   describe('getPostsByHandle', () => {
     it('lets the owner see PUBLIC, FOLLOWERS, and PRIVATE profile posts', async () => {
       const { prisma, service } = createService();
@@ -162,6 +202,53 @@ describe('UsersService social/privacy regressions', () => {
   });
 
   describe('follow request workflow', () => {
+    it('creates exactly one new_follower notification for a new PUBLIC follow', async () => {
+      const { prisma, notifications, service } = createService();
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'public-profile',
+        privacy: AccountPrivacy.PUBLIC,
+        handle: 'alyssa',
+        name: 'Alyssa Christener',
+        avatarUrl: null,
+      });
+      prisma.follow.findUnique.mockResolvedValue(null);
+      prisma.follow.upsert.mockResolvedValue({ status: FollowStatus.ACCEPTED });
+
+      await expect(
+        service.followUser('new-follower', 'public-profile'),
+      ).resolves.toEqual({ status: FollowStatus.ACCEPTED });
+
+      expect(notifications.createNotification).toHaveBeenCalledTimes(1);
+      expect(notifications.createNotification).toHaveBeenCalledWith({
+        userId: 'public-profile',
+        type: 'new_follower',
+        title: 'New follower',
+        body: 'Someone started following you.',
+        link: '/profile',
+      });
+    });
+
+    it('does not create a second notification for an existing PUBLIC follow', async () => {
+      const { prisma, notifications, service } = createService();
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'public-profile',
+        privacy: AccountPrivacy.PUBLIC,
+        handle: 'alyssa',
+        name: 'Alyssa Christener',
+        avatarUrl: null,
+      });
+      prisma.follow.findUnique.mockResolvedValue({
+        status: FollowStatus.ACCEPTED,
+      });
+      prisma.follow.upsert.mockResolvedValue({ status: FollowStatus.ACCEPTED });
+
+      await expect(
+        service.followUser('existing-follower', 'public-profile'),
+      ).resolves.toEqual({ status: FollowStatus.ACCEPTED });
+
+      expect(notifications.createNotification).not.toHaveBeenCalled();
+    });
+
     it('accepts a pending follow request and notifies the requester', async () => {
       const { prisma, notifications, service } = createService();
       prisma.follow.updateMany.mockResolvedValue({ count: 1 });

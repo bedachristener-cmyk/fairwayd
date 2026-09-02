@@ -65,6 +65,15 @@ function cleanFieldPrivacy(input: unknown) {
   return undefined;
 }
 
+function cleanAccountPrivacy(input: unknown) {
+  if (typeof input === 'undefined') return undefined;
+  if (input === 'PUBLIC' || input === 'PRIVATE') {
+    return input as AccountPrivacy;
+  }
+
+  throw new BadRequestException('Invalid account privacy');
+}
+
 const userProfileSelect = {
   id: true,
   email: true,
@@ -150,6 +159,7 @@ export class UsersService {
       homeGolfClub?: string | null;
       golfSlogan?: string | null;
       favoriteGolfDestination?: string | null;
+      privacy?: unknown;
       bioPrivacy?: unknown;
       handicapPrivacy?: unknown;
       homeGolfClubPrivacy?: unknown;
@@ -158,36 +168,43 @@ export class UsersService {
     },
   ) {
     const safeHandle = normalizeHandle(params.handle);
+    const accountPrivacy = cleanAccountPrivacy(params.privacy);
 
     if (!safeHandle || safeHandle.length < MIN_HANDLE_LENGTH) {
       throw new BadRequestException('Handle must be at least 3 characters');
     }
 
     try {
+      const data: Prisma.UserUpdateInput = {
+        handle: safeHandle,
+        name:
+          typeof params.name === 'string'
+            ? params.name.trim()
+            : (params.name ?? undefined),
+        bio: cleanProfileText(params.bio),
+        handicap: cleanHandicap(params.handicap),
+        homeGolfClub: cleanProfileText(params.homeGolfClub, 120),
+        golfSlogan: cleanProfileText(params.golfSlogan, 140),
+        favoriteGolfDestination: cleanProfileText(
+          params.favoriteGolfDestination,
+          120,
+        ),
+        bioPrivacy: cleanFieldPrivacy(params.bioPrivacy),
+        handicapPrivacy: cleanFieldPrivacy(params.handicapPrivacy),
+        homeGolfClubPrivacy: cleanFieldPrivacy(params.homeGolfClubPrivacy),
+        golfSloganPrivacy: cleanFieldPrivacy(params.golfSloganPrivacy),
+        favoriteGolfDestinationPrivacy: cleanFieldPrivacy(
+          params.favoriteGolfDestinationPrivacy,
+        ),
+      };
+
+      if (accountPrivacy) {
+        data.privacy = accountPrivacy;
+      }
+
       return await this.prisma.user.update({
         where: { id: userId },
-        data: {
-          handle: safeHandle,
-          name:
-            typeof params.name === 'string'
-              ? params.name.trim()
-              : (params.name ?? undefined),
-          bio: cleanProfileText(params.bio),
-          handicap: cleanHandicap(params.handicap),
-          homeGolfClub: cleanProfileText(params.homeGolfClub, 120),
-          golfSlogan: cleanProfileText(params.golfSlogan, 140),
-          favoriteGolfDestination: cleanProfileText(
-            params.favoriteGolfDestination,
-            120,
-          ),
-          bioPrivacy: cleanFieldPrivacy(params.bioPrivacy),
-          handicapPrivacy: cleanFieldPrivacy(params.handicapPrivacy),
-          homeGolfClubPrivacy: cleanFieldPrivacy(params.homeGolfClubPrivacy),
-          golfSloganPrivacy: cleanFieldPrivacy(params.golfSloganPrivacy),
-          favoriteGolfDestinationPrivacy: cleanFieldPrivacy(
-            params.favoriteGolfDestinationPrivacy,
-          ),
-        },
+        data,
         select: userProfileSelect,
       });
     } catch (e) {
@@ -603,6 +620,16 @@ export class UsersService {
         title: 'New follow request',
         body: 'Someone wants to connect with you.',
         link: '/follow-requests',
+      });
+    }
+
+    if (!existing && row.status === FollowStatus.ACCEPTED) {
+      await this.notifications.createNotification({
+        userId: targetUserId,
+        type: 'new_follower',
+        title: 'New follower',
+        body: 'Someone started following you.',
+        link: '/profile',
       });
     }
 
