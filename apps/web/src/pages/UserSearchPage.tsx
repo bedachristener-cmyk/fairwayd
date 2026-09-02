@@ -20,6 +20,7 @@ export default function UserSearchPage() {
   const [results, setResults] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [followBusyId, setFollowBusyId] = useState<string | null>(null);
+  const [searchFocused, setSearchFocused] = useState(false);
 
   useEffect(() => {
     if (!query.trim()) {
@@ -294,8 +295,14 @@ export default function UserSearchPage() {
               padding: "0 14px",
               borderRadius: 999,
               border:
-                "1px solid color-mix(in srgb, var(--border) 52%, transparent)",
-              background: "color-mix(in srgb, var(--muted) 64%, transparent)",
+                searchFocused
+                  ? "1px solid color-mix(in srgb, var(--green) 68%, var(--border))"
+                  : "1px solid color-mix(in srgb, var(--border) 92%, var(--text) 8%)",
+              background:
+                "color-mix(in srgb, var(--card) 98%, var(--bg))",
+              boxShadow: searchFocused
+                ? "0 0 0 3px color-mix(in srgb, var(--green) 18%, transparent), 0 10px 24px rgba(0,0,0,0.12)"
+                : "inset 0 0 0 1px color-mix(in srgb, #fff 42%, transparent), 0 8px 20px rgba(0,0,0,0.10)",
               boxSizing: "border-box",
             }}
           >
@@ -313,6 +320,8 @@ export default function UserSearchPage() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setSearchFocused(false)}
               placeholder="Search by name or handle..."
               style={{
                 width: "100%",
@@ -348,10 +357,18 @@ export default function UserSearchPage() {
 
       <div style={{ display: "grid", gap: 10 }}>
         {results.map((u) => (
-          <button
+          <div
             key={u.id}
-            type="button"
             onClick={() => nav(`/u/${u.handle}`)}
+            onKeyDown={(e) => {
+              if (e.target !== e.currentTarget) return;
+              if (e.key !== "Enter" && e.key !== " ") return;
+
+              e.preventDefault();
+              nav(`/u/${u.handle}`);
+            }}
+            role="button"
+            tabIndex={0}
             style={{
               display: "flex",
               alignItems: "center",
@@ -515,7 +532,7 @@ export default function UserSearchPage() {
             >
               {getFollowLabel(u.followStatus, followBusyId === u.id)}
             </button>
-          </button>
+          </div>
         ))}
       </div>
 

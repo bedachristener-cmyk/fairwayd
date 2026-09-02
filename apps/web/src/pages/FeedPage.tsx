@@ -404,6 +404,7 @@ export default function FeedPage() {
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const editorImageRef = useRef<HTMLImageElement | null>(null);
+  const postElementRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const nav = useNavigate();
 
   const resetEditorState = useCallback(() => {
@@ -1189,6 +1190,101 @@ export default function FeedPage() {
     posts,
   ]);
 
+  useEffect(() => {
+    if (!focusPostId) return;
+    if (feedLoading) return;
+    if (!filteredPosts.some((post) => post.id === focusPostId)) return;
+
+    let cancelled = false;
+    let frame = 0;
+    let stableFrames = 0;
+    let lastTop: number | null = null;
+    let lastHeight: number | null = null;
+    const frameIds: number[] = [];
+    const topOffset = isMobile ? 82 : 88;
+    const bottomOffset = isMobile ? 104 : 32;
+
+    const scrollToTarget = (behavior: ScrollBehavior) => {
+      const target = postElementRefs.current[focusPostId];
+      if (!target) return;
+
+      const rect = target.getBoundingClientRect();
+      const nextTop = Math.max(0, window.scrollY + rect.top - topOffset);
+      window.scrollTo({ top: nextTop, left: 0, behavior });
+    };
+
+    const isTargetPositioned = (rect: DOMRect) => {
+      const visibleBottom = window.innerHeight - bottomOffset;
+      return rect.top >= topOffset && rect.top <= visibleBottom - 120;
+    };
+
+    const scheduleAfterLayout = (behavior: ScrollBehavior) => {
+      const firstFrame = window.requestAnimationFrame(() => {
+        const secondFrame = window.requestAnimationFrame(() => {
+          if (!cancelled) scrollToTarget(behavior);
+        });
+        frameIds.push(secondFrame);
+      });
+      frameIds.push(firstFrame);
+    };
+
+    const monitorPosition = () => {
+      if (cancelled) return;
+
+      const target = postElementRefs.current[focusPostId];
+      if (!target) return;
+
+      frame += 1;
+      const rect = target.getBoundingClientRect();
+      const topDelta =
+        lastTop == null ? Number.POSITIVE_INFINITY : Math.abs(rect.top - lastTop);
+      const heightDelta =
+        lastHeight == null
+          ? Number.POSITIVE_INFINITY
+          : Math.abs(rect.height - lastHeight);
+
+      stableFrames = topDelta < 1 && heightDelta < 1 ? stableFrames + 1 : 0;
+      lastTop = rect.top;
+      lastHeight = rect.height;
+
+      if (frame === 1 || (stableFrames >= 3 && !isTargetPositioned(rect))) {
+        scrollToTarget(frame === 1 ? "smooth" : "auto");
+        stableFrames = 0;
+      }
+
+      if (frame < 120 && stableFrames < 10) {
+        const nextFrame = window.requestAnimationFrame(monitorPosition);
+        frameIds.push(nextFrame);
+      }
+    };
+
+    scheduleAfterLayout("smooth");
+    const monitorFrame = window.requestAnimationFrame(monitorPosition);
+    frameIds.push(monitorFrame);
+
+    const pendingImages = Array.from(
+      document.querySelectorAll<HTMLImageElement>(".fw-feed-stream img"),
+    ).filter((image) => !image.complete);
+
+    const handleImageSettled = () => {
+      scheduleAfterLayout("auto");
+    };
+
+    pendingImages.forEach((image) => {
+      image.addEventListener("load", handleImageSettled, { once: true });
+      image.addEventListener("error", handleImageSettled, { once: true });
+    });
+
+    return () => {
+      cancelled = true;
+      frameIds.forEach((frameId) => window.cancelAnimationFrame(frameId));
+      pendingImages.forEach((image) => {
+        image.removeEventListener("load", handleImageSettled);
+        image.removeEventListener("error", handleImageSettled);
+      });
+    };
+  }, [feedLoading, filteredPosts, focusPostId, isMobile]);
+
   const activeCommentPost =
     posts.find((p) => p.id === activeCommentPostId) ?? null;
 
@@ -1211,7 +1307,7 @@ export default function FeedPage() {
   const composerBoxStyle: React.CSSProperties = {
     position: composerOpen && isMobile ? "fixed" : undefined,
     inset: composerOpen && isMobile ? 0 : undefined,
-    zIndex: composerOpen && isMobile ? 1600 : undefined,
+    zIndex: composerOpen && isMobile ? 2200 : undefined,
     padding:
       composerOpen && isMobile
         ? "12px 14px calc(14px + env(safe-area-inset-bottom, 0px))"
@@ -1273,7 +1369,13 @@ export default function FeedPage() {
 
   return (
     <>
-      <div className="fw-page" style={{ background: "var(--bg)" }}>
+      <div
+        className="fw-page"
+        style={{
+          background: "var(--bg)",
+          zIndex: composerOpen && isMobile ? 2200 : undefined,
+        }}
+      >
         <div
           className="fw-page-shell fw-feed-page-shell"
           style={{
@@ -1286,6 +1388,7 @@ export default function FeedPage() {
             minWidth: 0,
             boxSizing: "border-box",
             overflowX: "hidden",
+            zIndex: composerOpen && isMobile ? 2200 : undefined,
           }}
         >
           <div className="fw-feed-desktop">
@@ -1320,7 +1423,7 @@ export default function FeedPage() {
             style={{
               position: "sticky",
               top: 12,
-              zIndex: 20,
+              zIndex: composerOpen && isMobile ? 2200 : 20,
               paddingBottom: 12,
               width: "100%",
               maxWidth: "100%",
@@ -2632,6 +2735,9 @@ export default function FeedPage() {
               return (
                 <div
                   key={p.id}
+                  ref={(node) => {
+                    postElementRefs.current[p.id] = node;
+                  }}
                   style={{
                     width: "100%",
                     maxWidth: "100%",

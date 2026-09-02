@@ -1246,10 +1246,24 @@ export default function CoursePage() {
       style={{
         display: "grid",
         gap: isMobile ? 14 : 16,
-        paddingBottom: isMobile ? 20 : 0,
+        width: "100%",
+        maxWidth: "100%",
+        minWidth: 0,
+        boxSizing: "border-box",
+        paddingBottom: isMobile
+          ? "calc(var(--fw-bottom-tabs-height, 72px) + 24px)"
+          : 0,
       }}
     >
-      <div style={{ padding: isMobile ? "8px 12px 0" : 0 }}>
+      <div
+        style={{
+          padding: isMobile ? "8px 12px 0" : 0,
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
+          boxSizing: "border-box",
+        }}
+      >
         <button
           type="button"
           onClick={() => nav("/map")}
@@ -1274,6 +1288,10 @@ export default function CoursePage() {
         style={{
           margin: isMobile ? "0 12px" : 0,
           padding: isMobile ? 16 : 22,
+          width: isMobile ? "calc(100% - 24px)" : undefined,
+          maxWidth: "100%",
+          minWidth: 0,
+          boxSizing: "border-box",
           borderRadius: 26,
           background:
             "linear-gradient(135deg, color-mix(in srgb, var(--green) 10%, var(--card)), var(--card) 46%, color-mix(in srgb, var(--bg) 18%, var(--card)))",
@@ -1497,7 +1515,15 @@ export default function CoursePage() {
         ) : null}
       </div>
 
-      <section ref={ratingSectionRef}>
+      <section
+        ref={ratingSectionRef}
+        style={{
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
+          boxSizing: "border-box",
+        }}
+      >
         <CourseRatingSummary
           rating={ratingSummary}
           canRate={!!token}
@@ -1564,6 +1590,10 @@ export default function CoursePage() {
           ref={ratingPanelRef}
           style={{
             padding: 16,
+            width: "100%",
+            maxWidth: "100%",
+            minWidth: 0,
+            boxSizing: "border-box",
             borderRadius: 16,
             background: "var(--card)",
             border: "1px solid var(--border)",
@@ -1838,7 +1868,16 @@ export default function CoursePage() {
       )}
 
       {/* ===== POSTS ===== */}
-      <div style={{ display: "grid", gap: 10 }}>
+      <div
+        style={{
+          display: "grid",
+          gap: 10,
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
+          boxSizing: "border-box",
+        }}
+      >
         {posts.length === 0 ? (
           <div
             style={{

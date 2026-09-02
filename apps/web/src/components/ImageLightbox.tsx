@@ -32,6 +32,8 @@ export default function ImageLightbox({
   const activeImage = images[activeIndex];
   const activeImageUrl =
     activeImage?.resolvedUrl?.trim() || fileUrl(activeImage?.url);
+  const mobileCloseTop = "calc(12px + env(safe-area-inset-top, 0px))";
+  const mobileCounterTop = "calc(16px + env(safe-area-inset-top, 0px))";
 
   const showPreviousImage = () => {
     if (!hasMultipleImages) return;
@@ -267,7 +269,7 @@ export default function ImageLightbox({
           aria-label="Close image viewer"
           style={{
             position: "fixed",
-            top: isMobile ? 12 : 20,
+            top: isMobile ? mobileCloseTop : 20,
             right: isMobile ? 12 : 24,
             width: 42,
             height: 42,
@@ -322,7 +324,7 @@ export default function ImageLightbox({
             <div
               style={{
                 position: "fixed",
-                top: isMobile ? 16 : 24,
+                top: isMobile ? mobileCounterTop : 24,
                 left: "50%",
                 transform: "translateX(-50%)",
                 padding: "6px 10px",

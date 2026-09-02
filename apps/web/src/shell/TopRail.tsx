@@ -178,6 +178,31 @@ export default function TopRail() {
   }, [loadNotificationBadgeCount]);
 
   useEffect(() => {
+    if (!auth?.token || !isAuthenticated) return;
+
+    const refreshIfVisible = () => {
+      if (document.visibilityState === "visible") {
+        void loadNotificationBadgeCount();
+      }
+    };
+
+    const handleFocus = () => {
+      void loadNotificationBadgeCount();
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", refreshIfVisible);
+
+    const interval = window.setInterval(refreshIfVisible, 60_000);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", refreshIfVisible);
+      window.clearInterval(interval);
+    };
+  }, [auth?.token, isAuthenticated, loadNotificationBadgeCount]);
+
+  useEffect(() => {
     if (!searchOpen) return;
 
     if (!query.trim()) {
@@ -1462,7 +1487,7 @@ export default function TopRail() {
         <div
           style={{
             position: "absolute",
-            top: 60,
+            top: "calc(60px + var(--fw-safe-area-top, 0px))",
             left: 8,
             right: 8,
             zIndex: 2999,

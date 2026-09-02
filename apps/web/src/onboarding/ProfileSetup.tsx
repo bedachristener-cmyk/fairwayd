@@ -11,6 +11,7 @@ import {
 } from "../theme/theme";
 
 type FieldPrivacy = "PUBLIC" | "FOLLOWERS" | "PRIVATE";
+type AccountPrivacy = "PUBLIC" | "PRIVATE";
 
 async function resizeImage(file: File): Promise<File> {
   const img = document.createElement("img");
@@ -198,6 +199,79 @@ function PrivacyPicker({
   );
 }
 
+function AccountPrivacyPicker({
+  value,
+  onChange,
+}: {
+  value: AccountPrivacy;
+  onChange: (value: AccountPrivacy) => void;
+}) {
+  const items: {
+    value: AccountPrivacy;
+    label: string;
+    description: string;
+  }[] = [
+    {
+      value: "PUBLIC",
+      label: "Public",
+      description: "Anyone can follow you immediately.",
+    },
+    {
+      value: "PRIVATE",
+      label: "Private",
+      description: "New followers need your approval.",
+    },
+  ];
+
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+        gap: 8,
+      }}
+    >
+      {items.map((item) => {
+        const active = value === item.value;
+
+        return (
+          <button
+            key={item.value}
+            type="button"
+            onClick={() => onChange(item.value)}
+            style={{
+              border: "1px solid var(--border)",
+              background: active ? "var(--text)" : "var(--bg)",
+              color: active ? "var(--bg)" : "var(--text)",
+              borderRadius: 14,
+              padding: "11px 12px",
+              cursor: "pointer",
+              textAlign: "left",
+              display: "grid",
+              gap: 4,
+              minWidth: 0,
+            }}
+          >
+            <span style={{ fontSize: 13, fontWeight: 950, lineHeight: 1.2 }}>
+              {item.label}
+            </span>
+            <span
+              style={{
+                color: active ? "color-mix(in srgb, var(--bg) 76%, transparent)" : "var(--sub)",
+                fontSize: 12,
+                fontWeight: 750,
+                lineHeight: 1.35,
+              }}
+            >
+              {item.description}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function ProfileField({
   label,
   value,
@@ -338,6 +412,9 @@ export default function ProfileSetup({
     useState<FieldPrivacy>(
       (me as any).favoriteGolfDestinationPrivacy ?? "PUBLIC",
     );
+  const [privacy, setPrivacy] = useState<AccountPrivacy>(
+    (me as any).privacy === "PUBLIC" ? "PUBLIC" : "PRIVATE",
+  );
 
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -379,6 +456,7 @@ export default function ProfileSetup({
           ? favoriteGolfDestination.trim()
           : null,
 
+        privacy,
         bioPrivacy,
         handicapPrivacy,
         homeGolfClubPrivacy,
@@ -557,6 +635,10 @@ export default function ProfileSetup({
               />
             </div>
           </div>
+        </Section>
+
+        <Section title="Profile privacy" subtitle="Choose who can follow you.">
+          <AccountPrivacyPicker value={privacy} onChange={setPrivacy} />
         </Section>
 
         <Section
