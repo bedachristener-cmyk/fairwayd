@@ -36,26 +36,37 @@ test("explore page loads", async ({ page }) => {
 
 test("Thailand destination page loads", async ({ page }) => {
   await page.goto("/destinations/thailand");
+  const main = page.getByRole("main");
 
   await expect(page.getByText("Golf destination").first()).toBeVisible();
   await expect(page.getByText("Thailand").first()).toBeVisible();
-  await expect(page.getByText("Black Mountain Golf Club")).toBeVisible();
+  await expect(
+    main.getByText("Black Mountain Golf Club", { exact: true }),
+  ).toBeVisible();
 });
 
 test("UAE destination page loads and shows course content", async ({ page }) => {
   await page.goto("/destinations/united-arab-emirates");
+  const main = page.getByRole("main");
 
   await expect(page.getByText("Golf destination").first()).toBeVisible();
   await expect(page.getByText("United Arab Emirates").first()).toBeVisible();
-  await expect(page.getByText("Emirates Golf Club")).toBeVisible();
-  await expect(page.getByText("Yas Links Abu Dhabi")).toBeVisible();
+  await expect(
+    main.getByText("Emirates Golf Club", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    main.getByText("Yas Links Abu Dhabi", { exact: true }),
+  ).toBeVisible();
 });
 
 test("Turkey destination page loads and shows course content", async ({ page }) => {
   await page.goto("/destinations/turkey");
+  const main = page.getByRole("main");
 
   await expect(page.getByText("Golf destination").first()).toBeVisible();
   await expect(page.getByText("Turkey").first()).toBeVisible();
-  await expect(page.getByText("Carya Golf Club")).toBeVisible();
-  await expect(page.getByText("Montgomerie Maxx Royal")).toBeVisible();
+  await expect(main.getByText("Carya Golf Club", { exact: true })).toBeVisible();
+  await expect(
+    main.getByText("Montgomerie Maxx Royal", { exact: true }),
+  ).toBeVisible();
 });

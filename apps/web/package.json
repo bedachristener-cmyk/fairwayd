@@ -8,8 +8,8 @@
     "build": "tsc -p tsconfig.app.json && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
+    "test:e2e": "node scripts/run-e2e.js",
+    "test:e2e:ui": "node scripts/run-e2e.js --ui",
     "qa:course-data": "node scripts/course-data-sanity.mjs"
   },
   "dependencies": {

@@ -8,12 +8,15 @@ export default defineConfig({
     baseURL: "http://127.0.0.1:4173",
     trace: "retain-on-failure",
   },
-  webServer: {
-    command: "npm run dev -- --host 127.0.0.1 --port 4173",
-    url: "http://127.0.0.1:4173",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  webServer:
+    process.env.CI && !process.env.FAIRWAYD_E2E_EXTERNAL_SERVER
+      ? {
+          command: "npx vite --host 127.0.0.1 --port 4173",
+          url: "http://127.0.0.1:4173",
+          reuseExistingServer: false,
+          timeout: 120_000,
+        }
+      : undefined,
   projects: [
     {
       name: "chromium",
