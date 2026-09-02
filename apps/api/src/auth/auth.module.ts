@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from '../prisma/prisma.module';
 import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
@@ -14,6 +15,7 @@ import { MailService } from './mail.service';
     PrismaModule,
     UsersModule, // <-- NEU: damit JwtStrategy UsersService injecten kann
     ConfigModule, // wichtig
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],

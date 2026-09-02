@@ -15,6 +15,7 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '@nestjs/passport';
 import { memoryStorage } from 'multer';
+import { AdminGuard } from '../auth/admin.guard';
 import { uploadToR2 } from '../storage/r2.service';
 import { CourseSubmissionsService } from './course-submissions.service';
 
@@ -97,19 +98,19 @@ export class CourseSubmissionsController {
     });
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), AdminGuard)
   @Get()
   list(@Query('status') status?: string) {
     return this.courseSubmissionsService.list(status);
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), AdminGuard)
   @Patch(':id/approve')
   approve(@Param('id') id: string) {
     return this.courseSubmissionsService.approve(id);
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), AdminGuard)
   @Patch(':id/reject')
   reject(@Param('id') id: string) {
     return this.courseSubmissionsService.reject(id);

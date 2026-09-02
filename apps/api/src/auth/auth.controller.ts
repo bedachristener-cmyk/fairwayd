@@ -9,7 +9,9 @@ import {
   UseGuards,
   BadRequestException,
 } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { Response } from 'express';
+import { AUTH_RATE_LIMITS } from './auth-rate-limits';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
@@ -34,6 +36,8 @@ export class AuthController {
    * - APPLE:  expects idToken (later)
    * - FACEBOOK: expects accessToken (later)
    */
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: AUTH_RATE_LIMITS.login })
   @Post('oauth')
   async oauth(
     @Body()
@@ -57,6 +61,8 @@ export class AuthController {
     });
   }
 
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: AUTH_RATE_LIMITS.login })
   @Get('google/native/start')
   startGoogleNative(@Res() res: Response) {
     const clientId = String(process.env.GOOGLE_CLIENT_ID ?? '').trim();
@@ -77,6 +83,8 @@ export class AuthController {
     return res.redirect(url.toString());
   }
 
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: AUTH_RATE_LIMITS.login })
   @Get('google/native/callback')
   async googleNativeCallback(
     @Query('code') code: string | undefined,
@@ -122,6 +130,8 @@ export class AuthController {
    * - { credential: string }  (Google Identity Services)
    * - { idToken: string }
    */
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: AUTH_RATE_LIMITS.login })
   @Post('google')
   async google(@Body() body: { credential?: string; idToken?: string }) {
     const idToken = body?.idToken ?? body?.credential;
@@ -136,6 +146,8 @@ export class AuthController {
     });
   }
 
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: AUTH_RATE_LIMITS.emailSend })
   @Post('email/request')
   async requestEmailLogin(@Body() body: { email?: string }) {
     const email = body?.email;
@@ -143,6 +155,8 @@ export class AuthController {
     return this.auth.requestEmailLogin(email);
   }
 
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: AUTH_RATE_LIMITS.verify })
   @Post('email/verify')
   async verifyEmailLogin(@Body() body: { token?: string }) {
     const token = body?.token;
@@ -150,6 +164,8 @@ export class AuthController {
     return this.auth.verifyEmailLogin(token);
   }
 
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: AUTH_RATE_LIMITS.login })
   @Post('password-login')
   async passwordLogin(@Body() body: { email?: string; password?: string }) {
     const email = body?.email;
@@ -161,6 +177,8 @@ export class AuthController {
     return this.auth.loginWithPassword(email, password);
   }
 
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: AUTH_RATE_LIMITS.register })
   @Post('register')
   async register(
     @Body()
@@ -221,6 +239,8 @@ export class AuthController {
     }
   }
 
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: AUTH_RATE_LIMITS.verify })
   @Post('verify-email')
   async verifyEmail(@Body() body: { email?: string; code?: string }) {
     const email = body?.email;
@@ -233,6 +253,8 @@ export class AuthController {
     return this.auth.verifyEmailCode(email, code);
   }
 
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: AUTH_RATE_LIMITS.emailSend })
   @Post('resend-verification-code')
   async resendVerificationCode(@Body() body: { email?: string }) {
     const email = body?.email;
@@ -240,6 +262,8 @@ export class AuthController {
     return this.auth.resendEmailVerificationCode(email);
   }
 
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: AUTH_RATE_LIMITS.emailSend })
   @Post('forgot-password')
   async forgotPassword(@Body() body: { email?: string }) {
     const email = body?.email;
@@ -247,6 +271,8 @@ export class AuthController {
     return this.auth.forgotPassword(email);
   }
 
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: AUTH_RATE_LIMITS.verify })
   @Post('reset-password')
   async resetPassword(
     @Body()
@@ -300,6 +326,8 @@ export class AuthController {
   /**
    * Dev-only login (local/dev environments)
    */
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: AUTH_RATE_LIMITS.dev })
   @Post('dev')
   async dev(@Body() body: { handle?: string }) {
     const handle = body?.handle?.trim();

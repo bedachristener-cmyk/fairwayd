@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   ConflictException,
+  ForbiddenException,
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -47,6 +48,36 @@ function uniqueStrings(values: Array<string | null | undefined>) {
   }
 
   return result;
+}
+
+function isTruthyEnv(value: string | undefined) {
+  return ['1', 'true', 'yes', 'on'].includes(
+    String(value ?? '').trim().toLowerCase(),
+  );
+}
+
+function isFalseyEnv(value: string | undefined) {
+  return ['0', 'false', 'no', 'off'].includes(
+    String(value ?? '').trim().toLowerCase(),
+  );
+}
+
+export function isDevLoginEnabled() {
+  const nodeEnv = String(process.env.NODE_ENV ?? '').trim().toLowerCase();
+  if (nodeEnv === 'production') return false;
+
+  const explicit = process.env.FAIRWAYD_ENABLE_DEV_LOGIN;
+  if (isTruthyEnv(explicit)) return true;
+  if (isFalseyEnv(explicit)) return false;
+
+  if (
+    process.env.NEON_DATABASE_URL ||
+    isTruthyEnv(process.env.FAIRWAYD_REQUIRE_DURABLE_UPLOADS)
+  ) {
+    return false;
+  }
+
+  return !nodeEnv || nodeEnv === 'development' || nodeEnv === 'test';
 }
 
 function decodeGoogleTokenAudience(idToken: string) {
@@ -157,6 +188,10 @@ export class AuthService {
   }
 
   async devLogin(handle: string) {
+    if (!isDevLoginEnabled()) {
+      throw new ForbiddenException('Dev login is disabled');
+    }
+
     const safeHandle =
       handle
         .trim()
