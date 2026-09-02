@@ -6,6 +6,18 @@ function isProduction() {
   return process.env.NODE_ENV === 'production';
 }
 
+function isTruthyEnv(value: string | undefined) {
+  return ['1', 'true', 'yes'].includes((value ?? '').trim().toLowerCase());
+}
+
+export function requiresDurableUploadStorage() {
+  return (
+    isProduction() ||
+    isTruthyEnv(process.env.FAIRWAYD_REQUIRE_DURABLE_UPLOADS) ||
+    !!process.env.NEON_DATABASE_URL
+  );
+}
+
 function localUploadsPath(key: string) {
   const uploadsRoot = join(process.cwd(), 'uploads');
   const safeKey = key
@@ -41,9 +53,10 @@ export async function uploadToR2(
     bucket &&
     process.env.R2_ACCESS_KEY_ID &&
     process.env.R2_SECRET_ACCESS_KEY;
+  const durableStorageRequired = requiresDurableUploadStorage();
 
   if (!hasR2Config) {
-    if (!isProduction()) {
+    if (!durableStorageRequired) {
       console.warn('[storage] R2 config missing; using local upload fallback', {
         key,
         contentType,
@@ -86,7 +99,7 @@ export async function uploadToR2(
       message: err?.message ?? String(err),
     });
 
-    if (!isProduction()) {
+    if (!durableStorageRequired) {
       console.warn('[storage] Using local upload fallback after R2 failure', {
         key,
         contentType,
@@ -99,7 +112,18 @@ export async function uploadToR2(
   }
 
   const publicUrl = (process.env.R2_PUBLIC_URL || '').trim().replace(/\/+$/, '');
-  if (!publicUrl) return key;
+  if (!publicUrl) {
+    if (durableStorageRequired) {
+      console.error('[storage] R2 public URL missing while durable storage is required', {
+        key,
+        contentType,
+        bytes: buffer.length,
+      });
+      throw new Error('R2 public URL is not configured');
+    }
+
+    return key;
+  }
   let normalizedPublicUrl = publicUrl;
 
   if (publicUrl.startsWith('//')) {
