@@ -5,6 +5,7 @@ import { useAuth } from "../auth/AuthContext";
 import GoogleLoginButton from "../auth/oauth/GoogleLoginButton";
 import { API_BASE } from "../api/base";
 import { validPostLoginNext } from "../auth/postLoginNext";
+import { t } from "../i18n/strings";
 
 export default function LoginPanel() {
   const nav = useNavigate();
@@ -92,21 +93,31 @@ export default function LoginPanel() {
 
   const readableMessage = (value: string) => {
     if (/EMAIL_NOT_VERIFIED/i.test(value)) {
-      return "Please verify your email before signing in.";
+      return t("auth_error_verify_email_first");
     }
     if (/invalid email or password/i.test(value)) {
-      return "Invalid email or password.";
+      return t("auth_error_invalid_credentials");
     }
     if (/invalid|expired|attempt/i.test(value) && /code/i.test(value)) {
-      return "Invalid or expired code.";
+      return t("auth_error_invalid_code");
     }
     return value.replace(/\s+\(\d{3}\)$/, ".");
   };
 
-  const isPositiveMessage = (value: string) =>
-    /sent|check your email|reset\.|new verification code|can sign in/i.test(
-      value,
+  const isPositiveMessage = (value: string) => {
+    const positiveMessages = new Set([
+      t("auth_register_verification_sent"),
+      t("auth_verification_code_sent"),
+      t("auth_reset_code_sent"),
+      t("auth_password_reset_done"),
+    ]);
+    return (
+      positiveMessages.has(value) ||
+      /sent|check your email|reset\.|new verification code|can sign in/i.test(
+        value,
+      )
     );
+  };
 
   const passwordLogin = async () => {
     const value = email.trim();
@@ -123,11 +134,11 @@ export default function LoginPanel() {
       });
 
       if (!res.ok) {
-        const apiError = await readApiError(res, "Invalid email or password");
+        const apiError = await readApiError(res, t("auth_error_invalid_credentials"));
         if (/EMAIL_NOT_VERIFIED/i.test(apiError)) {
           setVerificationEmail(value);
           setMode("verify");
-          throw new Error("Please verify your email before signing in.");
+          throw new Error(t("auth_error_verify_email_first"));
         }
         throw new Error(apiError);
       }
@@ -135,14 +146,14 @@ export default function LoginPanel() {
       const data = await res.json();
       const token = typeof data?.token === "string" ? data.token : "";
       if (!token) {
-        throw new Error("Invalid email or password");
+        throw new Error(t("auth_error_invalid_credentials"));
       }
 
       onLoggedIn(token);
     } catch (err) {
       setMsg(
         readableMessage(
-          err instanceof Error ? err.message : "Invalid email or password",
+          err instanceof Error ? err.message : t("auth_error_invalid_credentials"),
         ),
       );
     } finally {
@@ -156,23 +167,23 @@ export default function LoginPanel() {
     if (registerBusy) return;
 
     if (!cleanName) {
-      setMsg("Name is required");
+      setMsg(t("auth_error_name_required"));
       return;
     }
     if (!cleanEmail) {
-      setMsg("Email is required");
+      setMsg(t("auth_error_email_required"));
       return;
     }
     if (password.length < 8) {
-      setMsg("Password must be at least 8 characters");
+      setMsg(t("auth_error_password_min"));
       return;
     }
     if (password !== passwordConfirm) {
-      setMsg("Passwords do not match");
+      setMsg(t("auth_error_passwords_mismatch"));
       return;
     }
     if (!acceptedLegal) {
-      setMsg("Please accept the Terms & Conditions and Privacy Policy.");
+      setMsg(t("auth_error_accept_legal"));
       return;
     }
 
@@ -194,11 +205,11 @@ export default function LoginPanel() {
       });
 
       if (!res.ok) {
-        const apiError = await readApiError(res, "Could not create account");
+        const apiError = await readApiError(res, t("auth_error_create_account"));
 
         if (res.status === 409 || /already registered/i.test(apiError)) {
           throw new Error(
-            "This email is already registered. Please sign in instead.",
+            t("auth_error_email_registered"),
           );
         }
 
@@ -209,11 +220,11 @@ export default function LoginPanel() {
       setVerificationEmail(cleanEmail);
       setVerificationCode("");
       setMode("verify");
-      setMsg("Check your email for a 6-digit verification code.");
+      setMsg(t("auth_register_verification_sent"));
     } catch (err) {
       setMsg(
         readableMessage(
-          err instanceof Error ? err.message : "Could not create account",
+          err instanceof Error ? err.message : t("auth_error_create_account"),
         ),
       );
     } finally {
@@ -227,7 +238,7 @@ export default function LoginPanel() {
     if (verifyBusy) return;
 
     if (!cleanEmail || !code) {
-      setMsg("Enter the verification code from your email.");
+      setMsg(t("auth_error_enter_verification_code"));
       return;
     }
 
@@ -242,20 +253,20 @@ export default function LoginPanel() {
       });
 
       if (!res.ok) {
-        throw new Error(await readApiError(res, "Could not verify account"));
+        throw new Error(await readApiError(res, t("auth_error_verify_account")));
       }
 
       const data = await res.json();
       const token = typeof data?.token === "string" ? data.token : "";
       if (!token) {
-        throw new Error("Could not verify account");
+        throw new Error(t("auth_error_verify_account"));
       }
 
       onLoggedIn(token);
     } catch (err) {
       setMsg(
         readableMessage(
-          err instanceof Error ? err.message : "Could not verify account",
+          err instanceof Error ? err.message : t("auth_error_verify_account"),
         ),
       );
     } finally {
@@ -278,14 +289,14 @@ export default function LoginPanel() {
       });
 
       if (!res.ok) {
-        throw new Error(await readApiError(res, "Could not resend code"));
+        throw new Error(await readApiError(res, t("auth_error_resend_code")));
       }
 
-      setMsg("A new verification code has been sent.");
+      setMsg(t("auth_verification_code_sent"));
     } catch (err) {
       setMsg(
         readableMessage(
-          err instanceof Error ? err.message : "Could not resend code",
+          err instanceof Error ? err.message : t("auth_error_resend_code"),
         ),
       );
     } finally {
@@ -298,7 +309,7 @@ export default function LoginPanel() {
     if (forgotBusy) return;
 
     if (!cleanEmail) {
-      setMsg("Email is required");
+      setMsg(t("auth_error_email_required"));
       return;
     }
 
@@ -313,7 +324,7 @@ export default function LoginPanel() {
       });
 
       if (!res.ok) {
-        throw new Error(await readApiError(res, "Could not send reset code"));
+        throw new Error(await readApiError(res, t("auth_error_send_reset_code")));
       }
 
       setResetEmail(cleanEmail);
@@ -321,11 +332,11 @@ export default function LoginPanel() {
       setResetPassword("");
       setResetPasswordConfirm("");
       setMode("resetPassword");
-      setMsg("If an account exists for this email, we sent a reset code.");
+      setMsg(t("auth_reset_code_sent"));
     } catch (err) {
       setMsg(
         readableMessage(
-          err instanceof Error ? err.message : "Could not send reset code",
+          err instanceof Error ? err.message : t("auth_error_send_reset_code"),
         ),
       );
     } finally {
@@ -338,15 +349,15 @@ export default function LoginPanel() {
     if (resetBusy) return;
 
     if (!cleanEmail || !resetCode.trim()) {
-      setMsg("Enter your email and reset code.");
+      setMsg(t("auth_error_enter_email_reset_code"));
       return;
     }
     if (resetPassword.length < 8) {
-      setMsg("New password must be at least 8 characters.");
+      setMsg(t("auth_error_new_password_min"));
       return;
     }
     if (resetPassword !== resetPasswordConfirm) {
-      setMsg("Passwords do not match.");
+      setMsg(t("auth_error_passwords_mismatch"));
       return;
     }
 
@@ -365,17 +376,17 @@ export default function LoginPanel() {
       });
 
       if (!res.ok) {
-        throw new Error(await readApiError(res, "Could not reset password"));
+        throw new Error(await readApiError(res, t("auth_error_reset_password")));
       }
 
       setPassword("");
       setEmail(cleanEmail);
       setMode("signin");
-      setMsg("Password reset. You can sign in now.");
+      setMsg(t("auth_password_reset_done"));
     } catch (err) {
       setMsg(
         readableMessage(
-          err instanceof Error ? err.message : "Could not reset password",
+          err instanceof Error ? err.message : t("auth_error_reset_password"),
         ),
       );
     } finally {
@@ -477,9 +488,9 @@ export default function LoginPanel() {
             style={fieldGroupStyle}
           >
             <div style={{ display: "grid", gap: 6 }}>
-              <h2 style={titleStyle}>Sign in to Fairwayd</h2>
+              <h2 style={titleStyle}>{t("auth_signin_title")}</h2>
               <p style={helpTextStyle}>
-                Use your email and password, or continue with Google.
+                {t("auth_signin_help")}
               </p>
             </div>
 
@@ -504,7 +515,7 @@ export default function LoginPanel() {
               onKeyDown={(e) => {
                 if (e.key === "Enter") void passwordLogin();
               }}
-              placeholder="Password"
+              placeholder={t("auth_password_placeholder")}
               autoComplete="current-password"
               style={inputStyle}
             />
@@ -522,7 +533,7 @@ export default function LoginPanel() {
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
               />
-              <span>Remember me</span>
+              <span>{t("auth_remember_me")}</span>
             </label>
 
             <button
@@ -539,7 +550,7 @@ export default function LoginPanel() {
                     : "pointer",
               }}
             >
-              {passwordBusy ? "Signing in..." : "Sign in"}
+              {passwordBusy ? t("auth_signing_in") : t("auth_sign_in")}
             </button>
 
             <button
@@ -556,7 +567,7 @@ export default function LoginPanel() {
                 padding: "2px 0",
               }}
             >
-              Forgot password?
+              {t("auth_forgot_password")}
             </button>
           </div>
 
@@ -573,7 +584,7 @@ export default function LoginPanel() {
             }}
           >
             <div style={{ height: 1, background: "var(--border)" }} />
-            <div>or</div>
+            <div>{t("auth_or")}</div>
             <div style={{ height: 1, background: "var(--border)" }} />
           </div>
 
@@ -587,11 +598,12 @@ export default function LoginPanel() {
           ) : (
             <>
               <div style={{ fontSize: 13, opacity: 0.85 }}>
-                Google Login ist nicht konfiguriert.
+                {t("auth_google_not_configured")}
               </div>
               <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>
-                Setze <strong>VITE_GOOGLE_CLIENT_ID</strong> im Web (Vercel /
-                .env), dann erscheint der Google Button.
+                {t("auth_google_config_help_prefix")}{" "}
+                <strong>VITE_GOOGLE_CLIENT_ID</strong>{" "}
+                {t("auth_google_config_help_suffix")}
               </div>
             </>
           )}
@@ -605,7 +617,7 @@ export default function LoginPanel() {
             }}
             style={{ ...linkButtonStyle, marginTop: 10 }}
           >
-            Create account
+            {t("auth_create_account")}
           </button>
         </>
       ) : mode === "register" ? (
@@ -613,9 +625,9 @@ export default function LoginPanel() {
           style={fieldGroupStyle}
         >
           <div style={{ display: "grid", gap: 6 }}>
-            <h2 style={titleStyle}>Create your Fairwayd account</h2>
+            <h2 style={titleStyle}>{t("auth_register_title")}</h2>
             <p style={helpTextStyle}>
-              Join Fairwayd with email and password.
+              {t("auth_register_help")}
             </p>
           </div>
 
@@ -624,7 +636,7 @@ export default function LoginPanel() {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Name"
+            placeholder={t("auth_name_placeholder")}
             autoComplete="name"
             style={inputStyle}
           />
@@ -644,7 +656,7 @@ export default function LoginPanel() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
+            placeholder={t("auth_password_placeholder")}
             autoComplete="new-password"
             style={inputStyle}
           />
@@ -657,7 +669,7 @@ export default function LoginPanel() {
             onKeyDown={(e) => {
               if (e.key === "Enter") void registerAccount();
             }}
-            placeholder="Repeat password"
+            placeholder={t("auth_repeat_password_placeholder")}
             autoComplete="new-password"
             style={inputStyle}
           />
@@ -687,21 +699,21 @@ export default function LoginPanel() {
               }}
             />
             <span style={{ minWidth: 0 }}>
-              I accept the{" "}
+              {t("auth_accept_prefix")}{" "}
               <Link
                 to="/terms"
                 className="fw-auth-inline-link"
                 style={{ fontWeight: 900 }}
               >
-                Terms & Conditions
+                {t("auth_terms")}
               </Link>{" "}
-              and{" "}
+              {t("auth_accept_and")}{" "}
               <Link
                 to="/privacy"
                 className="fw-auth-inline-link"
                 style={{ fontWeight: 900 }}
               >
-                Privacy Policy
+                {t("auth_privacy_policy")}
               </Link>
             </span>
           </label>
@@ -717,7 +729,7 @@ export default function LoginPanel() {
               cursor: registerBusy || !canRegister ? "default" : "pointer",
             }}
           >
-            {registerBusy ? "Creating account..." : "Register account"}
+            {registerBusy ? t("auth_creating_account") : t("auth_register_account")}
           </button>
 
           <button
@@ -729,7 +741,7 @@ export default function LoginPanel() {
             }}
             style={linkButtonStyle}
           >
-            Already have an account? Sign in
+            {t("auth_already_have_account")}
           </button>
         </div>
       ) : mode === "verify" ? (
@@ -737,9 +749,9 @@ export default function LoginPanel() {
           style={fieldGroupStyle}
         >
           <div style={{ display: "grid", gap: 6 }}>
-            <h2 style={titleStyle}>Verify your email</h2>
+            <h2 style={titleStyle}>{t("auth_verify_title")}</h2>
             <p style={helpTextStyle}>
-              Enter the 6-digit code sent to {verificationEmail || email}.
+              {t("auth_verify_help").replace("{email}", verificationEmail || email)}
             </p>
           </div>
 
@@ -779,7 +791,7 @@ export default function LoginPanel() {
                   : "pointer",
             }}
           >
-            {verifyBusy ? "Verifying..." : "Verify account"}
+            {verifyBusy ? t("auth_verifying") : t("auth_verify_account")}
           </button>
 
           <button
@@ -789,7 +801,7 @@ export default function LoginPanel() {
             onClick={resendVerificationCode}
             style={linkButtonStyle}
           >
-            {resendBusy ? "Sending..." : "Resend code"}
+            {resendBusy ? t("sending") : t("auth_resend_code")}
           </button>
 
           <button
@@ -801,7 +813,7 @@ export default function LoginPanel() {
             }}
             style={linkButtonStyle}
           >
-            Back to sign in
+            {t("auth_back_to_signin")}
           </button>
         </div>
       ) : mode === "forgotPassword" ? (
@@ -809,10 +821,9 @@ export default function LoginPanel() {
           style={fieldGroupStyle}
         >
           <div style={{ display: "grid", gap: 6 }}>
-            <h2 style={titleStyle}>Reset your password</h2>
+            <h2 style={titleStyle}>{t("auth_forgot_title")}</h2>
             <p style={helpTextStyle}>
-              Enter your email and we will send a reset code if the account
-              exists.
+              {t("auth_forgot_help")}
             </p>
           </div>
 
@@ -840,7 +851,7 @@ export default function LoginPanel() {
               cursor: forgotBusy || !resetEmail.trim() ? "default" : "pointer",
             }}
           >
-            {forgotBusy ? "Sending..." : "Send reset code"}
+            {forgotBusy ? t("sending") : t("auth_send_reset_code")}
           </button>
 
           <button
@@ -852,7 +863,7 @@ export default function LoginPanel() {
             }}
             style={linkButtonStyle}
           >
-            Back to sign in
+            {t("auth_back_to_signin")}
           </button>
         </div>
       ) : (
@@ -860,9 +871,9 @@ export default function LoginPanel() {
           style={fieldGroupStyle}
         >
           <div style={{ display: "grid", gap: 6 }}>
-            <h2 style={titleStyle}>Enter reset code</h2>
+            <h2 style={titleStyle}>{t("auth_reset_title")}</h2>
             <p style={helpTextStyle}>
-              Use the 6-digit code from your email and choose a new password.
+              {t("auth_reset_help")}
             </p>
           </div>
 
@@ -884,7 +895,7 @@ export default function LoginPanel() {
             onChange={(e) =>
               setResetCode(e.target.value.replace(/\D/g, "").slice(0, 6))
             }
-            placeholder="Reset code"
+            placeholder={t("auth_reset_code_placeholder")}
             autoComplete="one-time-code"
             style={inputStyle}
           />
@@ -894,7 +905,7 @@ export default function LoginPanel() {
             type="password"
             value={resetPassword}
             onChange={(e) => setResetPassword(e.target.value)}
-            placeholder="New password"
+            placeholder={t("auth_new_password_placeholder")}
             autoComplete="new-password"
             style={inputStyle}
           />
@@ -907,7 +918,7 @@ export default function LoginPanel() {
             onKeyDown={(e) => {
               if (e.key === "Enter") void submitPasswordReset();
             }}
-            placeholder="Confirm new password"
+            placeholder={t("auth_confirm_new_password_placeholder")}
             autoComplete="new-password"
             style={inputStyle}
           />
@@ -943,7 +954,7 @@ export default function LoginPanel() {
                   : "pointer",
             }}
           >
-            {resetBusy ? "Resetting..." : "Reset password"}
+            {resetBusy ? t("auth_resetting") : t("auth_reset_password")}
           </button>
 
           <button
@@ -955,7 +966,7 @@ export default function LoginPanel() {
             }}
             style={linkButtonStyle}
           >
-            Send a new code
+            {t("auth_send_new_code")}
           </button>
         </div>
       )}

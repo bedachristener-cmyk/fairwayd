@@ -92,8 +92,8 @@ function tripCountdown(value: number) {
   today.setHours(0, 0, 0, 0);
   const days = Math.ceil((value - today.getTime()) / 86_400_000);
 
-  if (days <= 0) return "Today";
-  if (days === 1) return "Tomorrow";
+  if (days <= 0) return t("today");
+  if (days === 1) return t("tomorrow");
   if (days < 30) return `${days} days`;
 
   return shortTripDate(value);
@@ -141,7 +141,7 @@ export default function DesktopSidebar() {
   >(null);
   const isAdmin = ["beda"].includes((me?.handle || "").toLowerCase());
   const avatarUrl = fileUrl(me?.avatarUrl);
-  const displayName = me?.name || me?.handle || "Fairwayd golfer";
+  const displayName = me?.name || me?.handle || t("fairwayd_golfer");
 
   useEffect(() => {
     if (!token) {
@@ -214,7 +214,7 @@ export default function DesktopSidebar() {
         {
           key: "trips",
           path: "/trips",
-          label: "Trips",
+          label: t("trips"),
           icon: <CalendarDays size={18} strokeWidth={2.2} />,
           protected: true,
           isActive: activeStartsWith("/trips"),
@@ -222,7 +222,7 @@ export default function DesktopSidebar() {
       ],
     },
     {
-      label: "Social",
+      label: t("social"),
       items: [
         {
           key: "friends",
@@ -243,7 +243,7 @@ export default function DesktopSidebar() {
         {
           key: "follow-requests",
           path: "/follow-requests",
-          label: "Follow Requests",
+          label: t("follow_requests"),
           icon: <UserPlus size={18} strokeWidth={2.2} />,
           protected: true,
           isActive: activeStartsWith("/follow-requests"),
@@ -259,7 +259,7 @@ export default function DesktopSidebar() {
       ],
     },
     {
-      label: "Golf",
+      label: t("golf"),
       items: [
         {
           key: "following",
@@ -272,7 +272,7 @@ export default function DesktopSidebar() {
         {
           key: "suggest-course",
           path: "/course-submissions/new",
-          label: "Suggest course",
+          label: t("suggest_course"),
           icon: <MapPinPlus size={18} strokeWidth={2.2} />,
           protected: true,
           isActive: activeStartsWith("/course-submissions"),
@@ -280,7 +280,7 @@ export default function DesktopSidebar() {
       ],
     },
     {
-      label: "Account",
+      label: t("account"),
       items: [
         {
           key: "profile",
@@ -302,7 +302,7 @@ export default function DesktopSidebar() {
       ],
     },
     {
-      label: "Support",
+      label: t("support"),
       items: [
         {
           key: "help",
@@ -322,7 +322,7 @@ export default function DesktopSidebar() {
       ],
     },
     {
-      label: "Admin",
+      label: t("admin"),
       items: isAdmin
         ? [
             {
@@ -336,7 +336,7 @@ export default function DesktopSidebar() {
             {
               key: "course-submissions-admin",
               path: "/admin/course-submissions",
-              label: "Course submissions",
+              label: t("course_submissions"),
               icon: <ClipboardList size={18} strokeWidth={2.2} />,
               protected: true,
               isActive: activeExact("/admin/course-submissions"),
@@ -344,7 +344,7 @@ export default function DesktopSidebar() {
             {
               key: "course-submissions-history-admin",
               path: "/admin/course-submissions/history",
-              label: "Submission history",
+              label: t("course_submission_history"),
               icon: <ClipboardList size={18} strokeWidth={2.2} />,
               protected: true,
               isActive: activeExact("/admin/course-submissions/history"),
@@ -364,12 +364,12 @@ export default function DesktopSidebar() {
   }
 
   return (
-    <aside className="fw-desktop-sidebar" aria-label="Primary navigation">
+    <aside className="fw-desktop-sidebar" aria-label={t("primary_navigation")}>
       <button
         type="button"
         className="fw-desktop-sidebar__brand"
         onClick={() => nav(isAuthenticated ? "/feed" : "/map")}
-        aria-label="Fairwayd home"
+        aria-label={t("fairwayd_home")}
       >
         <img src={logo} alt="" className="fw-desktop-sidebar__logo" />
         <span>
@@ -420,7 +420,7 @@ export default function DesktopSidebar() {
 
       <div className="fw-desktop-sidebar__footer">
         {nextTrip ? (
-          <section className="fw-desktop-sidebar-trip" aria-label="My next trip">
+          <section className="fw-desktop-sidebar-trip" aria-label={t("desktop_trips_subtitle")}>
             <div className="fw-desktop-sidebar-trip__media" aria-hidden="true">
               <SidebarImage
                 src={nextTripCoverUrl}
@@ -430,7 +430,7 @@ export default function DesktopSidebar() {
             </div>
             <div className="fw-desktop-sidebar-trip__body">
               <span className="fw-desktop-sidebar-trip__eyebrow">
-                My next trip
+                {t("desktop_trips_subtitle")}
               </span>
               <strong>{nextTrip.trip.title}</strong>
               <span>
@@ -444,7 +444,7 @@ export default function DesktopSidebar() {
               className="fw-desktop-sidebar-trip__action"
               onClick={() => nav(`/trips/${nextTrip.trip.id}`)}
             >
-              View trip
+              {t("open")}
             </button>
           </section>
         ) : null}
@@ -454,7 +454,7 @@ export default function DesktopSidebar() {
             type="button"
             className="fw-desktop-sidebar-user"
             onClick={() => nav("/profile")}
-            aria-label="Open profile"
+            aria-label={t("open_profile")}
           >
             <span className="fw-desktop-sidebar-user__avatar" aria-hidden="true">
               <SidebarImage

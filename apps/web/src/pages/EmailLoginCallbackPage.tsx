@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
 import { consumeStoredPostLoginNext } from "../auth/postLoginNext";
+import { t } from "../i18n/strings";
 const emailVerifyRequests = new Map<string, Promise<string>>();
 
 function verifyEmailTokenOnce(token: string) {
@@ -16,18 +17,13 @@ function verifyEmailTokenOnce(token: string) {
   })
     .then(async (res) => {
       if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        const message = Array.isArray(data?.message)
-          ? data.message.join(", ")
-          : typeof data?.message === "string"
-            ? data.message
-            : "Invalid or expired login link";
-        throw new Error(message);
+        await res.json().catch(() => null);
+        throw new Error(t("auth_magic_invalid_link"));
       }
 
       const data = await res.json();
       const jwt = String(data?.token ?? "").trim();
-      if (!jwt) throw new Error("Login response did not include a token");
+      if (!jwt) throw new Error(t("auth_magic_missing_token_response"));
       return jwt;
     })
     .catch((error) => {
@@ -46,14 +42,14 @@ export default function EmailLoginCallbackPage() {
   const [status, setStatus] = useState<"loading" | "success" | "error">(
     "loading",
   );
-  const [message, setMessage] = useState("Signing you in...");
+  const [message, setMessage] = useState(t("auth_magic_signing_in"));
 
   useEffect(() => {
     const token = params.get("token") ?? "";
 
     if (!token.trim()) {
       setStatus("error");
-      setMessage("This login link is missing a token.");
+      setMessage(t("auth_magic_missing_token"));
       return;
     }
 
@@ -66,7 +62,7 @@ export default function EmailLoginCallbackPage() {
 
         setStatus("success");
         setStatus("success");
-        setMessage("Login confirmed. Opening Fairwayd...");
+        setMessage(t("auth_magic_confirmed"));
 
         const next = consumeStoredPostLoginNext();
 
@@ -81,7 +77,7 @@ export default function EmailLoginCallbackPage() {
           setMessage(
             err instanceof Error && err.message
               ? err.message
-              : "This login link is invalid or expired.",
+              : t("auth_magic_invalid_link"),
           );
         }
       }
@@ -118,7 +114,7 @@ export default function EmailLoginCallbackPage() {
           textAlign: "center",
         }}
       >
-        <div style={{ fontSize: 18, fontWeight: 900 }}>Email login</div>
+        <div style={{ fontSize: 18, fontWeight: 900 }}>{t("auth_magic_title")}</div>
         <div style={{ color: "var(--sub)", fontSize: 13, lineHeight: 1.45 }}>
           {message}
         </div>
@@ -136,7 +132,7 @@ export default function EmailLoginCallbackPage() {
               cursor: "pointer",
             }}
           >
-            Back to login
+            {t("auth_back_to_login")}
           </button>
         ) : null}
       </div>

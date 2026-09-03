@@ -2,31 +2,32 @@ import { Plus, Users } from "lucide-react";
 import { useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import TopRail from "./TopRail";
+import { t } from "../i18n/strings";
 
 function titleForPath(pathname: string) {
-  if (pathname.startsWith("/map")) return "Map";
-  if (pathname.startsWith("/destinations")) return "Explore";
-  if (pathname.startsWith("/trips")) return "Trips";
+  if (pathname.startsWith("/map")) return t("map");
+  if (pathname.startsWith("/destinations")) return t("explore");
+  if (pathname.startsWith("/trips")) return t("trips");
   if (pathname.startsWith("/profile") || pathname.startsWith("/u/")) {
-    return "Profile";
+    return t("profile");
   }
-  if (pathname.startsWith("/courses/")) return "Course";
-  if (pathname.startsWith("/users")) return "Find golfers";
-  if (pathname.startsWith("/notifications")) return "Notifications";
-  return "Feed";
+  if (pathname.startsWith("/courses/")) return t("course");
+  if (pathname.startsWith("/users")) return t("find_golfers");
+  if (pathname.startsWith("/notifications")) return t("notifications");
+  return t("feed");
 }
 
 function subtitleForPath(pathname: string) {
-  if (pathname.startsWith("/map")) return "Discover courses around the world";
-  if (pathname.startsWith("/destinations")) return "Golf travel by destination";
-  if (pathname.startsWith("/trips")) return "Plan golf travel with your group";
+  if (pathname.startsWith("/map")) return t("desktop_map_subtitle");
+  if (pathname.startsWith("/destinations")) return t("desktop_destinations_subtitle");
+  if (pathname.startsWith("/trips")) return t("desktop_trips_subtitle");
   if (pathname.startsWith("/profile") || pathname.startsWith("/u/")) {
-    return "Posts, friends and golf activity";
+    return t("desktop_profile_subtitle");
   }
-  if (pathname.startsWith("/courses/")) return "Course details and activity";
-  if (pathname.startsWith("/users")) return "Search Fairwayd members";
-  if (pathname.startsWith("/notifications")) return "Recent account activity";
-  return "Latest golf activity";
+  if (pathname.startsWith("/courses/")) return t("desktop_course_subtitle");
+  if (pathname.startsWith("/users")) return t("desktop_users_subtitle");
+  if (pathname.startsWith("/notifications")) return t("desktop_notifications_subtitle");
+  return t("latest_activity");
 }
 
 export default function DesktopTopbar() {
@@ -51,7 +52,7 @@ export default function DesktopTopbar() {
           onClick={() => nav("/course-submissions/new")}
         >
           <Plus size={16} strokeWidth={2.5} />
-          <span>Create</span>
+          <span>{t("create")}</span>
         </button>
 
         <button
@@ -60,7 +61,7 @@ export default function DesktopTopbar() {
           onClick={() => nav("/users")}
         >
           <Users size={16} strokeWidth={2.4} />
-          <span>Find golfers</span>
+          <span>{t("find_golfers")}</span>
         </button>
 
         <div className="fw-desktop-topbar__rail">

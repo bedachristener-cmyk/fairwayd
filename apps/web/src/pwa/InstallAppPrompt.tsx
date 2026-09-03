@@ -1,4 +1,5 @@
 import { useInstallPrompt } from "./useInstallPrompt";
+import { t } from "../i18n/strings";
 
 export default function InstallAppPrompt() {
   const { canInstall, promptInstall, dismissPrompt } = useInstallPrompt();
@@ -26,9 +27,9 @@ export default function InstallAppPrompt() {
       }}
     >
       <div style={{ minWidth: 0, flex: "1 1 auto", display: "grid", gap: 2 }}>
-        <div style={{ fontSize: 13, fontWeight: 950 }}>Install Fairwayd</div>
+        <div style={{ fontSize: 13, fontWeight: 950 }}>{t("install_fairwayd")}</div>
         <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
-          Add Fairwayd to your home screen for faster trip access.
+          {t("install_fairwayd_help")}
         </div>
       </div>
 
@@ -48,13 +49,13 @@ export default function InstallAppPrompt() {
           whiteSpace: "nowrap",
         }}
       >
-        Install
+        {t("install")}
       </button>
 
       <button
         type="button"
         onClick={dismissPrompt}
-        aria-label="Dismiss install prompt"
+        aria-label={t("dismiss_install_prompt")}
         style={{
           width: 30,
           height: 30,

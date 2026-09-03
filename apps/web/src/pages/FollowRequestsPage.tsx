@@ -14,6 +14,7 @@ import { fileUrl } from "../api/fileUrl";
 import { friendlyApiErrorMessage } from "../api/client";
 import MobilePageHeader from "../components/MobilePageHeader";
 import { EmptyState } from "../components/PolishStates";
+import { t } from "../i18n/strings";
 
 function Avatar({
   url,
@@ -236,11 +237,11 @@ export default function FollowRequestsPage() {
       }}
     >
       <MobilePageHeader
-        title="Follow Requests"
+        title={t("follow_requests")}
         subtitle={
           activeTab === "incoming"
-            ? "People who want to follow you."
-            : "People you requested to follow."
+            ? t("follow_requests_incoming_help")
+            : t("follow_requests_sent_tab_help")
         }
         action={
           <button

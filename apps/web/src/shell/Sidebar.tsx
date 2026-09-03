@@ -102,7 +102,7 @@ export default function Sidebar() {
           }}
           type="button"
         >
-          Trips
+          {t("trips")}
         </button>
 
         <button

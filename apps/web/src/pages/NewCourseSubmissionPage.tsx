@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
+import { t } from "../i18n/strings";
 
 type FormState = {
   name: string;
@@ -69,7 +70,7 @@ export default function NewCourseSubmissionPage() {
     const selected = Array.from(event.target.files ?? []);
 
     if (selected.length > maxImages) {
-      setErr(`You can upload up to ${maxImages} images.`);
+      setErr(t("course_images_help"));
       setImages([]);
       event.target.value = "";
       return;
@@ -80,7 +81,7 @@ export default function NewCourseSubmissionPage() {
     );
 
     if (invalid) {
-      setErr("Images must be image files and 5 MB or smaller.");
+      setErr(t("course_submission_images_invalid"));
       setImages([]);
       event.target.value = "";
       return;
@@ -95,7 +96,7 @@ export default function NewCourseSubmissionPage() {
     if (!token) return;
 
     if (!form.name.trim() || !form.country.trim()) {
-      setErr("Course name and country are required.");
+      setErr(t("course_submission_required"));
       return;
     }
 
@@ -152,7 +153,7 @@ export default function NewCourseSubmissionPage() {
       setDone(true);
     } catch (error) {
       console.error("Course submission failed", error);
-      setErr("Could not send the course suggestion.");
+      setErr(t("course_submission_failed"));
     } finally {
       setSending(false);
     }
@@ -215,11 +216,10 @@ export default function NewCourseSubmissionPage() {
             color: "var(--text)",
           }}
         >
-          Suggest missing course
+          {t("suggest_missing_course")}
         </div>
         <div style={{ fontSize: 14, color: "var(--sub)", lineHeight: 1.45 }}>
-          Send a course that is missing from Fairwayd. It will be reviewed
-          before being added.
+          {t("course_submission_help")}
         </div>
       </div>
 
@@ -234,7 +234,7 @@ export default function NewCourseSubmissionPage() {
           padding: 14,
         }}
       >
-        {field("name", "Course name", "Real Club de Golf ...")}
+        {field("name", t("course_name"), "Real Club de Golf ...")}
         <div
           style={{
             display: "grid",
@@ -242,9 +242,9 @@ export default function NewCourseSubmissionPage() {
             gap: 10,
           }}
         >
-          {field("country", "Country code", "ES")}
-          {field("city", "City", "Palma")}
-          {field("region", "Region", "Mallorca")}
+          {field("country", t("country_code"), "ES")}
+          {field("city", t("city"), "Palma")}
+          {field("region", t("region"), "Mallorca")}
         </div>
         {field("website", "Website", "https://...", "url")}
         <div
@@ -254,15 +254,15 @@ export default function NewCourseSubmissionPage() {
             gap: 10,
           }}
         >
-          {field("lat", "Latitude", "39.5", "number")}
-          {field("lon", "Longitude", "2.6", "number")}
-          {field("holes", "Holes", "18", "number")}
-          {field("par", "Par", "72", "number")}
+          {field("lat", t("latitude"), "39.5", "number")}
+          {field("lon", t("longitude"), "2.6", "number")}
+          {field("holes", t("holes"), "18", "number")}
+          {field("par", t("par"), "72", "number")}
         </div>
-        {field("imageUrl", "Image URL", "https://...", "url")}
+        {field("imageUrl", t("image_url"), "https://...", "url")}
 
         <label style={{ display: "grid", gap: 6 }}>
-          <span style={labelStyle}>Images</span>
+          <span style={labelStyle}>{t("course_images")}</span>
           <input
             key={fileInputKey}
             type="file"
@@ -281,7 +281,7 @@ export default function NewCourseSubmissionPage() {
             }}
           />
           <span style={{ fontSize: 12, color: "var(--sub)" }}>
-            Up to {maxImages} images, 5 MB each.
+            {t("course_images_help")}
           </span>
         </label>
 
@@ -312,11 +312,11 @@ export default function NewCourseSubmissionPage() {
         ) : null}
 
         <label style={{ display: "grid", gap: 6 }}>
-          <span style={labelStyle}>Notes</span>
+          <span style={labelStyle}>{t("notes")}</span>
           <textarea
             value={form.notes}
             onChange={(event) => setField("notes", event.target.value)}
-            placeholder="Anything that helps verify this course."
+            placeholder={t("course_submission_notes_placeholder")}
             rows={5}
             style={{
               width: "100%",
@@ -339,7 +339,7 @@ export default function NewCourseSubmissionPage() {
         ) : null}
         {done ? (
           <div style={{ fontSize: 13, color: "var(--sub)" }}>
-            Suggestion submitted for review.
+            {t("course_submission_sent")}
           </div>
         ) : null}
 
@@ -359,7 +359,7 @@ export default function NewCourseSubmissionPage() {
               opacity: sending ? 0.7 : 1,
             }}
           >
-            {sending ? "Sending..." : "Submit suggestion"}
+            {sending ? t("sending") : t("submit_suggestion")}
           </button>
           <button
             type="button"
@@ -375,7 +375,7 @@ export default function NewCourseSubmissionPage() {
               cursor: "pointer",
             }}
           >
-            Back
+            {t("back")}
           </button>
         </div>
       </form>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { apiPostForm, apiPostJson } from "../api";
 import type { Me } from "../auth/useMe";
-import { getLang, setLang, t, type Lang } from "../i18n/strings";
+import { LANGUAGE_OPTIONS, getLang, setLang, t, type Lang } from "../i18n/strings";
 import {
   getInitialTheme,
   setTheme,
@@ -144,9 +144,9 @@ function PrivacyPicker({
   onChange: (value: FieldPrivacy) => void;
 }) {
   const items: { value: FieldPrivacy; label: string; icon: string }[] = [
-    { value: "PUBLIC", label: "Public", icon: "🌍" },
-    { value: "FOLLOWERS", label: "Followers", icon: "👥" },
-    { value: "PRIVATE", label: "Private", icon: "🔒" },
+    { value: "PUBLIC", label: t("visibility_public"), icon: "🌍" },
+    { value: "FOLLOWERS", label: t("visibility_followers"), icon: "👥" },
+    { value: "PRIVATE", label: t("visibility_private"), icon: "🔒" },
   ];
 
   return (
@@ -199,6 +199,15 @@ function PrivacyPicker({
   );
 }
 
+function themeDisplayName(theme: ThemeName) {
+  if (theme === "dark") return t("theme_dark");
+  if (theme === "light") return t("theme_light");
+  if (theme === "forest") return t("theme_forest");
+  if (theme === "ocean") return t("theme_ocean");
+  if (theme === "warm") return t("theme_warm");
+  return t("theme_contrast");
+}
+
 function AccountPrivacyPicker({
   value,
   onChange,
@@ -213,13 +222,13 @@ function AccountPrivacyPicker({
   }[] = [
     {
       value: "PUBLIC",
-      label: "Public",
-      description: "Anyone can follow you immediately.",
+      label: t("visibility_public"),
+      description: t("privacy_public_help"),
     },
     {
       value: "PRIVATE",
-      label: "Private",
-      description: "New followers need your approval.",
+      label: t("visibility_private"),
+      description: t("privacy_private_help"),
     },
   ];
 
@@ -338,7 +347,7 @@ function ThemePickerUnderAvatar() {
   return (
     <div style={{ marginTop: 14 }}>
       <div style={{ fontSize: 12, color: "var(--sub)", fontWeight: 900 }}>
-        Theme
+        {t("theme")}
       </div>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 7 }}>
@@ -362,7 +371,7 @@ function ThemePickerUnderAvatar() {
               }}
               title={tName}
             >
-              {tName.toUpperCase()}
+              {themeDisplayName(tName)}
             </button>
           );
         })}
@@ -519,7 +528,7 @@ export default function ProfileSetup({
               marginBottom: 8,
             }}
           >
-            Fairwayd profile
+            {t("profile_fairwayd_profile")}
           </div>
 
           <h1 style={{ fontSize: 28, lineHeight: 1.05, margin: 0 }}>
@@ -539,7 +548,7 @@ export default function ProfileSetup({
           </p>
         </div>
 
-        <Section title="Profile photo" subtitle="Add a recognizable avatar.">
+        <Section title={t("profile_photo")} subtitle={t("profile_photo_help")}>
           <input
             type="file"
             accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
@@ -565,8 +574,8 @@ export default function ProfileSetup({
 
         <Section title={t("language")} subtitle={t("profile_language_help")}>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {(["en", "de", "fr", "it", "es", "ko", "th"] as Lang[]).map(
-              (code) => {
+            {LANGUAGE_OPTIONS.map(
+              ({ code }) => {
                 const active = lang === code;
 
                 return (
@@ -598,8 +607,8 @@ export default function ProfileSetup({
         </Section>
 
         <Section
-          title="Basic profile"
-          subtitle="This is how other golfers recognize you."
+          title={t("basic_profile")}
+          subtitle={t("basic_profile_help")}
         >
           <div style={{ display: "grid", gap: 14 }}>
             <div>
@@ -637,57 +646,57 @@ export default function ProfileSetup({
           </div>
         </Section>
 
-        <Section title="Profile privacy" subtitle="Choose who can follow you.">
+        <Section title={t("profile_privacy")} subtitle={t("profile_privacy_help")}>
           <AccountPrivacyPicker value={privacy} onChange={setPrivacy} />
         </Section>
 
         <Section
-          title="Golf profile"
-          subtitle="Tell others what kind of golfer you are. Each field has its own visibility."
+          title={t("golf_profile")}
+          subtitle={t("golf_profile_help")}
         >
           <div style={{ display: "grid", gap: 18 }}>
             <ProfileField
-              label="Bio"
+              label={t("bio")}
               value={bio}
               onChange={setBio}
-              placeholder="A few words about you..."
+              placeholder={t("bio_placeholder")}
               privacy={bioPrivacy}
               onPrivacyChange={setBioPrivacy}
               textarea
             />
 
             <ProfileField
-              label="Handicap"
+              label={t("handicap")}
               value={handicap}
               onChange={setHandicap}
-              placeholder="e.g. 18.4"
+              placeholder={t("handicap_placeholder")}
               privacy={handicapPrivacy}
               onPrivacyChange={setHandicapPrivacy}
             />
 
             <ProfileField
-              label="Home golf club"
+              label={t("home_golf_club")}
               value={homeGolfClub}
               onChange={setHomeGolfClub}
-              placeholder="e.g. Golfclub Basel"
+              placeholder={t("home_golf_club_placeholder")}
               privacy={homeGolfClubPrivacy}
               onPrivacyChange={setHomeGolfClubPrivacy}
             />
 
             <ProfileField
-              label="Golf slogan"
+              label={t("golf_slogan")}
               value={golfSlogan}
               onChange={setGolfSlogan}
-              placeholder="e.g. Play more, worry less"
+              placeholder={t("golf_slogan_placeholder")}
               privacy={golfSloganPrivacy}
               onPrivacyChange={setGolfSloganPrivacy}
             />
 
             <ProfileField
-              label="Favorite golf destination"
+              label={t("favorite_golf_destination")}
               value={favoriteGolfDestination}
               onChange={setFavoriteGolfDestination}
-              placeholder="e.g. Thailand, Portugal, Scotland"
+              placeholder={t("favorite_golf_destination_placeholder")}
               privacy={favoriteGolfDestinationPrivacy}
               onPrivacyChange={setFavoriteGolfDestinationPrivacy}
             />

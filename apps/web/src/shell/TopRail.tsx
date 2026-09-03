@@ -215,7 +215,7 @@ export default function TopRail() {
 
     let cancelled = false;
 
-    const t = setTimeout(async () => {
+    const timeoutId = setTimeout(async () => {
       try {
         setSearchLoading(true);
         setSearchError(null);
@@ -233,8 +233,8 @@ export default function TopRail() {
             setCompletedSearchQuery(query.trim());
             setSearchError(
               res.status === 401 || res.status === 403
-                ? "Your session has expired. Please login again."
-                : "Search is unavailable right now. Please try again.",
+                ? t("session_expired_login_again")
+                : t("search_unavailable_retry"),
             );
           }
           return;
@@ -313,8 +313,8 @@ export default function TopRail() {
           setCompletedSearchQuery(query.trim());
           setSearchError(
             err instanceof TypeError
-              ? "Search is unavailable right now. Please check your connection."
-              : "Search is unavailable right now. Please try again.",
+              ? t("search_unavailable_connection")
+              : t("search_unavailable_retry"),
           );
         }
       } finally {
@@ -326,7 +326,7 @@ export default function TopRail() {
 
     return () => {
       cancelled = true;
-      clearTimeout(t);
+      clearTimeout(timeoutId);
     };
   }, [query, searchOpen, auth?.token]);
 
@@ -487,8 +487,8 @@ export default function TopRail() {
       if (!res.ok) {
         throw new Error(
           res.status === 401 || res.status === 403
-            ? "Your session has expired. Please login again."
-            : "Could not update this follow request. Please try again.",
+            ? t("session_expired_login_again")
+            : t("follow_update_failed"),
         );
       }
 
@@ -528,7 +528,7 @@ export default function TopRail() {
       setSearchError(
         err instanceof Error
           ? err.message
-          : "Could not update this follow request. Please try again.",
+          : t("follow_update_failed"),
       );
 
       setResults((prev) =>
@@ -582,7 +582,7 @@ export default function TopRail() {
     },
     {
       key: "follow-requests",
-      label: "Follow Requests",
+      label: t("follow_requests"),
       subtitle: t("follow_requests_activity"),
       icon: <UserPlus size={18} strokeWidth={2.2} />,
       action: () => navigateFromMenu("/follow-requests"),
@@ -598,16 +598,16 @@ export default function TopRail() {
     },
     {
       key: "trips",
-      label: "Trips",
-      subtitle: "Golf trip planner",
+      label: t("trips"),
+      subtitle: t("trips_subtitle"),
       icon: <CalendarDays size={18} strokeWidth={2.2} />,
       action: () => navigateFromMenu("/trips"),
       isActive: location.pathname.startsWith("/trips"),
     },
     {
       key: "suggest-course",
-      label: "Suggest missing course",
-      subtitle: "Send a course for review",
+      label: t("suggest_missing_course"),
+      subtitle: t("suggest_course_subtitle"),
       icon: <MapPinPlus size={18} strokeWidth={2.2} />,
       action: () => navigateFromMenu("/course-submissions/new"),
       isActive: location.pathname === "/course-submissions/new",
@@ -632,8 +632,8 @@ export default function TopRail() {
       ? [
           {
             key: "admin",
-            label: "Admin",
-            subtitle: "Moderation tools",
+            label: t("admin"),
+            subtitle: t("moderation_tools"),
             icon: <ClipboardList size={18} strokeWidth={2.2} />,
             action: () => setAdminMenuExpanded((value) => !value),
             isActive:
@@ -651,16 +651,16 @@ export default function TopRail() {
               },
               {
                 key: "course-submissions-admin",
-                label: "Course submissions",
-                subtitle: "Review suggested courses",
+                label: t("course_submissions"),
+                subtitle: t("course_submissions_subtitle"),
                 icon: <ClipboardList size={18} strokeWidth={2.2} />,
                 action: () => navigateFromMenu("/admin/course-submissions"),
                 isActive: location.pathname === "/admin/course-submissions",
               },
               {
                 key: "course-submissions-history-admin",
-                label: "Course submission history",
-                subtitle: "Approved and rejected",
+                label: t("course_submission_history"),
+                subtitle: t("approved_and_rejected"),
                 icon: <ClipboardList size={18} strokeWidth={2.2} />,
                 action: () =>
                   navigateFromMenu("/admin/course-submissions/history"),
@@ -716,35 +716,35 @@ export default function TopRail() {
   const mainMenuGroups: MainMenuGroup[] = [
     {
       key: "social",
-      label: "Social",
+      label: t("social"),
       items: ["feed", "friends", "follow-requests", "notifications"]
         .map((key) => mainMenuItemByKey.get(key))
         .filter((item): item is MainMenuItem => Boolean(item)),
     },
     {
       key: "golf",
-      label: "Golf",
+      label: t("golf"),
       items: ["trips", "map", "destinations", "suggest-course"]
         .map((key) => mainMenuItemByKey.get(key))
         .filter((item): item is MainMenuItem => Boolean(item)),
     },
     {
       key: "account",
-      label: "Account",
+      label: t("account"),
       items: ["profile", "privacy", "settings", "logout"]
         .map((key) => mainMenuItemByKey.get(key))
         .filter((item): item is MainMenuItem => Boolean(item)),
     },
     {
       key: "support",
-      label: "Support",
+      label: t("support"),
       items: ["help", "feedback"]
         .map((key) => mainMenuItemByKey.get(key))
         .filter((item): item is MainMenuItem => Boolean(item)),
     },
     {
       key: "admin",
-      label: "Admin",
+      label: t("admin"),
       items: ["admin"]
         .map((key) => mainMenuItemByKey.get(key))
         .filter((item): item is MainMenuItem => Boolean(item)),
@@ -1531,7 +1531,7 @@ export default function TopRail() {
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search golfers..."
+              placeholder={t("search_golfers_placeholder")}
               style={{
                 width: "100%",
                 minWidth: 0,

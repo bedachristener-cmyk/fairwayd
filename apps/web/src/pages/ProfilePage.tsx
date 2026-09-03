@@ -15,7 +15,7 @@ import {
 import PostCard from "../components/PostCard";
 import CommentModal from "../components/CommentModal";
 import BackToTopButton from "../components/BackToTopButton";
-import { getLang, setLang, t, type Lang } from "../i18n/strings";
+import { LANGUAGE_OPTIONS, getLang, setLang, t, type Lang } from "../i18n/strings";
 
 type PostImage = { id: string; url: string };
 
@@ -244,22 +244,21 @@ function prettyDate(d?: string) {
   return t.toLocaleDateString();
 }
 
+function themeDisplayName(theme: ThemeName) {
+  if (theme === "dark") return t("theme_dark");
+  if (theme === "light") return t("theme_light");
+  if (theme === "forest") return t("theme_forest");
+  if (theme === "ocean") return t("theme_ocean");
+  if (theme === "warm") return t("theme_warm");
+  return t("theme_contrast");
+}
+
 function ProfileSettingsCard() {
   const [theme, setThemeState] = useState<ThemeName>(() => getInitialTheme());
   const [language, setLanguage] = useState<Lang>(() => getLang());
   const [expanded, setExpanded] = useState<"theme" | "language" | null>(null);
 
   const isMobile = window.innerWidth <= 980;
-
-  const languages: { code: Lang; label: string; flagCode: string }[] = [
-    { code: "en", label: "English", flagCode: "gb" },
-    { code: "de", label: "Deutsch", flagCode: "de" },
-    { code: "fr", label: "Français", flagCode: "fr" },
-    { code: "it", label: "Italiano", flagCode: "it" },
-    { code: "es", label: "Español", flagCode: "es" },
-    { code: "ko", label: "한국어", flagCode: "kr" },
-    { code: "th", label: "ไทย", flagCode: "th" },
-  ];
 
   useEffect(() => {
     setTheme(theme);
@@ -306,7 +305,7 @@ function ProfileSettingsCard() {
               lineHeight: 1.35,
             }}
           >
-            App appearance and language
+            {t("settings_app_appearance_language")}
           </div>
         </div>
 
@@ -314,7 +313,7 @@ function ProfileSettingsCard() {
         <SettingsControlRow
           icon="Aa"
           label={t("theme")}
-          value={theme.toUpperCase()}
+          value={themeDisplayName(theme)}
           expanded={expanded === "theme"}
           onClick={() => setExpanded((v) => (v === "theme" ? null : "theme"))}
         >
@@ -329,7 +328,7 @@ function ProfileSettingsCard() {
                   onClick={() => setThemeState(tName)}
                   style={settingsOptionStyle(active)}
                 >
-                  {tName.toUpperCase()}
+                  {themeDisplayName(tName)}
                 </button>
               );
             })}
@@ -346,7 +345,7 @@ function ProfileSettingsCard() {
           }
         >
           <SettingsOptions>
-            {languages.map((item) => {
+            {LANGUAGE_OPTIONS.map((item) => {
               const active = language === item.code;
 
               return (
@@ -382,7 +381,7 @@ function ProfileSettingsCard() {
                     }}
                   />
 
-                  <span>{item.label}</span>
+                  <span>{item.nativeLabel}</span>
                 </button>
               );
             })}
@@ -432,16 +431,16 @@ function AboutGolfProfileCard({
   const introChips = fields
     .map((field) => {
       if (field.key === "homeGolfClub") {
-        return { ...field, icon: "🏠", label: "Home club" };
+        return { ...field, icon: "🏠", label: t("home_golf_club_short") };
       }
       if (field.key === "handicap") {
-        return { ...field, icon: "⛳", label: "Handicap" };
+        return { ...field, icon: "⛳", label: t("handicap") };
       }
       if (field.key === "favoriteGolfDestination") {
-        return { ...field, icon: "📍", label: "Favorite destination" };
+        return { ...field, icon: "📍", label: t("favorite_destination_short") };
       }
       if (field.key === "golfSlogan") {
-        return { ...field, icon: "✍", label: "Golf slogan" };
+        return { ...field, icon: "✍", label: t("golf_slogan") };
       }
       return null;
     })
@@ -496,7 +495,7 @@ function AboutGolfProfileCard({
                 letterSpacing: -0.2,
               }}
             >
-              Intro
+              {t("intro")}
             </div>
             <div
               style={{
@@ -506,7 +505,7 @@ function AboutGolfProfileCard({
                 lineHeight: 1.35,
               }}
             >
-              Golf details and travel preferences
+              {t("intro_help")}
             </div>
           </div>
 
@@ -546,8 +545,7 @@ function AboutGolfProfileCard({
             }}
           >
             <div style={{ color: "var(--sub)", fontSize: 13, lineHeight: 1.4 }}>
-              Add a few golf profile details so other players can get to know
-              you.
+              {t("profile_add_details_help")}
             </div>
 
             <button
@@ -568,7 +566,7 @@ function AboutGolfProfileCard({
                   "0 10px 24px color-mix(in srgb, var(--green) 22%, transparent)",
               }}
             >
-              Edit profile
+              {t("edit_profile")}
             </button>
           </div>
         ) : (
@@ -1570,31 +1568,31 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
       [
         {
           key: "bio",
-          label: "Bio",
+          label: t("bio"),
           value: profile?.bio,
           privacy: profile?.bioPrivacy,
         },
         {
           key: "handicap",
-          label: "Handicap",
+          label: t("handicap"),
           value: profile?.handicap,
           privacy: profile?.handicapPrivacy,
         },
         {
           key: "homeGolfClub",
-          label: "Home golf club",
+          label: t("home_golf_club"),
           value: profile?.homeGolfClub,
           privacy: profile?.homeGolfClubPrivacy,
         },
         {
           key: "golfSlogan",
-          label: "Golf slogan",
+          label: t("golf_slogan"),
           value: profile?.golfSlogan,
           privacy: profile?.golfSloganPrivacy,
         },
         {
           key: "favoriteGolfDestination",
-          label: "Favorite golf destination",
+          label: t("favorite_golf_destination"),
           value: profile?.favoriteGolfDestination,
           privacy: profile?.favoriteGolfDestinationPrivacy,
         },
@@ -2143,7 +2141,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                     lineHeight: 1.35,
                   }}
                 >
-                  People who want to follow your Fairwayd profile
+                  {t("follow_requests_received_help")}
                 </div>
               </div>
 
@@ -2375,7 +2373,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                     lineHeight: 1.35,
                   }}
                 >
-                  Follow requests you have sent
+                  {t("follow_requests_sent_help")}
                 </div>
               </div>
 

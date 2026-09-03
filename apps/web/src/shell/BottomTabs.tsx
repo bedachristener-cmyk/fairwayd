@@ -94,7 +94,7 @@ export default function BottomTabs() {
       <Tab to="/feed" label={t("feed")} icon={<Home size={20} />} />
       <Tab to="/map" label={t("map")} icon={<Map size={20} />} />
       <Tab to="/destinations" label={t("explore")} icon={<Globe size={20} />} />
-      <Tab to="/trips" label="Trips" icon={<CalendarDays size={20} />} />
+      <Tab to="/trips" label={t("trips")} icon={<CalendarDays size={20} />} />
       <Tab to="/profile" label={t("me")} icon={<User size={20} />} />
     </div>
   );
