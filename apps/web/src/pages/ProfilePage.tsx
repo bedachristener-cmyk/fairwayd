@@ -836,9 +836,9 @@ function settingsOptionStyle(active: boolean): CSSProperties {
       ? "1px solid color-mix(in srgb, var(--green) 52%, var(--border))"
       : "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
     background: active
-      ? "color-mix(in srgb, var(--green) 14%, var(--card))"
+      ? "var(--control-selected-bg)"
       : "color-mix(in srgb, var(--card) 72%, transparent)",
-    color: "var(--text)",
+    color: active ? "var(--control-selected-text)" : "var(--text)",
     borderRadius: 999,
     padding: "10px 12px",
     cursor: "pointer",

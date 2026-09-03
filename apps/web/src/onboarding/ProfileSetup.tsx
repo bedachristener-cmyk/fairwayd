@@ -168,8 +168,8 @@ function PrivacyPicker({
             onClick={() => onChange(item.value)}
             style={{
               border: "1px solid var(--border)",
-              background: active ? "var(--text)" : "var(--card)",
-              color: active ? "var(--bg)" : "var(--text)",
+              background: active ? "var(--control-selected-bg)" : "var(--card)",
+              color: active ? "var(--control-selected-text)" : "var(--text)",
               borderRadius: 999,
               padding: "8px 7px",
               cursor: "pointer",
@@ -241,8 +241,8 @@ function AccountPrivacyPicker({
             onClick={() => onChange(item.value)}
             style={{
               border: "1px solid var(--border)",
-              background: active ? "var(--text)" : "var(--bg)",
-              color: active ? "var(--bg)" : "var(--text)",
+              background: active ? "var(--control-selected-bg)" : "var(--bg)",
+              color: active ? "var(--control-selected-text)" : "var(--text)",
               borderRadius: 14,
               padding: "11px 12px",
               cursor: "pointer",
@@ -257,7 +257,7 @@ function AccountPrivacyPicker({
             </span>
             <span
               style={{
-                color: active ? "color-mix(in srgb, var(--bg) 76%, transparent)" : "var(--sub)",
+                color: active ? "var(--control-selected-subtext)" : "var(--sub)",
                 fontSize: 12,
                 fontWeight: 750,
                 lineHeight: 1.35,
@@ -352,8 +352,8 @@ function ThemePickerUnderAvatar() {
               onClick={() => setThemeState(tName)}
               style={{
                 border: "1px solid var(--border)",
-                background: active ? "var(--text)" : "var(--bg)",
-                color: active ? "var(--bg)" : "var(--text)",
+                background: active ? "var(--control-selected-bg)" : "var(--bg)",
+                color: active ? "var(--control-selected-text)" : "var(--text)",
                 borderRadius: 999,
                 padding: "8px 12px",
                 cursor: "pointer",
@@ -579,8 +579,8 @@ export default function ProfileSetup({
                     }}
                     style={{
                       border: "1px solid var(--border)",
-                      background: active ? "var(--text)" : "var(--bg)",
-                      color: active ? "var(--bg)" : "var(--text)",
+                      background: active ? "var(--control-selected-bg)" : "var(--bg)",
+                      color: active ? "var(--control-selected-text)" : "var(--text)",
                       borderRadius: 999,
                       padding: "8px 12px",
                       cursor: "pointer",

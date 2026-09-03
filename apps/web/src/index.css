@@ -65,6 +65,9 @@ html[data-theme="dark"] {
   --bottom-tab-indicator: var(--green);
   --fw-pill-active-bg: rgba(115, 201, 138, 0.18);
   --fw-pill-active-text: var(--text);
+  --control-selected-bg: #f5f7f5;
+  --control-selected-text: #07100f;
+  --control-selected-subtext: rgba(7, 16, 15, 0.72);
   --fw-pill-inactive-bg: rgba(10, 18, 17, 0.88);
   --fw-pill-inactive-border: rgba(168, 184, 179, 0.2);
   --fw-pill-info-bg: rgba(10, 18, 17, 0.78);
@@ -146,6 +149,9 @@ html[data-theme="light"] {
   --bottom-tab-indicator: var(--accent);
   --fw-pill-active-bg: hsla(175, 25%, 78%, 1);
   --fw-pill-active-text: var(--text);
+  --control-selected-bg: #17251f;
+  --control-selected-text: #ffffff;
+  --control-selected-subtext: rgba(255, 255, 255, 0.74);
   --fw-pill-inactive-bg: #ffffff;
   --fw-pill-inactive-border: #e6e9ec;
   --fw-pill-info-bg: #ffffff;
@@ -185,6 +191,9 @@ html[data-theme="forest"] {
   --bottom-tab-active: #ffffff;
   --bottom-tab-inactive: rgba(230, 244, 234, 0.68);
   --bottom-tab-indicator: var(--green);
+  --control-selected-bg: #e6f4ea;
+  --control-selected-text: #0f1a14;
+  --control-selected-subtext: rgba(15, 26, 20, 0.72);
 }
 
 html[data-theme="ocean"] {
@@ -211,6 +220,9 @@ html[data-theme="ocean"] {
   --bottom-tab-active: #ffffff;
   --bottom-tab-inactive: rgba(230, 240, 255, 0.68);
   --bottom-tab-indicator: var(--green);
+  --control-selected-bg: #e6f0ff;
+  --control-selected-text: #0b1220;
+  --control-selected-subtext: rgba(11, 18, 32, 0.72);
 }
 
 html[data-theme="warm"] {
@@ -237,6 +249,9 @@ html[data-theme="warm"] {
   --bottom-tab-active: #3b2f2f;
   --bottom-tab-inactive: #8b6f6f;
   --bottom-tab-indicator: #3b2f2f;
+  --control-selected-bg: #3b2f2f;
+  --control-selected-text: #ffffff;
+  --control-selected-subtext: rgba(255, 255, 255, 0.76);
 }
 
 html[data-theme="contrast"] {
@@ -263,6 +278,20 @@ html[data-theme="contrast"] {
   --bottom-tab-active: #ffffff;
   --bottom-tab-inactive: #d1d5db;
   --bottom-tab-indicator: var(--green);
+  --fw-pill-active-bg: #ffffff;
+  --fw-pill-active-text: #000000;
+  --fw-pill-inactive-bg: #000000;
+  --fw-pill-inactive-border: #6b7280;
+  --fw-pill-info-bg: #111111;
+  --fw-pill-info-border: #6b7280;
+  --fw-pill-action-border: #00ff88;
+  --fw-pill-action-text: #ffffff;
+  --fw-pill-cta-bg: #00ff88;
+  --fw-pill-cta-bg-hover: #7dffc4;
+  --fw-pill-cta-text: #000000;
+  --control-selected-bg: #ffffff;
+  --control-selected-text: #000000;
+  --control-selected-subtext: rgba(0, 0, 0, 0.76);
 }
 
 /* fallback if attribute missing */
@@ -319,6 +348,9 @@ html[data-theme="contrast"] {
   --bottom-tab-indicator: var(--green);
   --fw-pill-active-bg: hsla(175, 25%, 78%, 1);
   --fw-pill-active-text: var(--text);
+  --control-selected-bg: #f5f7f5;
+  --control-selected-text: #07100f;
+  --control-selected-subtext: rgba(7, 16, 15, 0.72);
   --fw-pill-inactive-bg: #ffffff;
   --fw-pill-inactive-border: #e6e9ec;
   --fw-pill-info-bg: #ffffff;
