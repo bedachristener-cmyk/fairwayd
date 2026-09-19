@@ -12,6 +12,7 @@ import { useAuth } from "../auth/AuthContext";
 import { apiGet } from "../api/client";
 import { useCourseFollow } from "../hooks/useCourseFollow";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
+import { t } from "../i18n/strings";
 import "leaflet.markercluster";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
@@ -239,7 +240,7 @@ function LoggedInBadge({ isLoggedIn }: { isLoggedIn: boolean }) {
         alignItems: "center",
       }}
     >
-      <span style={{ fontWeight: 800 }}>Logged in</span>
+      <span style={{ fontWeight: 800 }}>{t("logged_in")}</span>
       <span style={{ opacity: 0.8 }}>{handle ? `@${handle}` : ""}</span>
     </div>
   );
@@ -268,7 +269,7 @@ function CourseFollowButton({
         toggleFollow();
       }}
       disabled={followBusy || !token}
-      title={!token ? "Please login" : "Follow course"}
+      title={!token ? t("please_login") : t("follow_course")}
       style={{
         width: fullWidth ? "100%" : undefined,
         minHeight: fullWidth ? 40 : undefined,
@@ -291,7 +292,7 @@ function CourseFollowButton({
         boxSizing: "border-box",
       }}
     >
-      {followBusy ? "..." : isFollowing ? "Following" : "Follow"}
+      {followBusy ? "..." : isFollowing ? t("following") : t("follow")}
     </button>
   );
 }
@@ -517,7 +518,7 @@ export default function CoursesMap() {
     return (
       <div style={{ padding: 16, fontFamily: "system-ui" }}>
         <div style={{ fontWeight: 800, marginBottom: 8 }}>
-          Failed to load courses
+          {t("failed_load_courses")}
         </div>
         <div style={{ fontFamily: "monospace", fontSize: 12 }}>{loadError}</div>
       </div>
@@ -565,7 +566,7 @@ export default function CoursesMap() {
                 setSearchOpen(true);
               }}
               onFocus={() => setSearchOpen(true)}
-              placeholder="Search courses"
+              placeholder={t("search_courses_plain")}
               style={{
                 flex: 1,
                 minWidth: 0,
@@ -585,8 +586,8 @@ export default function CoursesMap() {
                   setSearchQuery("");
                   setSearchOpen(false);
                 }}
-                aria-label="Clear course search"
-                title="Clear"
+                aria-label={t("clear_course_search")}
+                title={t("clear")}
                 style={{
                   border: "1px solid var(--border)",
                   background: "rgba(255,255,255,0.34)",
@@ -676,7 +677,7 @@ export default function CoursesMap() {
                     color: "rgba(17,17,17,0.62)",
                   }}
                 >
-                  No courses found.
+                  {t("no_courses_found")}
                 </div>
               )}
             </div>
@@ -706,7 +707,7 @@ export default function CoursesMap() {
           type="button"
           onClick={() => setMapStyle("map")}
           aria-pressed={mapStyle === "map"}
-          title="Standard map"
+          title={t("standard_map")}
           style={{
             border: 0,
             outline: 0,
@@ -727,14 +728,14 @@ export default function CoursesMap() {
               "background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease, opacity 0.15s ease",
           }}
         >
-          Map
+          {t("map")}
         </button>
 
         <button
           type="button"
           onClick={() => setMapStyle("satellite")}
           aria-pressed={mapStyle === "satellite"}
-          title="Satellite hybrid"
+          title={t("satellite_hybrid")}
           style={{
             border: 0,
             outline: 0,
@@ -756,7 +757,7 @@ export default function CoursesMap() {
               "background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease, opacity 0.15s ease",
           }}
         >
-          Satellite
+          {t("satellite")}
         </button>
       </div>
 
@@ -794,7 +795,7 @@ export default function CoursesMap() {
           Number.isFinite(userPos.lat) &&
           Number.isFinite(userPos.lon) && (
             <CircleMarker center={[userPos.lat, userPos.lon]} radius={8}>
-              <Popup>Your location</Popup>
+              <Popup>{t("your_location")}</Popup>
             </CircleMarker>
           )}
 
@@ -819,7 +820,7 @@ export default function CoursesMap() {
               .filter(Boolean)
               .join(", ");
             const websiteUrl = normalizeWebsite(c.website);
-            const golfMeta = [c.holes ? `${c.holes} holes` : null, c.par ? `Par ${c.par}` : null]
+            const golfMeta = [c.holes ? `${c.holes} ${t("holes")}` : null, c.par ? `Par ${c.par}` : null]
               .filter(Boolean)
               .join(" / ");
             const accessLabel = c.access?.replaceAll("_", " ");
@@ -975,7 +976,7 @@ export default function CoursesMap() {
                         boxSizing: "border-box",
                       }}
                     >
-                      Open Course
+                      {t("open_course")}
                     </button>
 
                     <CourseFollowButton courseId={c.id} fullWidth />
@@ -1003,7 +1004,7 @@ export default function CoursesMap() {
                         boxSizing: "border-box",
                       }}
                     >
-                      Check on Google
+                      {t("check_on_google")}
                     </a>
 
                     <a
@@ -1029,7 +1030,7 @@ export default function CoursesMap() {
                         boxSizing: "border-box",
                       }}
                     >
-                      Bring me there
+                      {t("bring_me_there")}
                     </a>
                   </div>
 
@@ -1049,7 +1050,7 @@ export default function CoursesMap() {
                         textDecoration: "none",
                       }}
                     >
-                      Visit website
+                      {t("visit_website")}
                     </a>
                   ) : null}
                 </div>
@@ -1061,8 +1062,8 @@ export default function CoursesMap() {
       {hasValidUserPos && (
         <button
           type="button"
-          title="My location"
-          aria-label="My location"
+          title={t("my_location")}
+          aria-label={t("my_location")}
           onClick={() => {
             if (!mapRef || userLat === null || userLon === null) return;
             mapRef.setView([userLat, userLon], 13, { animate: true });

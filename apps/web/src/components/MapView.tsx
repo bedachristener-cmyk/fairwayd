@@ -9,6 +9,7 @@ import {
 } from "react-leaflet";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
 import L from "leaflet";
+import { t } from "../i18n/strings";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
@@ -109,7 +110,7 @@ function CoursesByBoundsLoader({
           take: "1500",
         });
 
-        onStatus("Loading courses...");
+        onStatus(t("loading_courses"));
         const res = await fetch(
           `${API_BASE}/courses/in-bounds?${qs.toString()}`,
         );
@@ -121,10 +122,10 @@ function CoursesByBoundsLoader({
         if (!alive) return;
 
         onItems(items);
-        onStatus(`${items.length} courses in view`);
+        onStatus(`${items.length} ${t("courses_in_view")}`);
       } catch {
         if (!alive) return;
-        onStatus("Failed to load courses");
+        onStatus(t("failed_load_courses"));
       }
     };
 
@@ -148,7 +149,7 @@ export default function MapView() {
   const [center, setCenter] = useState<[number, number]>([47.5596, 7.5886]);
   const [radiusM] = useState(50000);
   const [courses, setCourses] = useState<CourseLite[]>([]);
-  const [loadStatus, setLoadStatus] = useState("Loading courses...");
+  const [loadStatus, setLoadStatus] = useState(t("loading_courses"));
 
   // Follow UI state
   const token = localStorage.getItem("fairwayd_token") || "";
@@ -241,7 +242,7 @@ export default function MapView() {
         <Circle center={center} radius={radiusM} />
 
         <Marker position={center} icon={meIcon}>
-          <Popup>You are here</Popup>
+          <Popup>{t("you_are_here")}</Popup>
         </Marker>
 
         <CoursesByBoundsLoader onStatus={setLoadStatus} onItems={setCourses} />
@@ -270,7 +271,7 @@ export default function MapView() {
                       textDecoration: "underline",
                     }}
                     onClick={() => onSelectCourse(c)}
-                    title="Open feed for this course"
+                    title={t("open_feed_for_course")}
                   >
                     {c.name}
                   </div>
@@ -291,10 +292,10 @@ export default function MapView() {
                       }}
                     >
                       {loading
-                        ? "Loading..."
+                        ? t("loading")
                         : following
-                          ? "Following"
-                          : "+ Follow"}
+                          ? t("following")
+                          : `+ ${t("follow")}`}
                     </button>
 
                     {!token ? (
@@ -305,7 +306,7 @@ export default function MapView() {
                           alignSelf: "center",
                         }}
                       >
-                        Login nötig
+                        {t("login_required")}
                       </span>
                     ) : null}
                   </div>

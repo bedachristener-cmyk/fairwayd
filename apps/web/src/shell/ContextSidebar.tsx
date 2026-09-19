@@ -10,6 +10,7 @@ import { useAuth } from "../auth/AuthContext";
 import { DESTINATION_INFO } from "../data/destinationInfo";
 import { useCourseFollow } from "../hooks/useCourseFollow";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
+import { t } from "../i18n/strings";
 
 type ContextCourse = {
   id: string;
@@ -338,7 +339,7 @@ function MiniMap({
         })}
         {validCourses.length === 0 ? (
           <Marker position={[center.lat, center.lon]} icon={userIcon}>
-            <Popup>Current area</Popup>
+            <Popup>{t("current_area")}</Popup>
           </Marker>
         ) : null}
       </MapContainer>
@@ -437,7 +438,7 @@ function AvatarStack({ users }: { users: ContextUser[] }) {
   }
 
   return (
-    <div className="fw-context-avatar-stack" aria-label="Golfers">
+    <div className="fw-context-avatar-stack" aria-label={t("golfers")}>
       {visualUsers.map((user) => (
         <AvatarStackItem key={user.id} user={user} />
       ))}
@@ -451,7 +452,7 @@ function CourseIconStack({ courses }: { courses: ContextCourse[] }) {
   if (visibleCourses.length === 0) return <CourseThumb />;
 
   return (
-    <div className="fw-context-course-stack" aria-label="Courses">
+    <div className="fw-context-course-stack" aria-label={t("courses")}>
       {visibleCourses.map((course) => (
         <CourseThumb key={course.id} course={course} />
       ))}
@@ -511,22 +512,22 @@ function CoursesCard({
   followingCount: number | null;
 }) {
   return (
-    <Card title="Courses">
+    <Card title={t("courses")}>
       <div className="fw-context-list">
         {followingCount != null ? (
           <Link to="/following" className="fw-context-row">
             <CourseIconStack courses={followedCourses} />
             <div>
-              <strong>Courses I follow</strong>
-              <span>{followingCount} followed</span>
+              <strong>{t("courses_i_follow")}</strong>
+              <span>{followingCount} {t("followed")}</span>
             </div>
           </Link>
         ) : null}
         <Link to="/map" className="fw-context-row">
           <CourseThumb variant="map" />
           <div>
-            <strong>Open course map</strong>
-            <span>Browse courses nearby and abroad</span>
+            <strong>{t("open_course_map")}</strong>
+            <span>{t("browse_courses_nearby_abroad")}</span>
           </div>
         </Link>
       </div>
@@ -546,14 +547,14 @@ function PeopleCard({
   requestCount: number | null;
 }) {
   return (
-    <Card title="People">
+    <Card title={t("people")}>
       <div className="fw-context-list">
         {followingUsers.length > 0 ? (
           <Link to="/friends" className="fw-context-row">
             <AvatarStack users={followingUsers} />
             <div>
-              <strong>Golfers I follow</strong>
-              <span>{followingUsers.length} golfers</span>
+              <strong>{t("golfers_i_follow")}</strong>
+              <span>{followingUsers.length} {t("golfers")}</span>
             </div>
           </Link>
         ) : null}
@@ -561,8 +562,8 @@ function PeopleCard({
           <Link to="/follow-requests" className="fw-context-row">
             <AvatarStack users={sentUsers} />
             <div>
-              <strong>Golfers I requested</strong>
-              <span>{sentUsers.length} pending</span>
+              <strong>{t("golfers_i_requested")}</strong>
+              <span>{sentUsers.length} {t("pending")}</span>
             </div>
           </Link>
         ) : null}
@@ -570,16 +571,16 @@ function PeopleCard({
           <Link to="/follow-requests" className="fw-context-row">
             <AvatarStack users={requestUsers} />
             <div>
-              <strong>Follow requests</strong>
-              <span>{requestCount} pending</span>
+              <strong>{t("follow_requests")}</strong>
+              <span>{requestCount} {t("pending")}</span>
             </div>
           </Link>
         ) : null}
         <Link to="/users" className="fw-context-row">
           <div className="fw-context-row__mark" aria-hidden="true" />
           <div>
-            <strong>Find golfers</strong>
-            <span>Search the Fairwayd community</span>
+            <strong>{t("find_golfers")}</strong>
+            <span>{t("search_fairwayd_community")}</span>
           </div>
         </Link>
       </div>
@@ -605,7 +606,7 @@ function SelectedCourseCard({
   const website = normalizeWebsite(course.website);
 
   return (
-    <Card title="Selected course">
+    <Card title={t("selected_course")}>
       <div className="fw-context-selected">
         <CourseThumb course={course} />
         <strong>{course.name}</strong>
@@ -616,20 +617,20 @@ function SelectedCourseCard({
         </span>
         <div className="fw-context-facts">
           <Fact
-            label="Rating"
+            label={t("rating")}
             value={
               rating?.count
                 ? `${rating.overall.toFixed(1)} / ${rating.count} reviews`
                 : ""
             }
           />
-          <Fact label="Access" value={formatAccess(course.access)} />
+          <Fact label={t("access")} value={formatAccess(course.access)} />
           <Fact
-            label="Website"
+            label={t("website")}
             value={
               website ? (
                 <a href={website} target="_blank" rel="noreferrer">
-                  Visit site
+                  {t("visit_site")}
                 </a>
               ) : (
                 ""
@@ -638,10 +639,10 @@ function SelectedCourseCard({
           />
         </div>
         <div className="fw-context-actions">
-          <Link to={`/courses/${course.id}`}>View course</Link>
+          <Link to={`/courses/${course.id}`}>{t("view_course")}</Link>
           {token ? (
             <button type="button" onClick={toggleFollow} disabled={followBusy}>
-              {followBusy ? "Saving..." : isFollowing ? "Following" : "Follow"}
+              {followBusy ? t("saving") : isFollowing ? t("following") : t("follow")}
             </button>
           ) : null}
         </div>
@@ -1011,7 +1012,7 @@ export default function ContextSidebar() {
     );
   } else if (destinationSlug && destinationInfo?.overviewDescription) {
     pageSpecificCard = (
-      <Card title="About this destination">
+      <Card title={t("about_this_destination")}>
         <p className="fw-context-copy">{destinationInfo.overviewDescription}</p>
         {destinationCourses.length > 0 ? (
           <div className="fw-context-page-card__courses">
@@ -1033,14 +1034,14 @@ export default function ContextSidebar() {
     );
   } else if (isFeedRoute && (followingUsers.length > 0 || requestCount != null)) {
     pageSpecificCard = (
-      <Card title="Network context">
+      <Card title={t("network_context")}>
         <div className="fw-context-list">
           {followingUsers.length > 0 ? (
             <Link to="/friends" className="fw-context-row">
               <AvatarStack users={followingUsers} />
               <div>
-                <strong>Following activity</strong>
-                <span>{followingUsers.length} golfers in your network</span>
+                <strong>{t("following_activity")}</strong>
+                <span>{followingUsers.length} {t("golfers_in_network")}</span>
               </div>
             </Link>
           ) : null}
@@ -1048,8 +1049,8 @@ export default function ContextSidebar() {
             <Link to="/follow-requests" className="fw-context-row">
               <AvatarStack users={requestUsers} />
               <div>
-                <strong>Follow requests</strong>
-                <span>{requestCount} pending</span>
+                <strong>{t("follow_requests")}</strong>
+                <span>{requestCount} {t("pending")}</span>
               </div>
             </Link>
           ) : null}
@@ -1072,10 +1073,10 @@ export default function ContextSidebar() {
   }
 
   return (
-    <aside className="fw-context-sidebar" aria-label="Context sidebar">
+    <aside className="fw-context-sidebar" aria-label={t("context_sidebar")}>
       <div className="fw-context-stack">
         <Card
-          title="Map"
+          title={t("map")}
           action={
             <button
               type="button"

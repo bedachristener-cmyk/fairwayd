@@ -563,8 +563,8 @@ export default function PostCard({
       if (navigator.share) {
         try {
           await navigator.share({
-            title: "Fairwayd post",
-            text: "Check out this golf post on Fairwayd",
+            title: t("fairwayd_post"),
+            text: t("share_post_text"),
             url: shareUrl,
           });
           return;
@@ -849,9 +849,9 @@ export default function PostCard({
                         ? `\u2B50 ${courseRating.overall.toFixed(1)} \u2022 ${
                             courseRating.count
                           } ${
-                            courseRating.count === 1 ? "rating" : "ratings"
-                          } \u2022 Rate course`
-                        : "No course rating yet \u2022 Be the first"}
+                            courseRating.count === 1 ? t("rating_singular") : t("rating_plural")
+                          } \u2022 ${t("rate_course")}`
+                        : `${t("no_course_rating_yet")} \u2022 ${t("be_the_first")}`}
                     </span>
                   </button>
                 </div>
@@ -1314,7 +1314,7 @@ export default function PostCard({
                         stopGalleryControlEvent(e);
                         showPreviousImage();
                       }}
-                      aria-label="Previous image"
+                      aria-label={t("previous_image")}
                       style={{
                         position: "absolute",
                         left: 10,
@@ -1351,7 +1351,7 @@ export default function PostCard({
                         stopGalleryControlEvent(e);
                         showNextImage();
                       }}
-                      aria-label="Next image"
+                      aria-label={t("next_image")}
                       style={{
                         position: "absolute",
                         right: 10,

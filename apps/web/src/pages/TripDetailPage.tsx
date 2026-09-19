@@ -6415,6 +6415,8 @@ export default function TripDetailPage() {
     const accent = calendarItemAccent(item);
     const canEditCurrentItem = canEditTripItem(item);
     const courseId = item.course?.id ?? item.courseId;
+    const metadataRows = overviewMetadataRowsForItem(item, displayKey);
+    const metadata = renderOverviewMetadataRows(metadataRows);
 
     return (
       <article
@@ -6438,17 +6440,19 @@ export default function TripDetailPage() {
           onTitleClick={courseId ? () => nav(`/courses/${courseId}`) : undefined}
         />
 
-        <div
-          className="fw-trip-item-card__body"
-          style={{
-            padding: "12px",
-            display: "grid",
-            gap: 10,
-            background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
-          }}
-        >
-          {renderOverviewMetadataRows(overviewMetadataRowsForItem(item, displayKey))}
-        </div>
+        {metadata ? (
+          <div
+            className="fw-trip-item-card__body"
+            style={{
+              padding: "12px",
+              display: "grid",
+              gap: 10,
+              background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
+            }}
+          >
+            {metadata}
+          </div>
+        ) : null}
 
         <div
           className="fw-trip-item-card__actions"
@@ -7120,6 +7124,7 @@ export default function TripDetailPage() {
 
               const accent = calendarItemAccent(item);
               const metadataRows = overviewMetadataRowsForItem(item, displayKey);
+              const metadata = renderOverviewMetadataRows(metadataRows);
 
               return (
                 <article
@@ -7142,17 +7147,19 @@ export default function TripDetailPage() {
                     variant="overview"
                   />
 
-                  <div
-                    className="fw-trip-item-card__body"
-                    style={{
-                      padding: "12px",
-                      display: "grid",
-                      gap: 10,
-                      background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
-                    }}
-                  >
-                    {renderOverviewMetadataRows(metadataRows)}
-                  </div>
+                  {metadata ? (
+                    <div
+                      className="fw-trip-item-card__body"
+                      style={{
+                        padding: "12px",
+                        display: "grid",
+                        gap: 10,
+                        background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
+                      }}
+                    >
+                      {metadata}
+                    </div>
+                  ) : null}
 
                   <div
                     className="fw-trip-item-card__actions"

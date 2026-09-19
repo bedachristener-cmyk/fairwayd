@@ -393,7 +393,7 @@ function FeaturedRegionsSection({
             color: "var(--text)",
           }}
         >
-          Featured Regions
+          {t("featured_regions")}
         </div>
         <div
           style={{
@@ -402,7 +402,7 @@ function FeaturedRegionsSection({
             lineHeight: 1.45,
           }}
         >
-          Start with the most recognizable golf areas for this destination.
+          {t("featured_regions_intro")}
         </div>
       </div>
 
@@ -516,7 +516,7 @@ function FeaturedRegionsSection({
                         "color-mix(in srgb, var(--card) 74%, transparent)",
                     }}
                   >
-                    {count} {count === 1 ? "course" : "courses"}
+                    {count} {count === 1 ? t("course_singular") : t("course_plural")}
                   </div>
                 </div>
                 <div
@@ -526,7 +526,7 @@ function FeaturedRegionsSection({
                     lineHeight: hasImage ? 1.4 : 1.48,
                   }}
                 >
-                  {region.description || `Explore golf around ${title}.`}
+                  {region.description || `${t("explore_golf_around")} ${title}.`}
                 </div>
                 <div
                   style={{
@@ -535,7 +535,7 @@ function FeaturedRegionsSection({
                     fontWeight: 900,
                   }}
                 >
-                  Explore region
+                  {t("explore_region")}
                 </div>
               </div>
             </button>
@@ -563,7 +563,7 @@ function FeaturedRegionsSection({
             cursor: "pointer",
           }}
         >
-          {showAllRegions ? "Show fewer regions" : "Show more regions"}
+          {showAllRegions ? t("show_fewer_regions") : t("show_more_regions")}
         </button>
       ) : null}
     </div>
@@ -2255,7 +2255,7 @@ export default function DestinationPage() {
                       lineHeight: 1.45,
                     }}
                   >
-                    Practical notes for planning a smoother golf trip.
+                    {t("practical_notes_intro")}
                   </div>
                 </div>
 
@@ -2507,7 +2507,7 @@ export default function DestinationPage() {
                   <textarea
                     value={tipText}
                     maxLength={500}
-                    placeholder="Share a practical golf travel tip..."
+                    placeholder={t("share_practical_tip_placeholder")}
                     onChange={(event) => {
                       setTipText(event.target.value.slice(0, 500));
                       if (tipError) setTipError(null);
@@ -2593,7 +2593,7 @@ export default function DestinationPage() {
                     lineHeight: 1.45,
                   }}
                 >
-                  Sign in to share a practical tip for this destination.
+                  {t("sign_in_share_practical_tip")}
                 </div>
               )}
 
@@ -2760,8 +2760,8 @@ export default function DestinationPage() {
                             disabled={!token || helpfulBusyTipId === tip.id}
                             title={
                               !token
-                                ? "Sign in to mark useful"
-                                : "Mark as useful"
+                                ? t("sign_in_mark_useful")
+                                : t("mark_as_useful")
                             }
                             style={{
                               minHeight: 30,
@@ -2796,7 +2796,7 @@ export default function DestinationPage() {
                           >
                             <ThumbsUp size={13} strokeWidth={2.3} />
                             <span>
-                              Useful
+                              {t("useful")}
                               {tip.helpfulCount > 0
                                 ? ` · ${tip.helpfulCount}`
                                 : ""}
@@ -2812,7 +2812,7 @@ export default function DestinationPage() {
                                 lineHeight: 1.25,
                               }}
                             >
-                              Sign in to mark
+                              {t("sign_in_to_mark")}
                             </div>
                           ) : null}
                         </div>
@@ -3176,7 +3176,7 @@ export default function DestinationPage() {
                               minWidth: 0,
                             }}
                           >
-                            Open Course
+                            {t("open_course")}
                           </button>
                           <button
                             type="button"
@@ -3521,7 +3521,7 @@ export default function DestinationPage() {
                           width: isMobile ? "100%" : "fit-content",
                         }}
                       >
-                        Open Course
+                        {t("open_course")}
                       </button>
                     </div>
                   ))}
@@ -3555,7 +3555,7 @@ export default function DestinationPage() {
                     lineHeight: 1.45,
                   }}
                 >
-                  Try another city, region, or course name in this destination.
+                  {t("try_another_course_search")}
                 </div>
               </div>
             ) : (
@@ -3578,7 +3578,7 @@ export default function DestinationPage() {
                         lineHeight: 1.2,
                       }}
                     >
-                      All {activeRegionTitle} courses
+                      {t("all_region_courses_prefix")} {activeRegionTitle} {t("course_plural")}
                     </div>
                     <div
                       style={{
@@ -3589,7 +3589,7 @@ export default function DestinationPage() {
                       }}
                     >
                       {regularFilteredItems.length}{" "}
-                      {regularFilteredItems.length === 1 ? "course" : "courses"}
+                      {regularFilteredItems.length === 1 ? t("course_singular") : t("course_plural")}
                     </div>
                   </div>
                 ) : null}
@@ -3609,7 +3609,7 @@ export default function DestinationPage() {
                     lineHeight: 1.45,
                   }}
                 >
-                  All matching courses are included in the featured picks above.
+                  {t("all_matching_courses_featured")}
                 </div>
               ) : (
               regularFilteredItems.map((c: Course) => {
@@ -3736,7 +3736,7 @@ export default function DestinationPage() {
                             minWidth: 0,
                           }}
                         >
-                          Open Course
+                          {t("open_course")}
                         </button>
 
                         <button
@@ -3831,7 +3831,7 @@ export default function DestinationPage() {
                       lineHeight: 1.45,
                     }}
                   >
-                    Recent golf moments and course notes from this destination.
+                    {t("destination_posts_intro")}
                   </div>
                 </div>
 
@@ -3856,7 +3856,7 @@ export default function DestinationPage() {
                 >
                   {postsLoading
                     ? t("loading_posts")
-                    : `${posts.length} ${posts.length === 1 ? "post" : "posts"}`}
+                    : `${posts.length} ${posts.length === 1 ? t("post_singular") : t("post_plural")}`}
                 </div>
               </div>
             </div>
@@ -3885,7 +3885,7 @@ export default function DestinationPage() {
                     lineHeight: 1.45,
                   }}
                 >
-                  Loading the latest destination activity.
+                  {t("loading_destination_activity")}
                 </div>
               </div>
             ) : posts.length === 0 ? (
@@ -3912,8 +3912,7 @@ export default function DestinationPage() {
                     lineHeight: 1.45,
                   }}
                 >
-                  When golfers share rounds or travel notes here, they will
-                  appear in this feed.
+                  {t("destination_posts_empty_body")}
                 </div>
               </div>
             ) : (

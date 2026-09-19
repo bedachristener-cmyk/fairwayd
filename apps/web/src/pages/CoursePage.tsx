@@ -8,6 +8,7 @@ import PostCard from "../components/PostCard";
 import { DESTINATION_INFO } from "../data/destinationInfo";
 import { getMonetizationLinksForCourse } from "../data/monetization";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
+import { t } from "../i18n/strings";
 import {
   saveRating,
   getMyRating,
@@ -720,7 +721,7 @@ export default function CoursePage() {
       setRatingSaved(true);
     } catch (err) {
       console.error("Save rating failed", err);
-      alert("Failed to save rating");
+      alert(t("failed_save_rating"));
     }
   };
 
@@ -753,7 +754,7 @@ export default function CoursePage() {
     ? `https://www.google.com/maps/dir/?api=1&destination=${course.lat},${course.lon}`
     : null;
   const metadataPills = [
-    course?.holes ? `${course.holes} holes` : null,
+    course?.holes ? `${course.holes} ${t("holes")}` : null,
     course?.par ? `Par ${course.par}` : null,
     formatAccessLabel(course?.access),
   ].filter(Boolean);
@@ -776,20 +777,20 @@ export default function CoursePage() {
     !!course?.website ||
     !!course?.phone;
   const availableDesktopTabs = [
-    { key: "posts" as const, label: "Posts", count: posts.length, show: true },
+    { key: "posts" as const, label: t("posts"), count: posts.length, show: true },
     {
       key: "reviews" as const,
-      label: "Reviews",
+      label: t("reviews"),
       count: ratingSummary?.count ?? 0,
       show: !!ratingSummary || !!token || !!myRating,
     },
     {
       key: "photos" as const,
-      label: "Photos",
+      label: t("photos"),
       count: photoImages.length,
       show: photoImages.length > 0,
     },
-    { key: "about" as const, label: "About", count: 0, show: hasAbout },
+    { key: "about" as const, label: t("about"), count: 0, show: hasAbout },
   ].filter((tab) => tab.show);
   const activeDesktopSection = availableDesktopTabs.some(
     (tab) => tab.key === desktopSection,
@@ -828,7 +829,7 @@ export default function CoursePage() {
               color: "var(--text)",
             }}
           >
-            {myRating ? "Edit your rating" : "Rate this course"}
+            {myRating ? t("edit_your_rating") : t("rate_this_course")}
           </div>
 
           <div
@@ -841,11 +842,11 @@ export default function CoursePage() {
           >
             {showDetailedRatings
               ? myRating
-                ? "Update your detailed rating. Overall is calculated automatically."
-                : "Add detailed ratings. Overall is calculated automatically."
+                ? t("rating_help_update_detailed")
+                : t("rating_help_add_detailed")
               : myRating
-                ? "You already rated this course. Adjust your overall rating or add detailed ratings."
-                : "Start with a quick overall rating. Detailed ratings are optional."}
+                ? t("rating_help_adjust")
+                : t("rating_help_quick")}
           </div>
         </div>
 
@@ -884,7 +885,7 @@ export default function CoursePage() {
       >
         {!showDetailedRatings && (
           <RatingSliderRow
-            label="Overall"
+            label={t("rating_overall")}
             value={draftRating.overall}
             onChange={(next) =>
               setDraftRating((prev) => ({ ...prev, overall: next }))
@@ -929,7 +930,7 @@ export default function CoursePage() {
               fontSize: 13,
             }}
           >
-            {showDetailedRatings ? "Hide detailed ratings" : "Add detailed ratings"}
+            {showDetailedRatings ? t("hide_detailed_ratings") : t("add_detailed_ratings")}
           </button>
         </div>
 
@@ -942,7 +943,7 @@ export default function CoursePage() {
             }}
           >
             <RatingSliderRow
-              label="Condition"
+              label={t("rating_condition")}
               value={draftRating.condition}
               onChange={(next) =>
                 setDraftRating((prev) => ({ ...prev, condition: next }))
@@ -950,7 +951,7 @@ export default function CoursePage() {
             />
 
             <RatingSliderRow
-              label="Layout"
+              label={t("rating_layout")}
               value={draftRating.layout}
               onChange={(next) =>
                 setDraftRating((prev) => ({ ...prev, layout: next }))
@@ -958,7 +959,7 @@ export default function CoursePage() {
             />
 
             <RatingSliderRow
-              label="Scenery"
+              label={t("rating_scenery")}
               value={draftRating.scenery}
               onChange={(next) =>
                 setDraftRating((prev) => ({ ...prev, scenery: next }))
@@ -966,7 +967,7 @@ export default function CoursePage() {
             />
 
             <RatingSliderRow
-              label="Value"
+              label={t("rating_value")}
               value={draftRating.value}
               onChange={(next) =>
                 setDraftRating((prev) => ({ ...prev, value: next }))
@@ -997,11 +998,11 @@ export default function CoursePage() {
             cursor: "pointer",
           }}
         >
-          {myRating ? "Update rating" : "Save rating"}
+          {myRating ? t("update_rating") : t("save_rating")}
         </button>
 
         <button type="button" onClick={handleCloseRatingPanel} style={secondaryBtnStyle}>
-          Close
+          {t("close")}
         </button>
       </div>
     </section>
@@ -1015,25 +1016,25 @@ export default function CoursePage() {
           className="fw-course-desktop-back"
           onClick={() => nav("/map")}
         >
-          Back to map
+          {t("back_to_map")}
         </button>
 
-        <section className="fw-course-desktop-hero" aria-label="Course overview">
+        <section className="fw-course-desktop-hero" aria-label={t("course_overview")}>
           <img
             className="fw-course-desktop-hero__image"
             src={heroImageUrl}
-            alt={course?.name ? `${course.name} golf course` : "Golf course"}
+            alt={course?.name ? `${course.name} ${t("golf_course")}` : t("golf_course")}
           />
         </section>
 
         <section className="fw-course-desktop-identity">
           <div className="fw-course-desktop-identity__copy">
-            <div className="fw-course-desktop-eyebrow">Golf course</div>
-            <h1>{course?.name ?? "Course"}</h1>
+            <div className="fw-course-desktop-eyebrow">{t("golf_course")}</div>
+            <h1>{course?.name ?? t("course")}</h1>
             {locationLine ? <p>{locationLine}</p> : null}
           </div>
 
-          <div className="fw-course-desktop-actions" aria-label="Course actions">
+          <div className="fw-course-desktop-actions" aria-label={t("course_actions")}>
             <button
               type="button"
               className="fw-course-desktop-action fw-course-desktop-action--soft"
@@ -1052,7 +1053,7 @@ export default function CoursePage() {
                 });
               }}
             >
-              Post here
+              {t("post_here")}
             </button>
 
             <button
@@ -1063,7 +1064,7 @@ export default function CoursePage() {
               onClick={handleFollowToggle}
               disabled={followBusy || !token}
             >
-              {followBusy ? "Saving..." : following ? "Following" : "Follow"}
+              {followBusy ? t("saving") : following ? t("following") : t("follow")}
             </button>
 
             {websiteUrl ? (
@@ -1073,7 +1074,7 @@ export default function CoursePage() {
                 rel="noreferrer"
                 className="fw-course-desktop-action"
               >
-                Website
+                {t("website")}
               </a>
             ) : null}
 
@@ -1084,7 +1085,7 @@ export default function CoursePage() {
                 rel="noreferrer"
                 className="fw-course-desktop-action fw-course-desktop-action--primary"
               >
-                Directions
+                {t("directions")}
               </a>
             ) : null}
           </div>
@@ -1100,11 +1101,11 @@ export default function CoursePage() {
           {!token ? (
             <div className="fw-course-desktop-signin">
               <div>
-                <strong>Sign in for course activity</strong>
-                <span>Follow this course, rate it and join the conversation.</span>
+                <strong>{t("sign_in_for_course_activity")}</strong>
+                <span>{t("course_activity_signin_help")}</span>
               </div>
               <button type="button" onClick={() => nav("/")}>
-                Sign in
+                {t("sign_in")}
               </button>
             </div>
           ) : null}
@@ -1116,22 +1117,22 @@ export default function CoursePage() {
             canRate={!!token}
             ctaLabel={
               showRatingPanel
-                ? "Hide rating form"
+                ? t("hide_rating_form")
                 : myRating
-                  ? "Edit your rating"
-                  : "Rate this course"
+                  ? t("edit_your_rating")
+                  : t("rate_this_course")
             }
             onRateClick={handleRatingClick}
           />
         </section>
 
         {ratingSaved && (
-          <div className="fw-course-desktop-status">Rating saved</div>
+          <div className="fw-course-desktop-status">{t("rating_saved")}</div>
         )}
 
         {ratingPanel}
 
-        <nav className="fw-course-desktop-tabs" aria-label="Course sections">
+        <nav className="fw-course-desktop-tabs" aria-label={t("course_sections")}>
           {availableDesktopTabs.map((tab) => (
             <button
               key={tab.key}
@@ -1155,10 +1156,10 @@ export default function CoursePage() {
               <div className="fw-course-desktop-empty">
                 <strong>
                   {!token
-                    ? "No public posts available yet"
-                    : "No posts for this course yet"}
+                    ? t("no_public_posts_available")
+                    : t("no_posts_for_course")}
                 </strong>
-                <span>Be the first to share something from this course.</span>
+                <span>{t("be_first_share_course")}</span>
               </div>
             ) : (
               posts.map((p) => <PostCard key={p.id} post={p} isMobile={false} />)
@@ -1173,10 +1174,10 @@ export default function CoursePage() {
               canRate={!!token}
               ctaLabel={
                 showRatingPanel
-                  ? "Hide rating form"
+                  ? t("hide_rating_form")
                   : myRating
-                    ? "Edit your rating"
-                    : "Rate this course"
+                    ? t("edit_your_rating")
+                    : t("rate_this_course")
               }
               onRateClick={handleRatingClick}
             />
@@ -1189,7 +1190,7 @@ export default function CoursePage() {
               <img
                 key={image.id}
                 src={image.url}
-                alt={course?.name ? `${course.name} post photo` : "Course post"}
+                alt={course?.name ? `${course.name} ${t("post_photo")}` : t("course_post")}
               />
             ))}
           </section>
@@ -1202,14 +1203,14 @@ export default function CoursePage() {
             <div className="fw-course-desktop-facts">
               {locationLine ? (
                 <div>
-                  <span>Location</span>
+                  <span>{t("location")}</span>
                   <strong>{locationLine}</strong>
                 </div>
               ) : null}
 
               {course?.holes ? (
                 <div>
-                  <span>Holes</span>
+                  <span>{t("holes")}</span>
                   <strong>{course.holes}</strong>
                 </div>
               ) : null}
@@ -1223,14 +1224,14 @@ export default function CoursePage() {
 
               {formatAccessLabel(course?.access) ? (
                 <div>
-                  <span>Access</span>
+                  <span>{t("access")}</span>
                   <strong>{formatAccessLabel(course?.access)}</strong>
                 </div>
               ) : null}
 
               {course?.phone ? (
                 <div>
-                  <span>Phone</span>
+                  <span>{t("phone")}</span>
                   <strong>{course.phone}</strong>
                 </div>
               ) : null}
@@ -1312,7 +1313,7 @@ export default function CoursePage() {
               color: "var(--text)",
             }}
           >
-            {course?.name ?? "Course"}
+            {course?.name ?? t("course")}
           </div>
 
           {locationLine ? (
@@ -1388,7 +1389,7 @@ export default function CoursePage() {
               maxWidth: "100%",
             }}
           >
-            Post here
+            {t("post_here")}
           </button>
         </div>
 
@@ -1436,7 +1437,7 @@ export default function CoursePage() {
               opacity: followBusy ? 0.72 : 1,
             }}
           >
-            {followBusy ? "Saving..." : following ? "✓ Following" : "Follow"}
+            {followBusy ? t("saving") : following ? `✓ ${t("following")}` : t("follow")}
           </button>
 
           {websiteUrl ? (
@@ -1449,7 +1450,7 @@ export default function CoursePage() {
                 textDecoration: "none",
               }}
             >
-              Website
+              {t("website")}
             </a>
           ) : null}
 
@@ -1463,7 +1464,7 @@ export default function CoursePage() {
                 textDecoration: "none",
               }}
             >
-              Directions
+              {t("directions")}
             </a>
           ) : null}
 
@@ -1482,7 +1483,7 @@ export default function CoursePage() {
             }}
           >
             <div style={{ fontSize: 14, fontWeight: 900, color: "var(--text)" }}>
-              Sign in to unlock the full course experience
+              {t("sign_in_unlock_course")}
             </div>
 
             <div
@@ -1492,7 +1493,7 @@ export default function CoursePage() {
                 lineHeight: 1.45,
               }}
             >
-              Follow this course, post updates and join the conversation.
+              {t("course_unlock_signin_help")}
             </div>
 
             <button
@@ -1509,7 +1510,7 @@ export default function CoursePage() {
                 width: "fit-content",
               }}
             >
-              Sign in
+              {t("sign_in")}
             </button>
           </div>
         ) : null}
@@ -1529,10 +1530,10 @@ export default function CoursePage() {
           canRate={!!token}
           ctaLabel={
             showRatingPanel
-              ? "Hide rating form"
+              ? t("hide_rating_form")
               : myRating
-                ? "Edit your rating"
-                : "Rate this course"
+                ? t("edit_your_rating")
+                : t("rate_this_course")
           }
           onRateClick={() => {
             if (!token) {
@@ -1580,7 +1581,7 @@ export default function CoursePage() {
             fontWeight: 700,
           }}
         >
-          ✅ Rating saved
+          ✓ {t("rating_saved")}
         </div>
       )}
 
@@ -1619,7 +1620,7 @@ export default function CoursePage() {
                   color: "var(--text)",
                 }}
               >
-                {myRating ? "Edit your rating" : "Rate this course"}
+                {myRating ? t("edit_your_rating") : t("rate_this_course")}
               </div>
 
               <div
@@ -1632,11 +1633,11 @@ export default function CoursePage() {
               >
                 {showDetailedRatings
                   ? myRating
-                    ? "Update your detailed rating. Overall is calculated automatically."
-                    : "Add detailed ratings. Overall is calculated automatically."
+                    ? t("rating_help_update_detailed")
+                    : t("rating_help_add_detailed")
                   : myRating
-                    ? "You already rated this course. Adjust your overall rating or add detailed ratings."
-                    : "Start with a quick overall rating. Detailed ratings are optional."}
+                    ? t("rating_help_adjust")
+                    : t("rating_help_quick")}
               </div>
             </div>
 
@@ -1675,7 +1676,7 @@ export default function CoursePage() {
           >
             {!showDetailedRatings && (
               <RatingSliderRow
-                label="Overall"
+                label={t("rating_overall")}
                 value={draftRating.overall}
                 onChange={(next) =>
                   setDraftRating((prev) => ({ ...prev, overall: next }))
@@ -1721,8 +1722,8 @@ export default function CoursePage() {
                 }}
               >
                 {showDetailedRatings
-                  ? "Hide detailed ratings"
-                  : "Add detailed ratings"}
+                  ? t("hide_detailed_ratings")
+                  : t("add_detailed_ratings")}
               </button>
             </div>
 
@@ -1735,7 +1736,7 @@ export default function CoursePage() {
                 }}
               >
                 <RatingSliderRow
-                  label="Condition"
+                  label={t("rating_condition")}
                   value={draftRating.condition}
                   onChange={(next) =>
                     setDraftRating((prev) => ({ ...prev, condition: next }))
@@ -1743,7 +1744,7 @@ export default function CoursePage() {
                 />
 
                 <RatingSliderRow
-                  label="Layout"
+                  label={t("rating_layout")}
                   value={draftRating.layout}
                   onChange={(next) =>
                     setDraftRating((prev) => ({ ...prev, layout: next }))
@@ -1751,7 +1752,7 @@ export default function CoursePage() {
                 />
 
                 <RatingSliderRow
-                  label="Scenery"
+                  label={t("rating_scenery")}
                   value={draftRating.scenery}
                   onChange={(next) =>
                     setDraftRating((prev) => ({ ...prev, scenery: next }))
@@ -1759,7 +1760,7 @@ export default function CoursePage() {
                 />
 
                 <RatingSliderRow
-                  label="Value"
+                  label={t("rating_value")}
                   value={draftRating.value}
                   onChange={(next) =>
                     setDraftRating((prev) => ({ ...prev, value: next }))
@@ -1823,7 +1824,7 @@ export default function CoursePage() {
                   setRatingSaved(true);
                 } catch (err) {
                   console.error("Save rating failed", err);
-                  alert("Failed to save rating");
+                  alert(t("failed_save_rating"));
                 }
               }}
               style={{
@@ -1836,7 +1837,7 @@ export default function CoursePage() {
                 cursor: "pointer",
               }}
             >
-              {myRating ? "Update rating" : "Save rating"}
+              {myRating ? t("update_rating") : t("save_rating")}
             </button>
 
             <button
@@ -1861,7 +1862,7 @@ export default function CoursePage() {
               }}
               style={secondaryBtnStyle}
             >
-              Close
+              {t("close")}
             </button>
           </div>
         </section>
@@ -1894,12 +1895,12 @@ export default function CoursePage() {
               style={{ fontSize: 18, marginBottom: 8, color: "var(--text)" }}
             >
               {!token
-                ? "Noch keine öffentlichen Posts verfügbar"
-                : "Noch keine Posts zu diesem Platz"}
+                ? t("no_public_posts_available")
+                : t("no_posts_for_course")}
             </div>
 
             <div style={{ opacity: 0.85, lineHeight: 1.5 }}>
-              Sei der Erste und teile etwas zu diesem Golfplatz.
+              {t("be_first_share_course")}
             </div>
           </div>
         ) : (

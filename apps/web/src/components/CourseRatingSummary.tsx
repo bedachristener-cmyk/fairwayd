@@ -1,4 +1,5 @@
 import type { RatingSummary as CourseRatingSummaryData } from "../api/ratings";
+import { t } from "../i18n/strings";
 
 type Props = {
   rating: CourseRatingSummaryData | null;
@@ -118,7 +119,7 @@ export default function CourseRatingSummary({
   ctaLabel,
 }: Props) {
   const resolvedCtaLabel =
-    ctaLabel ?? (canRate ? "Rate this course" : "Sign in to rate");
+    ctaLabel ?? (canRate ? t("rate_this_course") : t("sign_in_to_rate"));
 
   if (!rating) {
     return (
@@ -140,7 +141,7 @@ export default function CourseRatingSummary({
             color: "var(--text)",
           }}
         >
-          Course rating
+          {t("course_rating")}
         </div>
 
         <div
@@ -151,7 +152,7 @@ export default function CourseRatingSummary({
             lineHeight: 1.5,
           }}
         >
-          No ratings yet. Be the first golfer to rate this course.
+          {t("no_ratings_yet_course")}
         </div>
 
         <button
@@ -207,7 +208,7 @@ export default function CourseRatingSummary({
               color: "var(--text)",
             }}
           >
-            Course rating
+            {t("course_rating")}
           </div>
 
           <div
@@ -217,7 +218,7 @@ export default function CourseRatingSummary({
               color: "var(--sub)",
             }}
           >
-            Based on golfer feedback
+            {t("based_on_golfer_feedback")}
           </div>
         </div>
 
@@ -265,7 +266,7 @@ export default function CourseRatingSummary({
           {formatRating(rating.overall)}
           <StarPreview value={rating.overall} />
           <span style={{ color: "var(--sub)", fontWeight: 600 }}>
-            • {rating.count} reviews
+            • {rating.count} {rating.count === 1 ? t("review_singular") : t("review_plural")}
           </span>
         </span>
       </div>
@@ -277,10 +278,10 @@ export default function CourseRatingSummary({
           gap: 11,
         }}
       >
-        <RatingRow label="Condition" value={rating.breakdown.condition} />
-        <RatingRow label="Layout" value={rating.breakdown.layout} />
-        <RatingRow label="Scenery" value={rating.breakdown.scenery} />
-        <RatingRow label="Value" value={rating.breakdown.value} />
+        <RatingRow label={t("rating_condition")} value={rating.breakdown.condition} />
+        <RatingRow label={t("rating_layout")} value={rating.breakdown.layout} />
+        <RatingRow label={t("rating_scenery")} value={rating.breakdown.scenery} />
+        <RatingRow label={t("rating_value")} value={rating.breakdown.value} />
       </div>
 
       <button

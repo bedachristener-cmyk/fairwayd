@@ -306,15 +306,15 @@ function DesktopDestinationCard({
 
       <div className="fw-explore-destination-card__body">
         <div className="fw-explore-destination-card__copy">
-          <span>{visual.mood}</span>
+          <span>{t("golf_travel")}</span>
           <h3>{label}</h3>
-          <p>{visual.subtitle}</p>
+          <p>{t("destination_card_subtitle")}</p>
         </div>
 
         <div className="fw-explore-destination-card__meta">
           <span>{item.courseCount || 0} {t("course_plural")}</span>
-          <span>{item.tipsCount || 0} local notes</span>
-          {(item.followerCount || 0) > 0 ? <span>Trending</span> : null}
+          <span>{item.tipsCount || 0} {t("local_notes")}</span>
+          {(item.followerCount || 0) > 0 ? <span>{t("trending")}</span> : null}
         </div>
 
         {onFollow ? (
@@ -331,7 +331,7 @@ function DesktopDestinationCard({
             }}
             disabled={isBusy}
           >
-            {isBusy ? "Saving..." : isFollowing ? t("following") : t("follow")}
+            {isBusy ? t("saving") : isFollowing ? t("following") : t("follow")}
           </button>
         ) : null}
       </div>
@@ -348,7 +348,7 @@ function DesktopFreshTipCard({
 }) {
   const author =
     tip.user?.name ||
-    (tip.user?.handle ? `@${tip.user.handle}` : "Fairwayd golfer");
+    (tip.user?.handle ? `@${tip.user.handle}` : t("fairwayd_golfer"));
 
   return (
     <button
@@ -373,7 +373,7 @@ function DesktopFreshTipCard({
 
       <div className="fw-explore-note-card__footer">
         <span>{tip.destination.code}</span>
-        <span>Useful {tip.helpfulCount || 0}</span>
+        <span>{t("useful")} {tip.helpfulCount || 0}</span>
       </div>
     </button>
   );
@@ -425,7 +425,7 @@ function DestinationHeroCard({
       >
         <img
           src={visual.image}
-          alt={`${label} golf travel inspiration`}
+          alt={`${label} ${t("golf_travel_inspiration")}`}
           loading="lazy"
           onError={(event) => {
             event.currentTarget.style.display = "none";
@@ -522,7 +522,7 @@ function DestinationHeroCard({
                 whiteSpace: "nowrap",
               }}
             >
-              {visual.mood}
+              {t("golf_travel")}
             </div>
             <h2
               style={{
@@ -594,7 +594,7 @@ function DestinationHeroCard({
               whiteSpace: "nowrap",
             }}
           >
-            {visual.subtitle}
+            {t("destination_card_subtitle")}
           </div>
 
           <div
@@ -609,10 +609,10 @@ function DestinationHeroCard({
               {item.courseCount || 0} {t("course_plural")}
             </span>
             <span style={cinematicPillStyle}>
-              {item.tipsCount || 0} local notes
+              {item.tipsCount || 0} {t("local_notes")}
             </span>
             <span style={cinematicPillStyle}>
-              {(item.followerCount || 0) > 0 ? "Trending" : "Emerging"}
+              {(item.followerCount || 0) > 0 ? t("trending") : t("emerging")}
             </span>
           </div>
         </div>
@@ -889,11 +889,10 @@ export default function DestinationsPage() {
           <section className="fw-explore-desktop-hero">
             <img src={EXPLORE_HERO_IMAGE} alt="" loading="lazy" />
             <div className="fw-explore-desktop-hero__content">
-              <span className="fw-explore-desktop-eyebrow">Discovery</span>
-              <h1>Explore golf destinations</h1>
+              <span className="fw-explore-desktop-eyebrow">{t("discovery")}</span>
+              <h1>{t("explore_golf_destinations")}</h1>
               <p>
-                Browse countries shaped by memorable courses, local notes, and
-                travel-worthy fairways.
+                {t("explore_golf_destinations_intro")}
               </p>
 
               {!loading && !err ? (
@@ -927,16 +926,16 @@ export default function DestinationsPage() {
 
           {!loading && !err && visibleItems.length === 0 ? (
             <EmptyState
-              title="No destinations yet"
-              body="New golf destinations will appear here once they are available."
+              title={t("no_destinations_yet")}
+              body={t("no_destinations_body")}
             />
           ) : null}
 
           {!loading && !err && popularDestinations.length > 0 ? (
             <section className="fw-explore-desktop-section">
               <DesktopSectionHeader
-                title="Popular destinations"
-                description="Places golfers are following and exploring."
+                title={t("popular_destinations")}
+                description={t("popular_destinations_intro")}
               />
               <div className="fw-explore-popular-grid">
                 {popularDestinations.map((item) => {
@@ -958,8 +957,8 @@ export default function DestinationsPage() {
           {freshTips.length > 0 ? (
             <section className="fw-explore-desktop-section">
               <DesktopSectionHeader
-                title="Fresh local notes"
-                description="Recent practical tips from golfers around the world."
+                title={t("fresh_local_notes")}
+                description={t("fresh_local_notes_intro")}
               />
               <div className="fw-explore-notes-grid">
                 {freshTips.map((tip) => (
@@ -976,8 +975,8 @@ export default function DestinationsPage() {
           {!loading && !err && allDestinationCards.length > 0 ? (
             <section className="fw-explore-desktop-section">
               <DesktopSectionHeader
-                title="More destinations"
-                description="Browse the full destination list and follow the places on your golf travel radar."
+                title={t("more_destinations")}
+                description={t("more_destinations_intro")}
               />
               <div className="fw-explore-more-grid">
                 {allDestinationCards.map((item) => {
@@ -1108,7 +1107,7 @@ export default function DestinationsPage() {
                 textTransform: "uppercase",
               }}
             >
-              Discovery
+              {t("discovery")}
             </div>
 
             <h1
@@ -1122,7 +1121,7 @@ export default function DestinationsPage() {
                 maxWidth: 430,
               }}
             >
-              Explore golf destinations
+              {t("explore_golf_destinations")}
             </h1>
 
             <p
@@ -1134,8 +1133,7 @@ export default function DestinationsPage() {
                 lineHeight: 1.5,
               }}
             >
-              Browse countries shaped by memorable courses, local notes, and
-              travel-worthy fairways.
+              {t("explore_golf_destinations_intro")}
             </p>
           </div>
 
@@ -1218,8 +1216,8 @@ export default function DestinationsPage() {
 
         {!loading && !err && visibleItems.length === 0 ? (
           <EmptyState
-            title="No destinations yet"
-            body="New golf destinations will appear here once they are available."
+            title={t("no_destinations_yet")}
+            body={t("no_destinations_body")}
           />
         ) : null}
 
@@ -1247,7 +1245,7 @@ export default function DestinationsPage() {
                     letterSpacing: "-0.025em",
                   }}
                 >
-                  Popular destinations
+                  {t("popular_destinations")}
                 </div>
                 <div
                   style={{
@@ -1256,7 +1254,7 @@ export default function DestinationsPage() {
                     lineHeight: 1.4,
                   }}
                 >
-                  Places golfers are following and exploring.
+                  {t("popular_destinations_intro")}
                 </div>
               </div>
             </div>
@@ -1299,7 +1297,7 @@ export default function DestinationsPage() {
                   letterSpacing: "-0.025em",
                 }}
               >
-                Fresh local notes
+                {t("fresh_local_notes")}
               </div>
               <div
                 style={{
@@ -1308,7 +1306,7 @@ export default function DestinationsPage() {
                   lineHeight: 1.4,
                 }}
               >
-                Recent practical tips from golfers around the world.
+                {t("fresh_local_notes_intro")}
               </div>
             </div>
 
@@ -1324,7 +1322,7 @@ export default function DestinationsPage() {
                   tip.user?.name ||
                   (tip.user?.handle
                     ? `@${tip.user.handle}`
-                    : "Fairwayd golfer");
+                    : t("fairwayd_golfer"));
 
                 return (
                   <button
@@ -1425,7 +1423,7 @@ export default function DestinationsPage() {
                           fontWeight: 800,
                         }}
                       >
-                        Useful · {tip.helpfulCount || 0}
+                        {t("useful")} · {tip.helpfulCount || 0}
                       </span>
                     </div>
 

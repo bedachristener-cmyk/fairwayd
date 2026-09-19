@@ -39,6 +39,71 @@ export async function mockFairwaydApi(page: Page) {
       return json(route, allCourses);
     }
 
+    if (path === "/api/posts/feed") {
+      const course = allCourses[0];
+      return json(route, {
+        items: course
+          ? [
+              {
+                id: "post-feed-1",
+                content: "Backend post text stays unchanged.",
+                createdAt: "2026-01-01T12:00:00.000Z",
+                visibility: "PUBLIC",
+                course,
+                user: mockUser,
+                images: [],
+                likes: [],
+                comments: [],
+                _count: { likes: 0, comments: 0 },
+              },
+            ]
+          : [],
+      });
+    }
+
+    const coursePostsMatch = path.match(/^\/api\/posts\/course\/([^/]+)$/);
+    if (coursePostsMatch) {
+      return json(route, { items: [] });
+    }
+
+    const ratingMatch = path.match(/^\/api\/ratings\/([^/]+)$/);
+    if (ratingMatch) {
+      return json(route, {
+        overall: 4.4,
+        count: 1,
+        breakdown: {
+          condition: 4.2,
+          layout: 4.5,
+          scenery: 4.6,
+          value: 4.1,
+        },
+      });
+    }
+
+    const myRatingMatch = path.match(/^\/api\/ratings\/me\/([^/]+)$/);
+    if (myRatingMatch) {
+      return json(route, {
+        overall: 4.2,
+        condition: 4.0,
+        layout: 4.4,
+        scenery: 4.5,
+        value: 4.0,
+      });
+    }
+
+    const courseDetailMatch = path.match(/^\/api\/courses\/([^/]+)$/);
+    if (courseDetailMatch) {
+      const course = allCourses.find((item) => item.id === courseDetailMatch[1]);
+      return course
+        ? json(route, course)
+        : route.fulfill({ status: 404, body: "Not found" });
+    }
+
+    const courseFollowingMatch = path.match(/^\/api\/courses\/([^/]+)\/following$/);
+    if (courseFollowingMatch) {
+      return json(route, { following: false });
+    }
+
     if (path === "/api/destinations") {
       return json(route, { items: destinations });
     }

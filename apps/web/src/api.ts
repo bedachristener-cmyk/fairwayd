@@ -4,14 +4,22 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 export const STORAGE_TOKEN_KEY = "fairwayd_token";
 
 // Backwards compatible keys (in case older code used other names)
-const FALLBACK_TOKEN_KEYS = ["token", "auth_token", "fairwayd.jwt"];
+const FALLBACK_TOKEN_KEYS = [
+  "token",
+  "jwt",
+  "access_token",
+  "auth_token",
+  "fairwayd.jwt",
+];
 
 export function getToken() {
-  const direct = localStorage.getItem(STORAGE_TOKEN_KEY);
+  const direct =
+    localStorage.getItem(STORAGE_TOKEN_KEY) ??
+    sessionStorage.getItem(STORAGE_TOKEN_KEY);
   if (direct) return direct;
 
   for (const k of FALLBACK_TOKEN_KEYS) {
-    const t = localStorage.getItem(k);
+    const t = localStorage.getItem(k) ?? sessionStorage.getItem(k);
     if (t) return t;
   }
   return null;

@@ -86,11 +86,11 @@ const SUPPORTED_POST_IMAGE_EXTENSIONS = new Set([
 ]);
 const VISIBILITY_OPTIONS: {
   value: "PUBLIC" | "FOLLOWERS" | "PRIVATE";
-  label: string;
+  labelKey: "visibility_public" | "visibility_followers" | "visibility_private";
 }[] = [
-  { value: "PUBLIC", label: "Public" },
-  { value: "FOLLOWERS", label: "Followers" },
-  { value: "PRIVATE", label: "Private" },
+  { value: "PUBLIC", labelKey: "visibility_public" },
+  { value: "FOLLOWERS", labelKey: "visibility_followers" },
+  { value: "PRIVATE", labelKey: "visibility_private" },
 ];
 
 function isSupportedPostImageFile(file: File) {
@@ -102,19 +102,12 @@ function isSupportedPostImageFile(file: File) {
   );
 }
 
-const FEED_FILTERS: { value: FeedFilter; label: string }[] = [
-  { value: "following", label: "👥 Following" },
-  { value: "courses", label: "⛳ Courses" },
-  { value: "destinations", label: "🌍 Travel" },
-  { value: "trending", label: "🔥 Trending" },
+const FEED_FILTERS: { value: FeedFilter; icon: string; labelKey: "following" | "golf_courses" | "travel" | "trending" }[] = [
+  { value: "following", icon: "👥", labelKey: "following" },
+  { value: "courses", icon: "⛳", labelKey: "golf_courses" },
+  { value: "destinations", icon: "🌍", labelKey: "travel" },
+  { value: "trending", icon: "🔥", labelKey: "trending" },
 ];
-
-const FEED_FILTER_MOBILE_LABELS: Record<FeedFilter, string> = {
-  following: "👥 Following",
-  courses: "⛳ Courses",
-  destinations: "🌍 Travel",
-  trending: "🔥 Trending",
-};
 
 async function resizeImage(file: File): Promise<File> {
   const img = document.createElement("img");
@@ -253,7 +246,7 @@ function NewUserFeedWelcomeCard({
     >
       <div style={{ display: "grid", gap: 7 }}>
         <div style={{ fontSize: isMobile ? 20 : 22, fontWeight: 950 }}>
-          Welcome to Fairwayd
+          {t("feed_welcome_title")}
         </div>
         <div
           style={{
@@ -263,8 +256,7 @@ function NewUserFeedWelcomeCard({
             maxWidth: 520,
           }}
         >
-          Your feed is empty because you don&rsquo;t follow anyone or any course
-          yet.
+          {t("feed_welcome_empty_reason")}
         </div>
         <div
           style={{
@@ -274,7 +266,7 @@ function NewUserFeedWelcomeCard({
             maxWidth: 520,
           }}
         >
-          Start by following your first course to build your golf feed.
+          {t("feed_welcome_start")}
         </div>
       </div>
 
@@ -291,28 +283,28 @@ function NewUserFeedWelcomeCard({
           onClick={onDiscoverNearby}
           style={primaryButtonStyle}
         >
-          Discover nearby courses
+          {t("discover_nearby_courses")}
         </button>
         <button
           type="button"
           onClick={onSearchCourses}
           style={secondaryButtonStyle}
         >
-          Search courses
+          {t("search_courses_action")}
         </button>
         <button
           type="button"
           onClick={onExploreMap}
           style={secondaryButtonStyle}
         >
-          Explore map
+          {t("explore_map")}
         </button>
         <button
           type="button"
           onClick={onCompleteProfile}
           style={secondaryButtonStyle}
         >
-          Complete profile
+          {t("complete_profile")}
         </button>
       </div>
     </div>
@@ -433,14 +425,14 @@ export default function FeedPage() {
 
   const openEditorForFile = useCallback(async (picked: File) => {
     if (!isSupportedPostImageFile(picked)) {
-      throw new Error("Unsupported image format. Please use JPG, PNG or WebP.");
+      throw new Error(t("unsupported_image_format"));
     }
 
     const dataUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
 
       reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(new Error("Failed to read image file"));
+      reader.onerror = () => reject(new Error(t("failed_read_image_file")));
 
       reader.readAsDataURL(picked);
     });
@@ -449,7 +441,7 @@ export default function FeedPage() {
       const image = new Image();
       image.onload = () => resolve();
       image.onerror = () =>
-        reject(new Error("This image could not be loaded. Please use JPG, PNG or WebP."));
+        reject(new Error(t("image_could_not_load")));
       image.src = dataUrl;
     });
 
@@ -571,7 +563,7 @@ export default function FeedPage() {
         })),
       );
     } catch (e: any) {
-      setErr(friendlyApiErrorMessage(e, "Failed to load feed."));
+      setErr(friendlyApiErrorMessage(e, t("failed_load_feed")));
     } finally {
       setFeedLoading(false);
     }
@@ -893,7 +885,7 @@ export default function FeedPage() {
     const supported = picked.filter(isSupportedPostImageFile);
     const hasUnsupportedFiles = supported.length !== picked.length;
     if (supported.length !== picked.length) {
-      setErr("Unsupported image format. Please use JPG, PNG or WebP.");
+      setErr(t("unsupported_image_format"));
     } else {
       setErr(null);
     }
@@ -908,7 +900,7 @@ export default function FeedPage() {
         await openEditorForFile(supported[0]);
       } catch (err: any) {
         console.error("Open image editor failed", err);
-        setErr(err?.message ?? "Failed to open image editor");
+        setErr(err?.message ?? t("failed_open_image_editor"));
       }
     }
   };
@@ -948,7 +940,7 @@ export default function FeedPage() {
       resetEditorState();
     } catch (e: any) {
       console.error("Apply image edits failed", e);
-      setErr(e?.message ?? "Failed to edit image");
+      setErr(e?.message ?? t("failed_edit_image"));
     } finally {
       setApplyingEdit(false);
     }
@@ -1057,7 +1049,7 @@ export default function FeedPage() {
       setErr(
         "Selected course is missing details (name/coordinates). Please re-select the course.",
       );
-      alert("Selected course is missing details. Please re-select the course.");
+      alert(t("selected_course_missing_details"));
       return;
     }
 
@@ -1069,8 +1061,8 @@ export default function FeedPage() {
     }
 
     if (!token) {
-      setErr("Missing auth token. Please login again.");
-      alert("Missing auth token. Please login again.");
+      setErr(t("missing_auth_token_login_again"));
+      alert(t("missing_auth_token_login_again"));
       return;
     }
 
@@ -1142,7 +1134,7 @@ export default function FeedPage() {
       });
     } catch (e: any) {
       setPosts((prev) => prev.filter((p) => p.id !== optimisticId));
-      setErr(e?.message ?? "Failed to post");
+      setErr(e?.message ?? t("failed_to_post"));
     } finally {
       setPosting(false);
     }
@@ -1506,7 +1498,7 @@ export default function FeedPage() {
                     textOverflow: "ellipsis",
                   }}
                 >
-                  What's your golf moment?
+                  {t("whats_your_golf_moment")}
                 </div>
               </button>
 
@@ -1530,7 +1522,7 @@ export default function FeedPage() {
                         lineHeight: 1.2,
                       }}
                     >
-                      Create post
+                      {t("create_post")}
                     </div>
                     <div
                       style={{
@@ -1540,7 +1532,7 @@ export default function FeedPage() {
                         lineHeight: 1.35,
                       }}
                     >
-                      Course / Visibility / Moment / Actions
+                      {t("composer_steps")}
                     </div>
                   </div>
 
@@ -1561,7 +1553,7 @@ export default function FeedPage() {
                       cursor: posting ? "default" : "pointer",
                       opacity: posting ? 0.6 : 1,
                     }}
-                    aria-label="Close composer"
+                    aria-label={t("close_composer")}
                   >
                     x
                   </button>
@@ -1622,7 +1614,7 @@ export default function FeedPage() {
                           clearSelectedCourse();
                           setComposerHint(null);
                         }}
-                        placeholder="Choose course"
+                        placeholder={t("course_choose")}
                       />
 
                       {!selectedCourse ? (
@@ -1847,12 +1839,12 @@ export default function FeedPage() {
                           letterSpacing: 0.5,
                         }}
                       >
-                        Visibility
+                        {t("visibility")}
                       </div>
 
                       <div
                         role="radiogroup"
-                        aria-label="Post visibility"
+                        aria-label={t("post_visibility")}
                         style={{
                           display: "grid",
                           gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
@@ -1879,7 +1871,7 @@ export default function FeedPage() {
                                 opacity: posting ? 0.65 : 1,
                               }}
                             >
-                              {option.label}
+                              {t(option.labelKey)}
                             </button>
                           );
                         })}
@@ -2167,7 +2159,7 @@ export default function FeedPage() {
                                 console.error("Re-open editor failed", err);
                                 setErr(
                                   err?.message ??
-                                    "Failed to reopen image editor",
+                                    t("failed_reopen_image_editor"),
                                 );
                               }
                             }}
@@ -2369,7 +2361,7 @@ export default function FeedPage() {
                                 )
                               }
                               disabled={posting}
-                              aria-label="Remove image"
+                              aria-label={t("remove_image")}
                               style={{
                                 position: "absolute",
                                 top: 5,
@@ -2512,7 +2504,7 @@ export default function FeedPage() {
                                       imageUrl: editorImageSrc.slice(0, 96),
                                       length: editorImageSrc.length,
                                     });
-                                    setErr("Image failed to load. Please use JPG, PNG or WebP.");
+                                    setErr(t("image_failed_to_load"));
                                   }}
                                   style={{
                                     display: "block",
@@ -2665,7 +2657,7 @@ export default function FeedPage() {
           >
             <div
               className="fw-feed-filters"
-              aria-label="Feed filters"
+              aria-label={t("feed_filters")}
               style={{
                 display: "flex",
                 gap: isMobile ? 7 : 10,
@@ -2702,9 +2694,7 @@ export default function FeedPage() {
                       cursor: "pointer",
                     }}
                   >
-                    {isMobile
-                      ? FEED_FILTER_MOBILE_LABELS[filter.value]
-                      : filter.label}
+                    {filter.icon} {t(filter.labelKey)}
                   </button>
                 );
               })}
