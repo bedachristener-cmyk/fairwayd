@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const THEMES = ["dark", "light", "forest", "ocean", "warm", "contrast"] as const;
+const THEMES = ["dark", "light", "forest", "ocean", "warm"] as const;
 
 type Rgba = { r: number; g: number; b: number; a: number };
 
@@ -132,4 +132,56 @@ test("the no-attribute fallback uses the readable dark control palette", async (
       `${control.name} foreground/background contrast was ${ratio.toFixed(2)}:1`,
     ).toBeGreaterThanOrEqual(4.5);
   }
+});
+
+test("canonical dark active and selected surfaces remain dark", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("html").evaluate((html) => html.setAttribute("data-theme", "dark"));
+  await page.locator("body").evaluate((body) => {
+    body.innerHTML = `
+      <main style="background: var(--card); padding: 24px">
+        <button class="fw-pill fw-pill--active" data-dark-surface="active">Active</button>
+        <div
+          data-dark-surface="selected"
+          style="background: var(--control-selected-bg); color: var(--control-selected-text); padding: 8px"
+        >
+          Selected
+        </div>
+      </main>
+    `;
+  });
+
+  const surfaces = await page.locator("[data-dark-surface]").evaluateAll((elements) =>
+    elements.map((element) => ({
+      name: element.getAttribute("data-dark-surface"),
+      backgroundColor: getComputedStyle(element).backgroundColor,
+    })),
+  );
+
+  for (const surface of surfaces) {
+    const channels = surface.backgroundColor.match(/[\d.]+/g)?.map(Number) ?? [];
+    const background = {
+      r: channels[0] ?? 0,
+      g: channels[1] ?? 0,
+      b: channels[2] ?? 0,
+      a: 1,
+    };
+    expect(
+      luminance(background),
+      `${surface.name} background must remain dark in the canonical dark theme`,
+    ).toBeLessThan(0.15);
+  }
+});
+
+test("a legacy contrast preference migrates to the canonical dark theme", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem("fairwayd_theme", "contrast");
+  });
+
+  await page.goto("/");
+
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(
+    page.evaluate(() => window.localStorage.getItem("fairwayd_theme")),
+  ).resolves.toBe("dark");
 });

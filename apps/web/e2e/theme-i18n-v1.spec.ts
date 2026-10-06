@@ -15,7 +15,7 @@ async function selectedButtonColors(page: Page, name: string) {
   });
 }
 
-test("profile setup selected controls stay readable in dark and contrast", async ({ page }) => {
+test("profile setup selected controls use the canonical dark palette", async ({ page }) => {
   await signInForSmokeTest(page);
   await page.addInitScript(() => {
     window.localStorage.setItem("fairwayd_lang", "en");
@@ -25,16 +25,10 @@ test("profile setup selected controls stay readable in dark and contrast", async
   await page.goto("/onboarding/profile");
   await expect(page.getByText("Basic profile")).toBeVisible();
 
-  const darkDe = await selectedButtonColors(page, "EN");
-  expect(darkDe.color).not.toBe("rgba(0, 0, 0, 0)");
-  expect(darkDe.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
-
-  await page.getByRole("button", { name: "Contrast", exact: true }).click();
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "contrast");
-
-  const contrastTheme = await selectedButtonColors(page, "Contrast");
-  expect(contrastTheme.color).toBe("rgb(0, 0, 0)");
-  expect(contrastTheme.backgroundColor).toBe("rgb(255, 255, 255)");
+  const darkTheme = await selectedButtonColors(page, "EN");
+  expect(darkTheme.color).toBe("rgb(255, 255, 255)");
+  expect(darkTheme.backgroundColor).toBe("rgb(22, 66, 46)");
+  await expect(page.getByRole("button", { name: "Contrast", exact: true })).toHaveCount(0);
 });
 
 test("German language persists and localizes profile setup and mobile navigation", async ({ page }) => {

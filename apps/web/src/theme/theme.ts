@@ -7,17 +7,32 @@ export const THEMES = [
   "forest",
   "ocean",
   "warm",
-  "contrast",
 ] as const;
 export type ThemeName = (typeof THEMES)[number];
 
-function isTheme(x: any): x is ThemeName {
-  return THEMES.includes(x);
+function isTheme(x: unknown): x is ThemeName {
+  return typeof x === "string" && (THEMES as readonly string[]).includes(x);
+}
+
+function normalizeTheme(value: unknown): ThemeName | null {
+  if (value === "contrast") return "dark";
+  return isTheme(value) ? value : null;
+}
+
+function readSavedTheme(): ThemeName | null {
+  const saved = localStorage.getItem(THEME_KEY);
+  const normalized = normalizeTheme(saved);
+
+  if (saved === "contrast" && normalized) {
+    localStorage.setItem(THEME_KEY, normalized);
+  }
+
+  return normalized;
 }
 
 export function getInitialTheme(): ThemeName {
-  const saved = localStorage.getItem(THEME_KEY);
-  if (isTheme(saved)) return saved;
+  const saved = readSavedTheme();
+  if (saved) return saved;
 
   const prefersDark =
     typeof window !== "undefined" &&
@@ -33,13 +48,16 @@ export function getCurrentTheme(): ThemeName {
       ? document.documentElement.getAttribute("data-theme")
       : null;
 
-  if (isTheme(dom)) return dom;
+  const normalizedDomTheme = normalizeTheme(dom);
+  if (normalizedDomTheme) {
+    if (dom === "contrast") applyTheme(normalizedDomTheme);
+    return normalizedDomTheme;
+  }
 
-  const saved =
-    typeof localStorage !== "undefined"
-      ? localStorage.getItem(THEME_KEY)
-      : null;
-  if (isTheme(saved)) return saved;
+  if (typeof localStorage !== "undefined") {
+    const saved = readSavedTheme();
+    if (saved) return saved;
+  }
 
   return getInitialTheme();
 }

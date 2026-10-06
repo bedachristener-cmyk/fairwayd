@@ -249,8 +249,7 @@ function themeDisplayName(theme: ThemeName) {
   if (theme === "light") return t("theme_light");
   if (theme === "forest") return t("theme_forest");
   if (theme === "ocean") return t("theme_ocean");
-  if (theme === "warm") return t("theme_warm");
-  return t("theme_contrast");
+  return t("theme_warm");
 }
 
 function ProfileSettingsCard() {
