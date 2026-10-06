@@ -618,9 +618,9 @@ const secondaryButtonStyle: React.CSSProperties = {
 };
 
 const primaryButtonStyle: React.CSSProperties = {
-  background: "var(--accent-strong)",
-  borderColor: "var(--accent-strong)",
-  color: "#fff",
+  background: "var(--fw-pill-cta-bg)",
+  borderColor: "var(--fw-pill-cta-bg)",
+  color: "var(--fw-pill-cta-text)",
 };
 
 const dangerButtonStyle: React.CSSProperties = {

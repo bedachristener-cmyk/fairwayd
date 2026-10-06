@@ -945,6 +945,7 @@ export default function CoursesMap() {
                     }}
                   >
                     <button
+                      className="fw-pill fw-pill--cta"
                       type="button"
                       onMouseDown={stopBtn}
                       onClick={(e) => {
@@ -962,9 +963,6 @@ export default function CoursesMap() {
                       style={{
                         width: "100%",
                         minHeight: 40,
-                        border: "1px solid var(--green)",
-                        background: "var(--green)",
-                        color: "var(--bg)",
                         borderRadius: 18,
                         padding: "0 13px",
                         fontSize: 13,
