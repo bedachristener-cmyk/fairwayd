@@ -4,6 +4,7 @@ import {
   buildOrganizerCostsSummary,
   calculateCostShare,
   calculateBudgetV3Summary,
+  resolveBaseMoneyValue,
   type BudgetV3Member,
   type BudgetV3RichCost,
   type BudgetV3RichItem,
@@ -196,5 +197,287 @@ describe('budget v3 shared cost handling', () => {
           row.balance === 0,
       ),
     ).toBe(true);
+  });
+
+  it('keeps a CHF 220 cost as CHF 220', () => {
+    expect(
+      resolveBaseMoneyValue(
+        { id: 'chf', amount: 220, currency: 'CHF' },
+        'CHF',
+      ),
+    ).toEqual({ amount: 220, exchangeRate: 1, missingConversion: false });
+  });
+
+  it('converts THB 9,400 at 0.0224 to a CHF 210.56 snapshot', () => {
+    expect(
+      resolveBaseMoneyValue(
+        {
+          id: 'thb',
+          amount: 9400,
+          currency: 'THB',
+          exchangeRate: 0.0224,
+        },
+        'CHF',
+      ),
+    ).toEqual({
+      amount: 210.56,
+      exchangeRate: 0.0224,
+      missingConversion: false,
+    });
+  });
+
+  it('keeps an existing stored baseAmount authoritative during summaries', () => {
+    expect(
+      resolveBaseMoneyValue(
+        {
+          id: 'historical-thb',
+          amount: 9400,
+          currency: 'THB',
+          exchangeRate: 0.5,
+          baseAmount: 210.56,
+        },
+        'CHF',
+      ),
+    ).toEqual({
+      amount: 210.56,
+      exchangeRate: 0.5,
+      missingConversion: false,
+    });
+  });
+
+  it('splits a converted TOTAL cost between two people in base currency', () => {
+    const share = calculateCostShare(
+      {
+        id: 'thb-total',
+        amount: 9400,
+        currency: 'THB',
+        exchangeRate: 0.0224,
+        costMode: TripItemCostMode.TOTAL,
+        participants: members.slice(0, 2).map((member) => ({
+          tripMemberId: member.id,
+        })),
+      },
+      'CHF',
+    );
+
+    expect(share.totalBaseAmount).toBe(210.56);
+    expect(share.personalShare).toBe(105.28);
+  });
+
+  it('converts a PER_PERSON foreign amount before multiplying participants', () => {
+    const share = calculateCostShare(
+      {
+        id: 'thb-per-person',
+        amount: 9400,
+        currency: 'THB',
+        exchangeRate: 0.0224,
+        costMode: TripItemCostMode.PER_PERSON,
+        participants: members.slice(0, 2).map((member) => ({
+          tripMemberId: member.id,
+        })),
+      },
+      'CHF',
+    );
+
+    expect(share.personalShare).toBe(210.56);
+    expect(share.totalBaseAmount).toBe(421.12);
+  });
+
+  it('settles mixed CHF and THB costs entirely in CHF', () => {
+    const participants = members.slice(0, 2).map((member) => ({
+      tripMemberId: member.id,
+      tripMember: member,
+    }));
+    const summary = buildOrganizerCostsSummary({
+      tripId: 'trip-mixed',
+      baseCurrency: 'CHF',
+      members: members.slice(0, 2),
+      items: [
+        {
+          id: 'mixed-item',
+          costs: [
+            {
+              id: 'chf-cost',
+              amount: 220,
+              currency: 'CHF',
+              costMode: TripItemCostMode.TOTAL,
+              paymentMode: TripItemPaymentMode.PAID_BY_ONE,
+              paidByMemberId: 'beda',
+              participants,
+            },
+            {
+              id: 'thb-cost',
+              amount: 9400,
+              currency: 'THB',
+              exchangeRate: 0.0224,
+              costMode: TripItemCostMode.TOTAL,
+              paymentMode: TripItemPaymentMode.PAID_BY_ONE,
+              paidByMemberId: 'beda',
+              participants,
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(summary.summary.totalTripCost).toBe(430.56);
+    expect(summary.summary.paidBySummary[0].totalPaid).toBe(430.56);
+    expect(summary.summary.balancePreview).toEqual([
+      expect.objectContaining({
+        member: members[1],
+        paid: 0,
+        expectedShare: 215.28,
+        balance: -215.28,
+      }),
+      expect.objectContaining({
+        member: members[0],
+        paid: 430.56,
+        expectedShare: 215.28,
+        balance: 215.28,
+      }),
+    ]);
+  });
+
+  it('settles a foreign TOTAL cost as paid by each participant with no debt', () => {
+    const participatingMembers = members.slice(0, 2);
+    const items: BudgetV3RichItem[] = [
+      {
+        id: 'thb-each-pays-total-item',
+        costs: [
+          {
+            id: 'thb-each-pays-total',
+            amount: 9400,
+            currency: 'THB',
+            exchangeRate: 0.0224,
+            costMode: TripItemCostMode.TOTAL,
+            paymentMode: TripItemPaymentMode.EACH_PAYS_OWN,
+            participants: participatingMembers.map((member) => ({
+              tripMemberId: member.id,
+              tripMember: member,
+            })),
+          },
+        ],
+      },
+    ];
+    const organizerSummary = buildOrganizerCostsSummary({
+      tripId: 'trip-thb-each-pays-total',
+      baseCurrency: 'CHF',
+      members: participatingMembers,
+      items,
+    });
+    const memberSummary = buildMyCostsSummary({
+      tripId: 'trip-thb-each-pays-total',
+      baseCurrency: 'CHF',
+      currentMemberId: 'alex',
+      currentUserId: 'user-alex',
+      members: participatingMembers,
+      items,
+    });
+
+    expect(organizerSummary.summary.totalTripCost).toBe(210.56);
+    expect(memberSummary.costs[0].personalShare).toBe(105.28);
+    expect(organizerSummary.summary.balancePreview).toHaveLength(2);
+    expect(
+      organizerSummary.summary.balancePreview.every(
+        (row) =>
+          row.paid === 105.28 &&
+          row.expectedShare === 105.28 &&
+          row.balance === 0,
+      ),
+    ).toBe(true);
+    expect(
+      organizerSummary.summary.balancePreview.filter(
+        (row) => Math.abs(row.balance ?? 0) > 0.005,
+      ),
+    ).toEqual([]);
+    expect(memberSummary.costs[0].iOwe).toEqual([]);
+    expect(memberSummary.costs[0].owedToMe).toEqual([]);
+    expect(memberSummary.summary.balancePreview).toBe(0);
+  });
+
+  it('settles a foreign PER_PERSON cost as paid by each participant with no debt', () => {
+    const participatingMembers = members.slice(0, 2);
+    const items: BudgetV3RichItem[] = [
+      {
+        id: 'thb-each-pays-per-person-item',
+        costs: [
+          {
+            id: 'thb-each-pays-per-person',
+            amount: 9400,
+            currency: 'THB',
+            exchangeRate: 0.0224,
+            costMode: TripItemCostMode.PER_PERSON,
+            paymentMode: TripItemPaymentMode.EACH_PAYS_OWN,
+            participants: participatingMembers.map((member) => ({
+              tripMemberId: member.id,
+              tripMember: member,
+            })),
+          },
+        ],
+      },
+    ];
+    const organizerSummary = buildOrganizerCostsSummary({
+      tripId: 'trip-thb-each-pays-per-person',
+      baseCurrency: 'CHF',
+      members: participatingMembers,
+      items,
+    });
+    const memberSummary = buildMyCostsSummary({
+      tripId: 'trip-thb-each-pays-per-person',
+      baseCurrency: 'CHF',
+      currentMemberId: 'alex',
+      currentUserId: 'user-alex',
+      members: participatingMembers,
+      items,
+    });
+
+    expect(organizerSummary.summary.totalTripCost).toBe(421.12);
+    expect(memberSummary.costs[0].personalShare).toBe(210.56);
+    expect(
+      organizerSummary.summary.balancePreview.every(
+        (row) =>
+          row.paid === 210.56 &&
+          row.expectedShare === 210.56 &&
+          row.balance === 0,
+      ),
+    ).toBe(true);
+    expect(memberSummary.costs[0].iOwe).toEqual([]);
+    expect(memberSummary.costs[0].owedToMe).toEqual([]);
+    expect(memberSummary.summary.balancePreview).toBe(0);
+  });
+
+  it('explicitly marks a foreign cost with no conversion data', () => {
+    const missing = resolveBaseMoneyValue(
+      { id: 'missing', amount: 9400, currency: 'THB' },
+      'CHF',
+    );
+    const summary = buildOrganizerCostsSummary({
+      tripId: 'trip-missing',
+      baseCurrency: 'CHF',
+      members: members.slice(0, 2),
+      items: [
+        {
+          id: 'item-missing',
+          costs: [
+            {
+              id: 'missing',
+              amount: 9400,
+              currency: 'THB',
+              participants: members.slice(0, 2).map((member) => ({
+                tripMemberId: member.id,
+              })),
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(missing).toEqual({
+      amount: 0,
+      exchangeRate: null,
+      missingConversion: true,
+    });
+    expect(summary.costs[0].missingConversion).toBe(true);
+    expect(summary.summary.missingConversionCount).toBe(1);
   });
 });

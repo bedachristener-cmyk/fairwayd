@@ -14,6 +14,7 @@ import {
 import { API_BASE } from "../api/base";
 import { friendlyApiErrorMessage } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import { resolveTripCostConversion } from "../utils/tripCostAccounting";
 
 type TripItemType =
   | "golf_round"
@@ -442,7 +443,7 @@ function formatMoney(value?: number | null, currency?: string | null) {
     return new Intl.NumberFormat(undefined, {
       style: "currency",
       currency: code,
-      maximumFractionDigits: 0,
+      maximumFractionDigits: 2,
     }).format(value);
   } catch {
     return `${value} ${code}`.trim();
@@ -732,8 +733,22 @@ export default function AddTripItemPage() {
     if (amount === undefined || amount <= 0) return false;
     if (!baseCurrency || !currency) return false;
     if (currency.toUpperCase() === baseCurrency.toUpperCase()) return false;
-    if (optionalNumber(draft.baseAmount) !== undefined) return false;
-    return optionalNumber(draft.exchangeRate) === undefined;
+    const baseAmount = optionalNumber(draft.baseAmount);
+    if (baseAmount !== undefined && baseAmount > 0) return false;
+    const exchangeRate = optionalNumber(draft.exchangeRate);
+    return exchangeRate === undefined || exchangeRate <= 0;
+  }
+
+  function draftConversion(draft: BudgetCostDraft) {
+    return resolveTripCostConversion(
+      {
+        amount: optionalNumber(draft.amount),
+        currency: draft.currency,
+        exchangeRate: optionalNumber(draft.exchangeRate),
+        baseAmount: optionalNumber(draft.baseAmount),
+      },
+      trip?.baseCurrency || "CHF",
+    );
   }
 
   function budgetPayloadCosts() {
@@ -744,20 +759,25 @@ export default function AddTripItemPage() {
         const currency = optionalText(draft.currency);
         const isBaseCurrency =
           amount !== undefined &&
-          currency &&
-          baseCurrency &&
-          currency.toUpperCase() === baseCurrency.toUpperCase();
+          Boolean(currency) &&
+          Boolean(baseCurrency) &&
+          currency!.toUpperCase() === baseCurrency!.toUpperCase();
+        const conversion = resolveTripCostConversion(
+          {
+            amount,
+            currency,
+            exchangeRate: isBaseCurrency ? 1 : optionalNumber(draft.exchangeRate),
+            baseAmount: isBaseCurrency ? amount : optionalNumber(draft.baseAmount),
+          },
+          baseCurrency || "CHF",
+        );
 
         return {
           label: optionalText(draft.label),
           amount,
           currency,
-          exchangeRate: isBaseCurrency
-            ? 1
-            : optionalNumber(draft.exchangeRate),
-          baseAmount: isBaseCurrency
-            ? amount
-            : optionalNumber(draft.baseAmount),
+          exchangeRate: amount === undefined ? undefined : conversion.exchangeRate ?? undefined,
+          baseAmount: amount === undefined ? undefined : conversion.amount,
           costMode: draft.costMode,
           paymentMode: draft.paymentMode,
           paidByMemberId:
@@ -779,6 +799,9 @@ export default function AddTripItemPage() {
     const costs = budgetPayloadCosts();
     if (costs.some((cost) => !cost.label || cost.amount === undefined)) {
       return "Each cost needs a label and amount.";
+    }
+    if (budgetDrafts.some(draftNeedsExchangeRate)) {
+      return `Enter an exchange rate to ${trip?.baseCurrency || "the trip base currency"} for each foreign-currency cost.`;
     }
     if (
       costs.some(
@@ -2345,7 +2368,10 @@ export default function AddTripItemPage() {
                               inputMode="decimal"
                               value={draft.amount}
                               onChange={(event) =>
-                                updateBudgetDraft(draft.localId, { amount: event.target.value })
+                                updateBudgetDraft(draft.localId, {
+                                  amount: event.target.value,
+                                  baseAmount: "",
+                                })
                               }
                               style={fieldStyle}
                             />
@@ -2355,7 +2381,11 @@ export default function AddTripItemPage() {
                             <select
                               value={draft.currency}
                               onChange={(event) =>
-                                updateBudgetDraft(draft.localId, { currency: event.target.value })
+                                updateBudgetDraft(draft.localId, {
+                                  currency: event.target.value,
+                                  exchangeRate: "",
+                                  baseAmount: "",
+                                })
                               }
                               style={fieldStyle}
                             >
@@ -2367,6 +2397,43 @@ export default function AddTripItemPage() {
                             </select>
                           </label>
                         </div>
+
+                        {draft.currency.trim().toUpperCase() !==
+                        (trip?.baseCurrency || "CHF").trim().toUpperCase() ? (
+                          <div style={{ display: "grid", gap: 7 }}>
+                            <label style={labelStyle}>
+                              Exchange rate ({trip?.baseCurrency || "CHF"} per {draft.currency})
+                              <input
+                                type="number"
+                                inputMode="decimal"
+                                min="0"
+                                step="any"
+                                value={draft.exchangeRate}
+                                onChange={(event) =>
+                                  updateBudgetDraft(draft.localId, {
+                                    exchangeRate: event.target.value,
+                                    baseAmount: "",
+                                  })
+                                }
+                                placeholder={`1 ${draft.currency} in ${trip?.baseCurrency || "CHF"}`}
+                                style={fieldStyle}
+                              />
+                            </label>
+                            {draftConversion(draft).missingConversion ? (
+                              <div style={{ color: "var(--danger, #b42318)", fontSize: 12 }}>
+                                A conversion rate is required for this cost.
+                              </div>
+                            ) : optionalNumber(draft.amount) !== undefined &&
+                              optionalNumber(draft.exchangeRate) !== undefined ? (
+                              <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 800 }}>
+                                Equivalent: {formatMoney(
+                                  draftConversion(draft).amount,
+                                  trip?.baseCurrency || "CHF",
+                                )}
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
 
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
                           {[

@@ -47,6 +47,11 @@ import {
 import { useAuth } from "../auth/AuthContext";
 import { fileUrl } from "../api/fileUrl";
 import { TripCardsSkeleton } from "../components/PolishStates";
+import {
+  calculateTripCostShare,
+  resolveTripCostConversion,
+  roundTripMoney,
+} from "../utils/tripCostAccounting";
 
 type TripItem = {
   id: string;
@@ -291,6 +296,7 @@ type BudgetSummary = {
   caddyTotal: number;
   cartTotal: number;
   categories: Record<BudgetCategory, number>;
+  missingConversionCount: number;
 };
 
 type SettlementMember = {
@@ -323,6 +329,7 @@ type SettlementSummary = {
   totalShare: number;
   totalOwes: number;
   totalGetsBack: number;
+  missingConversionCount: number;
 };
 
 type TripInvite = {
@@ -1446,7 +1453,7 @@ function formatMoney(value?: number | null, currency?: string | null) {
     return new Intl.NumberFormat(undefined, {
       style: "currency",
       currency: code,
-      maximumFractionDigits: 0,
+      maximumFractionDigits: 2,
     }).format(value);
   } catch {
     return `${value} ${code}`.trim();
@@ -1492,6 +1499,13 @@ function settlementSummaryText(trip: Trip | null, summary: SettlementSummary) {
     `${trip?.title || "Trip"} trip balances`,
     "",
   ];
+
+  if (summary.missingConversionCount > 0) {
+    lines.push(
+      `${summary.missingConversionCount} cost${summary.missingConversionCount === 1 ? " is" : "s are"} missing conversion data and excluded from balances.`,
+      "",
+    );
+  }
 
   if (summary.mixedCurrencies) {
     lines.push("Mixed currencies: no automatic FX conversion applied.", "");
@@ -2690,47 +2704,15 @@ function costParticipantIds(cost: TripItemCost, tripMembers: TripMember[]) {
   return tripMembers.map((member) => member.id);
 }
 
-type ConvertedCostAmount = {
-  amount: number;
-  missingExchangeRate: boolean;
-};
-
-function costAmountInBaseCurrency(
-  cost: TripItemCost,
-  baseCurrency: string,
-): ConvertedCostAmount {
-  const amount = finiteAmount(cost.amount);
-  if (amount <= 0) return { amount: 0, missingExchangeRate: false };
-
-  const baseAmount = finiteAmount(cost.baseAmount);
-  if (baseAmount > 0) return { amount: baseAmount, missingExchangeRate: false };
-
-  const currency = cost.currency?.trim() || baseCurrency;
-  if (currency.toUpperCase() === baseCurrency.toUpperCase()) {
-    return { amount, missingExchangeRate: false };
-  }
-
-  const exchangeRate = finiteAmount(cost.exchangeRate);
-  if (exchangeRate > 0) {
-    return { amount: amount * exchangeRate, missingExchangeRate: false };
-  }
-
-  return { amount: 0, missingExchangeRate: true };
-}
-
 function totalCostAmountInBaseCurrency(
   cost: TripItemCost,
   baseCurrency: string,
   participantCount: number,
 ) {
-  const converted = costAmountInBaseCurrency(cost, baseCurrency);
-  if (converted.amount <= 0) return converted;
+  const converted = calculateTripCostShare(cost, baseCurrency, participantCount);
   return {
-    ...converted,
-    amount:
-      cost.costMode === "PER_PERSON"
-        ? converted.amount * Math.max(participantCount, 1)
-        : converted.amount,
+    amount: converted.totalBaseAmount,
+    missingExchangeRate: converted.missingConversion,
   };
 }
 
@@ -2739,14 +2721,10 @@ function memberCostShareInBaseCurrency(
   baseCurrency: string,
   participantCount: number,
 ) {
-  const converted = costAmountInBaseCurrency(cost, baseCurrency);
-  if (converted.amount <= 0) return converted;
+  const converted = calculateTripCostShare(cost, baseCurrency, participantCount);
   return {
-    ...converted,
-    amount:
-      cost.costMode === "PER_PERSON"
-        ? converted.amount
-        : converted.amount / Math.max(participantCount, 1),
+    amount: converted.personalShare,
+    missingExchangeRate: converted.missingConversion,
   };
 }
 
@@ -2764,8 +2742,10 @@ function draftNeedsExchangeRate(draft: BudgetCostDraft, baseCurrency: string) {
   if (amount === undefined || amount <= 0) return false;
   const currency = draft.currency.trim();
   if (!currency || currency.toUpperCase() === baseCurrency.toUpperCase()) return false;
-  if (optionalNumber(draft.baseAmount) !== undefined) return false;
-  return optionalNumber(draft.exchangeRate) === undefined;
+  const baseAmount = optionalNumber(draft.baseAmount);
+  if (baseAmount !== undefined && baseAmount > 0) return false;
+  const exchangeRate = optionalNumber(draft.exchangeRate);
+  return exchangeRate === undefined || exchangeRate <= 0;
 }
 
 function TripItemBudgetSection({
@@ -2900,7 +2880,10 @@ function TripItemBudgetSection({
                       inputMode="decimal"
                       value={draft.amount}
                       onChange={(event) =>
-                        onUpdateDraft(draft.localId, { amount: event.target.value })
+                        onUpdateDraft(draft.localId, {
+                          amount: event.target.value,
+                          baseAmount: "",
+                        })
                       }
                       placeholder={index === 0 ? "120" : undefined}
                       style={{ ...editFieldStyle, minHeight: 36, padding: "7px 9px" }}
@@ -2911,7 +2894,11 @@ function TripItemBudgetSection({
                     <select
                       value={draft.currency}
                       onChange={(event) =>
-                        onUpdateDraft(draft.localId, { currency: event.target.value })
+                        onUpdateDraft(draft.localId, {
+                          currency: event.target.value,
+                          exchangeRate: "",
+                          baseAmount: "",
+                        })
                       }
                       style={{ ...editFieldStyle, minHeight: 36, padding: "7px 8px" }}
                     >
@@ -4606,12 +4593,16 @@ export default function TripDetailPage() {
   }
 
   function budgetDraftFromCost(cost: TripItemCost, item: TripItem): BudgetCostDraft {
+    const conversion = resolveTripCostConversion(
+      cost,
+      trip?.baseCurrency || "CHF",
+    );
     return {
       localId: cost.id || `cost-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       label: cost.label || item.title || itemTypeLabel(item.type),
       amount: numberInputValue(cost.amount),
       currency: cost.currency || trip?.baseCurrency || item.currency || "CHF",
-      exchangeRate: numberInputValue(cost.exchangeRate),
+      exchangeRate: numberInputValue(cost.exchangeRate ?? conversion.exchangeRate),
       baseAmount: numberInputValue(cost.baseAmount),
       costMode: cost.costMode || defaultCostModeForItemType(item.type),
       paymentMode: cost.paymentMode || defaultPaymentModeForItemType(item.type),
@@ -4747,20 +4738,25 @@ export default function TripDetailPage() {
         const currency = optionalText(draft.currency);
         const isBaseCurrency =
           amount !== undefined &&
-          currency &&
-          baseCurrency &&
-          currency.toUpperCase() === baseCurrency.toUpperCase();
+          Boolean(currency) &&
+          Boolean(baseCurrency) &&
+          currency!.toUpperCase() === baseCurrency!.toUpperCase();
+        const conversion = resolveTripCostConversion(
+          {
+            amount,
+            currency,
+            exchangeRate: isBaseCurrency ? 1 : optionalNumber(draft.exchangeRate),
+            baseAmount: isBaseCurrency ? amount : optionalNumber(draft.baseAmount),
+          },
+          baseCurrency || "CHF",
+        );
 
         return {
           label: optionalText(draft.label),
           amount,
           currency,
-          exchangeRate: isBaseCurrency
-            ? 1
-            : optionalNumber(draft.exchangeRate),
-          baseAmount: isBaseCurrency
-            ? amount
-            : optionalNumber(draft.baseAmount),
+          exchangeRate: amount === undefined ? undefined : conversion.exchangeRate ?? undefined,
+          baseAmount: amount === undefined ? undefined : conversion.amount,
           costMode: draft.costMode,
           paymentMode: draft.paymentMode,
           paidByMemberId:
@@ -4793,6 +4789,14 @@ export default function TripDetailPage() {
 
     if (costs.some((cost) => cost.participantMemberIds.length === 0)) {
       return "Choose at least one member in Shared with for each cost.";
+    }
+
+    if (
+      budgetDrafts.some((draft) =>
+        draftNeedsExchangeRate(draft, trip?.baseCurrency || "CHF"),
+      )
+    ) {
+      return `Enter an exchange rate to ${trip?.baseCurrency || "the trip base currency"} for each foreign-currency cost.`;
     }
 
     return "";
@@ -5890,6 +5894,7 @@ export default function TripDetailPage() {
     ];
   }, [trip?.items, trip?.members]);
 
+  const baseCurrency = trip?.baseCurrency?.trim() || "CHF";
   const budgetSummary = useMemo<BudgetSummary>(() => {
     const categories: Record<BudgetCategory, number> = {
       Golf: 0,
@@ -5899,7 +5904,6 @@ export default function TripDetailPage() {
       Activity: 0,
       Other: 0,
     };
-    const currencies = new Set<string>();
     let greenTotal = 0;
     let directTotal = 0;
     let providerTotal = 0;
@@ -5907,70 +5911,54 @@ export default function TripDetailPage() {
     let cartTotal = 0;
     let sharedTotal = 0;
     let personalTotal = 0;
+    let missingConversionCount = 0;
 
     for (const item of trip?.items ?? []) {
-      if (isFlightItem(item)) continue;
+      for (const cost of budgetCostsForItem(item, trip?.members ?? [])) {
+        const participantIds = costParticipantIds(cost, trip?.members ?? []);
+        const calculated = calculateTripCostShare(
+          cost,
+          baseCurrency,
+          participantIds.length,
+        );
+        if (calculated.missingConversion) {
+          missingConversionCount += 1;
+          continue;
+        }
 
-      const itemTotal = itemBudgetAmount(item);
-      const golf = isGolfItem(item);
-      const green =
-        golf && item.includeGreenFeeInSplit !== false
-          ? finiteAmount(item.greenFee ?? item.directPrice)
-          : 0;
-      const direct = golf ? (item.greenFee ? finiteAmount(item.directPrice) : 0) : finiteAmount(item.directPrice);
-      const provider =
-        typeof item.providerPrice === "number" && Number.isFinite(item.providerPrice)
-          ? item.providerPrice
-          : 0;
-      const caddy =
-        !golf || item.includeCaddyFeeInSplit !== false
-          ? finiteAmount(item.caddyFee)
-          : 0;
-      const cart =
-        !golf || item.includeCartFeeInSplit !== false
-          ? finiteAmount(item.cartFee)
-          : 0;
-
-      if (itemTotal > 0) {
-        currencies.add(item.currency?.trim() || "CHF");
-      }
-
-      greenTotal += green;
-      directTotal += direct;
-      providerTotal += provider;
-      caddyTotal += caddy;
-      cartTotal += cart;
-      categories[budgetCategory(item.type)] += itemTotal;
-      if (item.expenseType === "PERSONAL") {
-        personalTotal += itemTotal;
-      } else {
-        sharedTotal += itemTotal;
+        const itemTotal = calculated.totalBaseAmount;
+        const label = cost.label?.toLowerCase() || "";
+        if (label.includes("green")) greenTotal += itemTotal;
+        else if (label.includes("direct")) directTotal += itemTotal;
+        else if (label.includes("provider")) providerTotal += itemTotal;
+        else if (label.includes("caddy")) caddyTotal += itemTotal;
+        else if (label.includes("cart")) cartTotal += itemTotal;
+        categories[budgetCategory(item.type)] += itemTotal;
+        if (item.expenseType === "PERSONAL") personalTotal += itemTotal;
+        else sharedTotal += itemTotal;
       }
     }
 
     const total = sharedTotal + personalTotal;
     const people = trip?.members?.length ?? 0;
-    const currencyList = Array.from(currencies).sort();
-    const currency = currencyList[0] || "CHF";
 
     return {
-      mixedCurrencies: currencies.size > 1,
-      currency,
-      currencies: currencyList,
-      total,
-      sharedTotal,
-      personalTotal,
-      perPerson: people > 0 ? total / people : total,
-      greenTotal,
-      directTotal,
-      providerTotal,
-      caddyTotal,
-      cartTotal,
+      mixedCurrencies: false,
+      currency: baseCurrency,
+      currencies: [baseCurrency],
+      total: roundTripMoney(total),
+      sharedTotal: roundTripMoney(sharedTotal),
+      personalTotal: roundTripMoney(personalTotal),
+      perPerson: roundTripMoney(people > 0 ? total / people : total),
+      greenTotal: roundTripMoney(greenTotal),
+      directTotal: roundTripMoney(directTotal),
+      providerTotal: roundTripMoney(providerTotal),
+      caddyTotal: roundTripMoney(caddyTotal),
+      cartTotal: roundTripMoney(cartTotal),
       categories,
+      missingConversionCount,
     };
-  }, [trip?.items, trip?.members]);
-
-  const baseCurrency = trip?.baseCurrency?.trim() || "CHF";
+  }, [baseCurrency, trip?.items, trip?.members]);
   function costSummaryDetailRows(
     mode: CostSummaryDrilldown["mode"],
     category: CostSummaryCategory,
@@ -6067,8 +6055,7 @@ export default function TripDetailPage() {
   const settlementSummary = useMemo<SettlementSummary>(() => {
     const members = trip?.members ?? [];
     const rowsByMemberId = new Map<string, SettlementMember>();
-    const rowsByCurrency = new Map<string, Map<string, SettlementMember>>();
-    const currencies = new Set<string>();
+    let missingConversionCount = 0;
 
     for (const member of members) {
       rowsByMemberId.set(member.id, {
@@ -6080,74 +6067,52 @@ export default function TripDetailPage() {
     }
 
     for (const item of trip?.items ?? []) {
-      const amount = settlementItemAmount(item);
-      if (amount <= 0) continue;
-
-      const currency = item.currency?.trim() || "CHF";
-      currencies.add(currency);
-
-      let currencyRows = rowsByCurrency.get(currency);
-      if (!currencyRows) {
-        currencyRows = new Map<string, SettlementMember>();
-        for (const member of members) {
-          currencyRows.set(member.id, {
-            member,
-            paid: 0,
-            share: 0,
-            balance: 0,
-          });
+      for (const cost of budgetCostsForItem(item, members)) {
+        const participantIds = costParticipantIds(cost, members);
+        const calculated = calculateTripCostShare(
+          cost,
+          baseCurrency,
+          participantIds.length,
+        );
+        if (calculated.missingConversion) {
+          missingConversionCount += 1;
+          continue;
         }
-        rowsByCurrency.set(currency, currencyRows);
-      }
 
-      const participants = effectiveParticipants(item, members);
-      if (participants.length > 0) {
-        const share = amount / participants.length;
-        for (const participant of participants) {
-          const row = rowsByMemberId.get(participant.id);
-          if (row) row.share += share;
-
-          const currencyRow = currencyRows.get(participant.id);
-          if (currencyRow) currencyRow.share += share;
+        for (const participantId of participantIds) {
+          const row = rowsByMemberId.get(participantId);
+          if (row) row.share += calculated.personalShare;
+          if (row && cost.paymentMode === "EACH_PAYS_OWN") {
+            row.paid += calculated.personalShare;
+          }
         }
-      }
 
-      const payerId = item.paidByMemberId || item.paidByMember?.id;
-      if (payerId) {
-        const row = rowsByMemberId.get(payerId);
-        if (row) row.paid += amount;
-
-        const currencyRow = currencyRows.get(payerId);
-        if (currencyRow) currencyRow.paid += amount;
+        if (cost.paymentMode !== "EACH_PAYS_OWN") {
+          const payerId = cost.paidByMemberId || cost.paidByMember?.id;
+          const payerRow = payerId ? rowsByMemberId.get(payerId) : null;
+          if (payerRow) payerRow.paid += calculated.totalBaseAmount;
+        }
       }
     }
 
     const rows = Array.from(rowsByMemberId.values()).map((row) => ({
       ...row,
-      balance: row.paid - row.share,
+      paid: roundTripMoney(row.paid),
+      share: roundTripMoney(row.share),
+      balance: roundTripMoney(row.paid - row.share),
     }));
-    const currencySummaries = Array.from(rowsByCurrency.entries())
-      .map(([currency, rowsForCurrency]) => {
-        const currencyRows = Array.from(rowsForCurrency.values()).map((row) => ({
-          ...row,
-          balance: row.paid - row.share,
-        }));
-
-        return {
-          currency,
-          rows: currencyRows,
-          totalOwes: currencyRows.reduce(
-            (sum, row) => sum + (row.balance < 0 ? Math.abs(row.balance) : 0),
-            0,
-          ),
-          totalGetsBack: currencyRows.reduce(
-            (sum, row) => sum + (row.balance > 0 ? row.balance : 0),
-            0,
-          ),
-        };
-      })
-      .sort((a, b) => a.currency.localeCompare(b.currency));
-    const mixedCurrencies = currencies.size > 1;
+    const currencySummaries = [{
+      currency: baseCurrency,
+      rows,
+      totalOwes: rows.reduce(
+        (sum, row) => sum + (row.balance < 0 ? Math.abs(row.balance) : 0),
+        0,
+      ),
+      totalGetsBack: rows.reduce(
+        (sum, row) => sum + (row.balance > 0 ? row.balance : 0),
+        0,
+      ),
+    }];
     const debtors = rows
       .filter((row) => row.balance < -0.005)
       .map((row) => ({ member: row.member, amount: Math.abs(row.balance) }))
@@ -6161,7 +6126,7 @@ export default function TripDetailPage() {
     let creditorIndex = 0;
 
     while (
-      !mixedCurrencies &&
+      missingConversionCount === 0 &&
       debtorIndex < debtors.length &&
       creditorIndex < creditors.length
     ) {
@@ -6184,11 +6149,9 @@ export default function TripDetailPage() {
       if (creditor.amount <= 0.005) creditorIndex += 1;
     }
 
-    const currency = Array.from(currencies)[0] || "CHF";
-
     return {
-      mixedCurrencies,
-      currency,
+      mixedCurrencies: false,
+      currency: baseCurrency,
       rows,
       currencySummaries,
       transfers,
@@ -6202,8 +6165,9 @@ export default function TripDetailPage() {
         (sum, row) => sum + (row.balance > 0 ? row.balance : 0),
         0,
       ),
+      missingConversionCount,
     };
-  }, [trip?.items, trip?.members]);
+  }, [baseCurrency, trip?.items, trip?.members]);
 
   const memberCount = trip?.members?.length ?? 0;
   const itemCount = trip?.items?.length ?? 0;
@@ -6258,8 +6222,23 @@ export default function TripDetailPage() {
   ).length;
   const checklistTotal = defaultTravelChecklistItems.length;
   const budgetItems = (trip?.items ?? [])
-    .map((item) => ({ item, amount: itemBudgetAmount(item) }))
-    .filter(({ amount }) => amount > 0);
+    .map((item) => {
+      const calculated = budgetCostsForItem(item, trip?.members ?? []).map((cost) => {
+        const participantIds = costParticipantIds(cost, trip?.members ?? []);
+        return calculateTripCostShare(cost, baseCurrency, participantIds.length);
+      });
+      return {
+        item,
+        amount: roundTripMoney(
+          calculated.reduce(
+            (sum, cost) => sum + (cost.missingConversion ? 0 : cost.totalBaseAmount),
+            0,
+          ),
+        ),
+        missingConversionCount: calculated.filter((cost) => cost.missingConversion).length,
+      };
+    })
+    .filter(({ amount, missingConversionCount }) => amount > 0 || missingConversionCount > 0);
   const budgetFieldTotals = [
     { label: "Greenfee", value: budgetSummary.greenTotal },
     { label: "Direct", value: budgetSummary.directTotal },
@@ -6329,7 +6308,10 @@ export default function TripDetailPage() {
     );
   }
 
-  function overviewMetadataRowsForItem(item: TripItem, displayKey?: string) {
+  function overviewMetadataRowsForItem(
+    item: TripItem,
+    displayKey?: string,
+  ): { label: string; value: string }[] {
     const startKey = displayKey || dateKey(item);
     const startDate = compactDateLabel(startKey);
     const endDate = item.endDate ? compactDateLabel(dayKeyFromValue(item.endDate)) : "";
@@ -7313,6 +7295,14 @@ export default function TripDetailPage() {
             </div>
           ) : null}
 
+          {(myCostsData?.summary.missingConversionCount ?? 0) > 0 ? (
+            <div style={{ color: "var(--danger)", fontSize: 12, lineHeight: 1.35 }}>
+              {myCostsData?.summary.missingConversionCount} foreign-currency cost
+              {myCostsData?.summary.missingConversionCount === 1 ? " is" : "s are"} missing
+              conversion data and excluded from these totals.
+            </div>
+          ) : null}
+
           <div
             style={{
               display: "grid",
@@ -7923,6 +7913,14 @@ export default function TripDetailPage() {
               }}
             >
               {organizerCostsErr}
+            </div>
+          ) : null}
+
+          {(organizerCostsData?.summary.missingConversionCount ?? 0) > 0 ? (
+            <div style={{ color: "var(--danger)", fontSize: 12, lineHeight: 1.35 }}>
+              {organizerCostsData?.summary.missingConversionCount} foreign-currency cost
+              {organizerCostsData?.summary.missingConversionCount === 1 ? " is" : "s are"} missing
+              conversion data and excluded from totals and balances.
             </div>
           ) : null}
 
@@ -10864,6 +10862,22 @@ export default function TripDetailPage() {
             </div>
           ) : null}
 
+          {budgetSummary.missingConversionCount > 0 ? (
+            <div
+              style={{
+                padding: 12,
+                color: "var(--danger)",
+                fontSize: 12,
+                lineHeight: 1.4,
+                ...sectionMutedCardStyle,
+              }}
+            >
+              {budgetSummary.missingConversionCount} foreign-currency cost
+              {budgetSummary.missingConversionCount === 1 ? " is" : "s are"} missing
+              conversion data and excluded from the totals above.
+            </div>
+          ) : null}
+
           <div
             style={{
               ...sectionCardStyle,
@@ -10892,7 +10906,7 @@ export default function TripDetailPage() {
               </div>
             ) : (
               <div style={{ display: "grid", gap: 8 }}>
-                {budgetItems.map(({ item, amount }) => {
+                {budgetItems.map(({ item, amount, missingConversionCount }) => {
                   const participants = effectiveParticipants(item, trip?.members ?? []);
                   const shared = item.expenseType !== "PERSONAL";
                   const payer = payerSummary(item) || "Not set";
@@ -10937,7 +10951,9 @@ export default function TripDetailPage() {
                             whiteSpace: "nowrap",
                           }}
                         >
-                          {formatMoney(amount, item.currency)}
+                          {missingConversionCount > 0 && amount === 0
+                            ? "Conversion required"
+                            : formatMoney(amount, baseCurrency)}
                         </div>
                       </div>
                       <div
@@ -11929,6 +11945,15 @@ export default function TripDetailPage() {
                       ? `paid by ${memberDisplayName(draftPaidBy)}`
                       : "paid by one member";
                 const needsExchangeRate = draftNeedsExchangeRate(draft, baseCurrency);
+                const draftConversion = resolveTripCostConversion(
+                  {
+                    amount: draftAmount,
+                    currency: draft.currency,
+                    exchangeRate: optionalNumber(draft.exchangeRate),
+                    baseAmount: optionalNumber(draft.baseAmount),
+                  },
+                  baseCurrency,
+                );
                 const shareHelperText = budgetDraftShareHelperText(draft);
                 const splitPreview = budgetDraftPreviewText(draft);
                 const costModeWarning = budgetDraftCostModeWarning(draft);
@@ -12038,7 +12063,10 @@ export default function TripDetailPage() {
                               inputMode="decimal"
                               value={draft.amount}
                               onChange={(event) =>
-                                updateBudgetDraft(draft.localId, { amount: event.target.value })
+                                updateBudgetDraft(draft.localId, {
+                                  amount: event.target.value,
+                                  baseAmount: "",
+                                })
                               }
                               style={editFieldStyle}
                             />
@@ -12048,7 +12076,11 @@ export default function TripDetailPage() {
                             <select
                               value={draft.currency}
                               onChange={(event) =>
-                                updateBudgetDraft(draft.localId, { currency: event.target.value })
+                                updateBudgetDraft(draft.localId, {
+                                  currency: event.target.value,
+                                  exchangeRate: "",
+                                  baseAmount: "",
+                                })
                               }
                               style={editFieldStyle}
                             >
@@ -12060,6 +12092,40 @@ export default function TripDetailPage() {
                             </select>
                           </label>
                         </div>
+
+                        {draft.currency.trim().toUpperCase() !==
+                        baseCurrency.toUpperCase() ? (
+                          <div style={{ display: "grid", gap: 7 }}>
+                            <label style={{ display: "grid", gap: 6, color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
+                              Exchange rate ({baseCurrency} per {draft.currency})
+                              <input
+                                type="number"
+                                inputMode="decimal"
+                                min="0"
+                                step="any"
+                                value={draft.exchangeRate}
+                                onChange={(event) =>
+                                  updateBudgetDraft(draft.localId, {
+                                    exchangeRate: event.target.value,
+                                    baseAmount: "",
+                                  })
+                                }
+                                placeholder={`1 ${draft.currency} in ${baseCurrency}`}
+                                style={editFieldStyle}
+                              />
+                            </label>
+                            {draftConversion.missingConversion ? (
+                              <div style={{ color: "var(--danger)", fontSize: 12 }}>
+                                A conversion rate is required for this cost.
+                              </div>
+                            ) : draftAmount !== undefined &&
+                              optionalNumber(draft.exchangeRate) !== undefined ? (
+                              <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 800 }}>
+                                Equivalent: {formatMoney(draftConversion.amount, baseCurrency)}
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
 
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
                           {(["TOTAL", "PER_PERSON"] as CostMode[]).map((mode) => {

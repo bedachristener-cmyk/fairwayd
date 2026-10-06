@@ -44,6 +44,7 @@ export type TripCostRow = {
   participantCount: number;
   personalShare: number;
   paidAmount: number;
+  missingConversion: boolean;
 };
 
 export type MyTripCostRow = TripCostRow & {
@@ -70,6 +71,7 @@ export type MyTripCostsResponse = {
     totalPaidByMe: number;
     balancePreview: number;
     groupedByCategory: TripCostGroupedSummary;
+    missingConversionCount: number;
   };
 };
 
@@ -79,6 +81,7 @@ export type OrganizerTripCostsResponse = {
   costs: TripCostRow[];
   summary: {
     totalTripCost: number;
+    missingConversionCount: number;
     paidBySummary: Array<{
       member: TripCostMember;
       totalPaid: number;

@@ -30,6 +30,7 @@ import { TripItemCostDto } from './dto/trip-item-cost.dto';
 import {
   buildMyCostsSummary,
   buildOrganizerCostsSummary,
+  resolveBaseMoneyValue,
 } from './budget-v3';
 
 function startsAtFromDto(date?: string, startTime?: string) {
@@ -1679,13 +1680,35 @@ export class TripsService {
         Boolean(currency) &&
         Boolean(baseCurrency) &&
         currency!.toUpperCase() === baseCurrency;
+      const hasValidExchangeRate =
+        typeof cost.exchangeRate === 'number' &&
+        Number.isFinite(cost.exchangeRate) &&
+        cost.exchangeRate > 0;
+      const conversion = resolveBaseMoneyValue(
+        {
+          amount,
+          currency,
+          exchangeRate: isBaseCurrency ? 1 : cost.exchangeRate,
+          baseAmount: isBaseCurrency
+            ? amount
+            : hasValidExchangeRate
+              ? null
+              : cost.baseAmount,
+        },
+        baseCurrency || 'CHF',
+      );
+      if (conversion.missingConversion) {
+        throw new BadRequestException(
+          `Exchange rate to ${baseCurrency || 'the trip base currency'} is required for ${currency || 'foreign-currency'} costs`,
+        );
+      }
 
       resolvedCosts.push({
         label: cost.label?.trim() || itemDto.title?.trim() || null,
         amount,
         currency,
-        exchangeRate: isBaseCurrency ? 1 : cost.exchangeRate ?? null,
-        baseAmount: isBaseCurrency ? amount : cost.baseAmount ?? null,
+        exchangeRate: amount === null ? null : conversion.exchangeRate,
+        baseAmount: amount === null ? null : conversion.amount,
         costMode: cost.costMode ?? itemDto.costMode ?? defaultTripItemCostMode(itemDto.type),
         paymentMode: cost.paymentMode ?? this.defaultPaymentMode(paidByMemberId),
         paidByMember:

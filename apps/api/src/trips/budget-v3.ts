@@ -92,6 +92,7 @@ export type BudgetV3CostShare = {
   baseAmount: number;
   totalBaseAmount: number;
   personalShare: number;
+  missingConversion: boolean;
   participantMemberIds: string[];
   participantCount: number;
 };
@@ -116,6 +117,7 @@ export type BudgetV3CostRow = {
   participantCount: number;
   personalShare: number;
   paidAmount: number;
+  missingConversion: boolean;
 };
 
 export type BudgetV3CostMemberAmount = {
@@ -142,6 +144,7 @@ export type BudgetV3MyCostsSummary = {
   totalPaidByMe: number;
   balancePreview: number;
   groupedByCategory: BudgetV3GroupedSummary;
+  missingConversionCount: number;
 };
 
 export type BudgetV3MyCostsResponse = {
@@ -166,6 +169,7 @@ export type BudgetV3OrganizerCostsResponse = {
   costs: BudgetV3CostRow[];
   summary: {
     totalTripCost: number;
+    missingConversionCount: number;
     paidBySummary: BudgetV3MemberSummaryRow[];
     memberShareSummary: BudgetV3MemberSummaryRow[];
     balancePreview: BudgetV3MemberSummaryRow[];
@@ -239,27 +243,57 @@ export function emptyGroupedSummary(): BudgetV3GroupedSummary {
   };
 }
 
-export function baseMoneyValue(cost: BudgetV3RichCost, baseCurrency: string) {
+export type BaseMoneyResolution = {
+  amount: number;
+  exchangeRate: number | null;
+  missingConversion: boolean;
+};
+
+export function resolveBaseMoneyValue(
+  cost: Pick<BudgetV3RichCost, 'amount' | 'baseAmount' | 'currency' | 'exchangeRate'>,
+  baseCurrency: string,
+): BaseMoneyResolution {
   const amount =
     typeof cost.amount === 'number' && Number.isFinite(cost.amount)
       ? cost.amount
       : 0;
-  const baseAmount =
+  const storedBaseAmount =
     typeof cost.baseAmount === 'number' && Number.isFinite(cost.baseAmount)
       ? cost.baseAmount
       : 0;
-  if (baseAmount > 0) return baseAmount;
+  const exchangeRate =
+    typeof cost.exchangeRate === 'number' &&
+    Number.isFinite(cost.exchangeRate) &&
+    cost.exchangeRate > 0
+      ? cost.exchangeRate
+      : null;
+  if (storedBaseAmount > 0 || (amount === 0 && storedBaseAmount === 0)) {
+    return {
+      amount: roundedMoney(storedBaseAmount),
+      exchangeRate:
+        exchangeRate ?? (amount > 0 ? storedBaseAmount / amount : null),
+      missingConversion: false,
+    };
+  }
 
   const currency = cost.currency?.trim();
   if (!currency || currency.toUpperCase() === baseCurrency.toUpperCase()) {
-    return amount;
+    return { amount: roundedMoney(amount), exchangeRate: 1, missingConversion: false };
   }
 
-  const exchangeRate =
-    typeof cost.exchangeRate === 'number' && Number.isFinite(cost.exchangeRate)
-      ? cost.exchangeRate
-      : 0;
-  return exchangeRate > 0 ? amount * exchangeRate : 0;
+  if (exchangeRate) {
+    return {
+      amount: roundedMoney(amount * exchangeRate),
+      exchangeRate,
+      missingConversion: false,
+    };
+  }
+
+  return { amount: 0, exchangeRate: null, missingConversion: amount > 0 };
+}
+
+export function baseMoneyValue(cost: BudgetV3RichCost, baseCurrency: string) {
+  return resolveBaseMoneyValue(cost, baseCurrency).amount;
 }
 
 export function participantMemberIdsForCost(cost: BudgetV3RichCost) {
@@ -278,7 +312,8 @@ export function calculateCostShare(
 ): BudgetV3CostShare {
   const participantMemberIds = participantMemberIdsForCost(cost);
   const participantCount = participantMemberIds.length;
-  const baseAmount = baseMoneyValue(cost, baseCurrency);
+  const conversion = resolveBaseMoneyValue(cost, baseCurrency);
+  const baseAmount = conversion.amount;
   const costMode = cost.costMode ?? TripItemCostMode.TOTAL;
   const totalBaseAmount =
     costMode === TripItemCostMode.PER_PERSON
@@ -295,6 +330,7 @@ export function calculateCostShare(
     baseAmount: roundedMoney(baseAmount),
     totalBaseAmount: roundedMoney(totalBaseAmount),
     personalShare: roundedMoney(personalShare),
+    missingConversion: conversion.missingConversion,
     participantMemberIds,
     participantCount,
   };
@@ -382,6 +418,7 @@ function costRow(
       currentMemberId && cost.paidByMemberId === currentMemberId
         ? share.totalBaseAmount
         : 0,
+    missingConversion: share.missingConversion,
   };
 }
 
@@ -525,6 +562,7 @@ export function buildMyCostsSummary(params: {
         costs.reduce((sum, cost) => sum + cost.netBalance, 0),
       ),
       groupedByCategory,
+      missingConversionCount: costs.filter((cost) => cost.missingConversion).length,
     },
   };
 }
@@ -620,6 +658,7 @@ export function buildOrganizerCostsSummary(params: {
       totalTripCost: roundedMoney(
         costs.reduce((sum, cost) => sum + cost.totalBaseAmount, 0),
       ),
+      missingConversionCount: costs.filter((cost) => cost.missingConversion).length,
       paidBySummary,
       memberShareSummary,
       balancePreview,
