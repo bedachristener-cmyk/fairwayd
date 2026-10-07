@@ -1269,7 +1269,7 @@ export default function CoursePage() {
       >
         <button
           type="button"
-          onClick={() => nav("/map")}
+          onClick={() => nav(backNavigation.to)}
           style={{
             border: "1px solid var(--border)",
             background: "var(--card)",
