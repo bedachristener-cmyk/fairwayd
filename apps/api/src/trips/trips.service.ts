@@ -27,6 +27,7 @@ import { UpdateTripMemberDto } from './dto/update-trip-member.dto';
 import { UpdateTripItemDto } from './dto/update-trip-item.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
 import { TripItemCostDto } from './dto/trip-item-cost.dto';
+import { DEFAULT_CURRENCY, normalizeSupportedCurrency } from '../currency';
 import {
   buildMyCostsSummary,
   buildOrganizerCostsSummary,
@@ -292,13 +293,30 @@ export class TripsService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  create(userId: string, dto: CreateTripDto) {
+  async create(userId: string, dto: CreateTripDto) {
+    let requestedBaseCurrency: string | undefined;
+    if (dto.baseCurrency !== undefined) {
+      try {
+        requestedBaseCurrency = normalizeSupportedCurrency(dto.baseCurrency);
+      } catch {
+        throw new BadRequestException('Unsupported trip base currency');
+      }
+    }
+    const user = requestedBaseCurrency
+      ? null
+      : await this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { preferredCurrency: true },
+        });
+    const baseCurrency =
+      requestedBaseCurrency || user?.preferredCurrency?.trim().toUpperCase() || DEFAULT_CURRENCY;
+
     return this.prisma.trip.create({
       data: {
         title: dto.title.trim(),
         destination: dto.destination?.trim() || null,
         description: dto.description?.trim() || null,
-        baseCurrency: dto.baseCurrency?.trim() || 'CHF',
+        baseCurrency,
         createdById: userId,
         members: {
           create: {

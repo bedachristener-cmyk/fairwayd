@@ -13,6 +13,7 @@ import {
   Visibility,
 } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
+import { normalizeSupportedCurrency } from '../currency';
 
 const MIN_HANDLE_LENGTH = 3;
 const PROFILE_TEXT_LIMIT = 240;
@@ -91,6 +92,7 @@ const userProfileSelect = {
   homeGolfClubPrivacy: true,
   golfSloganPrivacy: true,
   favoriteGolfDestinationPrivacy: true,
+  preferredCurrency: true,
   termsAcceptedAt: true,
   termsVersion: true,
   privacyAcceptedAt: true,
@@ -236,6 +238,21 @@ export class UsersService {
     return this.prisma.user.update({
       where: { id: userId },
       data: { avatarUrl },
+      select: userProfileSelect,
+    });
+  }
+
+  async updatePreferredCurrency(userId: string, preferredCurrency: unknown) {
+    let currency: string;
+    try {
+      currency = normalizeSupportedCurrency(preferredCurrency);
+    } catch {
+      throw new BadRequestException('Unsupported preferred currency');
+    }
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { preferredCurrency: currency },
       select: userProfileSelect,
     });
   }

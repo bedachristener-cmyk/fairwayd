@@ -21,6 +21,9 @@ export const STRINGS = {
     handle_in_use: "Handle already in use",
     handle_required: "Please enter a handle",
     profile_update_failed: "Failed to update profile",
+    preferred_currency: "Preferred currency",
+    preferred_currency_help: "Used as the default currency for new trips.",
+    preferred_currency_save_failed: "Failed to save preferred currency",
 
     // common menu
     edit_profile: "Edit profile",
@@ -263,6 +266,9 @@ export const STRINGS = {
     handle_in_use: "Handle bereits in Verwendung",
     handle_required: "Bitte einen Handle eingeben",
     profile_update_failed: "Profil konnte nicht aktualisiert werden",
+    preferred_currency: "Bevorzugte Währung",
+    preferred_currency_help: "Wird als Standardwährung für neue Reisen verwendet.",
+    preferred_currency_save_failed: "Bevorzugte Währung konnte nicht gespeichert werden",
 
     edit_profile: "Profil bearbeiten",
     theme: "Anzeige",
@@ -499,6 +505,9 @@ export const STRINGS = {
     handle_in_use: "Nom d’utilisateur déjà utilisé",
     handle_required: "Veuillez entrer un nom d’utilisateur",
     profile_update_failed: "Échec de la mise à jour du profil",
+    preferred_currency: "Devise préférée",
+    preferred_currency_help: "Utilisée comme devise par défaut pour les nouveaux voyages.",
+    preferred_currency_save_failed: "Échec de l’enregistrement de la devise préférée",
 
     edit_profile: "Modifier le profil",
     theme: "Affichage",
@@ -735,6 +744,9 @@ export const STRINGS = {
     handle_in_use: "Nome utente già in uso",
     handle_required: "Inserisci un nome utente",
     profile_update_failed: "Aggiornamento del profilo non riuscito",
+    preferred_currency: "Valuta preferita",
+    preferred_currency_help: "Usata come valuta predefinita per i nuovi viaggi.",
+    preferred_currency_save_failed: "Impossibile salvare la valuta preferita",
 
     edit_profile: "Modifica profilo",
     theme: "Tema",
@@ -970,6 +982,9 @@ export const STRINGS = {
     handle_in_use: "Nombre de usuario ya en uso",
     handle_required: "Introduce un nombre de usuario",
     profile_update_failed: "Error al actualizar el perfil",
+    preferred_currency: "Moneda preferida",
+    preferred_currency_help: "Se usa como moneda predeterminada para viajes nuevos.",
+    preferred_currency_save_failed: "No se pudo guardar la moneda preferida",
 
     edit_profile: "Editar perfil",
     theme: "Tema",
@@ -1206,6 +1221,9 @@ export const STRINGS = {
     handle_in_use: "이미 사용 중인 핸들입니다",
     handle_required: "핸들을 입력하세요",
     profile_update_failed: "프로필을 업데이트하지 못했습니다",
+    preferred_currency: "선호 통화",
+    preferred_currency_help: "새 여행의 기본 통화로 사용됩니다.",
+    preferred_currency_save_failed: "선호 통화를 저장하지 못했습니다",
 
     edit_profile: "프로필 수정",
     theme: "테마",
@@ -1440,6 +1458,9 @@ export const STRINGS = {
     handle_in_use: "ชื่อนี้ถูกใช้แล้ว",
     handle_required: "กรุณาใส่ชื่อผู้ใช้",
     profile_update_failed: "อัปเดตโปรไฟล์ไม่สำเร็จ",
+    preferred_currency: "สกุลเงินที่ต้องการ",
+    preferred_currency_help: "ใช้เป็นสกุลเงินเริ่มต้นสำหรับทริปใหม่",
+    preferred_currency_save_failed: "บันทึกสกุลเงินที่ต้องการไม่สำเร็จ",
 
     edit_profile: "แก้ไขโปรไฟล์",
     theme: "ธีม",

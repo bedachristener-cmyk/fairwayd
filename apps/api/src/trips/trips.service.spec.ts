@@ -6,6 +6,7 @@ function createService(prismaOverrides: Record<string, any> = {}) {
   const prisma = {
     trip: {
       findUnique: jest.fn(),
+      create: jest.fn(),
     },
     tripActivity: {
       create: jest.fn(),
@@ -41,6 +42,80 @@ function createService(prismaOverrides: Record<string, any> = {}) {
     service: new TripsService(prisma as any, notifications as any),
   };
 }
+
+describe('TripsService preferred currency defaults', () => {
+  it('falls back to CHF when the user has no preference', async () => {
+    const { prisma, service } = createService();
+    prisma.user.findUnique.mockResolvedValue({ preferredCurrency: null });
+    prisma.trip.create.mockResolvedValue({ id: 'trip-chf' });
+
+    await service.create('user-1', { title: 'Swiss trip' });
+
+    expect(prisma.trip.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ baseCurrency: 'CHF' }),
+      }),
+    );
+  });
+
+  it('uses the saved preference when no trip currency is provided', async () => {
+    const { prisma, service } = createService();
+    prisma.user.findUnique.mockResolvedValue({ preferredCurrency: 'EUR' });
+    prisma.trip.create.mockResolvedValue({ id: 'trip-eur' });
+
+    await service.create('user-1', { title: 'Euro trip' });
+
+    expect(prisma.trip.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ baseCurrency: 'EUR' }),
+      }),
+    );
+  });
+
+  it('keeps explicit CHF over a saved EUR preference', async () => {
+    const { prisma, service } = createService();
+    prisma.user.findUnique.mockResolvedValue({ preferredCurrency: 'EUR' });
+    prisma.trip.create.mockResolvedValue({ id: 'trip-chf-explicit' });
+
+    await service.create('user-1', {
+      title: 'Swiss trip',
+      baseCurrency: 'CHF',
+    });
+
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    expect(prisma.trip.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ baseCurrency: 'CHF' }),
+      }),
+    );
+  });
+
+  it('normalizes a supported explicit trip currency', async () => {
+    const { prisma, service } = createService();
+    prisma.trip.create.mockResolvedValue({ id: 'trip-eur-explicit' });
+
+    await service.create('user-1', {
+      title: 'Euro trip',
+      baseCurrency: 'eur',
+    });
+
+    expect(prisma.trip.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ baseCurrency: 'EUR' }),
+      }),
+    );
+  });
+
+  it('rejects an unsupported explicit trip currency', async () => {
+    const { prisma, service } = createService();
+
+    await expect(
+      service.create('user-1', { title: 'Invalid trip', baseCurrency: 'XYZ' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prisma.trip.create).not.toHaveBeenCalled();
+  });
+});
 
 describe('TripsService foreign-currency cost snapshots', () => {
   function setupCostResolution() {

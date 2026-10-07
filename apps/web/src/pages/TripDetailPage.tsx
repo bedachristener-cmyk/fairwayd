@@ -47,6 +47,7 @@ import {
 import { useAuth } from "../auth/AuthContext";
 import { fileUrl } from "../api/fileUrl";
 import { TripCardsSkeleton } from "../components/PolishStates";
+import { CURRENCY_OPTIONS } from "../constants/currencies";
 import {
   calculateTripCostShare,
   resolveTripCostConversion,
@@ -502,20 +503,7 @@ const tripDocumentCategoryLabels: Record<TripDocumentCategory, string> = {
   GENERAL: "General",
 };
 
-const currencyOptions = [
-  "THB",
-  "CHF",
-  "EUR",
-  "USD",
-  "JPY",
-  "GBP",
-  "AUD",
-  "SGD",
-  "MYR",
-  "IDR",
-  "PHP",
-  "ZAR",
-];
+const currencyOptions = CURRENCY_OPTIONS;
 
 const editFieldStyle: React.CSSProperties = {
   width: "100%",

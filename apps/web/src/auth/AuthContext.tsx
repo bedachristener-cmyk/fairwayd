@@ -16,6 +16,7 @@ type Me = {
   provider?: string | null;
   createdAt?: string;
   avatarUrl?: string | null;
+  preferredCurrency?: string | null;
 };
 
 type AuthState = {

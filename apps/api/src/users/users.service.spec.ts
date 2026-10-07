@@ -4,6 +4,7 @@ import {
   FollowStatus,
   Visibility,
 } from '@prisma/client';
+import { BadRequestException } from '@nestjs/common';
 import { UsersService } from './users.service';
 
 function createService(prismaOverrides: Record<string, any> = {}) {
@@ -23,6 +24,9 @@ function createService(prismaOverrides: Record<string, any> = {}) {
     },
     post: {
       findMany: jest.fn(),
+    },
+    trip: {
+      update: jest.fn(),
     },
     ...prismaOverrides,
   } as any;
@@ -58,6 +62,38 @@ const profileUser = {
 };
 
 describe('UsersService social/privacy regressions', () => {
+  describe('preferred currency', () => {
+    it('persists an uppercase preferred currency from lowercase input', async () => {
+      const { prisma, service } = createService();
+      prisma.user.update.mockResolvedValue({
+        ...profileUser,
+        preferredCurrency: 'EUR',
+      });
+
+      await expect(
+        service.updatePreferredCurrency('profile-user', 'eur'),
+      ).resolves.toEqual(expect.objectContaining({ preferredCurrency: 'EUR' }));
+
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'profile-user' },
+          data: { preferredCurrency: 'EUR' },
+        }),
+      );
+      expect(prisma.trip.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects unsupported preferred currencies', async () => {
+      const { prisma, service } = createService();
+
+      await expect(
+        service.updatePreferredCurrency('profile-user', 'XYZ'),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+  });
+
   describe('updateProfile', () => {
     it('stores PUBLIC account privacy when requested', async () => {
       const { prisma, service } = createService();

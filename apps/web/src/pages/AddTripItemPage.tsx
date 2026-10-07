@@ -15,6 +15,7 @@ import { API_BASE } from "../api/base";
 import { friendlyApiErrorMessage } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { resolveTripCostConversion } from "../utils/tripCostAccounting";
+import { CURRENCY_OPTIONS } from "../constants/currencies";
 
 type TripItemType =
   | "golf_round"
@@ -68,20 +69,7 @@ const memberVisibilityOptions: { value: TripItemVisibility; label: string }[] = 
   { value: "SELECTED", label: "Selected members" },
 ];
 
-const currencyOptions = [
-  "THB",
-  "CHF",
-  "EUR",
-  "USD",
-  "JPY",
-  "GBP",
-  "AUD",
-  "SGD",
-  "MYR",
-  "IDR",
-  "PHP",
-  "ZAR",
-];
+const currencyOptions = CURRENCY_OPTIONS;
 
 const golfDurationOptions = [
   { value: "", label: "Not specified" },

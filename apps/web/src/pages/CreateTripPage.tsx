@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
+import { CURRENCY_OPTIONS, DEFAULT_CURRENCY } from "../constants/currencies";
 
 const fieldStyle: CSSProperties = {
   width: "100%",
@@ -30,13 +31,21 @@ function optionalText(value: string) {
 
 export default function CreateTripPage() {
   const nav = useNavigate();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
   const [title, setTitle] = useState("");
   const [destination, setDestination] = useState("");
   const [description, setDescription] = useState("");
+  const [baseCurrency, setBaseCurrency] = useState(DEFAULT_CURRENCY);
+  const [baseCurrencyTouched, setBaseCurrencyTouched] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!baseCurrencyTouched) {
+      setBaseCurrency(user?.preferredCurrency || DEFAULT_CURRENCY);
+    }
+  }, [baseCurrencyTouched, user?.preferredCurrency]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -62,6 +71,7 @@ export default function CreateTripPage() {
           title: title.trim(),
           destination: optionalText(destination),
           description: optionalText(description),
+          baseCurrency,
         }),
       });
 
@@ -145,6 +155,24 @@ export default function CreateTripPage() {
             rows={4}
             style={{ ...fieldStyle, resize: "vertical" }}
           />
+        </label>
+
+        <label style={labelStyle}>
+          Base currency
+          <select
+            value={baseCurrency}
+            onChange={(e) => {
+              setBaseCurrency(e.target.value);
+              setBaseCurrencyTouched(true);
+            }}
+            style={fieldStyle}
+          >
+            {CURRENCY_OPTIONS.map((currency) => (
+              <option key={currency} value={currency}>
+                {currency}
+              </option>
+            ))}
+          </select>
         </label>
 
         <div style={{ display: "flex", gap: 10 }}>

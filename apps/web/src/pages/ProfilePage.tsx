@@ -16,6 +16,7 @@ import PostCard from "../components/PostCard";
 import CommentModal from "../components/CommentModal";
 import BackToTopButton from "../components/BackToTopButton";
 import { LANGUAGE_OPTIONS, getLang, setLang, t, type Lang } from "../i18n/strings";
+import { CURRENCY_OPTIONS, DEFAULT_CURRENCY } from "../constants/currencies";
 
 type PostImage = { id: string; url: string };
 
@@ -38,6 +39,7 @@ type ProfileUser = {
   homeGolfClubPrivacy?: ProfileFieldPrivacy | null;
   golfSloganPrivacy?: ProfileFieldPrivacy | null;
   favoriteGolfDestinationPrivacy?: ProfileFieldPrivacy | null;
+  preferredCurrency?: string | null;
 };
 
 type Post = {
@@ -252,16 +254,54 @@ function themeDisplayName(theme: ThemeName) {
   return t("theme_warm");
 }
 
-function ProfileSettingsCard() {
+function ProfileSettingsCard({
+  token,
+  preferredCurrency,
+  onPreferenceSaved,
+}: {
+  token: string;
+  preferredCurrency?: string | null;
+  onPreferenceSaved: () => Promise<void>;
+}) {
   const [theme, setThemeState] = useState<ThemeName>(() => getInitialTheme());
   const [language, setLanguage] = useState<Lang>(() => getLang());
-  const [expanded, setExpanded] = useState<"theme" | "language" | null>(null);
+  const [currency, setCurrency] = useState(preferredCurrency || DEFAULT_CURRENCY);
+  const [currencySaving, setCurrencySaving] = useState(false);
+  const [currencyError, setCurrencyError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<"theme" | "language" | "currency" | null>(null);
 
   const isMobile = window.innerWidth <= 980;
 
   useEffect(() => {
     setTheme(theme);
   }, [theme]);
+
+  useEffect(() => {
+    setCurrency(preferredCurrency || DEFAULT_CURRENCY);
+  }, [preferredCurrency]);
+
+  async function savePreferredCurrency(nextCurrency: string) {
+    if (!token || currencySaving) return;
+    setCurrencySaving(true);
+    setCurrencyError(null);
+    try {
+      const response = await fetch(`${API_BASE}/users/me/preferences`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ preferredCurrency: nextCurrency }),
+      });
+      if (!response.ok) throw new Error("Failed to save preferred currency");
+      setCurrency(nextCurrency);
+      await onPreferenceSaved();
+    } catch (error: any) {
+      setCurrencyError(error?.message || t("preferred_currency_save_failed"));
+    } finally {
+      setCurrencySaving(false);
+    }
+  }
 
   return (
     <div
@@ -385,6 +425,43 @@ function ProfileSettingsCard() {
               );
             })}
           </SettingsOptions>
+        </SettingsControlRow>
+
+        <SettingsControlRow
+          icon="¤"
+          label={t("preferred_currency")}
+          value={currency}
+          expanded={expanded === "currency"}
+          onClick={() =>
+            setExpanded((v) => (v === "currency" ? null : "currency"))
+          }
+        >
+          <div style={{ display: "grid", gap: 8 }}>
+            <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
+              {t("preferred_currency_help")}
+            </div>
+            <SettingsOptions>
+              {CURRENCY_OPTIONS.map((item) => {
+                const active = currency === item;
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    disabled={currencySaving}
+                    onClick={() => savePreferredCurrency(item)}
+                    style={settingsOptionStyle(active)}
+                  >
+                    {item}
+                  </button>
+                );
+              })}
+            </SettingsOptions>
+            {currencyError ? (
+              <div style={{ color: "var(--danger)", fontSize: 12 }}>
+                {currencyError}
+              </div>
+            ) : null}
+          </div>
         </SettingsControlRow>
         </div>
       </div>
@@ -868,7 +945,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
   const token = tokenFromContext || tokenFromStorage;
 
-  const { me, loading: meLoading, err: meErr } = useMe(true);
+  const { me, loading: meLoading, err: meErr, refresh: refreshMe } = useMe(true);
 
   const targetHandle = useMemo(() => {
     if (mode === "handle") return (params.handle ?? "").trim().toLowerCase();
@@ -2004,7 +2081,14 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
 
       {mode === "me" ? (
         <div style={{ order: 1 }}>
-          <ProfileSettingsCard />
+          <ProfileSettingsCard
+            token={token}
+            preferredCurrency={me?.preferredCurrency}
+            onPreferenceSaved={async () => {
+              await refreshMe();
+              await auth.refreshMe();
+            }}
+          />
         </div>
       ) : null}
 

@@ -12,6 +12,7 @@ import {
   UseInterceptors,
   Param,
   NotFoundException,
+  Patch,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -20,6 +21,7 @@ import { extname } from 'path';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { uploadToR2 } from '../storage/r2.service';
+import { UpdateUserPreferencesDto } from './dto/update-user-preferences.dto';
 
 function safeExt(original: string) {
   const ext = extname(original || '').toLowerCase();
@@ -104,6 +106,16 @@ export class UsersController {
       golfSloganPrivacy: body?.golfSloganPrivacy,
       favoriteGolfDestinationPrivacy: body?.favoriteGolfDestinationPrivacy,
     });
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Patch('me/preferences')
+  async updatePreferences(
+    @Req() req: any,
+    @Body() dto: UpdateUserPreferencesDto,
+  ) {
+    const userId = req?.user?.userId ?? req?.user?.id;
+    return this.users.updatePreferredCurrency(userId, dto.preferredCurrency);
   }
 
   // ---------------------------------------------------------
