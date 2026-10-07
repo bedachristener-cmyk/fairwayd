@@ -1,835 +1,314 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import {
+  CalendarDays,
+  MapPinned,
+  MessageCircleMore,
+  Search,
+  UsersRound,
+} from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
-import LoginPanel from "../components/LoginPanel";
-import DevLogin from "../components/DevLogin";
-import logo from "../assets/logo.png";
 import { validPostLoginNext } from "../auth/postLoginNext";
+import DevLogin from "../components/DevLogin";
+import LoginPanel from "../components/LoginPanel";
+import {
+  LANGUAGE_OPTIONS,
+  getLang,
+  setLang,
+  t,
+  type Lang,
+} from "../i18n/strings";
+import logo from "../assets/logo.png";
+import "./LandingPage.css";
+
+const DESTINATIONS = [
+  {
+    code: "th",
+    nameKey: "landing_thailand" as const,
+    image: "/destinations/thailand/thailand-golf-destination.jpg",
+    copyKey: "landing_thailand_copy" as const,
+  },
+  {
+    code: "pt",
+    nameKey: "landing_portugal" as const,
+    image: "/destinations/portugal/portugal-golf-destination.jpg",
+    copyKey: "landing_portugal_copy" as const,
+  },
+  {
+    code: "es",
+    nameKey: "landing_spain" as const,
+    image: "/destinations/spain/spain-hero.jpg",
+    copyKey: "landing_spain_copy" as const,
+  },
+  {
+    code: "ch",
+    nameKey: "landing_switzerland" as const,
+    image: "/destinations/switzerland-crans-montana.jpg",
+    copyKey: "landing_switzerland_copy" as const,
+  },
+];
+
+const FEATURES = [
+  {
+    titleKey: "discover_courses" as const,
+    copyKey: "landing_feature_discover_copy" as const,
+    Icon: Search,
+  },
+  {
+    titleKey: "landing_feature_follow" as const,
+    copyKey: "landing_feature_follow_copy" as const,
+    Icon: UsersRound,
+  },
+  {
+    titleKey: "landing_feature_share" as const,
+    copyKey: "landing_feature_share_copy" as const,
+    Icon: MessageCircleMore,
+  },
+  {
+    titleKey: "landing_feature_trips" as const,
+    copyKey: "landing_feature_trips_copy" as const,
+    Icon: CalendarDays,
+  },
+];
 
 export default function LandingPage() {
   const nav = useNavigate();
-  const loc = useLocation();
-  const { isAuthenticated, user, logout } = useAuth();
+  const location = useLocation();
+  const { isAuthenticated } = useAuth();
   const loginPanelRef = useRef<HTMLDivElement | null>(null);
-  const aboutRef = useRef<HTMLDivElement | null>(null);
+  const aboutRef = useRef<HTMLElement | null>(null);
   const [highlightLogin, setHighlightLogin] = useState(false);
   const [showLoginHint, setShowLoginHint] = useState(false);
-  const [loginHintText, setLoginHintText] = useState("Sign in to continue");
-  const isMobile = typeof window !== "undefined" && window.innerWidth <= 640;
+  const [loginHintText, setLoginHintText] = useState(t("landing_signin_hint"));
 
   useEffect(() => {
-    if (isAuthenticated) {
-      const next = validPostLoginNext(new URLSearchParams(loc.search).get("next"));
-      nav(next ?? "/feed", { replace: true });
+    if (!isAuthenticated) return;
+    const next = validPostLoginNext(
+      new URLSearchParams(location.search).get("next"),
+    );
+    nav(next ?? "/feed", { replace: true });
+  }, [isAuthenticated, location.search, nav]);
+
+  function focusLogin(message?: string) {
+    if (message) {
+      setLoginHintText(message);
+      setShowLoginHint(true);
+      window.setTimeout(() => setShowLoginHint(false), 2400);
     }
-  }, [isAuthenticated, loc.search, nav]);
+
+    loginPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlightLogin(true);
+    window.setTimeout(() => {
+      loginPanelRef.current
+        ?.querySelector<HTMLInputElement>('input[type="email"]')
+        ?.focus({ preventScroll: true });
+    }, 350);
+    window.setTimeout(() => setHighlightLogin(false), 1200);
+  }
+
+  function openDestination(path: string) {
+    if (isAuthenticated) {
+      nav(path);
+      return;
+    }
+    focusLogin(t("landing_destination_signin_hint"));
+  }
+
+  function scrollToAbout() {
+    aboutRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  if (isAuthenticated) {
+    return (
+      <main className="fw-landing fw-landing--redirecting">
+        <DevLogin />
+      </main>
+    );
+  }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#f5f6f8",
-        display: "grid",
-        placeItems: "center",
-        padding: isMobile ? 14 : isAuthenticated ? 16 : 24,
-        overflowX: "hidden",
-        boxSizing: "border-box",
-        width: "100%",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: isAuthenticated ? 1200 : 760,
-          display: "grid",
-          gridTemplateColumns: isAuthenticated
-            ? isMobile
-              ? "1fr"
-              : "1.2fr 1fr"
-            : "1fr",
-          gap: isMobile ? 16 : isAuthenticated ? 16 : 24,
-          alignItems: "start",
-          boxSizing: "border-box",
-          minWidth: 0,
-        }}
-      >
-        {/* Left: marketing / entry */}
-        <div
-          style={{
-            padding: isMobile ? 4 : isAuthenticated ? 22 : 8,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            minHeight: isMobile ? "auto" : 420,
-            background: "transparent",
-            minWidth: 0,
-            boxSizing: "border-box",
-          }}
+    <main className="fw-landing">
+      <div className="fw-landing__page">
+        <section
+          className="fw-landing__hero"
+          aria-labelledby="landing-title"
+          data-testid="landing-hero"
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <img
-              src={logo}
-              alt="Fairwayd"
-              style={{
-                width: isMobile ? 52 : 64,
-                height: isMobile ? 52 : 64,
-                borderRadius: isMobile ? 14 : 16,
-              }}
-            />
-
-            <div
-              style={{
-                fontWeight: 900,
-                fontSize: isMobile ? 26 : 32,
-                color: "#1a1a1a",
-                letterSpacing: isMobile ? -0.4 : -0.6,
-              }}
-            >
-              Fairwayd
+          <header className="fw-landing__topbar" data-testid="landing-header">
+            <div className="fw-landing__brand" aria-label="Fairwayd">
+              <img src={logo} alt="" />
+              <span>Fairwayd</span>
             </div>
 
-            <div
-              style={{
-                fontSize: isMobile ? 13 : 15,
-                color: "#1bbf73",
-                fontWeight: 800,
-                letterSpacing: 0.1,
-                lineHeight: 1.4,
-              }}
-            >
-              Discover golf through courses, players, and stories
-            </div>
+            <nav className="fw-landing__nav" aria-label="Fairwayd">
+              <button type="button" onClick={() => nav("/map")}>
+                {t("courses")}
+              </button>
+              <button type="button" onClick={() => nav("/map")}>
+                {t("map")}
+              </button>
+              <button type="button" onClick={() => openDestination("/destinations")}>
+                {t("destinations")}
+              </button>
+              <button type="button" onClick={scrollToAbout}>
+                {t("about")}
+              </button>
+            </nav>
 
-            <div
-              style={{
-                fontWeight: 900,
-                fontSize: isMobile ? 30 : 38,
-                lineHeight: isMobile ? 1.12 : 1.08,
-                color: "#111111",
-                letterSpacing: isMobile ? -0.5 : -0.8,
-                maxWidth: isMobile ? "100%" : 540,
-              }}
-            >
-              Everything about golf
-              <br />
-              in one place
+            <div className="fw-landing__header-actions">
+              <label className="fw-landing__language">
+                <span className="fw-landing__visually-hidden">{t("language")}</span>
+                <select
+                  aria-label={t("language")}
+                  defaultValue={getLang()}
+                  onChange={(event) => setLang(event.target.value as Lang)}
+                >
+                  {LANGUAGE_OPTIONS.map((language) => (
+                    <option value={language.code} key={language.code}>
+                      {language.code.toUpperCase()}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                className="fw-landing__header-signin"
+                type="button"
+                onClick={() => focusLogin()}
+              >
+                {t("sign_in")}
+              </button>
             </div>
+          </header>
 
-            <div style={subtitle(isMobile)}>
-              Find courses, share your rounds, rate experiences, follow other
-              golfers, and stay connected wherever you play.
+          <div className="fw-landing__hero-copy" data-testid="landing-hero-copy">
+            <div className="fw-landing__hero-content">
+              <p className="fw-landing__eyebrow">{t("landing_eyebrow")}</p>
+              <h1 id="landing-title">{t("landing_headline")}</h1>
+              <p className="fw-landing__lead">{t("landing_support")}</p>
+
+              <div className="fw-landing__actions">
+                <button
+                  className="fw-landing__button fw-landing__button--primary"
+                  type="button"
+                  onClick={() => nav("/map")}
+                >
+                  <MapPinned size={18} aria-hidden="true" />
+                  {t("explore_courses")}
+                </button>
+                <button
+                  className="fw-landing__button fw-landing__button--secondary"
+                  type="button"
+                  onClick={() => focusLogin()}
+                >
+                  {t("sign_in")}
+                </button>
+                <button
+                  className="fw-landing__text-link"
+                  type="button"
+                  onClick={scrollToAbout}
+                >
+                  {t("landing_about_heading")} <span aria-hidden="true">↓</span>
+                </button>
+              </div>
+
+              <p className="fw-landing__browse-note">{t("landing_browse_hint")}</p>
             </div>
           </div>
 
-          <div
-            style={{
-              marginTop: isMobile ? 16 : 18,
-              display: "flex",
-              gap: isMobile ? 8 : 10,
-              flexWrap: "wrap",
-            }}
+          <aside
+            className="fw-landing__login-card"
+            aria-labelledby="landing-login-title"
+            data-testid="landing-login-card"
           >
+            <div className="fw-landing__login-intro">
+              <span className="fw-landing__login-kicker">{t("landing_welcome")}</span>
+              <h2 id="landing-login-title">{t("landing_join")}</h2>
+              <p>{t("landing_login_copy")}</p>
+            </div>
+
+            <div className="fw-landing__community-points" aria-label={t("landing_join")}>
+              <span>{t("landing_community_share")}</span>
+              <span>{t("landing_community_map")}</span>
+              <span>{t("landing_community_discuss")}</span>
+            </div>
+
+            <div
+              ref={loginPanelRef}
+              className={`fw-landing__login-panel${highlightLogin ? " is-highlighted" : ""}`}
+              data-testid="landing-login-panel"
+            >
+              <LoginPanel />
+            </div>
+
+            <p className="fw-landing__login-footnote">{t("landing_browse_first")}</p>
+          </aside>
+        </section>
+
+        <section className="fw-landing__section" aria-labelledby="popular-destinations-title">
+          <div className="fw-landing__section-heading">
+            <div>
+              <p className="fw-landing__section-kicker">{t("landing_destinations_kicker")}</p>
+              <h2 id="popular-destinations-title">{t("landing_destinations_title")}</h2>
+              <p>{t("landing_destinations_intro")}</p>
+            </div>
             <button
-              style={primaryBtn}
-              onClick={() => nav("/map")}
+              className="fw-landing__button fw-landing__button--secondary"
               type="button"
+              onClick={() => openDestination("/destinations")}
             >
-              Explore courses
+              {t("landing_view_all_destinations")}
             </button>
-
-            {!isAuthenticated && (
-              <button
-                style={secondaryBtn}
-                onClick={() => {
-                  loginPanelRef.current?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "center",
-                  });
-                  setHighlightLogin(true);
-                  window.setTimeout(() => setHighlightLogin(false), 1200);
-                }}
-                type="button"
-              >
-                Sign in
-              </button>
-            )}
-
-            {!isAuthenticated && (
-              <button
-                style={secondaryBtn}
-                onClick={() => {
-                  aboutRef.current?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "start",
-                  });
-                }}
-                type="button"
-              >
-                What is Fairwayd?
-              </button>
-            )}
           </div>
 
-          <div
-            style={{
-              marginTop: 14,
-              fontSize: 12,
-              color: "var(--sub)",
-              lineHeight: 1.5,
-            }}
-          ></div>
-
-          <div style={hint(isMobile)}>
-            Explore the map freely. Sign in to post, review courses, and join
-            the conversation.
+          <div className="fw-landing__destinations">
+            {DESTINATIONS.map((destination) => (
+              <button
+                className="fw-landing__destination"
+                key={destination.code}
+                type="button"
+                onClick={() => openDestination(`/destinations/${destination.code}`)}
+              >
+                <img src={destination.image} alt="" loading="lazy" />
+                <span className="fw-landing__destination-overlay">
+                  <strong>{t(destination.nameKey)}</strong>
+                  <span>{t(destination.copyKey)}</span>
+                </span>
+              </button>
+            ))}
           </div>
+        </section>
 
-          {!isAuthenticated && (
-            <div
-              style={{
-                marginTop: isMobile ? 18 : 22,
-                padding: isMobile ? 16 : 18,
-                borderRadius: isMobile ? 18 : 20,
-                background: "white",
-                border: "1px solid rgba(0,0,0,0.08)",
-                boxShadow: "0 10px 28px rgba(0,0,0,0.05)",
-                maxWidth: 620,
-                width: "100%",
-                boxSizing: "border-box",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  color: "#1bbf73",
-                  textTransform: "uppercase",
-                  letterSpacing: 0.4,
-                  marginBottom: 10,
-                }}
-              >
-                Popular golf destinations
-              </div>
-
-              <div
-                style={{
-                  fontSize: isMobile ? 20 : 22,
-                  fontWeight: 900,
-                  color: "#111111",
-                  lineHeight: 1.15,
-                  marginBottom: 10,
-                }}
-              >
-                Explore golf in inspiring places
-              </div>
-
-              <div
-                style={{
-                  fontSize: isMobile ? 14 : 15,
-                  lineHeight: isMobile ? 1.65 : 1.7,
-                  color: "#4b5563",
-                  marginBottom: 10,
-                }}
-              >
-                Browse destinations to discover courses, stories, and golf
-                experiences from around the world.
-              </div>
-
-              {!isAuthenticated && (
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: "#6b7280",
-                    lineHeight: 1.5,
-                    marginBottom: 14,
-                  }}
-                >
-                  Sign in to explore destinations.
-                </div>
-              )}
-
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 10,
-                }}
-              >
-                <button
-                  style={destinationChip}
-                  onClick={() => {
-                    if (!isAuthenticated) {
-                      loginPanelRef.current?.scrollIntoView({
-                        behavior: "smooth",
-                        block: "center",
-                      });
-
-                      setHighlightLogin(true);
-
-                      setLoginHintText("Sign in to explore destinations");
-                      setShowLoginHint(true);
-
-                      window.setTimeout(() => setHighlightLogin(false), 1200);
-                      window.setTimeout(() => setShowLoginHint(false), 2400);
-
-                      return;
-                    }
-                    nav("/destinations/th");
-                  }}
-                  type="button"
-                >
-                  🇹🇭 Golf in Thailand
-                </button>
-
-                <button
-                  style={destinationChip}
-                  onClick={() => {
-                    if (!isAuthenticated) {
-                      loginPanelRef.current?.scrollIntoView({
-                        behavior: "smooth",
-                        block: "center",
-                      });
-
-                      setHighlightLogin(true);
-
-                      setLoginHintText("Sign in to explore destinations");
-                      setShowLoginHint(true);
-
-                      window.setTimeout(() => setHighlightLogin(false), 1200);
-                      window.setTimeout(() => setShowLoginHint(false), 2400);
-
-                      return;
-                    }
-                    nav("/destinations/pt");
-                  }}
-                  type="button"
-                >
-                  🇹🇭 Golf in Portugal
-                </button>
-
-                <button
-                  style={destinationChip}
-                  onClick={() => {
-                    if (!isAuthenticated) {
-                      loginPanelRef.current?.scrollIntoView({
-                        behavior: "smooth",
-                        block: "center",
-                      });
-
-                      setHighlightLogin(true);
-
-                      setLoginHintText("Sign in to explore destinations");
-                      setShowLoginHint(true);
-
-                      window.setTimeout(() => setHighlightLogin(false), 1200);
-                      window.setTimeout(() => setShowLoginHint(false), 2400);
-
-                      return;
-                    }
-                    nav("/destinations/es");
-                  }}
-                  type="button"
-                >
-                  🇹🇭 Golf in Spain
-                </button>
-
-                <button
-                  style={destinationChip}
-                  onClick={() => {
-                    if (!isAuthenticated) {
-                      loginPanelRef.current?.scrollIntoView({
-                        behavior: "smooth",
-                        block: "center",
-                      });
-
-                      setHighlightLogin(true);
-
-                      setLoginHintText("Sign in to explore destinations");
-                      setShowLoginHint(true);
-
-                      window.setTimeout(() => setHighlightLogin(false), 1200);
-                      window.setTimeout(() => setShowLoginHint(false), 2400);
-
-                      return;
-                    }
-                    nav("/destinations/ch");
-                  }}
-                  type="button"
-                >
-                  🇹🇭 Golf in Switzerland
-                </button>
-              </div>
-
-              <div style={{ marginTop: 14 }}>
-                <button
-                  style={secondaryBtn}
-                  onClick={() => {
-                    if (!isAuthenticated) {
-                      loginPanelRef.current?.scrollIntoView({
-                        behavior: "smooth",
-                        block: "center",
-                      });
-
-                      setHighlightLogin(true);
-
-                      setLoginHintText("Sign in to explore destinations");
-                      setShowLoginHint(true);
-
-                      window.setTimeout(() => setHighlightLogin(false), 1200);
-                      window.setTimeout(() => setShowLoginHint(false), 2400);
-
-                      return;
-                    }
-                    nav("/destinations");
-                  }}
-                  type="button"
-                >
-                  View all destinations
-                </button>
-              </div>
-            </div>
-          )}
-
-          {!isAuthenticated && (
-            <div
-              ref={aboutRef}
-              style={{
-                marginTop: isMobile ? 22 : 28,
-                padding: isMobile ? 16 : 20,
-                borderRadius: isMobile ? 18 : 20,
-                background: "white",
-                border: "1px solid rgba(0,0,0,0.08)",
-                boxShadow: "0 10px 28px rgba(0,0,0,0.05)",
-                maxWidth: 620,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  color: "#1bbf73",
-                  textTransform: "uppercase",
-                  letterSpacing: 0.4,
-                  marginBottom: 10,
-                }}
-              >
-                What is Fairwayd?
-              </div>
-
-              <div
-                style={{
-                  fontSize: isMobile ? 20 : 24,
-                  fontWeight: 900,
-                  color: "#111111",
-                  lineHeight: 1.15,
-                  marginBottom: 10,
-                }}
-              >
-                A social golf app built around real courses
-              </div>
-
-              <div
-                style={{
-                  fontSize: isMobile ? 14 : 15,
-                  lineHeight: isMobile ? 1.65 : 1.7,
-                  color: "#4b5563",
-                }}
-              >
-                Fairwayd is for golfers who want more than a list of courses.
-                You can explore golf destinations, follow courses and players,
-                share posts from where you play, and discover what other golfers
-                are experiencing.
-              </div>
-
-              <div
-                style={{
-                  marginTop: 14,
-                  fontSize: isMobile ? 14 : 15,
-                  lineHeight: isMobile ? 1.65 : 1.7,
-                  color: "#4b5563",
-                }}
-              >
-                It is designed for golfers who enjoy discovering new places,
-                sharing their golf life, and staying connected through courses,
-                rounds, stories, and community.
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Right: login / entry panel */}
-        <div
-          style={{
-            display: "grid",
-            gap: 16,
-            minWidth: 0,
-            width: "100%",
-            boxSizing: "border-box",
-          }}
+        <section
+          ref={aboutRef}
+          id="what-is-fairwayd"
+          className="fw-landing__section fw-landing__about"
+          aria-labelledby="about-fairwayd-title"
         >
-          {!isAuthenticated ? (
-            <div
-              style={{
-                ...card,
-                background: "linear-gradient(180deg, #111827 0%, #1f2937 100%)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                boxShadow: "0 18px 40px rgba(0,0,0,0.16)",
-                padding: isMobile ? 18 : 24,
-              }}
-            >
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "6px 10px",
-                  borderRadius: 999,
-                  background: "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  fontSize: 12,
-                  fontWeight: 800,
-                  color: "white",
-                  marginBottom: 14,
-                }}
-              >
-                Welcome to Fairwayd
-              </div>
+          <div className="fw-landing__about-copy">
+            <p className="fw-landing__section-kicker">{t("landing_about_heading")}</p>
+            <h2 id="about-fairwayd-title">{t("landing_about_title")}</h2>
+            <p>{t("landing_about_copy")}</p>
+          </div>
 
-              <div
-                style={{
-                  fontSize: isMobile ? 26 : 34,
-                  lineHeight: isMobile ? 1.12 : 1.08,
-                  fontWeight: 900,
-                  color: "white",
-                  marginBottom: 10,
-                  letterSpacing: isMobile ? -0.4 : -0.6,
-                }}
-              >
-                Join the golf community
-              </div>
-
-              <div
-                style={{
-                  fontSize: isMobile ? 14 : 16,
-                  lineHeight: isMobile ? 1.6 : 1.65,
-                  color: "rgba(255,255,255,0.82)",
-                  marginBottom: 18,
-                }}
-              >
-                Sign in to post updates, rate courses, ask questions, and follow
-                what other golfers are sharing.
-              </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gap: 10,
-                  marginBottom: 18,
-                }}
-              >
-                <div style={featureRow}>
-                  <span>⛳</span>
-                  <span>Share rounds and golf moments</span>
-                </div>
-                <div style={featureRow}>
-                  <span>🗺️</span>
-                  <span>Discover courses on the map</span>
-                </div>
-                <div style={featureRow}>
-                  <span>💬</span>
-                  <span>Join reviews, comments, and discussion</span>
-                </div>
-              </div>
-
-              <div
-                style={{
-                  padding: isMobile ? 12 : 14,
-                  borderRadius: 16,
-                  background: "rgba(0,0,0,0.02)",
-                  border: "1px solid var(--border)",
-                }}
-              >
-                <div ref={loginPanelRef} style={{ width: "100%" }}>
-                  <div
-                    style={{
-                      borderRadius: 22,
-                      transition: "box-shadow 0.25s ease, transform 0.25s ease",
-                      boxShadow: highlightLogin
-                        ? "0 0 0 4px rgba(34, 197, 94, 0.18), 0 18px 40px rgba(0,0,0,0.12)"
-                        : "none",
-                      transform: highlightLogin ? "translateY(-2px)" : "none",
-                      maxWidth: isMobile ? "100%" : 360,
-                      margin: "0 auto",
-                      width: "100%",
-                      boxSizing: "border-box",
-                    }}
-                  >
-                    <LoginPanel />
-                  </div>
-                </div>
-              </div>
-
-              <div
-                style={{
-                  marginTop: 14,
-                  fontSize: 12,
-                  color: "var(--sub)",
-                  lineHeight: 1.5,
-                }}
-              >
-                You can browse first and sign in when you are ready.
-              </div>
-            </div>
-          ) : (
-            <div style={card}>
-              <div style={{ fontWeight: 900, marginBottom: 8 }}>
-                You’re logged in
-              </div>
-
-              <div style={{ fontSize: 13, opacity: 0.8, lineHeight: 1.4 }}>
-                {user?.handle ? (
-                  <>
-                    Eingeloggt als <strong>{user.handle}</strong>. Du kannst
-                    direkt in den Feed oder zu deinem Profil.
-                  </>
-                ) : (
-                  <>Du kannst direkt in den Feed oder zu deinem Profil.</>
-                )}
-              </div>
-
-              <div
-                style={{
-                  marginTop: 14,
-                  display: "flex",
-                  gap: 10,
-                  flexWrap: "wrap",
-                }}
-              >
-                <button
-                  style={primaryBtn}
-                  onClick={() => nav("/feed")}
-                  type="button"
-                >
-                  Open feed
-                </button>
-
-                <button
-                  style={ghostBtn}
-                  onClick={() => nav("/profile")}
-                  type="button"
-                >
-                  Profile
-                </button>
-
-                <button
-                  style={ghostBtn}
-                  onClick={() => nav("/map")}
-                  type="button"
-                >
-                  Map
-                </button>
-
-                <button
-                  style={dangerBtn}
-                  onClick={() => {
-                    logout();
-                    nav("/");
-                  }}
-                  type="button"
-                >
-                  Logoff
-                </button>
-              </div>
-
-              <div style={{ marginTop: 12, fontSize: 12, opacity: 0.7 }}>
-                (MVP) Logout ist hier auf Landing erreichbar.
-              </div>
-            </div>
-          )}
-
-          {isAuthenticated && <DevLogin />}
-
-          {isAuthenticated && (
-            <div style={card}>
-              <div style={{ fontWeight: 900, marginBottom: 10 }}>
-                Quick links
-              </div>
-              <div style={{ display: "grid", gap: 10 }}>
-                <button
-                  style={listBtn}
-                  onClick={() => nav("/map")}
-                  type="button"
-                >
-                  🗺️ Map
-                </button>
-
-                <button
-                  style={listBtn}
-                  onClick={() => nav("/feed")}
-                  type="button"
-                >
-                  📰 Feed
-                </button>
-
-                <button
-                  style={listBtn}
-                  onClick={() => nav("/profile")}
-                  type="button"
-                >
-                  👤 Profile
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+          <div className="fw-landing__features">
+            {FEATURES.map(({ titleKey, copyKey, Icon }) => (
+              <article className="fw-landing__feature" key={titleKey}>
+                <span className="fw-landing__feature-icon">
+                  <Icon size={21} strokeWidth={2} aria-hidden="true" />
+                </span>
+                <h3>{t(titleKey)}</h3>
+                <p>{t(copyKey)}</p>
+              </article>
+            ))}
+          </div>
+        </section>
       </div>
-      {showLoginHint && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: isMobile ? 80 : 100,
-            left: "50%",
-            transform: "translateX(-50%)",
-            background: "white",
-            color: "#111",
-            padding: "12px 16px",
-            borderRadius: 14,
-            fontSize: 13,
-            fontWeight: 600,
-            boxShadow: "0 12px 30px rgba(0,0,0,0.15)",
-            border: "1px solid rgba(0,0,0,0.08)",
-            zIndex: 1000,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            maxWidth: "90%",
-          }}
-        >
-          <span style={{ fontSize: 16 }}>🔒</span>
-          <span>{loginHintText}</span>
-        </div>
-      )}
 
-      <style>{`
-@keyframes fadeSlideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-}
-`}</style>
-    </div>
+      {showLoginHint ? (
+        <div className="fw-landing__toast" role="status">
+          {loginHintText}
+        </div>
+      ) : null}
+    </main>
   );
 }
-
-/* --- styles --- */
-
-const card: React.CSSProperties = {
-  background: "white",
-  borderRadius: 24,
-  boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-  padding: 22,
-  width: "100%",
-  minWidth: 0,
-  boxSizing: "border-box",
-};
-
-const subtitle = (isMobile: boolean): React.CSSProperties => ({
-  marginTop: 8,
-  fontSize: isMobile ? 15 : 17,
-  color: "#4b5563",
-  lineHeight: isMobile ? 1.6 : 1.7,
-  maxWidth: isMobile ? "100%" : 620,
-});
-
-const hint = (isMobile: boolean): React.CSSProperties => ({
-  marginTop: 16,
-  fontSize: isMobile ? 12 : 13,
-  color: "#6b7280",
-  lineHeight: 1.6,
-  maxWidth: isMobile ? "100%" : 560,
-});
-
-const featureRow: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-  fontSize: 14,
-  color: "white",
-  padding: "12px 14px",
-  borderRadius: 14,
-  background: "rgba(255,255,255,0.06)",
-  border: "1px solid rgba(255,255,255,0.10)",
-  minWidth: 0,
-  boxSizing: "border-box",
-};
-
-const primaryBtn: React.CSSProperties = {
-  border: 0,
-  background: "#111111",
-  color: "white",
-  padding: "12px 18px",
-  borderRadius: 999,
-  fontWeight: 900,
-  cursor: "pointer",
-  fontSize: 14,
-  boxShadow: "0 10px 24px rgba(0,0,0,0.12)",
-};
-
-const secondaryBtn: React.CSSProperties = {
-  border: "1px solid rgba(0,0,0,0.10)",
-  background: "white",
-  color: "#111111",
-  padding: "12px 18px",
-  borderRadius: 999,
-  fontWeight: 900,
-  cursor: "pointer",
-  fontSize: 14,
-};
-
-const ghostBtn: React.CSSProperties = {
-  border: "1px solid rgba(0,0,0,0.12)",
-  background: "white",
-  color: "#111",
-  padding: "10px 14px",
-  borderRadius: 999,
-  fontWeight: 900,
-  cursor: "pointer",
-};
-
-const dangerBtn: React.CSSProperties = {
-  border: "1px solid rgba(227, 51, 51, 0.35)",
-  background: "white",
-  color: "#e33",
-  padding: "10px 14px",
-  borderRadius: 999,
-  fontWeight: 900,
-  cursor: "pointer",
-};
-
-const listBtn: React.CSSProperties = {
-  textAlign: "left",
-  width: "100%",
-  border: "1px solid rgba(0,0,0,0.12)",
-  background: "white",
-  padding: "12px 12px",
-  borderRadius: 14,
-  fontWeight: 800,
-  cursor: "pointer",
-  boxSizing: "border-box",
-};
-
-const destinationChip: React.CSSProperties = {
-  border: "1px solid rgba(0,0,0,0.10)",
-  background: "#f8fafc",
-  color: "#111111",
-  padding: "10px 14px",
-  borderRadius: 999,
-  fontWeight: 800,
-  cursor: "pointer",
-  fontSize: 14,
-};
