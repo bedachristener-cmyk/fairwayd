@@ -958,7 +958,9 @@ export default function CoursesMap() {
                           lon,
                         });
 
-                        nav(`/courses/${c.id}`);
+                        nav(`/courses/${c.id}`, {
+                          state: { courseBackSource: "map" },
+                        });
                       }}
                       style={{
                         width: "100%",

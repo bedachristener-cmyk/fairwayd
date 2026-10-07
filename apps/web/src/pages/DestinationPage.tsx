@@ -573,6 +573,10 @@ function FeaturedRegionsSection({
 export default function DestinationPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const openCourse = (courseId: string) =>
+    navigate(`/courses/${courseId}`, {
+      state: { courseBackSource: "explore" },
+    });
   const { token, logout, user } = useAuth();
   const isMobile = window.innerWidth <= 980;
   const overviewExperienceRef = useRef<HTMLDivElement | null>(null);
@@ -3037,7 +3041,7 @@ export default function DestinationPage() {
                       <div
                         className="fw-atmosphere-card"
                         key={c.id}
-                        onClick={() => navigate(`/courses/${c.id}`)}
+                        onClick={() => openCourse(c.id)}
                         style={{
                           padding: 14,
                           borderRadius: 20,
@@ -3165,7 +3169,7 @@ export default function DestinationPage() {
                             className="fw-pill fw-pill--cta"
                             onClick={(event) => {
                               event.stopPropagation();
-                              navigate(`/courses/${c.id}`);
+                              openCourse(c.id);
                             }}
                             style={{
                               height: 38,
@@ -3334,7 +3338,7 @@ export default function DestinationPage() {
                             ? () => {
                                 const courseId = p.course?.id;
                                 if (!courseId) return;
-                                navigate(`/courses/${courseId}`);
+                                openCourse(courseId);
                               }
                             : undefined
                         }
@@ -3425,7 +3429,7 @@ export default function DestinationPage() {
                   {activeRegionFeaturedCourses.map((c) => (
                     <div
                       key={c.id}
-                      onClick={() => navigate(`/courses/${c.id}`)}
+                      onClick={() => openCourse(c.id)}
                       style={{
                         border:
                           "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
@@ -3511,7 +3515,7 @@ export default function DestinationPage() {
                         className="fw-pill fw-pill--cta"
                         onClick={(event) => {
                           event.stopPropagation();
-                          navigate(`/courses/${c.id}`);
+                          openCourse(c.id);
                         }}
                         style={{
                           height: 36,
@@ -3620,7 +3624,7 @@ export default function DestinationPage() {
                   <div
                     className="fw-atmosphere-card"
                     key={c.id}
-                    onClick={() => navigate(`/courses/${c.id}`)}
+                    onClick={() => openCourse(c.id)}
                     style={{
                       borderRadius: 24,
                       border:
@@ -3725,7 +3729,7 @@ export default function DestinationPage() {
                           className="fw-pill fw-pill--cta"
                           onClick={(event) => {
                             event.stopPropagation();
-                            navigate(`/courses/${c.id}`);
+                            openCourse(c.id);
                           }}
                           style={{
                             height: 38,
@@ -3959,7 +3963,7 @@ export default function DestinationPage() {
                           ? () => {
                               const courseId = p.course?.id;
                               if (!courseId) return;
-                              navigate(`/courses/${courseId}`);
+                              openCourse(courseId);
                             }
                           : undefined
                       }

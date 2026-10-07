@@ -9,6 +9,7 @@ import { DESTINATION_INFO } from "../data/destinationInfo";
 import { getMonetizationLinksForCourse } from "../data/monetization";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
 import { t } from "../i18n/strings";
+import { courseBackNavigation } from "../utils/courseBackNavigation";
 import {
   saveRating,
   getMyRating,
@@ -750,6 +751,7 @@ export default function CoursePage() {
     .filter(Boolean)
     .join(", ");
   const websiteUrl = normalizeWebsite(course?.website);
+  const backNavigation = courseBackNavigation(location.state);
   const directionsUrl = course
     ? `https://www.google.com/maps/dir/?api=1&destination=${course.lat},${course.lon}`
     : null;
@@ -1014,9 +1016,9 @@ export default function CoursePage() {
         <button
           type="button"
           className="fw-course-desktop-back"
-          onClick={() => nav("/map")}
+          onClick={() => nav(backNavigation.to)}
         >
-          {t("back_to_map")}
+          ← {t(backNavigation.labelKey)}
         </button>
 
         <section className="fw-course-desktop-hero" aria-label={t("course_overview")}>
@@ -1279,7 +1281,7 @@ export default function CoursePage() {
             boxShadow: "0 8px 20px rgba(0,0,0,0.10)",
           }}
         >
-          ← Back to map
+          ← {t(backNavigation.labelKey)}
         </button>
       </div>
 
