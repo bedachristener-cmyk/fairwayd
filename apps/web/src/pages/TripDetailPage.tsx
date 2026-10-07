@@ -53,6 +53,12 @@ import {
   resolveTripCostConversion,
   roundTripMoney,
 } from "../utils/tripCostAccounting";
+import { t } from "../i18n/strings";
+import {
+  formatFxSuggestionDate,
+  useFxRateSuggestions,
+  type FxSuggestionDraft,
+} from "../hooks/useFxRateSuggestions";
 
 type TripItem = {
   id: string;
@@ -213,13 +219,10 @@ type EditDraft = {
   documentIds: string[];
 };
 
-type BudgetCostDraft = {
-  localId: string;
+type BudgetCostDraft = FxSuggestionDraft & {
   label: string;
   amount: string;
   currency: string;
-  exchangeRate: string;
-  baseAmount: string;
   costMode: CostMode;
   paymentMode: PaymentMode;
   paidByMemberId: string;
@@ -2886,6 +2889,12 @@ function TripItemBudgetSection({
                           currency: event.target.value,
                           exchangeRate: "",
                           baseAmount: "",
+                          exchangeRateManuallyEdited: false,
+                          hasStoredConversion: false,
+                          fxSuggestionStatus: "idle",
+                          fxSuggestionDate: "",
+                          fxSuggestionSource: "",
+                          fxSuggestionVersion: draft.fxSuggestionVersion + 1,
                         })
                       }
                       style={{ ...editFieldStyle, minHeight: 36, padding: "7px 8px" }}
@@ -2908,7 +2917,19 @@ function TripItemBudgetSection({
                       shared with {participantCount} {participantCount === 1 ? "person" : "people"}
                     </span>
                   ) : null}
-                  {needsExchangeRate ? (
+                  {draft.fxSuggestionStatus === "loading" ? (
+                    <span className="fw-pill fw-pill--meta">
+                      {t("finding_reference_rate")}
+                    </span>
+                  ) : draft.fxSuggestionStatus === "suggested" ? (
+                    <span className="fw-pill fw-pill--meta">
+                      {t("suggested_reference_rate")} · {draft.exchangeRate}
+                    </span>
+                  ) : draft.fxSuggestionStatus === "unavailable" ? (
+                    <span className="fw-pill fw-pill--meta">
+                      {t("current_rate_unavailable_manual")}
+                    </span>
+                  ) : needsExchangeRate ? (
                     <span className="fw-pill fw-pill--meta">
                       exchange rate needed
                     </span>
@@ -4009,6 +4030,12 @@ export default function TripDetailPage() {
     useState<CostSummaryDrilldown | null>(null);
   const [expandedBudgetCostId, setExpandedBudgetCostId] = useState<string | null>(null);
   const [savingBudgetItemId, setSavingBudgetItemId] = useState<string | null>(null);
+  useFxRateSuggestions({
+    drafts: budgetDrafts,
+    setDrafts: setBudgetDrafts,
+    baseCurrency: (trip?.baseCurrency || "CHF").trim().toUpperCase(),
+    token,
+  });
   const [savingItemId, setSavingItemId] = useState<string | null>(null);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
   const [movingItemId, setMovingItemId] = useState<string | null>(null);
@@ -4573,6 +4600,12 @@ export default function TripDetailPage() {
       currency: trip?.baseCurrency || item.currency || "CHF",
       exchangeRate: "",
       baseAmount: "",
+      exchangeRateManuallyEdited: false,
+      hasStoredConversion: false,
+      fxSuggestionStatus: "idle",
+      fxSuggestionDate: "",
+      fxSuggestionSource: "",
+      fxSuggestionVersion: 0,
       costMode,
       paymentMode,
       paidByMemberId: defaultBudgetPaidByMemberId(),
@@ -4592,6 +4625,14 @@ export default function TripDetailPage() {
       currency: cost.currency || trip?.baseCurrency || item.currency || "CHF",
       exchangeRate: numberInputValue(cost.exchangeRate ?? conversion.exchangeRate),
       baseAmount: numberInputValue(cost.baseAmount),
+      exchangeRateManuallyEdited: false,
+      hasStoredConversion:
+        (typeof cost.exchangeRate === "number" && cost.exchangeRate > 0) ||
+        (typeof cost.baseAmount === "number" && cost.baseAmount > 0),
+      fxSuggestionStatus: "idle",
+      fxSuggestionDate: "",
+      fxSuggestionSource: "",
+      fxSuggestionVersion: 0,
       costMode: cost.costMode || defaultCostModeForItemType(item.type),
       paymentMode: cost.paymentMode || defaultPaymentModeForItemType(item.type),
       paidByMemberId:
@@ -12068,6 +12109,12 @@ export default function TripDetailPage() {
                                   currency: event.target.value,
                                   exchangeRate: "",
                                   baseAmount: "",
+                                  exchangeRateManuallyEdited: false,
+                                  hasStoredConversion: false,
+                                  fxSuggestionStatus: "idle",
+                                  fxSuggestionDate: "",
+                                  fxSuggestionSource: "",
+                                  fxSuggestionVersion: draft.fxSuggestionVersion + 1,
                                 })
                               }
                               style={editFieldStyle}
@@ -12085,7 +12132,7 @@ export default function TripDetailPage() {
                         baseCurrency.toUpperCase() ? (
                           <div style={{ display: "grid", gap: 7 }}>
                             <label style={{ display: "grid", gap: 6, color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
-                              Exchange rate ({baseCurrency} per {draft.currency})
+                              {t("exchange_rate")} ({baseCurrency} {t("currency_per")} {draft.currency})
                               <input
                                 type="number"
                                 inputMode="decimal"
@@ -12096,20 +12143,36 @@ export default function TripDetailPage() {
                                   updateBudgetDraft(draft.localId, {
                                     exchangeRate: event.target.value,
                                     baseAmount: "",
+                                    exchangeRateManuallyEdited: true,
+                                    fxSuggestionStatus: "manual",
+                                    fxSuggestionDate: "",
+                                    fxSuggestionSource: "",
                                   })
                                 }
                                 placeholder={`1 ${draft.currency} in ${baseCurrency}`}
                                 style={editFieldStyle}
                               />
                             </label>
-                            {draftConversion.missingConversion ? (
+                            {draft.fxSuggestionStatus === "loading" ? (
+                              <div style={{ color: "var(--sub)", fontSize: 12 }}>
+                                {t("finding_reference_rate")}
+                              </div>
+                            ) : draft.fxSuggestionStatus === "suggested" ? (
+                              <div style={{ color: "var(--sub)", fontSize: 12 }}>
+                                {t("suggested_reference_rate")} · {formatFxSuggestionDate(draft.fxSuggestionDate)} · {draft.fxSuggestionSource}
+                              </div>
+                            ) : draft.fxSuggestionStatus === "unavailable" ? (
+                              <div style={{ color: "var(--sub)", fontSize: 12 }}>
+                                {t("current_rate_unavailable_manual")}
+                              </div>
+                            ) : draftConversion.missingConversion ? (
                               <div style={{ color: "var(--danger)", fontSize: 12 }}>
-                                A conversion rate is required for this cost.
+                                {t("conversion_rate_required")}
                               </div>
                             ) : draftAmount !== undefined &&
                               optionalNumber(draft.exchangeRate) !== undefined ? (
                               <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 800 }}>
-                                Equivalent: {formatMoney(draftConversion.amount, baseCurrency)}
+                                {t("equivalent")}: {formatMoney(draftConversion.amount, baseCurrency)}
                               </div>
                             ) : null}
                           </div>

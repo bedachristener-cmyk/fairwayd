@@ -15,6 +15,7 @@ import { RatingsModule } from './ratings/ratings.module';
 import { CourseSubmissionsModule } from './course-submissions/course-submissions.module';
 import { TripsModule } from './trips/trips.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { FxModule } from './fx/fx.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     CourseSubmissionsModule,
     TripsModule,
     NotificationsModule,
+    FxModule,
   ],
   controllers: [AppController],
   providers: [AppService],

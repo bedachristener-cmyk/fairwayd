@@ -16,6 +16,12 @@ import { friendlyApiErrorMessage } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { resolveTripCostConversion } from "../utils/tripCostAccounting";
 import { CURRENCY_OPTIONS } from "../constants/currencies";
+import { t } from "../i18n/strings";
+import {
+  formatFxSuggestionDate,
+  useFxRateSuggestions,
+  type FxSuggestionDraft,
+} from "../hooks/useFxRateSuggestions";
 
 type TripItemType =
   | "golf_round"
@@ -32,13 +38,10 @@ type ReturnToHotelMode = "" | "after_round" | "custom" | "own_transport";
 type CostMode = "PER_PERSON" | "TOTAL";
 type PaymentMode = "PAID_BY_ONE" | "EACH_PAYS_OWN";
 
-type BudgetCostDraft = {
-  localId: string;
+type BudgetCostDraft = FxSuggestionDraft & {
   label: string;
   amount: string;
   currency: string;
-  exchangeRate: string;
-  baseAmount: string;
   costMode: CostMode;
   paymentMode: PaymentMode;
   paidByMemberId: string;
@@ -516,6 +519,12 @@ export default function AddTripItemPage() {
   const [courseLoading, setCourseLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  useFxRateSuggestions({
+    drafts: budgetDrafts,
+    setDrafts: setBudgetDrafts,
+    baseCurrency: (trip?.baseCurrency || "CHF").trim().toUpperCase(),
+    token,
+  });
   const myMembership = trip?.members?.find((member) => member.userId === user?.id);
   const canCreateGroupItem =
     myMembership?.role === "OWNER" || myMembership?.role === "ADMIN";
@@ -659,6 +668,12 @@ export default function AddTripItemPage() {
       currency: trip?.baseCurrency || "CHF",
       exchangeRate: "",
       baseAmount: "",
+      exchangeRateManuallyEdited: false,
+      hasStoredConversion: false,
+      fxSuggestionStatus: "idle",
+      fxSuggestionDate: "",
+      fxSuggestionSource: "",
+      fxSuggestionVersion: 0,
       costMode: defaultCostModeForItemType(type),
       paymentMode: defaultPaymentModeForItemType(type),
       paidByMemberId: defaultBudgetPaidByMemberId(),
@@ -1516,7 +1531,17 @@ export default function AddTripItemPage() {
                   <select
                     value={draft.currency}
                     onChange={(event) =>
-                      updateBudgetDraft(draft.localId, { currency: event.target.value })
+                      updateBudgetDraft(draft.localId, {
+                        currency: event.target.value,
+                        exchangeRate: "",
+                        baseAmount: "",
+                        exchangeRateManuallyEdited: false,
+                        hasStoredConversion: false,
+                        fxSuggestionStatus: "idle",
+                        fxSuggestionDate: "",
+                        fxSuggestionSource: "",
+                        fxSuggestionVersion: draft.fxSuggestionVersion + 1,
+                      })
                     }
                     style={{ ...fieldStyle, minHeight: 36, padding: "7px 8px" }}
                   >
@@ -1540,7 +1565,19 @@ export default function AddTripItemPage() {
                     {budgetParticipantText(draft)}
                   </span>
                 ) : null}
-                {draftNeedsExchangeRate(draft) ? (
+                {draft.fxSuggestionStatus === "loading" ? (
+                  <span className="fw-pill fw-pill--meta">
+                    {t("finding_reference_rate")}
+                  </span>
+                ) : draft.fxSuggestionStatus === "suggested" ? (
+                  <span className="fw-pill fw-pill--meta">
+                    {t("suggested_reference_rate")} · {draft.exchangeRate}
+                  </span>
+                ) : draft.fxSuggestionStatus === "unavailable" ? (
+                  <span className="fw-pill fw-pill--meta">
+                    {t("current_rate_unavailable_manual")}
+                  </span>
+                ) : draftNeedsExchangeRate(draft) ? (
                   <span className="fw-pill fw-pill--meta">
                     exchange rate needed
                   </span>
@@ -2373,6 +2410,12 @@ export default function AddTripItemPage() {
                                   currency: event.target.value,
                                   exchangeRate: "",
                                   baseAmount: "",
+                                  exchangeRateManuallyEdited: false,
+                                  hasStoredConversion: false,
+                                  fxSuggestionStatus: "idle",
+                                  fxSuggestionDate: "",
+                                  fxSuggestionSource: "",
+                                  fxSuggestionVersion: draft.fxSuggestionVersion + 1,
                                 })
                               }
                               style={fieldStyle}
@@ -2390,7 +2433,7 @@ export default function AddTripItemPage() {
                         (trip?.baseCurrency || "CHF").trim().toUpperCase() ? (
                           <div style={{ display: "grid", gap: 7 }}>
                             <label style={labelStyle}>
-                              Exchange rate ({trip?.baseCurrency || "CHF"} per {draft.currency})
+                              {t("exchange_rate")} ({trip?.baseCurrency || "CHF"} {t("currency_per")} {draft.currency})
                               <input
                                 type="number"
                                 inputMode="decimal"
@@ -2401,20 +2444,36 @@ export default function AddTripItemPage() {
                                   updateBudgetDraft(draft.localId, {
                                     exchangeRate: event.target.value,
                                     baseAmount: "",
+                                    exchangeRateManuallyEdited: true,
+                                    fxSuggestionStatus: "manual",
+                                    fxSuggestionDate: "",
+                                    fxSuggestionSource: "",
                                   })
                                 }
                                 placeholder={`1 ${draft.currency} in ${trip?.baseCurrency || "CHF"}`}
                                 style={fieldStyle}
                               />
                             </label>
-                            {draftConversion(draft).missingConversion ? (
+                            {draft.fxSuggestionStatus === "loading" ? (
+                              <div style={{ color: "var(--sub)", fontSize: 12 }}>
+                                {t("finding_reference_rate")}
+                              </div>
+                            ) : draft.fxSuggestionStatus === "suggested" ? (
+                              <div style={{ color: "var(--sub)", fontSize: 12 }}>
+                                {t("suggested_reference_rate")} · {formatFxSuggestionDate(draft.fxSuggestionDate)} · {draft.fxSuggestionSource}
+                              </div>
+                            ) : draft.fxSuggestionStatus === "unavailable" ? (
+                              <div style={{ color: "var(--sub)", fontSize: 12 }}>
+                                {t("current_rate_unavailable_manual")}
+                              </div>
+                            ) : draftConversion(draft).missingConversion ? (
                               <div style={{ color: "var(--danger, #b42318)", fontSize: 12 }}>
-                                A conversion rate is required for this cost.
+                                {t("conversion_rate_required")}
                               </div>
                             ) : optionalNumber(draft.amount) !== undefined &&
                               optionalNumber(draft.exchangeRate) !== undefined ? (
                               <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 800 }}>
-                                Equivalent: {formatMoney(
+                                {t("equivalent")}: {formatMoney(
                                   draftConversion(draft).amount,
                                   trip?.baseCurrency || "CHF",
                                 )}
