@@ -1,5 +1,6 @@
 export type DestinationInfo = {
   heroImage?: string;
+  heroImageSource?: "ai-fallback";
   overviewDescription?: string;
   galleryTitle?: string;
   gallerySubtitle?: string;
@@ -59,6 +60,7 @@ export const DESTINATION_INFO: Record<string, DestinationInfo> = {
   thailand: {
     // Local AI-generated destination-level visual; not assigned to a specific region or course.
     heroImage: "/destinations/thailand/thailand-golf-destination.jpg",
+    heroImageSource: "ai-fallback",
     overviewDescription:
       "Thailand blends tropical resort golf, city-access clubs, beach regions, mountain escapes, and warm hospitality into one of Asia's most complete golf travel experiences.",
     galleryTitle: "Thailand Gallery",
@@ -448,6 +450,7 @@ export const DESTINATION_INFO: Record<string, DestinationInfo> = {
   portugal: {
     // Local AI-generated destination-level visual; not assigned to a specific region or course.
     heroImage: "/destinations/portugal/portugal-golf-destination.jpg",
+    heroImageSource: "ai-fallback",
     overviewDescription:
       "Portugal is a polished golf-travel classic, pairing Atlantic light, resort bases, coastal courses, city breaks, and year-round playability.",
     galleryTitle: "Portugal Gallery",
@@ -1638,6 +1641,7 @@ export const DESTINATION_INFO: Record<string, DestinationInfo> = {
   japan: {
     // Local AI-generated destination-level visual; not assigned to a specific region or course.
     heroImage: "/destinations/japan/japan-golf-destination.jpg",
+    heroImageSource: "ai-fallback",
     overviewDescription:
       "Japan offers refined golf travel with seasonal contrast, precise service, mountain and forest courses, city escapes, and resort stays.",
     galleryTitle: "Japan Gallery",

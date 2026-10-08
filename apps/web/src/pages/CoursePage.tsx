@@ -5,11 +5,11 @@ import { fileUrl } from "../api/fileUrl";
 import { useAuth } from "../auth/AuthContext";
 import CourseRatingSummary from "../components/CourseRatingSummary";
 import PostCard from "../components/PostCard";
-import { DESTINATION_INFO } from "../data/destinationInfo";
 import { getMonetizationLinksForCourse } from "../data/monetization";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
 import { t } from "../i18n/strings";
 import { courseBackNavigation } from "../utils/courseBackNavigation";
+import { resolveCourseHeroImage } from "../utils/courseHeroImage";
 import {
   saveRating,
   getMyRating,
@@ -63,22 +63,6 @@ type DraftRating = {
 };
 
 type DesktopSection = "posts" | "reviews" | "photos" | "about";
-
-const DESTINATION_KEY_BY_COUNTRY_CODE: Record<string, string> = {
-  AT: "austria",
-  DE: "germany",
-  ES: "spain",
-  FR: "france",
-  IT: "italy",
-  JP: "japan",
-  PH: "philippines",
-  PT: "portugal",
-  TH: "thailand",
-  TR: "turkey",
-  US: "united-states",
-  ZA: "south-africa",
-  CH: "switzerland",
-};
 
 function clampRating(value: number) {
   return Math.min(5, Math.max(1, value));
@@ -324,17 +308,6 @@ function normalizeWebsite(url?: string | null) {
   return `https://${trimmed}`;
 }
 
-function slugifyDestinationKey(value?: string | null) {
-  if (!value) return "";
-
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/&/g, "and")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
 function formatAccessLabel(access?: string | null) {
   if (!access) return null;
 
@@ -342,27 +315,6 @@ function formatAccessLabel(access?: string | null) {
     .replaceAll("_", " ")
     .toLowerCase()
     .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function getCourseHeroImage(course: Course | null, posts: Post[]) {
-  const postImage = posts
-    .flatMap((post) => post.images ?? [])
-    .map((image) => fileUrl(image.url))
-    .find(Boolean);
-
-  if (postImage) return postImage;
-
-  const countryCode = course?.country?.trim().toUpperCase() ?? "";
-  const destinationKey =
-    DESTINATION_KEY_BY_COUNTRY_CODE[countryCode] ??
-    slugifyDestinationKey(course?.country);
-  const destination = destinationKey ? DESTINATION_INFO[destinationKey] : null;
-
-  return (
-    destination?.heroImage ??
-    destination?.galleryImages?.find((image) => image.src)?.src ??
-    "https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?auto=format&fit=crop&w=1600&q=78"
-  );
 }
 
 function createDefaultDraftRating(): DraftRating {
@@ -760,7 +712,7 @@ export default function CoursePage() {
     course?.par ? `Par ${course.par}` : null,
     formatAccessLabel(course?.access),
   ].filter(Boolean);
-  const heroImageUrl = getCourseHeroImage(course, posts);
+  const heroImage = resolveCourseHeroImage(course, posts);
   const photoImages = posts
     .flatMap((post) =>
       (post.images ?? []).map((image) => ({
@@ -1024,9 +976,12 @@ export default function CoursePage() {
         <section className="fw-course-desktop-hero" aria-label={t("course_overview")}>
           <img
             className="fw-course-desktop-hero__image"
-            src={heroImageUrl}
+            src={heroImage.url}
             alt={course?.name ? `${course.name} ${t("golf_course")}` : t("golf_course")}
           />
+          {heroImage.source === "ai-fallback" ? (
+            <span className="fw-ai-image-badge">{t("ai_generated_image")}</span>
+          ) : null}
         </section>
 
         <section className="fw-course-desktop-identity">
@@ -1305,6 +1260,15 @@ export default function CoursePage() {
           overflow: "hidden",
         }}
       >
+        <div className="fw-course-mobile-hero">
+          <img
+            src={heroImage.url}
+            alt={course?.name ? `${course.name} ${t("golf_course")}` : t("golf_course")}
+          />
+          {heroImage.source === "ai-fallback" ? (
+            <span className="fw-ai-image-badge">{t("ai_generated_image")}</span>
+          ) : null}
+        </div>
         <div style={{ display: "grid", gap: 8 }}>
           <div
             style={{

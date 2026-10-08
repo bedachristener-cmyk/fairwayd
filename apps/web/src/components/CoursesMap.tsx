@@ -13,6 +13,7 @@ import { apiGet } from "../api/client";
 import { useCourseFollow } from "../hooks/useCourseFollow";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
 import { t } from "../i18n/strings";
+import { resolveCourseHeroImage } from "../utils/courseHeroImage";
 import "leaflet.markercluster";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
@@ -33,6 +34,10 @@ type Course = {
 };
 
 type Geo = { lat: number; lon: number };
+
+type CoursePost = {
+  images?: { id: string; url: string }[];
+};
 
 const golfIcon = L.divIcon({
   className: "golf-marker",
@@ -374,7 +379,7 @@ export default function CoursesMap() {
   const nav = useNavigate();
   const location = useLocation();
 
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, token } = useAuth();
   const { setSelectedCourse } = useSelectedCourse();
 
   const [courses, setCourses] = useState<Course[]>([]);
@@ -388,6 +393,7 @@ export default function CoursesMap() {
   }, [mapStyle]);
 
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
+  const [activeCoursePosts, setActiveCoursePosts] = useState<CoursePost[]>([]);
   const [highlightedCourseId, setHighlightedCourseId] = useState<string | null>(
     null,
   );
@@ -395,6 +401,7 @@ export default function CoursesMap() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [mapRef, setMapRef] = useState<L.Map | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const selectedCourseRequestRef = useRef<string | null>(null);
   (window as any).__activeCourseId = activeCourseId ?? highlightedCourseId;
 
   const isMobile = typeof window !== "undefined" && window.innerWidth <= 980;
@@ -430,9 +437,20 @@ export default function CoursesMap() {
   const markerRefs = useRef<Record<string, L.Marker | null>>({});
 
   const activeCourse = useMemo(() => {
-    if (!activeCourseId) return null;
-    return courses.find((c) => c.id === activeCourseId) ?? null;
-  }, [activeCourseId, courses]);
+    const selectedId = activeCourseId ?? highlightedCourseId;
+    if (!selectedId) return null;
+    return courses.find((c) => c.id === selectedId) ?? null;
+  }, [activeCourseId, courses, highlightedCourseId]);
+
+  const selectedCourseId = activeCourseId ?? highlightedCourseId;
+
+  const activeCourseHero = useMemo(
+    () =>
+      activeCourse
+        ? resolveCourseHeroImage(activeCourse, activeCoursePosts)
+        : null,
+    [activeCourse, activeCoursePosts],
+  );
 
   const searchResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -475,6 +493,41 @@ export default function CoursesMap() {
   }, []);
 
   useEffect(() => {
+    if (!selectedCourseId) {
+      selectedCourseRequestRef.current = null;
+      setActiveCoursePosts([]);
+      return;
+    }
+
+    selectedCourseRequestRef.current = selectedCourseId;
+    let cancelled = false;
+    const requestCourseId = selectedCourseId;
+    setActiveCoursePosts([]);
+
+    apiGet<{ items?: CoursePost[] } | CoursePost[]>(
+      `/posts/course/${requestCourseId}`,
+      { token },
+    )
+      .then((data) => {
+        if (cancelled || selectedCourseRequestRef.current !== requestCourseId) {
+          return;
+        }
+        setActiveCoursePosts(
+          Array.isArray(data) ? data : Array.isArray(data.items) ? data.items : [],
+        );
+      })
+      .catch(() => {
+        if (!cancelled && selectedCourseRequestRef.current === requestCourseId) {
+          setActiveCoursePosts([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCourseId, token]);
+
+  useEffect(() => {
     if (!shouldOpenCourseSearch) return;
 
     setSearchOpen(true);
@@ -496,6 +549,7 @@ export default function CoursesMap() {
     (courseId: string) => {
       const course = courses.find((c) => c.id === courseId);
       if (course) setSelectedCourse(course);
+      selectedCourseRequestRef.current = courseId;
       setHighlightedCourseId(null);
       setActiveCourseId(courseId);
     },
@@ -507,6 +561,7 @@ export default function CoursesMap() {
       setSearchQuery(course.name);
       setSearchOpen(false);
       setSelectedCourse(course);
+      selectedCourseRequestRef.current = course.id;
       setActiveCourseId(null);
       setHighlightedCourseId(course.id);
       mapRef?.setView([course.lat, course.lon], 14, { animate: true });
@@ -834,18 +889,23 @@ export default function CoursesMap() {
                 autoPanPaddingTopLeft={[20, 120]}
                 autoPanPaddingBottomRight={[20, 80]}
                 eventHandlers={{
-                  remove: () => setActiveCourseId(null),
+                  remove: () => {
+                    selectedCourseRequestRef.current = null;
+                    setActiveCourseId(null);
+                    setHighlightedCourseId(null);
+                  },
                 }}
               >
                 <div
+                  className="fw-course-popup__card"
                   style={{
-                    width: 272,
+                    width: isMobile ? 286 : 272,
                     maxWidth: "calc(100vw - 48px)",
                     boxSizing: "border-box",
                     display: "flex",
                     flexDirection: "column",
-                    gap: 12,
-                    padding: 12,
+                    gap: isMobile ? 8 : 12,
+                    padding: isMobile ? 8 : 12,
                     borderRadius: 22,
                     border: "1px solid var(--border)",
                     background: "var(--card)",
@@ -853,6 +913,20 @@ export default function CoursesMap() {
                     boxShadow: "0 18px 40px rgba(0,0,0,0.28)",
                   }}
                 >
+                  {isMobile && activeCourseHero ? (
+                    <div
+                      className="fw-course-popup__hero"
+                      data-testid="map-course-preview-image"
+                    >
+                      <img src={activeCourseHero.url} alt="" />
+                      {activeCourseHero.source === "ai-fallback" ? (
+                        <span className="fw-ai-image-badge">
+                          {t("ai_generated_image")}
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
+
                   <div style={{ display: "grid", gap: 5 }}>
                     <div
                       style={{
