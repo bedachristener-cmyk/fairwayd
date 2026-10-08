@@ -542,6 +542,10 @@
 
   .fw-landing__hero {
     display: grid;
+    grid-template-areas:
+      "header"
+      "content"
+      "login";
     min-height: auto;
     gap: 14px;
     overflow: hidden;
@@ -554,6 +558,7 @@
   }
 
   .fw-landing__topbar {
+    grid-area: header;
     position: relative;
     top: auto;
     right: auto;
@@ -571,7 +576,12 @@
     padding: 38px 22px 30px;
   }
 
+  .fw-landing__hero-copy {
+    grid-area: content;
+  }
+
   .fw-landing__login-card {
+    grid-area: login;
     position: relative;
     top: auto;
     right: auto;
@@ -605,18 +615,22 @@
   }
 
   .fw-landing__hero::before {
-    background-position: 64% center;
+    background-position: 62% center;
+    filter: saturate(0.92) contrast(0.96);
   }
 
   .fw-landing__hero::after {
-    background: linear-gradient(90deg, rgba(244, 248, 242, 0.98), rgba(244, 248, 242, 0.82));
+    background:
+      linear-gradient(180deg, rgba(244, 248, 242, 0.96) 0%, rgba(244, 248, 242, 0.88) 56%, rgba(244, 248, 242, 0.7) 100%),
+      linear-gradient(0deg, rgba(22, 49, 31, 0.2), transparent 48%);
   }
 
   .fw-landing__topbar {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 8px;
     border-radius: 17px;
-    padding: 8px 9px;
+    min-height: 54px;
+    padding: 7px 9px;
   }
 
   .fw-landing__hero-content {
@@ -626,13 +640,13 @@
 
   .fw-landing__brand {
     gap: 8px;
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .fw-landing__brand img {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
   }
 
   .fw-landing__header-actions {
@@ -687,7 +701,7 @@
   }
 
   .fw-landing__login-card {
-    padding: 22px 16px 18px;
+    padding: 20px 16px 18px;
   }
 
   .fw-landing__login-intro h2 {
@@ -695,7 +709,7 @@
   }
 
   .fw-landing__community-points {
-    margin: 15px 0;
+    display: none;
   }
 
   .fw-landing__login-panel .fw-auth-card {

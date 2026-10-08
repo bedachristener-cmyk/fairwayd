@@ -47,18 +47,31 @@ test("mobile landing uses the intended single-column order without page overflow
   await page.goto("/");
 
   const hero = page.getByTestId("landing-hero-copy");
+  const header = page.getByTestId("landing-header");
   const login = page.getByTestId("landing-login-card");
   const destinations = page.getByRole("heading", {
     name: "Find your next place to play",
   });
   const about = page.locator("#what-is-fairwayd");
+  const scroller = page.getByTestId("landing-destination-scroller");
 
-  const [heroBox, loginBox, destinationsBox, aboutBox] = await Promise.all([
+  await expect(header).toBeVisible();
+  await expect(scroller).toBeVisible();
+  await expect(scroller.locator(".fw-landing__destination img").first()).toBeVisible();
+
+  const [headerBox, heroBox, loginBox, destinationsBox, aboutBox] = await Promise.all([
+    header.boundingBox(),
     hero.boundingBox(),
     login.boundingBox(),
     destinations.boundingBox(),
     about.boundingBox(),
   ]);
+  expect(headerBox).not.toBeNull();
+  expect(heroBox).not.toBeNull();
+  expect(loginBox).not.toBeNull();
+  expect(destinationsBox).not.toBeNull();
+  expect(aboutBox).not.toBeNull();
+  expect(headerBox!.y).toBeLessThan(heroBox!.y);
   expect(loginBox!.y).toBeGreaterThan(heroBox!.y + heroBox!.height - 2);
   expect(destinationsBox!.y).toBeGreaterThan(loginBox!.y + loginBox!.height);
   expect(aboutBox!.y).toBeGreaterThan(destinationsBox!.y);

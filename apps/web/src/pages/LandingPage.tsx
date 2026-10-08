@@ -260,7 +260,11 @@ export default function LandingPage() {
             </button>
           </div>
 
-          <div className="fw-landing__destinations">
+          <div
+            className="fw-landing__destinations"
+            data-testid="landing-destination-scroller"
+            aria-label={t("landing_destinations_title")}
+          >
             {DESTINATIONS.map((destination) => (
               <button
                 className="fw-landing__destination"
