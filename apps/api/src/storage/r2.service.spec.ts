@@ -1,10 +1,11 @@
-import { uploadToR2 } from './r2.service';
+import { readStoredUpload, uploadPrivateToR2, uploadToR2 } from './r2.service';
 import { S3Client } from '@aws-sdk/client-s3';
 import { existsSync, rmSync } from 'fs';
 import { join } from 'path';
 
 jest.mock('@aws-sdk/client-s3', () => {
   return {
+    GetObjectCommand: jest.fn().mockImplementation((input) => ({ input })),
     PutObjectCommand: jest.fn().mockImplementation((input) => ({ input })),
     S3Client: jest.fn().mockImplementation(() => ({
       send: jest.fn(),
@@ -65,6 +66,48 @@ describe('uploadToR2 durable storage guard', () => {
     expect(send).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps private uploads addressable without exposing the public URL', async () => {
+    const send = jest.fn().mockResolvedValue({});
+    mockS3Send(send);
+    process.env.R2_ENDPOINT = 'https://example.r2.cloudflarestorage.com';
+    process.env.R2_BUCKET = 'fairwayd-stage';
+    process.env.R2_ACCESS_KEY_ID = 'access-key';
+    process.env.R2_SECRET_ACCESS_KEY = 'secret-key';
+    process.env.R2_PUBLIC_URL = 'https://cdn.example.com';
+    process.env.NEON_DATABASE_URL = 'postgresql://shared-db';
+
+    await expect(
+      uploadPrivateToR2(
+        'trips/trip-1/documents/private.pdf',
+        Buffer.from('private'),
+        'application/pdf',
+      ),
+    ).resolves.toBe('r2://trips/trip-1/documents/private.pdf');
+
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads private R2 uploads through authenticated object storage', async () => {
+    const send = jest.fn().mockResolvedValue({
+      Body: {
+        transformToByteArray: jest
+          .fn()
+          .mockResolvedValue(new Uint8Array(Buffer.from('private'))),
+      },
+    });
+    mockS3Send(send);
+    process.env.R2_ENDPOINT = 'https://example.r2.cloudflarestorage.com';
+    process.env.R2_BUCKET = 'fairwayd-stage';
+    process.env.R2_ACCESS_KEY_ID = 'access-key';
+    process.env.R2_SECRET_ACCESS_KEY = 'secret-key';
+
+    await expect(
+      readStoredUpload('r2://trips/trip-1/documents/private.pdf'),
+    ).resolves.toEqual(Buffer.from('private'));
+
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
   it('fails instead of returning /uploads when shared data has missing R2 config', async () => {
     process.env.NEON_DATABASE_URL = 'postgresql://shared-db';
 
@@ -89,9 +132,9 @@ describe('uploadToR2 durable storage guard', () => {
       uploadToR2('posts/test.jpg', Buffer.from('image'), 'image/jpeg'),
     ).rejects.toThrow('R2 unavailable');
 
-    expect(existsSync(join(process.cwd(), 'uploads', 'posts', 'test.jpg'))).toBe(
-      false,
-    );
+    expect(
+      existsSync(join(process.cwd(), 'uploads', 'posts', 'test.jpg')),
+    ).toBe(false);
   });
 
   it('keeps local upload fallback for isolated local development', async () => {

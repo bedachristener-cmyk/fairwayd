@@ -14,6 +14,9 @@ async function bootstrap() {
   app.set('trust proxy', 1);
 
   // Static uploads
+  app.use('/uploads/trips/:tripId/documents', (_req, response) => {
+    response.status(404).end();
+  });
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
   // Validation

@@ -34,6 +34,7 @@ type TripItemType =
   | "note";
 
 type TripItemVisibility = "GROUP" | "SELECTED" | "PRIVATE";
+type TripDocumentVisibility = "SHARED" | "SELECTED" | "PRIVATE";
 type ReturnToHotelMode = "" | "after_round" | "custom" | "own_transport";
 type CostMode = "PER_PERSON" | "TOTAL";
 type PaymentMode = "PAID_BY_ONE" | "EACH_PAYS_OWN";
@@ -116,7 +117,8 @@ type TripDocument = {
   uploadedByUserId?: string;
   createdAt?: string;
   updatedAt?: string;
-  visibility?: "SHARED" | "PRIVATE";
+  visibility?: TripDocumentVisibility;
+  visibilityMembers?: { tripMemberId: string }[];
 };
 
 type Trip = {
@@ -839,7 +841,45 @@ export default function AddTripItemPage() {
   }
 
   function documentVisibilityForItem() {
-    return visibility === "PRIVATE" ? "PRIVATE" : "SHARED";
+    if (visibility === "PRIVATE") return "PRIVATE";
+    if (visibility === "SELECTED") return "SELECTED";
+    return "SHARED";
+  }
+
+  async function updateRelatedDocumentVisibility(
+    documentId: string,
+    documentVisibility: TripDocumentVisibility,
+    memberIds: string[],
+  ) {
+    if (!tripId || !token) return;
+    const res = await fetch(
+      `${API_BASE}/trips/${encodeURIComponent(tripId)}/documents/${encodeURIComponent(documentId)}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          visibility: documentVisibility,
+          visibleToMemberIds:
+            documentVisibility === "SELECTED" ? memberIds : undefined,
+        }),
+      },
+    );
+    if (!res.ok) {
+      setDocumentUploadState("failed");
+      setDocumentUploadMessage(t("trip_document_visibility_failed"));
+      return;
+    }
+    const updated = (await res.json()) as TripDocument;
+    setTrip((current) => ({
+      ...(current ?? {}),
+      documents: (current?.documents ?? []).map((document) =>
+        document.id === updated.id ? updated : document,
+      ),
+    }));
+    setDocumentUploadMessage(t("trip_document_visibility_saved"));
   }
 
   async function uploadRelatedDocument() {
@@ -855,6 +895,11 @@ export default function AddTripItemPage() {
       form.append("title", documentUploadFile.name);
       form.append("category", documentCategoryForType());
       form.append("visibility", documentVisibilityForItem());
+      if (visibility === "SELECTED") {
+        visibleToMemberIds.forEach((memberId) =>
+          form.append("visibleToMemberIds", memberId),
+        );
+      }
       form.append("note", "Uploaded from trip item");
       form.append("file", documentUploadFile);
 
@@ -1109,6 +1154,15 @@ export default function AddTripItemPage() {
     fontWeight: 900,
     fontSize: 12,
   };
+
+  const costSecondaryButtonStyle: CSSProperties = isFlight
+    ? {
+        ...secondaryButtonStyle,
+        borderColor: theme.color,
+        background: theme.soft,
+        color: theme.color,
+      }
+    : secondaryButtonStyle;
 
   const renderTypeSelector = (
     <div
@@ -1473,7 +1527,7 @@ export default function AddTripItemPage() {
             type="button"
             onClick={addBudgetDraft}
             className="fw-pill fw-pill--meta fw-pill--action"
-            style={{ height: 32, cursor: "pointer" }}
+            style={{ height: 32, cursor: "pointer", ...costSecondaryButtonStyle }}
           >
             + Add cost
           </button>
@@ -1586,7 +1640,7 @@ export default function AddTripItemPage() {
                   type="button"
                   onClick={() => editBudgetDraft(draft.localId)}
                   className="fw-pill fw-pill--meta fw-pill--action"
-                  style={{ height: 28, cursor: "pointer" }}
+                  style={{ height: 28, cursor: "pointer", ...costSecondaryButtonStyle }}
                 >
                   Edit
                 </button>
@@ -1608,7 +1662,12 @@ export default function AddTripItemPage() {
           type="button"
           onClick={addBudgetDraft}
           className="fw-pill fw-pill--meta fw-pill--action"
-          style={{ height: 32, width: "fit-content", cursor: "pointer" }}
+          style={{
+            height: 32,
+            width: "fit-content",
+            cursor: "pointer",
+            ...costSecondaryButtonStyle,
+          }}
         >
           + Add cost
         </button>
@@ -1627,16 +1686,14 @@ export default function AddTripItemPage() {
           {(trip?.documents ?? []).map((document) => {
             const selected = selectedDocumentIds.includes(document.id);
             return (
-              <label
+              <div
                 key={document.id}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
+                  display: "grid",
                   gap: 7,
-                  minHeight: 36,
                   maxWidth: "100%",
-                  padding: "0 10px",
-                  borderRadius: 999,
+                  padding: "8px 10px",
+                  borderRadius: 14,
                   border: selected
                     ? `1px solid ${theme.color}`
                     : "1px solid var(--border)",
@@ -1647,28 +1704,96 @@ export default function AddTripItemPage() {
                   overflow: "hidden",
                 }}
               >
-                <input
-                  type="checkbox"
-                  checked={selected}
-                  onChange={(event) => {
-                    setSelectedDocumentIds((current) =>
-                      event.target.checked
-                        ? [...current, document.id]
-                        : current.filter((id) => id !== document.id),
-                    );
-                  }}
-                />
-                <span
-                  style={{
-                    minWidth: 0,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {document.title || document.fileName}
-                </span>
-              </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    onChange={(event) => {
+                      setSelectedDocumentIds((current) =>
+                        event.target.checked
+                          ? [...current, document.id]
+                          : current.filter((id) => id !== document.id),
+                      );
+                    }}
+                  />
+                  <span
+                    style={{
+                      minWidth: 0,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {document.title || document.fileName}
+                  </span>
+                </label>
+                {document.uploadedByUserId === user?.id ? (
+                  <>
+                    <select
+                      aria-label={`${t("trip_document_visibility")}: ${document.title || document.fileName}`}
+                      value={document.visibility ?? "SHARED"}
+                      onChange={(event) => {
+                        const nextVisibility = event.target.value as TripDocumentVisibility;
+                        const memberIds =
+                          nextVisibility === "SELECTED" &&
+                          (document.visibilityMembers ?? []).length === 0 &&
+                          myMembership?.id
+                            ? [myMembership.id]
+                            : (document.visibilityMembers ?? []).map(
+                                (member) => member.tripMemberId,
+                              );
+                        void updateRelatedDocumentVisibility(
+                          document.id,
+                          nextVisibility,
+                          memberIds,
+                        );
+                      }}
+                      style={{ ...fieldStyle, minHeight: 34, padding: "5px 8px", fontSize: 12 }}
+                    >
+                      <option value="SHARED">{t("trip_visibility_group")}</option>
+                      <option value="SELECTED">{t("trip_visibility_selected")}</option>
+                      <option value="PRIVATE">{t("trip_visibility_private")}</option>
+                    </select>
+                    {document.visibility === "SELECTED" ? (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {(trip?.members ?? []).map((member) => {
+                          const ids = (document.visibilityMembers ?? []).map(
+                            (selection) => selection.tripMemberId,
+                          );
+                          const checked = ids.includes(member.id);
+                          return (
+                            <label key={member.id} style={{ display: "flex", gap: 5, alignItems: "center", fontSize: 11 }}>
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={(event) => {
+                                  const nextIds = event.target.checked
+                                    ? [...new Set([...ids, member.id])]
+                                    : ids.filter((id) => id !== member.id);
+                                  void updateRelatedDocumentVisibility(
+                                    document.id,
+                                    "SELECTED",
+                                    nextIds,
+                                  );
+                                }}
+                              />
+                              <span>{memberDisplayName(member)}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <span style={{ color: "var(--sub)", fontSize: 11 }}>
+                    {document.visibility === "PRIVATE"
+                      ? t("trip_visibility_private")
+                      : document.visibility === "SELECTED"
+                        ? t("trip_visibility_selected")
+                        : t("trip_visibility_group")}
+                  </span>
+                )}
+              </div>
             );
           })}
         </div>
@@ -1720,9 +1845,7 @@ export default function AddTripItemPage() {
           ) : null}
         </div>
         {visibility === "SELECTED" ? (
-          <div style={sectionIntroStyle}>
-            Selected-item document visibility uses shared trip document visibility.
-          </div>
+          <div style={sectionIntroStyle}>{t("trip_document_visible_members")}: {visibleToMemberIds.length}</div>
         ) : null}
       </div>
     </Card>
@@ -2637,7 +2760,7 @@ export default function AddTripItemPage() {
                   type="button"
                   onClick={addBudgetDraft}
                   className="fw-pill fw-pill--meta fw-pill--action"
-                  style={{ height: 32, cursor: "pointer" }}
+                  style={{ height: 32, cursor: "pointer", ...costSecondaryButtonStyle }}
                 >
                   Add cost
                 </button>
@@ -2648,9 +2771,9 @@ export default function AddTripItemPage() {
                     height: 32,
                     padding: "0 12px",
                     borderRadius: 999,
-                    border: "1px solid var(--border)",
-                    background: "var(--text)",
-                    color: "var(--bg)",
+                    border: `1px solid ${isFlight ? theme.color : "var(--border)"}`,
+                    background: isFlight ? theme.color : "var(--text)",
+                    color: isFlight ? "#fff" : "var(--bg)",
                     cursor: "pointer",
                     fontWeight: 900,
                     fontSize: 12,

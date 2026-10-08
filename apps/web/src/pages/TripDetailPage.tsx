@@ -353,7 +353,7 @@ type TripDocumentCategory =
   | "VISA"
   | "GENERAL";
 
-type TripDocumentVisibility = "SHARED" | "PRIVATE";
+type TripDocumentVisibility = "SHARED" | "SELECTED" | "PRIVATE";
 
 type TripDocument = {
   id: string;
@@ -362,13 +362,14 @@ type TripDocument = {
   note?: string | null;
   category: TripDocumentCategory;
   visibility: TripDocumentVisibility;
-  fileUrl: string;
+  fileUrl?: string;
   fileName: string;
   mimeType: string;
   sizeBytes: number;
   uploadedByUserId: string;
   createdAt: string;
   updatedAt: string;
+  downloadPath?: string;
   uploadedBy?: {
     id: string;
     handle?: string | null;
@@ -376,6 +377,10 @@ type TripDocument = {
     avatarUrl?: string | null;
   } | null;
   itemLinks?: { tripItemId: string }[];
+  visibilityMembers?: {
+    tripMemberId: string;
+    tripMember?: TripMember | null;
+  }[];
 };
 
 type TripDocumentDraft = {
@@ -383,6 +388,7 @@ type TripDocumentDraft = {
   note: string;
   category: TripDocumentCategory;
   visibility: TripDocumentVisibility;
+  visibleToMemberIds: string[];
   file: File | null;
 };
 
@@ -1566,6 +1572,29 @@ function isGolfItem(item: TripItem) {
 function isFlightItem(item: TripItem) {
   const value = String(item.type ?? "").toLowerCase();
   return value === "flight" || value === "flights";
+}
+
+function tripItemActionStyles(item: TripItem) {
+  if (!isFlightItem(item)) {
+    return {
+      primary: primaryButtonStyle,
+      secondary: secondaryButtonStyle,
+    };
+  }
+
+  const accent = calendarItemAccent(item);
+  return {
+    primary: {
+      background: accent.header,
+      borderColor: accent.header,
+      color: accent.headerText,
+    } satisfies React.CSSProperties,
+    secondary: {
+      background: `color-mix(in srgb, ${accent.header} 9%, transparent)`,
+      borderColor: accent.border,
+      color: accent.header,
+    } satisfies React.CSSProperties,
+  };
 }
 
 function flightTitle(flightNumber: string) {
@@ -2778,6 +2807,7 @@ function TripItemBudgetSection({
 }) {
   const costs = budgetCostsForItem(item, members);
   const isInlineEditing = Boolean(drafts);
+  const actionStyles = tripItemActionStyles(item);
   if (costs.length === 0 && !canEdit && !isInlineEditing) return null;
 
   return (
@@ -2938,7 +2968,7 @@ function TripItemBudgetSection({
                     type="button"
                     onClick={(event) => onEdit(item, event, { costId: draft.localId })}
                     className="fw-pill fw-pill--meta fw-pill--action"
-                    style={{ height: 28, cursor: "pointer", ...secondaryButtonStyle }}
+                    style={{ height: 28, cursor: "pointer", ...actionStyles.secondary }}
                   >
                     Edit
                   </button>
@@ -2995,7 +3025,7 @@ function TripItemBudgetSection({
               type="button"
               onClick={(event) => onAddDraft(item, event)}
               className="fw-pill fw-pill--meta fw-pill--action"
-              style={{ height: 32, cursor: "pointer", ...secondaryButtonStyle }}
+              style={{ height: 32, cursor: "pointer", ...actionStyles.secondary }}
             >
               + Add cost
             </button>
@@ -3008,7 +3038,7 @@ function TripItemBudgetSection({
                 padding: "0 12px",
                 borderRadius: 999,
                 border: "1px solid var(--border)",
-                ...primaryButtonStyle,
+                ...actionStyles.primary,
                 cursor: saving ? "default" : "pointer",
                 fontWeight: 900,
                 fontSize: 12,
@@ -3028,7 +3058,7 @@ function TripItemBudgetSection({
               type="button"
               onClick={(event) => onStartInline(item, event, { addNew: true })}
               className="fw-pill fw-pill--meta fw-pill--action"
-              style={{ height: 32, cursor: "pointer", ...secondaryButtonStyle }}
+              style={{ height: 32, cursor: "pointer", ...actionStyles.secondary }}
             >
               + Add cost
             </button>
@@ -3097,7 +3127,7 @@ function TripItemBudgetSection({
                       type="button"
                       onClick={(event) => onStartInline(item, event, { costId: cost.id })}
                       className="fw-pill fw-pill--meta fw-pill--action"
-                      style={{ height: 28, cursor: "pointer", ...secondaryButtonStyle }}
+                      style={{ height: 28, cursor: "pointer", ...actionStyles.secondary }}
                     >
                       Edit
                     </button>
@@ -3141,7 +3171,7 @@ function TripItemBudgetSection({
                 height: 32,
                 width: "fit-content",
                 cursor: "pointer",
-                ...secondaryButtonStyle,
+                ...actionStyles.secondary,
               }}
             >
               + Add cost
@@ -4064,6 +4094,7 @@ export default function TripDetailPage() {
     note: "",
     category: "GENERAL",
     visibility: "SHARED",
+    visibleToMemberIds: [],
     file: null,
   });
   const [uploadingDocument, setUploadingDocument] = useState(false);
@@ -5228,6 +5259,7 @@ export default function TripDetailPage() {
     note?: string;
     category: TripDocumentCategory;
     visibility: TripDocumentVisibility;
+    visibleToMemberIds?: string[];
     file: File;
   }) {
     if (!tripId || !token) throw new Error("Trip is not ready.");
@@ -5236,6 +5268,11 @@ export default function TripDetailPage() {
     form.append("title", params.title);
     form.append("category", params.category);
     form.append("visibility", params.visibility);
+    if (params.visibility === "SELECTED") {
+      (params.visibleToMemberIds ?? []).forEach((memberId) =>
+        form.append("visibleToMemberIds", memberId),
+      );
+    }
     form.append("note", params.note?.trim() ?? "");
     form.append("file", params.file);
 
@@ -5288,6 +5325,7 @@ export default function TripDetailPage() {
         note: documentDraft.note,
         category: documentDraft.category,
         visibility: documentDraft.visibility,
+        visibleToMemberIds: documentDraft.visibleToMemberIds,
         file: documentDraft.file,
       });
       setDocumentDraft({
@@ -5295,6 +5333,7 @@ export default function TripDetailPage() {
         note: "",
         category: "GENERAL",
         visibility: "SHARED",
+        visibleToMemberIds: [],
         file: null,
       });
       if (documentInputRef.current) documentInputRef.current.value = "";
@@ -5319,7 +5358,9 @@ export default function TripDetailPage() {
   }
 
   function documentVisibilityForEditItem(): TripDocumentVisibility {
-    return editDraft?.visibility === "PRIVATE" ? "PRIVATE" : "SHARED";
+    if (editDraft?.visibility === "PRIVATE") return "PRIVATE";
+    if (editDraft?.visibility === "SELECTED") return "SELECTED";
+    return "SHARED";
   }
 
   async function uploadAndLinkItemDocument(itemId: string) {
@@ -5333,6 +5374,10 @@ export default function TripDetailPage() {
         note: "Uploaded from trip item",
         category: documentCategoryForEditItem(),
         visibility: documentVisibilityForEditItem(),
+        visibleToMemberIds:
+          editDraft.visibility === "SELECTED"
+            ? editDraft.visibleToMemberIds
+            : undefined,
         file: itemDocumentUploadFile,
       });
       const nextDocumentIds = editDraft.documentIds.includes(created.id)
@@ -6301,6 +6346,9 @@ export default function TripDetailPage() {
     trip?.items?.find((item) => item.id === detailsItemId) ?? null;
   const budgetEditingItem =
     trip?.items?.find((item) => item.id === budgetEditingItemId) ?? null;
+  const budgetEditingActionStyles = budgetEditingItem
+    ? tripItemActionStyles(budgetEditingItem)
+    : { primary: primaryButtonStyle, secondary: secondaryButtonStyle };
 
   function renderMapActionLinks(item: TripItem, keyPrefix: string) {
     return tripItemMapActions(item).map((action) => (
@@ -6319,6 +6367,64 @@ export default function TripDetailPage() {
         {action.label}
       </a>
     ));
+  }
+
+  async function updateDocumentVisibility(
+    documentId: string,
+    visibility: TripDocumentVisibility,
+    visibleToMemberIds: string[],
+  ) {
+    if (!tripId || !token) return;
+    setDocumentsErr(null);
+    const res = await fetch(
+      `${API_BASE}/trips/${encodeURIComponent(tripId)}/documents/${encodeURIComponent(documentId)}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          visibility,
+          visibleToMemberIds:
+            visibility === "SELECTED" ? visibleToMemberIds : undefined,
+        }),
+      },
+    );
+    if (!res.ok) {
+      setDocumentsErr(t("trip_document_visibility_failed"));
+      return;
+    }
+    const updated = (await res.json()) as TripDocument;
+    setDocuments((current) =>
+      current.map((document) =>
+        document.id === updated.id ? updated : document,
+      ),
+    );
+    setItemDocumentUploadMessage(t("trip_document_visibility_saved"));
+    await loadTrip();
+  }
+
+  async function openTripDocument(document: TripDocument) {
+    if (!tripId || !token) return;
+    setDocumentsErr(null);
+    const path =
+      document.downloadPath ??
+      `/trips/${encodeURIComponent(tripId)}/documents/${encodeURIComponent(document.id)}/file`;
+    const res = await fetch(`${API_BASE}${path}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      setDocumentsErr(`Unable to open document (${res.status}).`);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(await res.blob());
+    const link = window.document.createElement("a");
+    link.href = objectUrl;
+    link.target = "_blank";
+    link.rel = "noreferrer";
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
   }
 
   function renderOverviewMetadataRows(rows: { label: string; value: string }[]) {
@@ -9951,20 +10057,22 @@ export default function TripDetailPage() {
                                 No documents yet. Upload a booking confirmation, voucher or screenshot.
                               </div>
                             ) : (
-                              <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                              <div style={{ display: "grid", gap: 7 }}>
                                 {documents.map((document) => {
                                   const selected = editDraft.documentIds.includes(document.id);
+                                  const selectedMemberIds = (
+                                    document.visibilityMembers ?? []
+                                  ).map((selection) => selection.tripMemberId);
                                   return (
-                                    <label
+                                    <div
                                       key={document.id}
                                       style={{
-                                        display: "flex",
-                                        alignItems: "center",
+                                        display: "grid",
                                         gap: 7,
                                         minHeight: 34,
                                         maxWidth: "100%",
-                                        padding: "0 10px",
-                                        borderRadius: 999,
+                                        padding: "8px 10px",
+                                        borderRadius: 14,
                                         border: selected
                                           ? "1px solid var(--accent-strong)"
                                           : "1px solid var(--border)",
@@ -9977,31 +10085,110 @@ export default function TripDetailPage() {
                                         overflow: "hidden",
                                       }}
                                     >
-                                      <input
-                                        type="checkbox"
-                                        checked={selected}
-                                        onChange={(event) =>
-                                          setEditDraft({
-                                            ...editDraft,
-                                            documentIds: event.target.checked
-                                              ? [...editDraft.documentIds, document.id]
-                                              : editDraft.documentIds.filter(
-                                                  (id) => id !== document.id,
-                                                ),
-                                          })
-                                        }
-                                      />
-                                      <span
-                                        style={{
-                                          minWidth: 0,
-                                          overflow: "hidden",
-                                          textOverflow: "ellipsis",
-                                          whiteSpace: "nowrap",
-                                        }}
-                                      >
-                                        {document.title || document.fileName}
-                                      </span>
-                                    </label>
+                                      <label style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                                        <input
+                                          type="checkbox"
+                                          checked={selected}
+                                          onChange={(event) =>
+                                            setEditDraft({
+                                              ...editDraft,
+                                              documentIds: event.target.checked
+                                                ? [...editDraft.documentIds, document.id]
+                                                : editDraft.documentIds.filter(
+                                                    (id) => id !== document.id,
+                                                  ),
+                                            })
+                                          }
+                                        />
+                                        <span
+                                          style={{
+                                            minWidth: 0,
+                                            overflow: "hidden",
+                                            textOverflow: "ellipsis",
+                                            whiteSpace: "nowrap",
+                                          }}
+                                        >
+                                          {document.title || document.fileName}
+                                        </span>
+                                      </label>
+                                      {document.uploadedByUserId === user?.id ? (
+                                        <>
+                                          <select
+                                            aria-label={`${t("trip_document_visibility")}: ${document.title || document.fileName}`}
+                                            value={document.visibility ?? "SHARED"}
+                                            onChange={(event) => {
+                                              const visibility = event.target
+                                                .value as TripDocumentVisibility;
+                                              const memberIds =
+                                                visibility === "SELECTED" &&
+                                                selectedMemberIds.length === 0 &&
+                                                myMembership?.id
+                                                  ? [myMembership.id]
+                                                  : selectedMemberIds;
+                                              void updateDocumentVisibility(
+                                                document.id,
+                                                visibility,
+                                                memberIds,
+                                              );
+                                            }}
+                                            style={{
+                                              ...editFieldStyle,
+                                              minHeight: 34,
+                                              padding: "5px 8px",
+                                              fontSize: 12,
+                                            }}
+                                          >
+                                            <option value="SHARED">{t("trip_visibility_group")}</option>
+                                            <option value="SELECTED">{t("trip_visibility_selected")}</option>
+                                            <option value="PRIVATE">{t("trip_visibility_private")}</option>
+                                          </select>
+                                          {document.visibility === "SELECTED" ? (
+                                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                              {(trip?.members ?? []).map((member) => {
+                                                const checked = selectedMemberIds.includes(member.id);
+                                                return (
+                                                  <label
+                                                    key={member.id}
+                                                    style={{
+                                                      display: "flex",
+                                                      gap: 5,
+                                                      alignItems: "center",
+                                                      fontSize: 11,
+                                                    }}
+                                                  >
+                                                    <input
+                                                      type="checkbox"
+                                                      checked={checked}
+                                                      onChange={(event) => {
+                                                        const nextIds = event.target.checked
+                                                          ? [...new Set([...selectedMemberIds, member.id])]
+                                                          : selectedMemberIds.filter(
+                                                              (id) => id !== member.id,
+                                                            );
+                                                        void updateDocumentVisibility(
+                                                          document.id,
+                                                          "SELECTED",
+                                                          nextIds,
+                                                        );
+                                                      }}
+                                                    />
+                                                    {memberDisplayName(member)}
+                                                  </label>
+                                                );
+                                              })}
+                                            </div>
+                                          ) : null}
+                                        </>
+                                      ) : (
+                                        <span style={{ color: "var(--sub)", fontSize: 11 }}>
+                                          {document.visibility === "PRIVATE"
+                                            ? t("trip_visibility_private")
+                                            : document.visibility === "SELECTED"
+                                              ? t("trip_visibility_selected")
+                                              : t("trip_visibility_group")}
+                                        </span>
+                                      )}
+                                    </div>
                                   );
                                 })}
                               </div>
@@ -10069,11 +10256,6 @@ export default function TripDetailPage() {
                                 </span>
                               ) : null}
                             </div>
-                            {editDraft.visibility === "SELECTED" ? (
-                              <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
-                                Selected-item document visibility uses shared trip document visibility.
-                              </div>
-                            ) : null}
                           </div>
 
                           <textarea
@@ -10430,30 +10612,60 @@ export default function TripDetailPage() {
                 style={{ ...editFieldStyle, resize: "vertical" }}
               />
 
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 9,
-                  color: "var(--text)",
-                  fontSize: 13,
-                  fontWeight: 850,
-                  lineHeight: 1.35,
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={documentDraft.visibility === "PRIVATE"}
-                  onChange={(event) =>
+              <label style={{ display: "grid", gap: 5, color: "var(--text)", fontSize: 13, fontWeight: 850 }}>
+                {t("trip_document_visibility")}
+                <select
+                  value={documentDraft.visibility}
+                  onChange={(event) => {
+                    const nextVisibility = event.target.value as TripDocumentVisibility;
                     setDocumentDraft((current) => ({
                       ...current,
-                      visibility: event.target.checked ? "PRIVATE" : "SHARED",
-                    }))
-                  }
-                  style={{ width: 16, height: 16, flex: "0 0 auto" }}
-                />
-                <span>Private document - only visible to me</span>
+                      visibility: nextVisibility,
+                      visibleToMemberIds:
+                        nextVisibility === "SELECTED" &&
+                        current.visibleToMemberIds.length === 0 &&
+                        myMembership?.id
+                          ? [myMembership.id]
+                          : current.visibleToMemberIds,
+                    }));
+                  }}
+                  style={editFieldStyle}
+                >
+                  <option value="SHARED">{t("trip_visibility_group")}</option>
+                  <option value="SELECTED">{t("trip_visibility_selected")}</option>
+                  <option value="PRIVATE">{t("trip_visibility_private")}</option>
+                </select>
               </label>
+
+              {documentDraft.visibility === "SELECTED" ? (
+                <div style={{ display: "grid", gap: 6 }}>
+                  <span style={{ color: "var(--sub)", fontSize: 12, fontWeight: 850 }}>
+                    {t("trip_document_visible_members")}
+                  </span>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                    {(trip?.members ?? []).map((member) => {
+                      const checked = documentDraft.visibleToMemberIds.includes(member.id);
+                      return (
+                        <label key={member.id} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(event) =>
+                              setDocumentDraft((current) => ({
+                                ...current,
+                                visibleToMemberIds: event.target.checked
+                                  ? [...new Set([...current.visibleToMemberIds, member.id])]
+                                  : current.visibleToMemberIds.filter((id) => id !== member.id),
+                              }))
+                            }
+                          />
+                          {memberDisplayName(member)}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
 
               <button
                 type="button"
@@ -10613,12 +10825,11 @@ export default function TripDetailPage() {
                     "Trip member";
                   const size = formatFileSize(document.sizeBytes);
                   const date = formatDocumentDate(document.createdAt);
-                  const isPrivateDocument = document.visibility === "PRIVATE";
                   const isDocumentUploader =
                     document.uploadedByUserId === user?.id;
-                  const canDeleteDocument = isPrivateDocument
-                    ? isDocumentUploader
-                    : canEditTrip || isDocumentUploader;
+                  const canDeleteDocument =
+                    isDocumentUploader ||
+                    (document.visibility === "SHARED" && canEditTrip);
 
                   return (
                     <article
@@ -10663,22 +10874,24 @@ export default function TripDetailPage() {
                             >
                               {tripDocumentCategoryLabels[document.category]}
                             </span>
-                            {isPrivateDocument ? (
-                              <span
-                                style={{
-                                  width: "fit-content",
-                                  borderRadius: 999,
-                                  border: "1px solid var(--border)",
-                                  padding: "4px 8px",
-                                  color: "var(--text)",
-                                  background: "var(--card)",
-                                  fontSize: 11,
-                                  fontWeight: 950,
-                                }}
-                              >
-                                Private
-                              </span>
-                            ) : null}
+                            <span
+                              style={{
+                                width: "fit-content",
+                                borderRadius: 999,
+                                border: "1px solid var(--border)",
+                                padding: "4px 8px",
+                                color: "var(--text)",
+                                background: "var(--card)",
+                                fontSize: 11,
+                                fontWeight: 950,
+                              }}
+                            >
+                              {document.visibility === "PRIVATE"
+                                ? t("trip_visibility_private")
+                                : document.visibility === "SELECTED"
+                                  ? t("trip_visibility_selected")
+                                  : t("trip_visibility_group")}
+                            </span>
                           </div>
                           <div
                             style={{
@@ -10726,11 +10939,66 @@ export default function TripDetailPage() {
                         </span>
                       </div>
 
+                      {isDocumentUploader ? (
+                        <div style={{ display: "grid", gap: 7 }}>
+                          <select
+                            aria-label={`${t("trip_document_visibility")}: ${document.title}`}
+                            value={document.visibility}
+                            onChange={(event) => {
+                              const nextVisibility = event.target.value as TripDocumentVisibility;
+                              const currentIds = (document.visibilityMembers ?? []).map(
+                                (selection) => selection.tripMemberId,
+                              );
+                              void updateDocumentVisibility(
+                                document.id,
+                                nextVisibility,
+                                nextVisibility === "SELECTED" && currentIds.length === 0 && myMembership?.id
+                                  ? [myMembership.id]
+                                  : currentIds,
+                              );
+                            }}
+                            style={{ ...editFieldStyle, minHeight: 34, padding: "5px 8px", fontSize: 12 }}
+                          >
+                            <option value="SHARED">{t("trip_visibility_group")}</option>
+                            <option value="SELECTED">{t("trip_visibility_selected")}</option>
+                            <option value="PRIVATE">{t("trip_visibility_private")}</option>
+                          </select>
+                          {document.visibility === "SELECTED" ? (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                              {(trip?.members ?? []).map((member) => {
+                                const ids = (document.visibilityMembers ?? []).map(
+                                  (selection) => selection.tripMemberId,
+                                );
+                                const checked = ids.includes(member.id);
+                                return (
+                                  <label key={member.id} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11 }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={checked}
+                                      onChange={(event) => {
+                                        const nextIds = event.target.checked
+                                          ? [...new Set([...ids, member.id])]
+                                          : ids.filter((id) => id !== member.id);
+                                        void updateDocumentVisibility(
+                                          document.id,
+                                          "SELECTED",
+                                          nextIds,
+                                        );
+                                      }}
+                                    />
+                                    <span>{memberDisplayName(member)}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+
                       <div style={{ ...wrappingActionRowStyle, gap: 8 }}>
-                        <a
-                          href={fileUrl(document.fileUrl)}
-                          target="_blank"
-                          rel="noreferrer"
+                        <button
+                          type="button"
+                          onClick={() => void openTripDocument(document)}
                           style={{
                             height: 32,
                             padding: "0 11px",
@@ -10741,13 +11009,13 @@ export default function TripDetailPage() {
                             display: "inline-flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            textDecoration: "none",
                             fontWeight: 900,
                             fontSize: 12,
+                            cursor: "pointer",
                           }}
                         >
-                          Open file
-                        </a>
+                          {t("trip_document_open")}
+                        </button>
                         {canDeleteDocument ? (
                           <button
                             type="button"
@@ -11776,11 +12044,10 @@ export default function TripDetailPage() {
                 {linkedDocumentsForItem(detailsItem, documents).length > 0 ? (
                   <div style={{ display: "grid", gap: 8 }}>
                     {linkedDocumentsForItem(detailsItem, documents).map((document) => (
-                      <a
+                      <button
+                        type="button"
                         key={document.id}
-                        href={fileUrl(document.fileUrl)}
-                        target="_blank"
-                        rel="noreferrer"
+                        onClick={() => void openTripDocument(document)}
                         className="fw-pill fw-pill--meta fw-pill--action"
                         style={{
                           minHeight: 36,
@@ -11793,7 +12060,7 @@ export default function TripDetailPage() {
                         }}
                       >
                         {document.title || document.fileName}
-                      </a>
+                      </button>
                     ))}
                   </div>
                 ) : (
@@ -12376,7 +12643,11 @@ export default function TripDetailPage() {
                   type="button"
                   onClick={addBudgetDraft}
                   className="fw-pill fw-pill--meta fw-pill--action"
-                  style={{ height: 32, cursor: "pointer", ...secondaryButtonStyle }}
+                  style={{
+                    height: 32,
+                    cursor: "pointer",
+                    ...budgetEditingActionStyles.secondary,
+                  }}
                 >
                   Add cost
                 </button>
@@ -12389,7 +12660,7 @@ export default function TripDetailPage() {
                     padding: "0 12px",
                     borderRadius: 999,
                     border: "1px solid var(--border)",
-                    ...primaryButtonStyle,
+                    ...budgetEditingActionStyles.primary,
                     cursor: savingBudgetItemId ? "default" : "pointer",
                     fontWeight: 900,
                     fontSize: 12,
@@ -12714,4 +12985,3 @@ export default function TripDetailPage() {
     </div>
   );
 }
-

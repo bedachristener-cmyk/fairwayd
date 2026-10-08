@@ -1,5 +1,9 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { mkdir, writeFile } from 'fs/promises';
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
+import { mkdir, readFile, writeFile } from 'fs/promises';
 import { dirname, join, normalize, sep } from 'path';
 
 function isProduction() {
@@ -111,14 +115,19 @@ export async function uploadToR2(
     throw err;
   }
 
-  const publicUrl = (process.env.R2_PUBLIC_URL || '').trim().replace(/\/+$/, '');
+  const publicUrl = (process.env.R2_PUBLIC_URL || '')
+    .trim()
+    .replace(/\/+$/, '');
   if (!publicUrl) {
     if (durableStorageRequired) {
-      console.error('[storage] R2 public URL missing while durable storage is required', {
-        key,
-        contentType,
-        bytes: buffer.length,
-      });
+      console.error(
+        '[storage] R2 public URL missing while durable storage is required',
+        {
+          key,
+          contentType,
+          bytes: buffer.length,
+        },
+      );
       throw new Error('R2 public URL is not configured');
     }
 
@@ -138,4 +147,74 @@ export async function uploadToR2(
   }
 
   return `${normalizedPublicUrl}/${key}`;
+}
+
+export async function uploadPrivateToR2(
+  key: string,
+  buffer: Buffer,
+  contentType: string,
+) {
+  const endpoint = process.env.R2_ENDPOINT || '';
+  const bucket = process.env.R2_BUCKET || '';
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID || '';
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY || '';
+  const hasR2Config = endpoint && bucket && accessKeyId && secretAccessKey;
+
+  if (!hasR2Config) {
+    if (!requiresDurableUploadStorage()) return writeLocalUpload(key, buffer);
+    throw new Error('R2 storage is not configured');
+  }
+
+  const client = new S3Client({
+    region: 'auto',
+    endpoint,
+    credentials: { accessKeyId, secretAccessKey },
+  });
+  await client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+    }),
+  );
+
+  return `r2://${key}`;
+}
+
+export async function readStoredUpload(fileUrl: string) {
+  if (fileUrl.startsWith('/uploads/')) {
+    const relativeKey = fileUrl.slice('/uploads/'.length);
+    const { filePath } = localUploadsPath(relativeKey);
+    return readFile(filePath);
+  }
+
+  if (fileUrl.startsWith('r2://') || fileUrl.startsWith('trips/')) {
+    const key = fileUrl.startsWith('r2://')
+      ? fileUrl.slice('r2://'.length)
+      : fileUrl;
+    const endpoint = process.env.R2_ENDPOINT || '';
+    const bucket = process.env.R2_BUCKET || '';
+    const accessKeyId = process.env.R2_ACCESS_KEY_ID || '';
+    const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY || '';
+    if (!key || !endpoint || !bucket || !accessKeyId || !secretAccessKey) {
+      throw new Error('R2 storage is not configured');
+    }
+    const client = new S3Client({
+      region: 'auto',
+      endpoint,
+      credentials: { accessKeyId, secretAccessKey },
+    });
+    const result = await client.send(
+      new GetObjectCommand({ Bucket: bucket, Key: key }),
+    );
+    if (!result.Body) throw new Error('Stored upload has no content');
+    return Buffer.from(await result.Body.transformToByteArray());
+  }
+
+  const response = await fetch(fileUrl);
+  if (!response.ok) {
+    throw new Error(`Stored upload could not be read (${response.status})`);
+  }
+  return Buffer.from(await response.arrayBuffer());
 }

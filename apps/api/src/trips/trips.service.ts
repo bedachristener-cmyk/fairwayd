@@ -93,6 +93,7 @@ function cleanTripDocumentVisibility(visibility?: string) {
 
   if (
     value !== TripDocumentVisibility.SHARED &&
+    value !== TripDocumentVisibility.SELECTED &&
     value !== TripDocumentVisibility.PRIVATE
   ) {
     throw new BadRequestException('Unsupported trip document visibility');
@@ -114,7 +115,9 @@ function cleanTripItemVisibility(visibility?: TripItemVisibility) {
 }
 
 function canUseGroupTripItemVisibility(membership: { role: TripRole }) {
-  return membership.role === TripRole.OWNER || membership.role === TripRole.ADMIN;
+  return (
+    membership.role === TripRole.OWNER || membership.role === TripRole.ADMIN
+  );
 }
 
 function enforceTripItemVisibilityPermission(
@@ -125,7 +128,9 @@ function enforceTripItemVisibilityPermission(
     visibility === TripItemVisibility.GROUP &&
     !canUseGroupTripItemVisibility(membership)
   ) {
-    throw new ForbiddenException('Only trip organizers can use group visibility');
+    throw new ForbiddenException(
+      'Only trip organizers can use group visibility',
+    );
   }
 
   return visibility;
@@ -200,6 +205,14 @@ const tripItemInclude = {
           uploadedBy: {
             select: tripUserSelect,
           },
+          visibilityMembers: {
+            orderBy: { createdAt: 'asc' },
+            include: {
+              tripMember: {
+                include: tripMemberInclude,
+              },
+            },
+          },
         },
       },
     },
@@ -223,6 +236,14 @@ const tripDocumentInclude = {
       tripItemId: true,
     },
   },
+  visibilityMembers: {
+    orderBy: { createdAt: 'asc' },
+    include: {
+      tripMember: {
+        include: tripMemberInclude,
+      },
+    },
+  },
 } satisfies Prisma.TripDocumentInclude;
 
 const tripActivityInclude = {
@@ -234,7 +255,9 @@ const tripActivityInclude = {
 function inviteToken() {
   return randomBytes(32).toString('base64url');
 }
-function visibleTripItemWhereForUser(userId: string): Prisma.TripItemWhereInput {
+function visibleTripItemWhereForUser(
+  userId: string,
+): Prisma.TripItemWhereInput {
   return {
     OR: [
       { visibility: TripItemVisibility.GROUP },
@@ -273,14 +296,37 @@ function visibleTripItemWhereForMember(
   };
 }
 
+function visibleTripDocumentWhereForMember(
+  userId: string,
+  tripMemberId: string,
+): Prisma.TripDocumentWhereInput {
+  return {
+    OR: [
+      { visibility: TripDocumentVisibility.SHARED },
+      { uploadedByUserId: userId },
+      {
+        visibility: TripDocumentVisibility.SELECTED,
+        visibilityMembers: { some: { tripMemberId } },
+      },
+    ],
+  };
+}
+
 function manageableTripItemWhereForMembership(
   userId: string,
   membership: { role: TripRole },
 ): Prisma.TripItemWhereInput {
   const or: Prisma.TripItemWhereInput[] = [{ createdByUserId: userId }];
 
-  if (membership.role === TripRole.OWNER || membership.role === TripRole.ADMIN) {
-    or.push({ visibility: { in: [TripItemVisibility.GROUP, TripItemVisibility.SELECTED] } });
+  if (
+    membership.role === TripRole.OWNER ||
+    membership.role === TripRole.ADMIN
+  ) {
+    or.push({
+      visibility: {
+        in: [TripItemVisibility.GROUP, TripItemVisibility.SELECTED],
+      },
+    });
   }
 
   return { OR: or };
@@ -309,7 +355,9 @@ export class TripsService {
           select: { preferredCurrency: true },
         });
     const baseCurrency =
-      requestedBaseCurrency || user?.preferredCurrency?.trim().toUpperCase() || DEFAULT_CURRENCY;
+      requestedBaseCurrency ||
+      user?.preferredCurrency?.trim().toUpperCase() ||
+      DEFAULT_CURRENCY;
 
     return this.prisma.trip.create({
       data: {
@@ -400,10 +448,7 @@ export class TripsService {
         },
         documents: {
           where: {
-            OR: [
-              { visibility: TripDocumentVisibility.SHARED },
-              { uploadedByUserId: userId },
-            ],
+            ...visibleTripDocumentWhereForMember(userId, membership.id),
           },
           orderBy: { createdAt: 'desc' },
           include: tripDocumentInclude,
@@ -417,11 +462,15 @@ export class TripsService {
 
     return {
       ...trip,
+      documents: trip.documents.map((document) =>
+        this.publicTripDocument(document),
+      ),
       items: this.filterTripItemsForUser(
         trip.items,
         userId,
         membership.id,
-        membership.role === TripRole.OWNER || membership.role === TripRole.ADMIN,
+        membership.role === TripRole.OWNER ||
+          membership.role === TripRole.ADMIN,
       ),
     };
   }
@@ -578,7 +627,7 @@ export class TripsService {
   }
 
   async update(tripId: string, userId: string, dto: UpdateTripDto) {
-    await this.assertCanModifyTrip(tripId, userId);
+    const membership = await this.assertCanModifyTrip(tripId, userId);
 
     const trip = await this.prisma.trip.update({
       where: {
@@ -625,7 +674,11 @@ export class TripsService {
 
     return {
       ...trip,
-      items: this.filterTripItemsDocumentsForUser(trip.items, userId),
+      items: this.filterTripItemsDocumentsForUser(
+        trip.items,
+        userId,
+        membership.id,
+      ),
     };
   }
 
@@ -652,19 +705,18 @@ export class TripsService {
   }
 
   async findDocuments(tripId: string, userId: string) {
-    await this.assertIsTripMember(tripId, userId);
+    const membership = await this.assertIsTripMember(tripId, userId);
 
-    return this.prisma.tripDocument.findMany({
+    const documents = await this.prisma.tripDocument.findMany({
       where: {
         tripId,
-        OR: [
-          { visibility: TripDocumentVisibility.SHARED },
-          { uploadedByUserId: userId },
-        ],
+        ...visibleTripDocumentWhereForMember(userId, membership.id),
       },
       orderBy: { createdAt: 'desc' },
       include: tripDocumentInclude,
     });
+
+    return documents.map((document) => this.publicTripDocument(document));
   }
 
   async findActivity(tripId: string, userId: string) {
@@ -694,6 +746,7 @@ export class TripsService {
       mimeType: string;
       sizeBytes: number;
       visibility?: string;
+      visibleToMemberIds?: string[];
     },
   ) {
     await this.assertIsTripMember(tripId, userId);
@@ -701,6 +754,10 @@ export class TripsService {
     const title = data.title?.trim();
     if (!title) throw new BadRequestException('Document title is required');
     const visibility = cleanTripDocumentVisibility(data.visibility);
+    const visibleToMemberIds =
+      visibility === TripDocumentVisibility.SELECTED
+        ? await this.resolveVisibilityMemberIds(tripId, data.visibleToMemberIds)
+        : [];
 
     const document = await this.prisma.tripDocument.create({
       data: {
@@ -714,6 +771,14 @@ export class TripsService {
         mimeType: data.mimeType,
         sizeBytes: data.sizeBytes,
         uploadedByUserId: userId,
+        visibilityMembers:
+          visibility === TripDocumentVisibility.SELECTED
+            ? {
+                create: visibleToMemberIds.map((tripMemberId) => ({
+                  tripMemberId,
+                })),
+              }
+            : undefined,
       },
       include: tripDocumentInclude,
     });
@@ -728,7 +793,60 @@ export class TripsService {
       );
     }
 
-    return document;
+    return this.publicTripDocument(document);
+  }
+
+  async findDocument(tripId: string, documentId: string, userId: string) {
+    const document = await this.findAccessibleDocumentOrThrow(
+      tripId,
+      documentId,
+      userId,
+    );
+    return this.publicTripDocument(document);
+  }
+
+  async findDocumentFile(tripId: string, documentId: string, userId: string) {
+    return this.findAccessibleDocumentOrThrow(tripId, documentId, userId);
+  }
+
+  async updateDocumentVisibility(
+    tripId: string,
+    documentId: string,
+    userId: string,
+    data: { visibility?: string; visibleToMemberIds?: string[] },
+  ) {
+    await this.assertIsTripMember(tripId, userId);
+    const existing = await this.prisma.tripDocument.findFirst({
+      where: { id: documentId, tripId },
+      select: { id: true, uploadedByUserId: true },
+    });
+
+    if (!existing) throw new NotFoundException('Trip document not found');
+    if (existing.uploadedByUserId !== userId) {
+      throw new ForbiddenException(
+        'Only the document owner can change visibility',
+      );
+    }
+
+    const visibility = cleanTripDocumentVisibility(data.visibility);
+    const visibleToMemberIds =
+      visibility === TripDocumentVisibility.SELECTED
+        ? await this.resolveVisibilityMemberIds(tripId, data.visibleToMemberIds)
+        : [];
+
+    const document = await this.prisma.tripDocument.update({
+      where: { id: documentId },
+      data: {
+        visibility,
+        visibilityMembers: {
+          deleteMany: {},
+          create: visibleToMemberIds.map((tripMemberId) => ({ tripMemberId })),
+        },
+      },
+      include: tripDocumentInclude,
+    });
+
+    return this.publicTripDocument(document);
   }
 
   async deleteDocument(tripId: string, documentId: string, userId: string) {
@@ -754,7 +872,8 @@ export class TripsService {
     const isUploader = document.uploadedByUserId === userId;
     const canDeleteAnyShared =
       document.visibility === TripDocumentVisibility.SHARED &&
-      (membership.role === TripRole.OWNER || membership.role === TripRole.ADMIN);
+      (membership.role === TripRole.OWNER ||
+        membership.role === TripRole.ADMIN);
     if (!isUploader && !canDeleteAnyShared) {
       throw new ForbiddenException('Insufficient trip document permissions');
     }
@@ -784,7 +903,9 @@ export class TripsService {
     const displayName = dto.displayName?.trim();
 
     if (!requestedUserId && !displayName) {
-      throw new BadRequestException('Trip member requires userId or displayName');
+      throw new BadRequestException(
+        'Trip member requires userId or displayName',
+      );
     }
 
     if (requestedUserId && displayName) {
@@ -834,7 +955,9 @@ export class TripsService {
     const memberUserId = requestedUserId;
 
     if (!memberUserId) {
-      throw new BadRequestException('Trip member requires userId or displayName');
+      throw new BadRequestException(
+        'Trip member requires userId or displayName',
+      );
     }
 
     try {
@@ -1039,7 +1162,7 @@ export class TripsService {
       );
     }
 
-    return this.filterTripItemDocumentsForUser(item, userId);
+    return this.filterTripItemDocumentsForUser(item, userId, membership.id);
   }
 
   async updateItem(
@@ -1107,7 +1230,11 @@ export class TripsService {
     const documentIds =
       dto.documentIds === undefined
         ? undefined
-        : await this.resolveLinkableDocumentIds(tripId, userId, dto.documentIds);
+        : await this.resolveLinkableDocumentIds(
+            tripId,
+            userId,
+            dto.documentIds,
+          );
 
     const item = await this.prisma.tripItem.update({
       where: {
@@ -1122,7 +1249,9 @@ export class TripsService {
         endDate:
           dto.endDate === undefined ? undefined : dateFromDto(dto.endDate),
         startTime:
-          dto.startTime === undefined ? undefined : dto.startTime.trim() || null,
+          dto.startTime === undefined
+            ? undefined
+            : dto.startTime.trim() || null,
         endTime:
           dto.endTime === undefined ? undefined : dto.endTime.trim() || null,
         departureFromHotelTime:
@@ -1219,7 +1348,7 @@ export class TripsService {
       );
     }
 
-    return this.filterTripItemDocumentsForUser(item, userId);
+    return this.filterTripItemDocumentsForUser(item, userId, membership.id);
   }
 
   async deleteItem(tripId: string, itemId: string, userId: string) {
@@ -1278,7 +1407,9 @@ export class TripsService {
       ],
     });
 
-    const currentIndex = items.findIndex((candidate) => candidate.id === itemId);
+    const currentIndex = items.findIndex(
+      (candidate) => candidate.id === itemId,
+    );
     if (currentIndex < 0) {
       throw new NotFoundException('Trip item not found');
     }
@@ -1324,7 +1455,11 @@ export class TripsService {
       include: tripItemInclude,
     });
 
-    return this.filterTripItemsDocumentsForUser(movedItems, userId);
+    return this.filterTripItemsDocumentsForUser(
+      movedItems,
+      userId,
+      membership.id,
+    );
   }
 
   private async createTripActivity(
@@ -1511,10 +1646,14 @@ export class TripsService {
     if (!hasMemberIds && !hasUserIds) return undefined;
 
     const participantMemberIds = [
-      ...new Set((dto.participantMemberIds ?? []).map((id) => id.trim()).filter(Boolean)),
+      ...new Set(
+        (dto.participantMemberIds ?? []).map((id) => id.trim()).filter(Boolean),
+      ),
     ];
     const participantUserIds = [
-      ...new Set((dto.participantUserIds ?? []).map((id) => id.trim()).filter(Boolean)),
+      ...new Set(
+        (dto.participantUserIds ?? []).map((id) => id.trim()).filter(Boolean),
+      ),
     ];
 
     if (participantMemberIds.length === 0 && participantUserIds.length === 0) {
@@ -1650,7 +1789,8 @@ export class TripsService {
               currency: itemDto.currency,
               exchangeRate: itemDto.exchangeRate,
               baseAmount: itemDto.baseAmount,
-              costMode: itemDto.costMode ?? defaultTripItemCostMode(itemDto.type),
+              costMode:
+                itemDto.costMode ?? defaultTripItemCostMode(itemDto.type),
               paymentMode: this.defaultPaymentMode(fallbackPaidByMemberId),
               paidByMemberId: fallbackPaidByMemberId ?? undefined,
               participantMemberIds: fallbackParticipantMemberIds,
@@ -1672,10 +1812,8 @@ export class TripsService {
         cost.paidByMemberId === undefined
           ? fallbackPaidByMemberId
           : await this.resolveOptionalTripMemberId(tripId, cost.paidByMemberId);
-      const explicitParticipantMemberIds = await this.resolveParticipantMemberIds(
-        tripId,
-        cost,
-      );
+      const explicitParticipantMemberIds =
+        await this.resolveParticipantMemberIds(tripId, cost);
       const participantMemberIds =
         explicitParticipantMemberIds ??
         fallbackParticipantMemberIds ??
@@ -1727,8 +1865,12 @@ export class TripsService {
         currency,
         exchangeRate: amount === null ? null : conversion.exchangeRate,
         baseAmount: amount === null ? null : conversion.amount,
-        costMode: cost.costMode ?? itemDto.costMode ?? defaultTripItemCostMode(itemDto.type),
-        paymentMode: cost.paymentMode ?? this.defaultPaymentMode(paidByMemberId),
+        costMode:
+          cost.costMode ??
+          itemDto.costMode ??
+          defaultTripItemCostMode(itemDto.type),
+        paymentMode:
+          cost.paymentMode ?? this.defaultPaymentMode(paidByMemberId),
         paidByMember:
           paidByMemberId === null || paidByMemberId === undefined
             ? undefined
@@ -1751,6 +1893,7 @@ export class TripsService {
     userId: string,
     documentIds?: string[],
   ) {
+    const membership = await this.assertIsTripMember(tripId, userId);
     const uniqueIds = [
       ...new Set((documentIds ?? []).map((id) => id.trim()).filter(Boolean)),
     ];
@@ -1760,33 +1903,33 @@ export class TripsService {
       where: {
         id: { in: uniqueIds },
         tripId,
-        OR: [
-          { visibility: TripDocumentVisibility.SHARED },
-          { uploadedByUserId: userId },
-        ],
+        ...visibleTripDocumentWhereForMember(userId, membership.id),
       },
       select: { id: true },
     });
 
     if (documents.length !== uniqueIds.length) {
-      throw new BadRequestException('One or more trip documents are unavailable');
+      throw new BadRequestException(
+        'One or more trip documents are unavailable',
+      );
     }
 
     return uniqueIds;
   }
 
-  private filterTripItemsForUser<T extends {
-    createdByUserId?: string | null;
-    costs?: any[];
-    documentLinks?: any[];
-  }>(
-    items: T[],
-    userId: string,
-    tripMemberId?: string,
-    canSeeAllCosts = false,
-  ) {
+  private filterTripItemsForUser<
+    T extends {
+      createdByUserId?: string | null;
+      costs?: any[];
+      documentLinks?: any[];
+    },
+  >(items: T[], userId: string, tripMemberId?: string, canSeeAllCosts = false) {
     return items.map((item) => {
-      const itemWithDocuments = this.filterTripItemDocumentsForUser(item, userId);
+      const itemWithDocuments = this.filterTripItemDocumentsForUser(
+        item,
+        userId,
+        tripMemberId,
+      );
 
       if (!Array.isArray(itemWithDocuments.costs) || canSeeAllCosts) {
         return itemWithDocuments;
@@ -1795,7 +1938,12 @@ export class TripsService {
       return {
         ...itemWithDocuments,
         costs: itemWithDocuments.costs.filter((cost) =>
-          this.isCostVisibleToMember(cost, itemWithDocuments, userId, tripMemberId),
+          this.isCostVisibleToMember(
+            cost,
+            itemWithDocuments,
+            userId,
+            tripMemberId,
+          ),
         ),
       };
     });
@@ -1804,26 +1952,77 @@ export class TripsService {
   private filterTripItemsDocumentsForUser<T extends { documentLinks?: any[] }>(
     items: T[],
     userId: string,
+    tripMemberId?: string,
   ) {
-    return items.map((item) => this.filterTripItemDocumentsForUser(item, userId));
+    return items.map((item) =>
+      this.filterTripItemDocumentsForUser(item, userId, tripMemberId),
+    );
   }
 
   private filterTripItemDocumentsForUser<T extends { documentLinks?: any[] }>(
     item: T,
     userId: string,
+    tripMemberId?: string,
   ) {
     if (!Array.isArray(item.documentLinks)) return item;
 
     return {
       ...item,
-      documentLinks: item.documentLinks.filter((link) => {
-        const document = link?.tripDocument;
-        return (
-          document?.visibility === TripDocumentVisibility.SHARED ||
-          document?.uploadedByUserId === userId
-        );
-      }),
+      documentLinks: item.documentLinks
+        .filter((link) =>
+          this.canAccessTripDocument(link?.tripDocument, userId, tripMemberId),
+        )
+        .map((link) => ({
+          ...link,
+          tripDocument: this.publicTripDocument(link.tripDocument),
+        })),
     };
+  }
+
+  private canAccessTripDocument(
+    document: any,
+    userId: string,
+    tripMemberId?: string,
+  ) {
+    if (!document) return false;
+    if (document.uploadedByUserId === userId) return true;
+    if (document.visibility === TripDocumentVisibility.SHARED) return true;
+    return (
+      document.visibility === TripDocumentVisibility.SELECTED &&
+      !!tripMemberId &&
+      (document.visibilityMembers ?? []).some(
+        (selection: any) => selection.tripMemberId === tripMemberId,
+      )
+    );
+  }
+
+  private publicTripDocument<
+    T extends { id: string; tripId: string; fileUrl?: string },
+  >(document: T) {
+    const { fileUrl: _privateStorageUrl, ...metadata } = document;
+    return {
+      ...metadata,
+      downloadPath: `/trips/${encodeURIComponent(document.tripId)}/documents/${encodeURIComponent(document.id)}/file`,
+    };
+  }
+
+  private async findAccessibleDocumentOrThrow(
+    tripId: string,
+    documentId: string,
+    userId: string,
+  ) {
+    const membership = await this.assertIsTripMember(tripId, userId);
+    const document = await this.prisma.tripDocument.findFirst({
+      where: {
+        id: documentId,
+        tripId,
+        ...visibleTripDocumentWhereForMember(userId, membership.id),
+      },
+      include: tripDocumentInclude,
+    });
+
+    if (!document) throw new NotFoundException('Trip document not found');
+    return document;
   }
 
   private isCostVisibleToMember(
@@ -1865,7 +2064,6 @@ export class TripsService {
     return trip;
   }
 
-
   private async resolveVisibilityMemberIds(
     tripId: string,
     visibleToMemberIds?: string[],
@@ -1897,10 +2095,7 @@ export class TripsService {
 
     return memberIds;
   }
-  private async resolveOptionalTripMemberId(
-    tripId: string,
-    memberId?: string,
-  ) {
+  private async resolveOptionalTripMemberId(tripId: string, memberId?: string) {
     const id = memberId?.trim();
     if (!id) return null;
 
@@ -1927,7 +2122,8 @@ export class TripsService {
     userId: string,
     membership?: { role: TripRole },
   ) {
-    const tripMembership = membership ?? (await this.assertIsTripMember(tripId, userId));
+    const tripMembership =
+      membership ?? (await this.assertIsTripMember(tripId, userId));
     const item = await this.prisma.tripItem.findFirst({
       where: {
         id: itemId,

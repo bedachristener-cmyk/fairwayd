@@ -8,16 +8,23 @@ import {
   Patch,
   Post,
   Req,
+  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
+import { randomBytes } from 'node:crypto';
 import { extname } from 'path';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Public } from '../auth/public.decorator';
-import { uploadToR2 } from '../storage/r2.service';
+import {
+  readStoredUpload,
+  uploadPrivateToR2,
+  uploadToR2,
+} from '../storage/r2.service';
 import { AddTripMemberDto } from './dto/add-trip-member.dto';
 import { CreateTripItemDto } from './dto/create-trip-item.dto';
 import { CreateTripDto } from './dto/create-trip.dto';
@@ -105,7 +112,9 @@ export class TripsController {
         const ext = safeDocumentExt(file.originalname, file.mimetype);
         if (!ext) {
           cb(
-            new BadRequestException('Only PDF and image uploads are allowed') as any,
+            new BadRequestException(
+              'Only PDF and image uploads are allowed',
+            ) as any,
             false,
           );
           return;
@@ -123,6 +132,7 @@ export class TripsController {
       note?: string;
       category?: string;
       visibility?: string;
+      visibleToMemberIds?: string | string[];
     },
     @UploadedFile() file?: Express.Multer.File,
   ) {
@@ -130,10 +140,8 @@ export class TripsController {
     await this.tripsService.assertCanManageDocuments(tripId, req.user.id);
 
     const ext = safeDocumentExt(file.originalname, file.mimetype) || '.bin';
-    const key = `trips/${tripId}/documents/${Date.now()}-${Math.random()
-      .toString(36)
-      .slice(2)}${ext}`;
-    const fileUrl = await uploadToR2(
+    const key = `trips/${tripId}/documents/${randomBytes(24).toString('base64url')}${ext}`;
+    const fileUrl = await uploadPrivateToR2(
       key,
       file.buffer,
       file.mimetype || 'application/octet-stream',
@@ -144,11 +152,65 @@ export class TripsController {
       note: body.note,
       category: body.category,
       visibility: body.visibility,
+      visibleToMemberIds: Array.isArray(body.visibleToMemberIds)
+        ? body.visibleToMemberIds
+        : body.visibleToMemberIds
+          ? [body.visibleToMemberIds]
+          : [],
       fileUrl,
       fileName: file.originalname || `document${ext}`,
       mimeType: file.mimetype || 'application/octet-stream',
       sizeBytes: file.size,
     });
+  }
+
+  @Get(':tripId/documents/:documentId')
+  findDocument(
+    @Param('tripId') tripId: string,
+    @Param('documentId') documentId: string,
+    @Req() req: any,
+  ) {
+    return this.tripsService.findDocument(tripId, documentId, req.user.id);
+  }
+
+  @Get(':tripId/documents/:documentId/file')
+  async downloadDocument(
+    @Param('tripId') tripId: string,
+    @Param('documentId') documentId: string,
+    @Req() req: any,
+    @Res() response: Response,
+  ) {
+    const document = await this.tripsService.findDocumentFile(
+      tripId,
+      documentId,
+      req.user.id,
+    );
+    const contents = await readStoredUpload(document.fileUrl);
+    const safeFileName = document.fileName.replace(/[\r\n"]/g, '_');
+    response.setHeader('Content-Type', document.mimeType);
+    response.setHeader('Content-Length', String(contents.length));
+    response.setHeader(
+      'Content-Disposition',
+      `inline; filename="${safeFileName}"`,
+    );
+    response.setHeader('Cache-Control', 'private, no-store');
+    response.send(contents);
+  }
+
+  @Patch(':tripId/documents/:documentId')
+  updateDocumentVisibility(
+    @Param('tripId') tripId: string,
+    @Param('documentId') documentId: string,
+    @Req() req: any,
+    @Body()
+    body: { visibility?: string; visibleToMemberIds?: string[] },
+  ) {
+    return this.tripsService.updateDocumentVisibility(
+      tripId,
+      documentId,
+      req.user.id,
+      body,
+    );
   }
 
   @Delete(':tripId/documents/:documentId')
