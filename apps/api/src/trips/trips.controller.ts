@@ -140,7 +140,7 @@ export class TripsController {
     await this.tripsService.assertCanManageDocuments(tripId, req.user.id);
 
     const ext = safeDocumentExt(file.originalname, file.mimetype) || '.bin';
-    const key = `trips/${tripId}/documents/${randomBytes(24).toString('base64url')}${ext}`;
+    const key = `private-trip-documents/trips/${tripId}/documents/${randomBytes(24).toString('base64url')}${ext}`;
     const fileUrl = await uploadPrivateToR2(
       key,
       file.buffer,

@@ -5,6 +5,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import { dirname, join, normalize, sep } from 'path';
+import { createHash } from 'crypto';
 
 function isProduction() {
   return process.env.NODE_ENV === 'production';
@@ -115,7 +116,7 @@ export async function uploadToR2(
     throw err;
   }
 
-  const publicUrl = (process.env.R2_PUBLIC_URL || '')
+  const publicUrl = (process.env.R2_PUBLIC_BASE_URL || process.env.R2_PUBLIC_URL || '')
     .trim()
     .replace(/\/+$/, '');
   if (!publicUrl) {
@@ -155,14 +156,13 @@ export async function uploadPrivateToR2(
   contentType: string,
 ) {
   const endpoint = process.env.R2_ENDPOINT || '';
-  const bucket = process.env.R2_BUCKET || '';
+  const bucket = process.env.R2_PRIVATE_DOCUMENT_BUCKET || '';
   const accessKeyId = process.env.R2_ACCESS_KEY_ID || '';
   const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY || '';
   const hasR2Config = endpoint && bucket && accessKeyId && secretAccessKey;
 
   if (!hasR2Config) {
-    if (!requiresDurableUploadStorage()) return writeLocalUpload(key, buffer);
-    throw new Error('R2 storage is not configured');
+    throw new Error('Private Trip document storage is not configured');
   }
 
   const client = new S3Client({
@@ -182,6 +182,77 @@ export async function uploadPrivateToR2(
   return `r2://${key}`;
 }
 
+function r2Client() {
+  const endpoint = process.env.R2_ENDPOINT || '';
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID || '';
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY || '';
+  if (!endpoint || !accessKeyId || !secretAccessKey) {
+    throw new Error('R2 storage is not configured');
+  }
+  return new S3Client({
+    region: 'auto',
+    endpoint,
+    credentials: { accessKeyId, secretAccessKey },
+  });
+}
+
+function privateDocumentBucket() {
+  const bucket = process.env.R2_PRIVATE_DOCUMENT_BUCKET || '';
+  if (!bucket) throw new Error('Private Trip document storage is not configured');
+  return bucket;
+}
+
+function legacyPublicBaseUrl() {
+  const configured = (process.env.R2_LEGACY_PUBLIC_BASE_URL || process.env.R2_PUBLIC_BASE_URL || process.env.R2_PUBLIC_URL || '').trim();
+  if (!configured) throw new Error('Legacy public media base URL is not configured');
+  return new URL(configured.startsWith('//') ? `https:${configured}` : configured.startsWith('http') ? configured : `https://${configured}`).toString().replace(/\/+$/, '');
+}
+
+function assertLegacyPublicUrl(fileUrl: string) {
+  const url = new URL(fileUrl);
+  const base = new URL(legacyPublicBaseUrl());
+  if (url.protocol !== 'https:' || url.origin !== base.origin || !url.pathname.startsWith(`${base.pathname.replace(/\/$/, '')}/`)) {
+    throw new Error('Legacy Trip document URL is outside the configured public media origin');
+  }
+  return url;
+}
+
+/** Copy a legacy public object to private storage and verify its bytes before the DB reference is changed. */
+export async function copyLegacyTripDocumentToPrivate(
+  fileUrl: string,
+  targetKey: string,
+  contentType: string,
+) {
+  if (!targetKey.startsWith('private-trip-documents/')) throw new Error('Invalid private Trip document target');
+  let source: Buffer;
+  if (fileUrl.startsWith('r2://') || fileUrl.startsWith('trips/')) {
+    // Explicit migration-only read for references created by the old shared-bucket implementation.
+    const key = fileUrl.startsWith('r2://') ? fileUrl.slice('r2://'.length) : fileUrl;
+    if (!key.startsWith('trips/') || key.includes('..')) throw new Error('Invalid legacy Trip document key');
+    const oldBucket = process.env.R2_BUCKET || '';
+    if (!oldBucket) throw new Error('Legacy public media storage is not configured');
+    const old = await r2Client().send(new GetObjectCommand({ Bucket: oldBucket, Key: key }));
+    if (!old.Body) throw new Error('Legacy Trip document returned no content');
+    source = Buffer.from(await old.Body.transformToByteArray());
+  } else {
+    const url = assertLegacyPublicUrl(fileUrl);
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Legacy Trip document could not be read (${response.status})`);
+    source = Buffer.from(await response.arrayBuffer());
+  }
+  const bucket = privateDocumentBucket();
+  const client = r2Client();
+  await client.send(new PutObjectCommand({ Bucket: bucket, Key: targetKey, Body: source, ContentType: contentType }));
+  const stored = await client.send(new GetObjectCommand({ Bucket: bucket, Key: targetKey }));
+  if (!stored.Body) throw new Error('Private Trip document verification returned no content');
+  const copied = Buffer.from(await stored.Body.transformToByteArray());
+  const digest = (value: Buffer) => createHash('sha256').update(value).digest('hex');
+  if (copied.length !== source.length || digest(copied) !== digest(source)) {
+    throw new Error('Private Trip document verification failed');
+  }
+  return `r2://${targetKey}`;
+}
+
 export async function readStoredUpload(fileUrl: string) {
   if (fileUrl.startsWith('/uploads/')) {
     const relativeKey = fileUrl.slice('/uploads/'.length);
@@ -189,22 +260,18 @@ export async function readStoredUpload(fileUrl: string) {
     return readFile(filePath);
   }
 
-  if (fileUrl.startsWith('r2://') || fileUrl.startsWith('trips/')) {
-    const key = fileUrl.startsWith('r2://')
-      ? fileUrl.slice('r2://'.length)
-      : fileUrl;
-    const endpoint = process.env.R2_ENDPOINT || '';
-    const bucket = process.env.R2_BUCKET || '';
-    const accessKeyId = process.env.R2_ACCESS_KEY_ID || '';
-    const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY || '';
-    if (!key || !endpoint || !bucket || !accessKeyId || !secretAccessKey) {
-      throw new Error('R2 storage is not configured');
+  if (fileUrl.startsWith('r2://')) {
+    const key = fileUrl.slice('r2://'.length);
+    if (key.startsWith('trips/') && process.env.R2_ALLOW_LEGACY_SHARED_TRIP_DOCUMENT_READS === 'true') {
+      const bucket = process.env.R2_BUCKET || '';
+      if (!bucket || key.includes('..')) throw new Error('Legacy Trip document storage is not configured');
+      const result = await r2Client().send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+      if (!result.Body) throw new Error('Stored upload has no content');
+      return Buffer.from(await result.Body.transformToByteArray());
     }
-    const client = new S3Client({
-      region: 'auto',
-      endpoint,
-      credentials: { accessKeyId, secretAccessKey },
-    });
+    if (!key.startsWith('private-trip-documents/') || key.includes('..')) throw new Error('Invalid private Trip document reference');
+    const bucket = privateDocumentBucket();
+    const client = r2Client();
     const result = await client.send(
       new GetObjectCommand({ Bucket: bucket, Key: key }),
     );
@@ -212,6 +279,19 @@ export async function readStoredUpload(fileUrl: string) {
     return Buffer.from(await result.Body.transformToByteArray());
   }
 
+  if (fileUrl.startsWith('trips/')) {
+    // Compatibility for pre-private-bucket object keys during transition.
+    if (process.env.R2_ALLOW_LEGACY_SHARED_TRIP_DOCUMENT_READS !== 'true') {
+      throw new Error('Legacy Trip document storage is not enabled');
+    }
+    const bucket = process.env.R2_BUCKET || '';
+    if (!bucket) throw new Error('Legacy Trip document storage is not configured');
+    const result = await r2Client().send(new GetObjectCommand({ Bucket: bucket, Key: fileUrl }));
+    if (!result.Body) throw new Error('Stored upload has no content');
+    return Buffer.from(await result.Body.transformToByteArray());
+  }
+
+  assertLegacyPublicUrl(fileUrl);
   const response = await fetch(fileUrl);
   if (!response.ok) {
     throw new Error(`Stored upload could not be read (${response.status})`);
