@@ -2,6 +2,13 @@
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
+## Map basemap configuration
+
+`VITE_CARTO_BASEMAP_KEY` is optional and is safe to expose to the browser as a
+basemap key. When it is unset or empty, Fairwayd maps use OpenStreetMap tiles;
+when it is set, the normal map basemap uses CARTO with that key. Do not place
+R2, API, or other server secrets in Vite variables.
+
 Currently, two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh

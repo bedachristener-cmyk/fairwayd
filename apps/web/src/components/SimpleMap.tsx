@@ -1,12 +1,15 @@
 import { MapContainer, TileLayer } from "react-leaflet";
+import { getMapBasemap } from "../maps/basemap";
 
 export default function SimpleMap() {
+  const basemap = getMapBasemap();
+
   return (
     <div style={{ height: "100vh" }}>
       <MapContainer center={[47.5596, 7.5886]} zoom={8} style={{ height: "100%", width: "100%" }}>
         <TileLayer
-          attribution='&copy; OpenStreetMap contributors &copy; CARTO'
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          attribution={basemap.attribution}
+          url={basemap.url}
         />
       </MapContainer>
     </div>

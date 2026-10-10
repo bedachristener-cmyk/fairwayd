@@ -14,6 +14,7 @@ import { useCourseFollow } from "../hooks/useCourseFollow";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
 import { t } from "../i18n/strings";
 import { resolveCourseHeroImage } from "../utils/courseHeroImage";
+import { getMapBasemap } from "../maps/basemap";
 import "leaflet.markercluster";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
@@ -421,10 +422,7 @@ export default function CoursesMap() {
   const shouldOpenCourseSearch = mapQuery.get("search") === "courses";
   const shouldCenterNearby = mapQuery.get("nearby") === "true";
 
-  const mapTileUrl =
-    "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
-
-  const mapTileAttribution = "&copy; OpenStreetMap contributors &copy; CARTO";
+  const mapBasemap = getMapBasemap();
 
   const satelliteTileUrl =
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
@@ -823,7 +821,7 @@ export default function CoursesMap() {
         ref={setMapRef}
       >
         {mapStyle === "map" ? (
-          <TileLayer attribution={mapTileAttribution} url={mapTileUrl} />
+          <TileLayer attribution={mapBasemap.attribution} url={mapBasemap.url} />
         ) : (
           <>
             <TileLayer

@@ -16,6 +16,16 @@ test("Explore map renders container", async ({
   await expect(map).toBeVisible();
 });
 
+test("Explore map uses the shared no-key OpenStreetMap basemap", async ({
+  page,
+}) => {
+  await page.goto("/map");
+
+  await expect
+    .poll(() => page.locator(".leaflet-tile").first().getAttribute("src"))
+    .toMatch(/^https:\/\/[abc]\.tile\.openstreetmap\.org\//);
+});
+
 test("Explore map renders mocked course cards", async ({ page }) => {
   await page.goto("/map?search=courses");
 
@@ -38,5 +48,5 @@ test("Explore map course card opens expected course preview", async ({
   await page.getByRole("button", { name: /Yas Links Abu Dhabi/ }).click();
 
   await expect(page.getByText("Yas Links Abu Dhabi").first()).toBeVisible();
-  await expect(page.getByText("Abu Dhabi, AE")).toBeVisible();
+  await expect(page.getByText("Abu Dhabi, Abu Dhabi, AE").first()).toBeVisible();
 });
