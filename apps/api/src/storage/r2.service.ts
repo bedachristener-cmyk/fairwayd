@@ -1,4 +1,5 @@
 import {
+  DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -200,6 +201,23 @@ function privateDocumentBucket() {
   const bucket = process.env.R2_PRIVATE_DOCUMENT_BUCKET || '';
   if (!bucket) throw new Error('Private Trip document storage is not configured');
   return bucket;
+}
+
+export async function deletePrivateUpload(fileUrl: string) {
+  if (!fileUrl.startsWith('r2://private-trip-documents/')) return false;
+
+  const key = fileUrl.slice('r2://'.length);
+  if (key.includes('..')) {
+    throw new Error('Invalid private Trip document reference');
+  }
+
+  await r2Client().send(
+    new DeleteObjectCommand({
+      Bucket: privateDocumentBucket(),
+      Key: key,
+    }),
+  );
+  return true;
 }
 
 function legacyPublicBaseUrl() {

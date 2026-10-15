@@ -413,6 +413,25 @@ describe('TripsService trip document visibility', () => {
     expect(prisma.tripDocument.update).not.toHaveBeenCalled();
   });
 
+  it('returns the internal storage reference for post-delete cleanup', async () => {
+    const { prisma, service } = setup();
+    prisma.tripDocument.findFirst.mockResolvedValue({
+      ...document,
+      uploadedByUserId: 'user-1',
+    });
+    prisma.tripDocument.delete.mockResolvedValue(document);
+
+    await expect(
+      service.deleteDocument('trip-1', 'document-1', 'user-1'),
+    ).resolves.toEqual({
+      ok: true,
+      deletedFileUrl: document.fileUrl,
+    });
+    expect(prisma.tripDocument.delete).toHaveBeenCalledWith({
+      where: { id: 'document-1' },
+    });
+  });
+
   it('denies access after the selected user is removed from the trip', async () => {
     const { prisma, service } = createService();
     prisma.tripMember.findUnique.mockResolvedValue(null);

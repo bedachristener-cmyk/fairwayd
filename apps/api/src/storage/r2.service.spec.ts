@@ -1,10 +1,22 @@
-import { copyLegacyTripDocumentToPrivate, readStoredUpload, uploadPrivateToR2, uploadToR2 } from './r2.service';
-import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  copyLegacyTripDocumentToPrivate,
+  deletePrivateUpload,
+  readStoredUpload,
+  uploadPrivateToR2,
+  uploadToR2,
+} from './r2.service';
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { existsSync, rmSync } from 'fs';
 import { join } from 'path';
 
 jest.mock('@aws-sdk/client-s3', () => {
   return {
+    DeleteObjectCommand: jest.fn().mockImplementation((input) => ({ input })),
     GetObjectCommand: jest.fn().mockImplementation((input) => ({ input })),
     PutObjectCommand: jest.fn().mockImplementation((input) => ({ input })),
     S3Client: jest.fn().mockImplementation(() => ({
@@ -92,6 +104,39 @@ describe('uploadToR2 durable storage guard', () => {
 
     expect(send).toHaveBeenCalledTimes(1);
     expect((send.mock.calls[0][0] as any).input.Bucket).toBe('fairwayd-trip-documents-stage');
+  });
+
+  it('deletes private Trip document objects from the private bucket', async () => {
+    const send = jest.fn().mockResolvedValue({});
+    mockS3Send(send);
+    process.env.R2_ENDPOINT = 'https://example.r2.cloudflarestorage.com';
+    process.env.R2_PRIVATE_DOCUMENT_BUCKET = 'fairwayd-trip-documents-stage';
+    process.env.R2_ACCESS_KEY_ID = 'access-key';
+    process.env.R2_SECRET_ACCESS_KEY = 'secret-key';
+
+    await expect(
+      deletePrivateUpload(
+        'r2://private-trip-documents/trips/trip-1/documents/private.pdf',
+      ),
+    ).resolves.toBe(true);
+
+    expect(DeleteObjectCommand).toHaveBeenCalledWith({
+      Bucket: 'fairwayd-trip-documents-stage',
+      Key: 'private-trip-documents/trips/trip-1/documents/private.pdf',
+    });
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not delete legacy or public references as private objects', async () => {
+    await expect(deletePrivateUpload('r2://trips/legacy.pdf')).resolves.toBe(
+      false,
+    );
+    await expect(
+      deletePrivateUpload('https://cdn.example.com/trips/legacy.pdf'),
+    ).resolves.toBe(false);
+
+    expect(DeleteObjectCommand).not.toHaveBeenCalled();
+    expect(S3Client).not.toHaveBeenCalled();
   });
 
   it('reads private R2 uploads through authenticated object storage', async () => {

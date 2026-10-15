@@ -860,6 +860,7 @@ export class TripsService {
       select: {
         id: true,
         title: true,
+        fileUrl: true,
         uploadedByUserId: true,
         visibility: true,
       },
@@ -894,7 +895,7 @@ export class TripsService {
       );
     }
 
-    return { ok: true };
+    return { ok: true, deletedFileUrl: document.fileUrl };
   }
 
   async addMember(tripId: string, userId: string, dto: AddTripMemberDto) {

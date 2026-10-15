@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  Logger,
   Param,
   Patch,
   Post,
@@ -21,6 +22,7 @@ import { extname } from 'path';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Public } from '../auth/public.decorator';
 import {
+  deletePrivateUpload,
   readStoredUpload,
   uploadPrivateToR2,
   uploadToR2,
@@ -65,7 +67,23 @@ function safeDocumentExt(original: string, mimeType?: string) {
 @Controller('trips')
 @UseGuards(JwtAuthGuard)
 export class TripsController {
+  private readonly logger = new Logger(TripsController.name);
+
   constructor(private readonly tripsService: TripsService) {}
+
+  private async cleanupPrivateDocumentUpload(
+    fileUrl: string,
+    reason: string,
+  ) {
+    try {
+      await deletePrivateUpload(fileUrl);
+    } catch (error) {
+      this.logger.error(
+        `Failed to clean up private Trip document after ${reason}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+  }
 
   @Post()
   create(@Req() req: any, @Body() dto: CreateTripDto) {
@@ -147,21 +165,26 @@ export class TripsController {
       file.mimetype || 'application/octet-stream',
     );
 
-    return this.tripsService.createDocument(tripId, req.user.id, {
-      title: body.title,
-      note: body.note,
-      category: body.category,
-      visibility: body.visibility,
-      visibleToMemberIds: Array.isArray(body.visibleToMemberIds)
-        ? body.visibleToMemberIds
-        : body.visibleToMemberIds
-          ? [body.visibleToMemberIds]
-          : [],
-      fileUrl,
-      fileName: file.originalname || `document${ext}`,
-      mimeType: file.mimetype || 'application/octet-stream',
-      sizeBytes: file.size,
-    });
+    try {
+      return await this.tripsService.createDocument(tripId, req.user.id, {
+        title: body.title,
+        note: body.note,
+        category: body.category,
+        visibility: body.visibility,
+        visibleToMemberIds: Array.isArray(body.visibleToMemberIds)
+          ? body.visibleToMemberIds
+          : body.visibleToMemberIds
+            ? [body.visibleToMemberIds]
+            : [],
+        fileUrl,
+        fileName: file.originalname || `document${ext}`,
+        mimeType: file.mimetype || 'application/octet-stream',
+        sizeBytes: file.size,
+      });
+    } catch (error) {
+      await this.cleanupPrivateDocumentUpload(fileUrl, 'failed creation');
+      throw error;
+    }
   }
 
   @Get(':tripId/documents/:documentId')
@@ -214,12 +237,21 @@ export class TripsController {
   }
 
   @Delete(':tripId/documents/:documentId')
-  deleteDocument(
+  async deleteDocument(
     @Param('tripId') tripId: string,
     @Param('documentId') documentId: string,
     @Req() req: any,
   ) {
-    return this.tripsService.deleteDocument(tripId, documentId, req.user.id);
+    const result = await this.tripsService.deleteDocument(
+      tripId,
+      documentId,
+      req.user.id,
+    );
+    await this.cleanupPrivateDocumentUpload(
+      result.deletedFileUrl,
+      'document deletion',
+    );
+    return { ok: true };
   }
 
   @Get(':tripId/activity')
