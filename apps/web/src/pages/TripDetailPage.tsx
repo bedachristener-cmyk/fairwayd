@@ -4106,6 +4106,11 @@ export default function TripDetailPage() {
     "idle" | "uploading" | "uploaded" | "failed"
   >("idle");
   const [itemDocumentUploadMessage, setItemDocumentUploadMessage] = useState("");
+  const [expandedItemDocumentId, setExpandedItemDocumentId] = useState<string | null>(null);
+  const [itemDocumentMemberPickerId, setItemDocumentMemberPickerId] = useState<
+    string | null
+  >(null);
+  const [itemDocumentMemberQuery, setItemDocumentMemberQuery] = useState("");
   const [activity, setActivity] = useState<TripActivity[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityErr, setActivityErr] = useState<string | null>(null);
@@ -5407,6 +5412,9 @@ export default function TripDetailPage() {
       }
 
       setEditDraft({ ...editDraft, documentIds: nextDocumentIds });
+      setExpandedItemDocumentId(created.id);
+      setItemDocumentMemberPickerId(null);
+      setItemDocumentMemberQuery("");
       setItemDocumentUploadFile(null);
       setItemDocumentUploadState("uploaded");
       setItemDocumentUploadMessage("Uploaded and linked.");
@@ -10052,6 +10060,92 @@ export default function TripDetailPage() {
                             <div style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
                               Related documents
                             </div>
+                            <div
+                              style={{
+                                display: "grid",
+                                gap: 7,
+                                padding: 9,
+                                borderRadius: 12,
+                                border: "1px solid var(--border)",
+                                background: "var(--card)",
+                              }}
+                            >
+                              <div
+                                style={{ color: "var(--text)", fontSize: 11, fontWeight: 900 }}
+                              >
+                                Upload new document
+                              </div>
+                              <input
+                                type="file"
+                                accept="application/pdf,image/jpeg,image/png,image/webp"
+                                onChange={(event) => {
+                                  setItemDocumentUploadFile(event.target.files?.[0] ?? null);
+                                  setItemDocumentUploadState("idle");
+                                  setItemDocumentUploadMessage("");
+                                }}
+                                style={{
+                                  ...editFieldStyle,
+                                  minHeight: 36,
+                                  fontSize: 12,
+                                  padding: "7px 10px",
+                                }}
+                              />
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexWrap: "wrap",
+                                  gap: 8,
+                                  alignItems: "center",
+                                }}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => uploadAndLinkItemDocument(item.id)}
+                                  disabled={
+                                    !itemDocumentUploadFile ||
+                                    itemDocumentUploadState === "uploading"
+                                  }
+                                  style={{
+                                    height: 32,
+                                    padding: "0 11px",
+                                    borderRadius: 999,
+                                    border: "1px solid var(--border)",
+                                    background: "transparent",
+                                    color: "var(--text)",
+                                    cursor:
+                                      !itemDocumentUploadFile ||
+                                      itemDocumentUploadState === "uploading"
+                                        ? "default"
+                                        : "pointer",
+                                    opacity:
+                                      !itemDocumentUploadFile ||
+                                      itemDocumentUploadState === "uploading"
+                                        ? 0.65
+                                        : 1,
+                                    fontWeight: 900,
+                                    fontSize: 12,
+                                  }}
+                                >
+                                  {itemDocumentUploadState === "uploading"
+                                    ? "Uploading..."
+                                    : "Upload document"}
+                                </button>
+                                {itemDocumentUploadMessage ? (
+                                  <span
+                                    style={{
+                                      color:
+                                        itemDocumentUploadState === "failed"
+                                          ? "var(--danger)"
+                                          : "var(--sub)",
+                                      fontSize: 12,
+                                      fontWeight: 800,
+                                    }}
+                                  >
+                                    {itemDocumentUploadMessage}
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
                             {documents.length === 0 ? (
                               <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
                                 No documents yet. Upload a booking confirmation, voucher or screenshot.
@@ -10063,6 +10157,25 @@ export default function TripDetailPage() {
                                   const selectedMemberIds = (
                                     document.visibilityMembers ?? []
                                   ).map((selection) => selection.tripMemberId);
+                                  const documentName = document.title || document.fileName;
+                                  const isOwner = document.uploadedByUserId === user?.id;
+                                  const isExpanded = expandedItemDocumentId === document.id;
+                                  const isMemberPickerOpen =
+                                    itemDocumentMemberPickerId === document.id;
+                                  const normalizedMemberQuery = itemDocumentMemberQuery
+                                    .trim()
+                                    .toLocaleLowerCase();
+                                  const matchingMembers = (trip?.members ?? []).filter((member) =>
+                                    memberDisplayName(member)
+                                      .toLocaleLowerCase()
+                                      .includes(normalizedMemberQuery),
+                                  );
+                                  const visibilityLabel =
+                                    document.visibility === "PRIVATE"
+                                      ? t("trip_visibility_private")
+                                      : document.visibility === "SELECTED"
+                                        ? `${t("trip_visibility_selected")} · ${selectedMemberIds.length}`
+                                        : t("trip_visibility_group");
                                   return (
                                     <div
                                       key={document.id}
@@ -10085,40 +10198,128 @@ export default function TripDetailPage() {
                                         overflow: "hidden",
                                       }}
                                     >
-                                      <label style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                                        <input
-                                          type="checkbox"
-                                          checked={selected}
-                                          onChange={(event) =>
-                                            setEditDraft({
-                                              ...editDraft,
-                                              documentIds: event.target.checked
-                                                ? [...editDraft.documentIds, document.id]
-                                                : editDraft.documentIds.filter(
-                                                    (id) => id !== document.id,
-                                                  ),
-                                            })
-                                          }
-                                        />
-                                        <span
+                                      <div
+                                        style={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          justifyContent: "space-between",
+                                          gap: 9,
+                                          minWidth: 0,
+                                        }}
+                                      >
+                                        <label
                                           style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 7,
                                             minWidth: 0,
-                                            overflow: "hidden",
-                                            textOverflow: "ellipsis",
-                                            whiteSpace: "nowrap",
+                                            flex: "1 1 auto",
                                           }}
                                         >
-                                          {document.title || document.fileName}
-                                        </span>
-                                      </label>
-                                      {document.uploadedByUserId === user?.id ? (
-                                        <>
+                                          <input
+                                            type="checkbox"
+                                            checked={selected}
+                                            onChange={(event) =>
+                                              setEditDraft({
+                                                ...editDraft,
+                                                documentIds: event.target.checked
+                                                  ? [...editDraft.documentIds, document.id]
+                                                  : editDraft.documentIds.filter(
+                                                      (id) => id !== document.id,
+                                                    ),
+                                              })
+                                            }
+                                          />
+                                          <span
+                                            style={{
+                                              minWidth: 0,
+                                              overflow: "hidden",
+                                              textOverflow: "ellipsis",
+                                              whiteSpace: "nowrap",
+                                            }}
+                                          >
+                                            {documentName}
+                                          </span>
+                                        </label>
+                                        {isOwner ? (
+                                          <button
+                                            type="button"
+                                            aria-expanded={isExpanded}
+                                            aria-controls={`edit-document-permissions-${document.id}`}
+                                            aria-label={`Permissions for ${documentName}: ${visibilityLabel}`}
+                                            onClick={() => {
+                                              setExpandedItemDocumentId(
+                                                isExpanded ? null : document.id,
+                                              );
+                                              setItemDocumentMemberPickerId(null);
+                                              setItemDocumentMemberQuery("");
+                                            }}
+                                            style={{
+                                              display: "inline-flex",
+                                              alignItems: "center",
+                                              justifyContent: "flex-end",
+                                              gap: 5,
+                                              flex: "0 0 auto",
+                                              minHeight: 30,
+                                              maxWidth: "52%",
+                                              padding: "4px 7px",
+                                              border: 0,
+                                              background: "transparent",
+                                              color: "var(--sub)",
+                                              cursor: "pointer",
+                                              font: "inherit",
+                                              fontSize: 11,
+                                              fontWeight: 850,
+                                            }}
+                                          >
+                                            <span
+                                              style={{
+                                                minWidth: 0,
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                                whiteSpace: "nowrap",
+                                              }}
+                                            >
+                                              {visibilityLabel}
+                                            </span>
+                                            <ChevronDown
+                                              aria-hidden="true"
+                                              size={15}
+                                              style={{
+                                                flex: "0 0 auto",
+                                                transform: isExpanded
+                                                  ? "rotate(180deg)"
+                                                  : "rotate(0deg)",
+                                                transition: "transform 160ms ease",
+                                              }}
+                                            />
+                                          </button>
+                                        ) : (
+                                          <span style={{ color: "var(--sub)", fontSize: 11 }}>
+                                            {visibilityLabel}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {isOwner && isExpanded ? (
+                                        <div
+                                          id={`edit-document-permissions-${document.id}`}
+                                          style={{
+                                            display: "grid",
+                                            gap: 8,
+                                            paddingTop: 8,
+                                            borderTop: "1px solid var(--border)",
+                                          }}
+                                        >
                                           <select
                                             aria-label={`${t("trip_document_visibility")}: ${document.title || document.fileName}`}
                                             value={document.visibility ?? "SHARED"}
                                             onChange={(event) => {
                                               const visibility = event.target
                                                 .value as TripDocumentVisibility;
+                                              if (visibility !== "SELECTED") {
+                                                setItemDocumentMemberPickerId(null);
+                                                setItemDocumentMemberQuery("");
+                                              }
                                               const memberIds =
                                                 visibility === "SELECTED" &&
                                                 selectedMemberIds.length === 0 &&
@@ -10143,119 +10344,184 @@ export default function TripDetailPage() {
                                             <option value="PRIVATE">{t("trip_visibility_private")}</option>
                                           </select>
                                           {document.visibility === "SELECTED" ? (
-                                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                                              {(trip?.members ?? []).map((member) => {
-                                                const checked = selectedMemberIds.includes(member.id);
-                                                return (
-                                                  <label
-                                                    key={member.id}
+                                            <div style={{ display: "grid", gap: 6 }}>
+                                              <button
+                                                type="button"
+                                                aria-expanded={isMemberPickerOpen}
+                                                aria-controls={`edit-document-members-${document.id}`}
+                                                aria-label={`Choose members for ${documentName}: ${selectedMemberIds.length} selected`}
+                                                onClick={() => {
+                                                  setItemDocumentMemberPickerId(
+                                                    isMemberPickerOpen ? null : document.id,
+                                                  );
+                                                  setItemDocumentMemberQuery("");
+                                                }}
+                                                style={{
+                                                  ...editFieldStyle,
+                                                  display: "flex",
+                                                  alignItems: "center",
+                                                  justifyContent: "space-between",
+                                                  minHeight: 36,
+                                                  padding: "6px 9px",
+                                                  cursor: "pointer",
+                                                  textAlign: "left",
+                                                  fontSize: 12,
+                                                  fontWeight: 850,
+                                                }}
+                                              >
+                                                <span>
+                                                  {selectedMemberIds.length === 1
+                                                    ? "1 member selected"
+                                                    : `${selectedMemberIds.length} members selected`}
+                                                </span>
+                                                <ChevronDown
+                                                  aria-hidden="true"
+                                                  size={15}
+                                                  style={{
+                                                    transform: isMemberPickerOpen
+                                                      ? "rotate(180deg)"
+                                                      : "rotate(0deg)",
+                                                    transition: "transform 160ms ease",
+                                                  }}
+                                                />
+                                              </button>
+
+                                              {isMemberPickerOpen ? (
+                                                <div
+                                                  id={`edit-document-members-${document.id}`}
+                                                  style={{
+                                                    display: "grid",
+                                                    gap: 7,
+                                                    padding: 8,
+                                                    borderRadius: 11,
+                                                    border: "1px solid var(--border)",
+                                                    background: "var(--card)",
+                                                  }}
+                                                >
+                                                  <input
+                                                    type="search"
+                                                    aria-label={`Search members for ${documentName}`}
+                                                    placeholder="Search members"
+                                                    value={itemDocumentMemberQuery}
+                                                    onChange={(event) =>
+                                                      setItemDocumentMemberQuery(event.target.value)
+                                                    }
                                                     style={{
-                                                      display: "flex",
-                                                      gap: 5,
-                                                      alignItems: "center",
-                                                      fontSize: 11,
+                                                      ...editFieldStyle,
+                                                      minHeight: 34,
+                                                      padding: "5px 8px",
+                                                      fontSize: 12,
                                                     }}
-                                                  >
-                                                    <input
-                                                      type="checkbox"
-                                                      checked={checked}
-                                                      onChange={(event) => {
-                                                        const nextIds = event.target.checked
-                                                          ? [...new Set([...selectedMemberIds, member.id])]
-                                                          : selectedMemberIds.filter(
-                                                              (id) => id !== member.id,
-                                                            );
+                                                  />
+                                                  <div style={{ display: "flex", gap: 7 }}>
+                                                    <button
+                                                      type="button"
+                                                      onClick={() =>
                                                         void updateDocumentVisibility(
                                                           document.id,
                                                           "SELECTED",
-                                                          nextIds,
-                                                        );
+                                                          (trip?.members ?? []).map(
+                                                            (member) => member.id,
+                                                          ),
+                                                        )
+                                                      }
+                                                      style={{
+                                                        ...secondaryButtonStyle,
+                                                        minHeight: 30,
+                                                        fontSize: 11,
                                                       }}
-                                                    />
-                                                    {memberDisplayName(member)}
-                                                  </label>
-                                                );
-                                              })}
+                                                    >
+                                                      Select all
+                                                    </button>
+                                                    <button
+                                                      type="button"
+                                                      onClick={() =>
+                                                        void updateDocumentVisibility(
+                                                          document.id,
+                                                          "SELECTED",
+                                                          [],
+                                                        )
+                                                      }
+                                                      style={{
+                                                        ...secondaryButtonStyle,
+                                                        minHeight: 30,
+                                                        fontSize: 11,
+                                                      }}
+                                                    >
+                                                      Clear
+                                                    </button>
+                                                  </div>
+                                                  <div
+                                                    style={{
+                                                      display: "grid",
+                                                      gap: 3,
+                                                      maxHeight: 220,
+                                                      overflowY: "auto",
+                                                      overscrollBehavior: "contain",
+                                                    }}
+                                                  >
+                                                    {matchingMembers.length === 0 ? (
+                                                      <div
+                                                        style={{
+                                                          color: "var(--sub)",
+                                                          fontSize: 11,
+                                                        }}
+                                                      >
+                                                        No matching members.
+                                                      </div>
+                                                    ) : (
+                                                      matchingMembers.map((member) => {
+                                                        const checked =
+                                                          selectedMemberIds.includes(member.id);
+                                                        return (
+                                                          <label
+                                                            key={member.id}
+                                                            style={{
+                                                              display: "flex",
+                                                              gap: 6,
+                                                              alignItems: "center",
+                                                              minHeight: 30,
+                                                              fontSize: 11,
+                                                            }}
+                                                          >
+                                                            <input
+                                                              type="checkbox"
+                                                              checked={checked}
+                                                              onChange={(event) => {
+                                                                const nextIds = event.target.checked
+                                                                  ? [
+                                                                      ...new Set([
+                                                                        ...selectedMemberIds,
+                                                                        member.id,
+                                                                      ]),
+                                                                    ]
+                                                                  : selectedMemberIds.filter(
+                                                                      (id) => id !== member.id,
+                                                                    );
+                                                                void updateDocumentVisibility(
+                                                                  document.id,
+                                                                  "SELECTED",
+                                                                  nextIds,
+                                                                );
+                                                              }}
+                                                            />
+                                                            <span>{memberDisplayName(member)}</span>
+                                                          </label>
+                                                        );
+                                                      })
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              ) : null}
                                             </div>
                                           ) : null}
-                                        </>
-                                      ) : (
-                                        <span style={{ color: "var(--sub)", fontSize: 11 }}>
-                                          {document.visibility === "PRIVATE"
-                                            ? t("trip_visibility_private")
-                                            : document.visibility === "SELECTED"
-                                              ? t("trip_visibility_selected")
-                                              : t("trip_visibility_group")}
-                                        </span>
-                                      )}
+                                        </div>
+                                      ) : null}
                                     </div>
                                   );
                                 })}
                               </div>
                             )}
-                            <input
-                              type="file"
-                              accept="application/pdf,image/jpeg,image/png,image/webp"
-                              onChange={(event) => {
-                                setItemDocumentUploadFile(event.target.files?.[0] ?? null);
-                                setItemDocumentUploadState("idle");
-                                setItemDocumentUploadMessage("");
-                              }}
-                              style={{
-                                ...editFieldStyle,
-                                minHeight: 36,
-                                fontSize: 12,
-                                padding: "7px 10px",
-                              }}
-                            />
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-                              <button
-                                type="button"
-                                onClick={() => uploadAndLinkItemDocument(item.id)}
-                                disabled={
-                                  !itemDocumentUploadFile ||
-                                  itemDocumentUploadState === "uploading"
-                                }
-                                style={{
-                                  height: 32,
-                                  padding: "0 11px",
-                                  borderRadius: 999,
-                                  border: "1px solid var(--border)",
-                                  background: "transparent",
-                                  color: "var(--text)",
-                                  cursor:
-                                    !itemDocumentUploadFile ||
-                                    itemDocumentUploadState === "uploading"
-                                      ? "default"
-                                      : "pointer",
-                                  opacity:
-                                    !itemDocumentUploadFile ||
-                                    itemDocumentUploadState === "uploading"
-                                      ? 0.65
-                                      : 1,
-                                  fontWeight: 900,
-                                  fontSize: 12,
-                                }}
-                              >
-                                {itemDocumentUploadState === "uploading"
-                                  ? "Uploading..."
-                                  : "Upload document"}
-                              </button>
-                              {itemDocumentUploadMessage ? (
-                                <span
-                                  style={{
-                                    color:
-                                      itemDocumentUploadState === "failed"
-                                        ? "var(--danger)"
-                                        : "var(--sub)",
-                                    fontSize: 12,
-                                    fontWeight: 800,
-                                  }}
-                                >
-                                  {itemDocumentUploadMessage}
-                                </span>
-                              ) : null}
-                            </div>
                           </div>
 
                           <textarea
