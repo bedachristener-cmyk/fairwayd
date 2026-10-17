@@ -59,9 +59,16 @@ Trip download endpoint after its visibility check.
    Verify every migrated record through Fairwayd authorization (including
    private/selected denial cases) and confirm all document references are
    `r2://` private references. Inspect failed IDs and rerun as needed.
-8. Only after application verification, remove the old public objects using a
-   separately reviewed, explicit Cloudflare cleanup. Verify each old URL no
-   longer returns content. Do not remove sources during the first migration.
+8. Only after application verification, inventory the old public objects:
+   `npx ts-node scripts/cleanup-legacy-trip-document-objects.ts --dry-run`.
+   The cleanup aborts if any Trip document database reference is not private
+   and only inventories keys matching `trips/<tripId>/documents/<object>`;
+   public Trip covers and other public media are outside that pattern. Review
+   the count and keys, then apply with both explicit switches:
+   `npx ts-node scripts/cleanup-legacy-trip-document-objects.ts --apply --confirm-delete-legacy-trip-documents`.
+   Apply writes an ignored local JSON manifest before deletion and verifies
+   that no matching legacy objects remain. Finally verify each known old URL no
+   longer returns content. Do not disable public access on the shared bucket.
 9. Repeat with a separate private bucket/name and environment values for
    Production before production document uploads are enabled.
 
