@@ -6,6 +6,7 @@ import {
   BedDouble,
   Bus,
   Car,
+  ChevronDown,
   Flag,
   Plane,
   StickyNote,
@@ -508,6 +509,7 @@ export default function AddTripItemPage() {
     useState<CourseSearchResult | null>(null);
   const [trip, setTrip] = useState<Trip | null>(null);
   const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
+  const [expandedDocumentId, setExpandedDocumentId] = useState<string | null>(null);
   const [budgetDrafts, setBudgetDrafts] = useState<BudgetCostDraft[]>([]);
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
   const [expandedBudgetCostId, setExpandedBudgetCostId] = useState<string | null>(null);
@@ -925,6 +927,7 @@ export default function AddTripItemPage() {
       setSelectedDocumentIds((current) =>
         current.includes(document.id) ? current : [...current, document.id],
       );
+      setExpandedDocumentId(document.id);
       setDocumentUploadFile(null);
       if (documentInputRef.current) documentInputRef.current.value = "";
       setDocumentUploadState("uploaded");
@@ -1677,128 +1680,19 @@ export default function AddTripItemPage() {
 
   const renderRelatedDocuments = (
     <Card title="Related documents" subtitle="Attach an existing trip document to this item.">
-      {(trip?.documents ?? []).length === 0 ? (
-        <div style={sectionIntroStyle}>
-          No documents yet. Upload a booking confirmation, voucher or screenshot.
+      <div
+        style={{
+          display: "grid",
+          gap: 7,
+          padding: 10,
+          borderRadius: 14,
+          border: "1px solid var(--border)",
+          background: "color-mix(in srgb, var(--card) 72%, var(--bg))",
+        }}
+      >
+        <div style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
+          Upload new document
         </div>
-      ) : (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-          {(trip?.documents ?? []).map((document) => {
-            const selected = selectedDocumentIds.includes(document.id);
-            return (
-              <div
-                key={document.id}
-                style={{
-                  display: "grid",
-                  gap: 7,
-                  maxWidth: "100%",
-                  padding: "8px 10px",
-                  borderRadius: 14,
-                  border: selected
-                    ? `1px solid ${theme.color}`
-                    : "1px solid var(--border)",
-                  background: selected ? theme.soft : "transparent",
-                  color: "var(--text)",
-                  fontSize: 12,
-                  fontWeight: 850,
-                  overflow: "hidden",
-                }}
-              >
-                <label style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                  <input
-                    type="checkbox"
-                    checked={selected}
-                    onChange={(event) => {
-                      setSelectedDocumentIds((current) =>
-                        event.target.checked
-                          ? [...current, document.id]
-                          : current.filter((id) => id !== document.id),
-                      );
-                    }}
-                  />
-                  <span
-                    style={{
-                      minWidth: 0,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {document.title || document.fileName}
-                  </span>
-                </label>
-                {document.uploadedByUserId === user?.id ? (
-                  <>
-                    <select
-                      aria-label={`${t("trip_document_visibility")}: ${document.title || document.fileName}`}
-                      value={document.visibility ?? "SHARED"}
-                      onChange={(event) => {
-                        const nextVisibility = event.target.value as TripDocumentVisibility;
-                        const memberIds =
-                          nextVisibility === "SELECTED" &&
-                          (document.visibilityMembers ?? []).length === 0 &&
-                          myMembership?.id
-                            ? [myMembership.id]
-                            : (document.visibilityMembers ?? []).map(
-                                (member) => member.tripMemberId,
-                              );
-                        void updateRelatedDocumentVisibility(
-                          document.id,
-                          nextVisibility,
-                          memberIds,
-                        );
-                      }}
-                      style={{ ...fieldStyle, minHeight: 34, padding: "5px 8px", fontSize: 12 }}
-                    >
-                      <option value="SHARED">{t("trip_visibility_group")}</option>
-                      <option value="SELECTED">{t("trip_visibility_selected")}</option>
-                      <option value="PRIVATE">{t("trip_visibility_private")}</option>
-                    </select>
-                    {document.visibility === "SELECTED" ? (
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        {(trip?.members ?? []).map((member) => {
-                          const ids = (document.visibilityMembers ?? []).map(
-                            (selection) => selection.tripMemberId,
-                          );
-                          const checked = ids.includes(member.id);
-                          return (
-                            <label key={member.id} style={{ display: "flex", gap: 5, alignItems: "center", fontSize: 11 }}>
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={(event) => {
-                                  const nextIds = event.target.checked
-                                    ? [...new Set([...ids, member.id])]
-                                    : ids.filter((id) => id !== member.id);
-                                  void updateRelatedDocumentVisibility(
-                                    document.id,
-                                    "SELECTED",
-                                    nextIds,
-                                  );
-                                }}
-                              />
-                              <span>{memberDisplayName(member)}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    ) : null}
-                  </>
-                ) : (
-                  <span style={{ color: "var(--sub)", fontSize: 11 }}>
-                    {document.visibility === "PRIVATE"
-                      ? t("trip_visibility_private")
-                      : document.visibility === "SELECTED"
-                        ? t("trip_visibility_selected")
-                        : t("trip_visibility_group")}
-                  </span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-      <div style={{ display: "grid", gap: 7 }}>
         <input
           ref={documentInputRef}
           type="file"
@@ -1845,9 +1739,233 @@ export default function AddTripItemPage() {
           ) : null}
         </div>
         {visibility === "SELECTED" ? (
-          <div style={sectionIntroStyle}>{t("trip_document_visible_members")}: {visibleToMemberIds.length}</div>
+          <div style={sectionIntroStyle}>
+            {t("trip_document_visible_members")}: {visibleToMemberIds.length}
+          </div>
         ) : null}
       </div>
+
+      {(trip?.documents ?? []).length === 0 ? (
+        <div style={sectionIntroStyle}>
+          No documents yet. Upload a booking confirmation, voucher or screenshot.
+        </div>
+      ) : (
+        <div style={{ display: "grid", gap: 7 }}>
+          {(trip?.documents ?? []).map((document) => {
+            const selected = selectedDocumentIds.includes(document.id);
+            const isOwner = document.uploadedByUserId === user?.id;
+            const isExpanded = expandedDocumentId === document.id;
+            const documentName = document.title || document.fileName;
+            const visibilityMemberCount = (document.visibilityMembers ?? []).length;
+            const visibilityLabel =
+              document.visibility === "PRIVATE"
+                ? t("trip_visibility_private")
+                : document.visibility === "SELECTED"
+                  ? `${t("trip_visibility_selected")} · ${visibilityMemberCount}`
+                  : t("trip_visibility_group");
+
+            return (
+              <div
+                key={document.id}
+                style={{
+                  display: "grid",
+                  gap: isExpanded ? 9 : 7,
+                  maxWidth: "100%",
+                  padding: "9px 10px",
+                  borderRadius: 14,
+                  border: selected
+                    ? `1px solid ${theme.color}`
+                    : "1px solid var(--border)",
+                  background: selected ? theme.soft : "transparent",
+                  color: "var(--text)",
+                  fontSize: 12,
+                  fontWeight: 850,
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 9,
+                    minWidth: 0,
+                  }}
+                >
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 7,
+                      minWidth: 0,
+                      flex: "1 1 auto",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={(event) => {
+                        setSelectedDocumentIds((current) =>
+                          event.target.checked
+                            ? [...current, document.id]
+                            : current.filter((id) => id !== document.id),
+                        );
+                      }}
+                    />
+                    <span
+                      style={{
+                        minWidth: 0,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {documentName}
+                    </span>
+                  </label>
+
+                  {isOwner ? (
+                    <button
+                      type="button"
+                      aria-expanded={isExpanded}
+                      aria-controls={`document-permissions-${document.id}`}
+                      aria-label={`Permissions for ${documentName}: ${visibilityLabel}`}
+                      onClick={() =>
+                        setExpandedDocumentId((current) =>
+                          current === document.id ? null : document.id,
+                        )
+                      }
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "flex-end",
+                        gap: 5,
+                        flex: "0 0 auto",
+                        minHeight: 30,
+                        maxWidth: "52%",
+                        padding: "4px 7px",
+                        border: 0,
+                        background: "transparent",
+                        color: "var(--sub)",
+                        cursor: "pointer",
+                        font: "inherit",
+                        fontSize: 11,
+                        fontWeight: 850,
+                      }}
+                    >
+                      <span
+                        style={{
+                          minWidth: 0,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {visibilityLabel}
+                      </span>
+                      <ChevronDown
+                        aria-hidden="true"
+                        size={15}
+                        style={{
+                          flex: "0 0 auto",
+                          transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                          transition: "transform 160ms ease",
+                        }}
+                      />
+                    </button>
+                  ) : (
+                    <span style={{ color: "var(--sub)", fontSize: 11 }}>
+                      {visibilityLabel}
+                    </span>
+                  )}
+                </div>
+
+                {isOwner && isExpanded ? (
+                  <div
+                    id={`document-permissions-${document.id}`}
+                    style={{
+                      display: "grid",
+                      gap: 8,
+                      paddingTop: 8,
+                      borderTop: "1px solid var(--border)",
+                    }}
+                  >
+                    <select
+                      aria-label={`${t("trip_document_visibility")}: ${documentName}`}
+                      value={document.visibility ?? "SHARED"}
+                      onChange={(event) => {
+                        const nextVisibility = event.target.value as TripDocumentVisibility;
+                        const memberIds =
+                          nextVisibility === "SELECTED" &&
+                          (document.visibilityMembers ?? []).length === 0 &&
+                          myMembership?.id
+                            ? [myMembership.id]
+                            : (document.visibilityMembers ?? []).map(
+                                (member) => member.tripMemberId,
+                              );
+                        void updateRelatedDocumentVisibility(
+                          document.id,
+                          nextVisibility,
+                          memberIds,
+                        );
+                      }}
+                      style={{
+                        ...fieldStyle,
+                        minHeight: 34,
+                        padding: "5px 8px",
+                        fontSize: 12,
+                      }}
+                    >
+                      <option value="SHARED">{t("trip_visibility_group")}</option>
+                      <option value="SELECTED">{t("trip_visibility_selected")}</option>
+                      <option value="PRIVATE">{t("trip_visibility_private")}</option>
+                    </select>
+
+                    {document.visibility === "SELECTED" ? (
+                      <div style={{ display: "grid", gap: 6 }}>
+                        {(trip?.members ?? []).map((member) => {
+                          const ids = (document.visibilityMembers ?? []).map(
+                            (selection) => selection.tripMemberId,
+                          );
+                          const checked = ids.includes(member.id);
+                          return (
+                            <label
+                              key={member.id}
+                              style={{
+                                display: "flex",
+                                gap: 6,
+                                alignItems: "center",
+                                minHeight: 28,
+                                fontSize: 11,
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={(event) => {
+                                  const nextIds = event.target.checked
+                                    ? [...new Set([...ids, member.id])]
+                                    : ids.filter((id) => id !== member.id);
+                                  void updateRelatedDocumentVisibility(
+                                    document.id,
+                                    "SELECTED",
+                                    nextIds,
+                                  );
+                                }}
+                              />
+                              <span>{memberDisplayName(member)}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </Card>
   );
 
