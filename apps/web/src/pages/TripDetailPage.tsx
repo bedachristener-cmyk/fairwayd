@@ -4107,9 +4107,6 @@ export default function TripDetailPage() {
   >("idle");
   const [itemDocumentUploadMessage, setItemDocumentUploadMessage] = useState("");
   const [expandedItemDocumentId, setExpandedItemDocumentId] = useState<string | null>(null);
-  const [itemDocumentMemberPickerId, setItemDocumentMemberPickerId] = useState<
-    string | null
-  >(null);
   const [itemDocumentMemberQuery, setItemDocumentMemberQuery] = useState("");
   const [activity, setActivity] = useState<TripActivity[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
@@ -5413,7 +5410,6 @@ export default function TripDetailPage() {
 
       setEditDraft({ ...editDraft, documentIds: nextDocumentIds });
       setExpandedItemDocumentId(created.id);
-      setItemDocumentMemberPickerId(null);
       setItemDocumentMemberQuery("");
       setItemDocumentUploadFile(null);
       setItemDocumentUploadState("uploaded");
@@ -10152,7 +10148,7 @@ export default function TripDetailPage() {
                               </div>
                             ) : (
                               <div style={{ display: "grid", gap: 7 }}>
-                                {documents.map((document) => {
+                                {documents.map((document, documentIndex) => {
                                   const selected = editDraft.documentIds.includes(document.id);
                                   const selectedMemberIds = (
                                     document.visibilityMembers ?? []
@@ -10160,8 +10156,6 @@ export default function TripDetailPage() {
                                   const documentName = document.title || document.fileName;
                                   const isOwner = document.uploadedByUserId === user?.id;
                                   const isExpanded = expandedItemDocumentId === document.id;
-                                  const isMemberPickerOpen =
-                                    itemDocumentMemberPickerId === document.id;
                                   const normalizedMemberQuery = itemDocumentMemberQuery
                                     .trim()
                                     .toLocaleLowerCase();
@@ -10191,7 +10185,9 @@ export default function TripDetailPage() {
                                           : "1px solid var(--border)",
                                         background: selected
                                           ? "var(--accent-soft)"
-                                          : "transparent",
+                                          : documentIndex % 2 === 0
+                                            ? "color-mix(in srgb, var(--card) 78%, var(--bg))"
+                                            : "color-mix(in srgb, var(--bg) 88%, var(--card))",
                                         color: "var(--text)",
                                         fontSize: 12,
                                         fontWeight: 850,
@@ -10251,7 +10247,6 @@ export default function TripDetailPage() {
                                               setExpandedItemDocumentId(
                                                 isExpanded ? null : document.id,
                                               );
-                                              setItemDocumentMemberPickerId(null);
                                               setItemDocumentMemberQuery("");
                                             }}
                                             style={{
@@ -10310,94 +10305,114 @@ export default function TripDetailPage() {
                                             borderTop: "1px solid var(--border)",
                                           }}
                                         >
-                                          <select
-                                            aria-label={`${t("trip_document_visibility")}: ${document.title || document.fileName}`}
-                                            value={document.visibility ?? "SHARED"}
-                                            onChange={(event) => {
-                                              const visibility = event.target
-                                                .value as TripDocumentVisibility;
-                                              if (visibility !== "SELECTED") {
-                                                setItemDocumentMemberPickerId(null);
-                                                setItemDocumentMemberQuery("");
-                                              }
-                                              const memberIds =
-                                                visibility === "SELECTED" &&
-                                                selectedMemberIds.length === 0 &&
-                                                myMembership?.id
-                                                  ? [myMembership.id]
-                                                  : selectedMemberIds;
-                                              void updateDocumentVisibility(
-                                                document.id,
-                                                visibility,
-                                                memberIds,
-                                              );
-                                            }}
+                                          <div
+                                            role="group"
+                                            aria-label={`${t("trip_document_visibility")}: ${documentName}`}
                                             style={{
-                                              ...editFieldStyle,
-                                              minHeight: 34,
-                                              padding: "5px 8px",
-                                              fontSize: 12,
+                                              display: "grid",
+                                              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                                              gap: 5,
+                                              padding: 4,
+                                              borderRadius: 12,
+                                              border: "1px solid var(--border)",
+                                              background: "var(--bg)",
                                             }}
                                           >
-                                            <option value="SHARED">{t("trip_visibility_group")}</option>
-                                            <option value="SELECTED">{t("trip_visibility_selected")}</option>
-                                            <option value="PRIVATE">{t("trip_visibility_private")}</option>
-                                          </select>
-                                          {document.visibility === "SELECTED" ? (
-                                            <div style={{ display: "grid", gap: 6 }}>
-                                              <button
-                                                type="button"
-                                                aria-expanded={isMemberPickerOpen}
-                                                aria-controls={`edit-document-members-${document.id}`}
-                                                aria-label={`Choose members for ${documentName}: ${selectedMemberIds.length} selected`}
-                                                onClick={() => {
-                                                  setItemDocumentMemberPickerId(
-                                                    isMemberPickerOpen ? null : document.id,
-                                                  );
-                                                  setItemDocumentMemberQuery("");
-                                                }}
-                                                style={{
-                                                  ...editFieldStyle,
-                                                  display: "flex",
-                                                  alignItems: "center",
-                                                  justifyContent: "space-between",
-                                                  minHeight: 36,
-                                                  padding: "6px 9px",
-                                                  cursor: "pointer",
-                                                  textAlign: "left",
-                                                  fontSize: 12,
-                                                  fontWeight: 850,
-                                                }}
-                                              >
-                                                <span>
-                                                  {selectedMemberIds.length === 1
-                                                    ? "1 member selected"
-                                                    : `${selectedMemberIds.length} members selected`}
-                                                </span>
-                                                <ChevronDown
-                                                  aria-hidden="true"
-                                                  size={15}
-                                                  style={{
-                                                    transform: isMemberPickerOpen
-                                                      ? "rotate(180deg)"
-                                                      : "rotate(0deg)",
-                                                    transition: "transform 160ms ease",
+                                            {(
+                                              [
+                                                ["SHARED", t("trip_visibility_group")],
+                                                ["SELECTED", t("trip_visibility_selected")],
+                                                ["PRIVATE", t("trip_visibility_private")],
+                                              ] as Array<[TripDocumentVisibility, string]>
+                                            ).map(([visibility, label]) => {
+                                              const active =
+                                                (document.visibility ?? "SHARED") === visibility;
+                                              return (
+                                                <button
+                                                  key={visibility}
+                                                  type="button"
+                                                  aria-pressed={active}
+                                                  aria-label={`Set ${documentName} visibility to ${label}`}
+                                                  onClick={() => {
+                                                    if (visibility !== "SELECTED") {
+                                                      setItemDocumentMemberQuery("");
+                                                    }
+                                                    const memberIds =
+                                                      visibility === "SELECTED" &&
+                                                      selectedMemberIds.length === 0 &&
+                                                      myMembership?.id
+                                                        ? [myMembership.id]
+                                                        : selectedMemberIds;
+                                                    void updateDocumentVisibility(
+                                                      document.id,
+                                                      visibility,
+                                                      memberIds,
+                                                    );
                                                   }}
-                                                />
-                                              </button>
-
-                                              {isMemberPickerOpen ? (
-                                                <div
-                                                  id={`edit-document-members-${document.id}`}
                                                   style={{
-                                                    display: "grid",
-                                                    gap: 7,
-                                                    padding: 8,
-                                                    borderRadius: 11,
-                                                    border: "1px solid var(--border)",
-                                                    background: "var(--card)",
+                                                    minWidth: 0,
+                                                    minHeight: 32,
+                                                    padding: "5px 7px",
+                                                    borderRadius: 9,
+                                                    border: active
+                                                      ? "1px solid var(--accent-strong)"
+                                                      : "1px solid transparent",
+                                                    background: active
+                                                      ? "var(--accent-soft)"
+                                                      : "transparent",
+                                                    color: active
+                                                      ? "var(--accent-strong)"
+                                                      : "var(--sub)",
+                                                    cursor: "pointer",
+                                                    font: "inherit",
+                                                    fontSize: 11,
+                                                    fontWeight: active ? 950 : 800,
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    whiteSpace: "nowrap",
                                                   }}
                                                 >
+                                                  {label}
+                                                </button>
+                                              );
+                                            })}
+                                          </div>
+                                          {document.visibility === "SELECTED" ? (
+                                            <div style={{ display: "grid", gap: 6 }}>
+                                              <div
+                                                id={`edit-document-members-${document.id}`}
+                                                style={{
+                                                  display: "grid",
+                                                  gap: 7,
+                                                  padding: 9,
+                                                  borderRadius: 11,
+                                                  border: "1px solid var(--border)",
+                                                  background:
+                                                    "color-mix(in srgb, var(--card) 88%, var(--accent-soft))",
+                                                }}
+                                              >
+                                                <div
+                                                  style={{
+                                                    display: "flex",
+                                                    flexWrap: "wrap",
+                                                    alignItems: "baseline",
+                                                    gap: 5,
+                                                    color: "var(--text)",
+                                                    fontSize: 11,
+                                                  }}
+                                                >
+                                                  <strong>Selected members:</strong>
+                                                  <span style={{ color: "var(--sub)" }}>
+                                                    {selectedMemberIds.length === 0
+                                                      ? "None"
+                                                      : (trip?.members ?? [])
+                                                          .filter((member) =>
+                                                            selectedMemberIds.includes(member.id),
+                                                          )
+                                                          .map(memberDisplayName)
+                                                          .join(", ")}
+                                                  </span>
+                                                </div>
                                                   <input
                                                     type="search"
                                                     aria-label={`Search members for ${documentName}`}
@@ -10512,7 +10527,6 @@ export default function TripDetailPage() {
                                                     )}
                                                   </div>
                                                 </div>
-                                              ) : null}
                                             </div>
                                           ) : null}
                                         </div>
