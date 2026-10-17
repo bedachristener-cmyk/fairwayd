@@ -156,3 +156,31 @@ test("flight cost actions use the flight blue accent", async ({ page }) => {
   const saveCosts = page.getByRole("button", { name: "Save costs" }).first();
   await expect(saveCosts).toHaveCSS("background-color", "rgb(47, 145, 216)");
 });
+
+
+test("trip item documents keep permissions collapsed until requested", async ({ page }) => {
+  await mockTripApi(page);
+  await page.goto("/trips/trip-1");
+  await page.getByRole("button", { name: /Timeline/i }).click();
+  await page.getByRole("button", { name: "Edit" }).click();
+
+  await expect(page.getByText("Upload new document", { exact: true })).toBeVisible();
+  await expect(page.getByText("Booking PDF", { exact: true })).toBeVisible();
+
+  const visibility = page.getByRole("combobox", {
+    name: "Document visibility: Booking PDF",
+  });
+  await expect(visibility).toHaveCount(0);
+
+  const permissions = page.getByRole("button", {
+    name: "Permissions for Booking PDF: Group",
+  });
+  await expect(permissions).toHaveAttribute("aria-expanded", "false");
+  await permissions.click();
+
+  await expect(permissions).toHaveAttribute("aria-expanded", "true");
+  await expect(visibility).toHaveValue("SHARED");
+
+  await visibility.selectOption("SELECTED");
+  await expect(page.getByLabel("Guest Player")).toBeVisible();
+});
