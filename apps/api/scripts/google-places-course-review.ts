@@ -165,7 +165,7 @@ async function textSearch(query: string, country: string) {
   }
 
   const json = (await response.json()) as { places?: GooglePlace[] };
-  return Array.isArray(json.places) ? json.places[0] : undefined;
+  return Array.isArray(json.places) ? json.places.slice(0, 3) : [];
 }
 
 async function main() {
@@ -211,6 +211,7 @@ async function main() {
       'currentLat',
       'currentLon',
       'currentGoogleMapsUri',
+      'candidateRank',
       'googleLat',
       'googleLon',
       'placeId',
@@ -226,44 +227,51 @@ async function main() {
 
   for (let i = 0; i < courses.length; i++) {
     const course = courses[i];
-    const place = await textSearch(buildQuery(course), country);
+    const places = await textSearch(buildQuery(course), country);
+    const candidates: Array<GooglePlace | undefined> =
+      places.length > 0 ? places : [undefined];
 
-    const googleLat = place?.location?.latitude ?? null;
-    const googleLon = place?.location?.longitude ?? null;
-    const distance =
-      Number.isFinite(googleLat) && Number.isFinite(googleLon)
-        ? distanceKm(
-            { lat: course.lat, lon: course.lon },
-            { lat: googleLat as number, lon: googleLon as number },
-          )
-        : null;
+    candidates.forEach((place, candidateIndex) => {
+      const googleLat = place?.location?.latitude ?? null;
+      const googleLon = place?.location?.longitude ?? null;
+      const distance =
+        Number.isFinite(googleLat) && Number.isFinite(googleLon)
+          ? distanceKm(
+              { lat: course.lat, lon: course.lon },
+              { lat: googleLat as number, lon: googleLon as number },
+            )
+          : null;
 
-    rows.push(
-      [
-        course.id,
-        course.country,
-        course.name,
-        course.city,
-        course.region,
-        course.lat,
-        course.lon,
-        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${course.lat},${course.lon}`)}`,
-        googleLat,
-        googleLon,
-        place?.id,
-        place?.displayName?.text,
-        place?.formattedAddress,
-        place?.googleMapsUri,
-        distance === null ? '' : distance.toFixed(2),
-        confidenceReason(course, place),
-        '',
-        '',
-      ]
-        .map(csvCell)
-        .join(','),
+      rows.push(
+        [
+          course.id,
+          course.country,
+          course.name,
+          course.city,
+          course.region,
+          course.lat,
+          course.lon,
+          `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${course.lat},${course.lon}`)}`,
+          place ? candidateIndex + 1 : '',
+          googleLat,
+          googleLon,
+          place?.id,
+          place?.displayName?.text,
+          place?.formattedAddress,
+          place?.googleMapsUri,
+          distance === null ? '' : distance.toFixed(2),
+          confidenceReason(course, place),
+          '',
+          '',
+        ]
+          .map(csvCell)
+          .join(','),
+      );
+    });
+
+    console.log(
+      `Reviewed ${i + 1}/${courses.length}: ${course.name} candidates=${places.length}`,
     );
-
-    console.log(`Reviewed ${i + 1}/${courses.length}: ${course.name}`);
   }
 
   fs.writeFileSync(outputPath, `${rows.join('\n')}\n`, 'utf-8');
