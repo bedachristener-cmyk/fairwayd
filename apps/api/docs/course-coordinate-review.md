@@ -29,13 +29,15 @@ The generated files are written to `course-audits/` and ignored by Git.
 
 ## Candidate review
 
-Generate Google Places candidates with the existing country review script.
-Never apply the generated file automatically. Add the following columns to the
-review CSV if they are not present:
+Generate Google Places candidates for one country. This performs external API
+requests but never updates the database:
 
-- `country`
-- `reviewDecision`
-- `reviewNotes`
+```powershell
+npx ts-node scripts/google-places-course-review.ts CH 91 --dry-run
+```
+
+The generated CSV includes `country`, `reviewDecision`, and `reviewNotes`.
+Never apply the generated file automatically.
 
 Allowed decisions are:
 
