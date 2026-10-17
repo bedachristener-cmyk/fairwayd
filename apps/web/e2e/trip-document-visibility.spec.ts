@@ -167,10 +167,10 @@ test("trip item documents keep permissions collapsed until requested", async ({ 
   await expect(page.getByText("Upload new document", { exact: true })).toBeVisible();
   await expect(page.getByText("Booking PDF", { exact: true })).toBeVisible();
 
-  const visibility = page.getByRole("combobox", {
-    name: "Document visibility: Booking PDF",
+  const selectedVisibility = page.getByRole("button", {
+    name: "Set Booking PDF visibility to Selected members",
   });
-  await expect(visibility).toHaveCount(0);
+  await expect(selectedVisibility).toHaveCount(0);
 
   const permissions = page.getByRole("button", {
     name: "Permissions for Booking PDF: Group",
@@ -179,18 +179,13 @@ test("trip item documents keep permissions collapsed until requested", async ({ 
   await permissions.click();
 
   await expect(permissions).toHaveAttribute("aria-expanded", "true");
-  await expect(visibility).toHaveValue("SHARED");
+  await expect(selectedVisibility).toHaveAttribute("aria-pressed", "false");
+  await selectedVisibility.click();
 
-  await visibility.selectOption("SELECTED");
-  await expect(page.getByLabel("Guest Player")).toHaveCount(0);
-
-  const memberPicker = page.getByRole("button", {
-    name: "Choose members for Booking PDF: 1 selected",
-  });
-  await expect(memberPicker).toHaveAttribute("aria-expanded", "false");
-  await memberPicker.click();
-
-  await expect(memberPicker).toHaveAttribute("aria-expanded", "true");
-  await expect(page.getByRole("searchbox", { name: "Search members for Booking PDF" })).toBeVisible();
+  await expect(selectedVisibility).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByText("Selected members:", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("searchbox", { name: "Search members for Booking PDF" }),
+  ).toBeVisible();
   await expect(page.getByLabel("Guest Player")).toBeVisible();
 });
