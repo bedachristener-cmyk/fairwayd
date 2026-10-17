@@ -168,7 +168,7 @@ async function main() {
 
   const limit = Number.isFinite(limitArg) && limitArg > 0 ? limitArg : 10;
   const outputPath = path.resolve(
-    `data/review/${country.toLowerCase()}-google-places-candidates.csv`,
+    `course-audits/${country.toLowerCase()}-google-places-candidates.csv`,
   );
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 
@@ -190,11 +190,13 @@ async function main() {
   const rows = [
     [
       'id',
+      'country',
       'name',
       'city',
       'region',
       'currentLat',
       'currentLon',
+      'currentGoogleMapsUri',
       'googleLat',
       'googleLon',
       'placeId',
@@ -203,6 +205,8 @@ async function main() {
       'googleMapsUri',
       'distanceKm',
       'confidenceReason',
+      'reviewDecision',
+      'reviewNotes',
     ].join(','),
   ];
 
@@ -232,11 +236,13 @@ async function main() {
     rows.push(
       [
         course.id,
+        course.country,
         course.name,
         course.city,
         course.region,
         course.lat,
         course.lon,
+        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${course.lat},${course.lon}`)}`,
         googleLat,
         googleLon,
         place?.id,
@@ -245,6 +251,8 @@ async function main() {
         place?.googleMapsUri,
         distance === null ? '' : distance.toFixed(2),
         confidenceReason(course, place),
+        '',
+        '',
       ]
         .map(csvCell)
         .join(','),
