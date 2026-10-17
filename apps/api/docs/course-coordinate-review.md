@@ -48,7 +48,11 @@ requests but never updates the database:
 npx ts-node scripts/google-places-course-review.ts CH 91 --dry-run
 ```
 
-The generated CSV includes `country`, `reviewDecision`, and `reviewNotes`.
+The generated CSV includes `country`, `candidateRank`, `reviewDecision`,
+and `reviewNotes`. Google can return up to three candidate rows per course in
+one billable request. Review all candidates, but set `APPROVE` on at most one
+row per course. The apply preflight rejects duplicate approved course IDs.
+
 Never apply the generated file automatically. If Google rejects any API request,
 the command aborts and does not write or overwrite the candidate CSV.
 
