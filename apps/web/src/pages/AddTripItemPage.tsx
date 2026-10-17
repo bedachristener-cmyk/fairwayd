@@ -510,6 +510,8 @@ export default function AddTripItemPage() {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
   const [expandedDocumentId, setExpandedDocumentId] = useState<string | null>(null);
+  const [memberPickerDocumentId, setMemberPickerDocumentId] = useState<string | null>(null);
+  const [documentMemberQuery, setDocumentMemberQuery] = useState("");
   const [budgetDrafts, setBudgetDrafts] = useState<BudgetCostDraft[]>([]);
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
   const [expandedBudgetCostId, setExpandedBudgetCostId] = useState<string | null>(null);
@@ -1756,7 +1758,15 @@ export default function AddTripItemPage() {
             const isOwner = document.uploadedByUserId === user?.id;
             const isExpanded = expandedDocumentId === document.id;
             const documentName = document.title || document.fileName;
-            const visibilityMemberCount = (document.visibilityMembers ?? []).length;
+            const visibilityMemberIds = (document.visibilityMembers ?? []).map(
+              (selection) => selection.tripMemberId,
+            );
+            const visibilityMemberCount = visibilityMemberIds.length;
+            const isMemberPickerOpen = memberPickerDocumentId === document.id;
+            const normalizedMemberQuery = documentMemberQuery.trim().toLocaleLowerCase();
+            const matchingMembers = (trip?.members ?? []).filter((member) =>
+              memberDisplayName(member).toLocaleLowerCase().includes(normalizedMemberQuery),
+            );
             const visibilityLabel =
               document.visibility === "PRIVATE"
                 ? t("trip_visibility_private")
@@ -1830,11 +1840,11 @@ export default function AddTripItemPage() {
                       aria-expanded={isExpanded}
                       aria-controls={`document-permissions-${document.id}`}
                       aria-label={`Permissions for ${documentName}: ${visibilityLabel}`}
-                      onClick={() =>
-                        setExpandedDocumentId((current) =>
-                          current === document.id ? null : document.id,
-                        )
-                      }
+                      onClick={() => {
+                        setExpandedDocumentId(isExpanded ? null : document.id);
+                        setMemberPickerDocumentId(null);
+                        setDocumentMemberQuery("");
+                      }}
                       style={{
                         display: "inline-flex",
                         alignItems: "center",
@@ -1895,6 +1905,10 @@ export default function AddTripItemPage() {
                       value={document.visibility ?? "SHARED"}
                       onChange={(event) => {
                         const nextVisibility = event.target.value as TripDocumentVisibility;
+                        if (nextVisibility !== "SELECTED") {
+                          setMemberPickerDocumentId(null);
+                          setDocumentMemberQuery("");
+                        }
                         const memberIds =
                           nextVisibility === "SELECTED" &&
                           (document.visibilityMembers ?? []).length === 0 &&
@@ -1923,40 +1937,147 @@ export default function AddTripItemPage() {
 
                     {document.visibility === "SELECTED" ? (
                       <div style={{ display: "grid", gap: 6 }}>
-                        {(trip?.members ?? []).map((member) => {
-                          const ids = (document.visibilityMembers ?? []).map(
-                            (selection) => selection.tripMemberId,
-                          );
-                          const checked = ids.includes(member.id);
-                          return (
-                            <label
-                              key={member.id}
+                        <button
+                          type="button"
+                          aria-expanded={isMemberPickerOpen}
+                          aria-controls={`document-members-${document.id}`}
+                          aria-label={`Choose members for ${documentName}: ${visibilityMemberCount} selected`}
+                          onClick={() => {
+                            setMemberPickerDocumentId(isMemberPickerOpen ? null : document.id);
+                            setDocumentMemberQuery("");
+                          }}
+                          style={{
+                            ...fieldStyle,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            minHeight: 36,
+                            padding: "6px 9px",
+                            cursor: "pointer",
+                            textAlign: "left",
+                            fontSize: 12,
+                            fontWeight: 850,
+                          }}
+                        >
+                          <span>
+                            {visibilityMemberCount === 1
+                              ? "1 member selected"
+                              : `${visibilityMemberCount} members selected`}
+                          </span>
+                          <ChevronDown
+                            aria-hidden="true"
+                            size={15}
+                            style={{
+                              transform: isMemberPickerOpen
+                                ? "rotate(180deg)"
+                                : "rotate(0deg)",
+                              transition: "transform 160ms ease",
+                            }}
+                          />
+                        </button>
+
+                        {isMemberPickerOpen ? (
+                          <div
+                            id={`document-members-${document.id}`}
+                            style={{
+                              display: "grid",
+                              gap: 7,
+                              padding: 8,
+                              borderRadius: 11,
+                              border: "1px solid var(--border)",
+                              background: "var(--card)",
+                            }}
+                          >
+                            <input
+                              type="search"
+                              aria-label={`Search members for ${documentName}`}
+                              placeholder="Search members"
+                              value={documentMemberQuery}
+                              onChange={(event) => setDocumentMemberQuery(event.target.value)}
                               style={{
-                                display: "flex",
-                                gap: 6,
-                                alignItems: "center",
-                                minHeight: 28,
-                                fontSize: 11,
+                                ...fieldStyle,
+                                minHeight: 34,
+                                padding: "5px 8px",
+                                fontSize: 12,
                               }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={(event) => {
-                                  const nextIds = event.target.checked
-                                    ? [...new Set([...ids, member.id])]
-                                    : ids.filter((id) => id !== member.id);
+                            />
+                            <div style={{ display: "flex", gap: 7 }}>
+                              <button
+                                type="button"
+                                onClick={() =>
                                   void updateRelatedDocumentVisibility(
                                     document.id,
                                     "SELECTED",
-                                    nextIds,
+                                    (trip?.members ?? []).map((member) => member.id),
+                                  )
+                                }
+                                style={{ ...secondaryButtonStyle, minHeight: 30, fontSize: 11 }}
+                              >
+                                Select all
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void updateRelatedDocumentVisibility(
+                                    document.id,
+                                    "SELECTED",
+                                    [],
+                                  )
+                                }
+                                style={{ ...secondaryButtonStyle, minHeight: 30, fontSize: 11 }}
+                              >
+                                Clear
+                              </button>
+                            </div>
+                            <div
+                              style={{
+                                display: "grid",
+                                gap: 3,
+                                maxHeight: 220,
+                                overflowY: "auto",
+                                overscrollBehavior: "contain",
+                              }}
+                            >
+                              {matchingMembers.length === 0 ? (
+                                <div style={sectionIntroStyle}>No matching members.</div>
+                              ) : (
+                                matchingMembers.map((member) => {
+                                  const checked = visibilityMemberIds.includes(member.id);
+                                  return (
+                                    <label
+                                      key={member.id}
+                                      style={{
+                                        display: "flex",
+                                        gap: 6,
+                                        alignItems: "center",
+                                        minHeight: 30,
+                                        fontSize: 11,
+                                      }}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={(event) => {
+                                          const nextIds = event.target.checked
+                                            ? [...new Set([...visibilityMemberIds, member.id])]
+                                            : visibilityMemberIds.filter(
+                                                (id) => id !== member.id,
+                                              );
+                                          void updateRelatedDocumentVisibility(
+                                            document.id,
+                                            "SELECTED",
+                                            nextIds,
+                                          );
+                                        }}
+                                      />
+                                      <span>{memberDisplayName(member)}</span>
+                                    </label>
                                   );
-                                }}
-                              />
-                              <span>{memberDisplayName(member)}</span>
-                            </label>
-                          );
-                        })}
+                                })
+                              )}
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>
