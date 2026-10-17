@@ -37,7 +37,8 @@ npx ts-node scripts/google-places-course-review.ts CH 91 --dry-run
 ```
 
 The generated CSV includes `country`, `reviewDecision`, and `reviewNotes`.
-Never apply the generated file automatically.
+Never apply the generated file automatically. If Google rejects any API request,
+the command aborts and does not write or overwrite the candidate CSV.
 
 Allowed decisions are:
 
