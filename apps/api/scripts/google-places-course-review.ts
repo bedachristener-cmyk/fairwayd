@@ -6,7 +6,9 @@ import { PrismaPg } from '@prisma/adapter-pg';
 
 const connectionString =
   process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
-const googleApiKey = process.env.GOOGLE_MAPS_API_KEY;
+const googleApiKey =
+  process.env.GOOGLE_PLACES_REVIEW_API_KEY ||
+  process.env.GOOGLE_MAPS_API_KEY;
 
 if (!connectionString) {
   console.error(
@@ -16,7 +18,9 @@ if (!connectionString) {
 }
 
 if (!googleApiKey) {
-  console.error('GOOGLE_MAPS_API_KEY is missing. Check apps/api/.env');
+  console.error(
+    'GOOGLE_PLACES_REVIEW_API_KEY or GOOGLE_MAPS_API_KEY is missing. Check apps/api/.env',
+  );
   process.exit(1);
 }
 
