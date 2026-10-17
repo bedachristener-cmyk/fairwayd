@@ -142,12 +142,22 @@ async function textSearch(query: string, country: string) {
   );
 
   if (!response.ok) {
-    const body = await response.text();
-    console.error('Google Places request failed');
-    console.error(`Status: ${response.status}`);
-    console.error(`Status text: ${response.statusText}`);
-    console.error(`Response body: ${body}`);
-    return undefined;
+    let detail = response.statusText || 'request rejected';
+
+    try {
+      const body = (await response.json()) as {
+        error?: { message?: string; status?: string };
+      };
+      detail = [body.error?.status, body.error?.message]
+        .filter(Boolean)
+        .join(': ') || detail;
+    } catch {
+      // Keep the HTTP status text when Google did not return JSON.
+    }
+
+    throw new Error(
+      `Google Places request failed: ${response.status} ${detail}`,
+    );
   }
 
   const json = (await response.json()) as { places?: GooglePlace[] };
@@ -212,16 +222,7 @@ async function main() {
 
   for (let i = 0; i < courses.length; i++) {
     const course = courses[i];
-    let place: GooglePlace | undefined;
-
-    try {
-      place = await textSearch(buildQuery(course), country);
-    } catch (error: any) {
-      console.error(
-        `Google Places error for ${course.name}: ${error?.message ?? error}`,
-      );
-      place = undefined;
-    }
+    const place = await textSearch(buildQuery(course), country);
 
     const googleLat = place?.location?.latitude ?? null;
     const googleLon = place?.location?.longitude ?? null;
