@@ -182,5 +182,15 @@ test("trip item documents keep permissions collapsed until requested", async ({ 
   await expect(visibility).toHaveValue("SHARED");
 
   await visibility.selectOption("SELECTED");
+  await expect(page.getByLabel("Guest Player")).toHaveCount(0);
+
+  const memberPicker = page.getByRole("button", {
+    name: "Choose members for Booking PDF: 1 selected",
+  });
+  await expect(memberPicker).toHaveAttribute("aria-expanded", "false");
+  await memberPicker.click();
+
+  await expect(memberPicker).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("searchbox", { name: "Search members for Booking PDF" })).toBeVisible();
   await expect(page.getByLabel("Guest Player")).toBeVisible();
 });
