@@ -166,7 +166,7 @@ async function main() {
           `active=${summary.active}`,
           `verified=${summary.verified}`,
           `unverified=${summary.unverified}`,
-          `invalid=${summary.invalidRange}`,
+          `invalid-range=${summary.invalidRange}`,
           `zero=${summary.zeroIsland}`,
           `shared-coordinate=${summary.sharedCoordinateCourses}`,
         ].join(' '),
@@ -174,6 +174,7 @@ async function main() {
     }
     console.log(`Summary: ${summaryPath}`);
     console.log(`Details: ${detailPath}`);
+    console.log('Accuracy verification: not performed (range and duplicate checks only)');
     console.log('Database changes: 0');
   } finally {
     await prisma.$disconnect();
