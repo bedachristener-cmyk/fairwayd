@@ -29,6 +29,18 @@ The generated files are written to `course-audits/` and ignored by Git.
 
 ## Candidate review
 
+Use a dedicated server-side Google key in `apps/api/.env`:
+
+```dotenv
+GOOGLE_PLACES_REVIEW_API_KEY=...
+```
+
+The Google Cloud project must have billing and Places API (New) enabled. Restrict
+the key to Places API (New) and, for local server-side execution, to the public
+IP address from which the review command runs. The existing
+`GOOGLE_MAPS_API_KEY` remains a compatibility fallback and does not need to be
+relaxed.
+
 Generate Google Places candidates for one country. This performs external API
 requests but never updates the database:
 
