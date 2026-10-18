@@ -100,3 +100,33 @@ npx ts-node scripts/apply-reviewed-ch-course-corrections.ts --apply --confirm-re
 
 Apply mode writes an ignored JSON manifest before the transaction. Re-running
 the command is idempotent when the reviewed state is already present.
+
+
+## Switzerland completeness discovery
+
+The completeness discovery is independent from the name-by-name coordinate
+review. It queries an overlapping grid across Switzerland for Google Places of
+type `golf_course`, deduplicates Place IDs, and compares every discovery with
+the active CH courses in the database.
+
+The run is read-only but makes 117 Nearby Search requests, so the explicit
+request confirmation is required:
+
+```powershell
+npx ts-node scripts/google-places-course-discovery.ts CH --dry-run --confirm-google-places-requests
+```
+
+The generated `course-audits/ch-google-places-discovery.csv` uses these
+statuses:
+
+- `MATCHED`: a Google golf course is within 0.75 km of an active database course
+- `REVIEW_NEARBY`: nearest active course is between 0.75 and 3 km away
+- `POSSIBLE_MISSING`: nearest active course is more than 3 km away
+- `DATABASE_ONLY`: active database course has no Google golf-course result
+  within 0.75 km
+
+All non-matched rows require manual review. A `DATABASE_ONLY` row is not proof
+that the database record is wrong; private or small courses may not be
+categorized as `golf_course` by Google. If any search cell returns Google's
+20-result maximum, the command warns that coverage may be truncated. This
+workflow never writes to the database.
