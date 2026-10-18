@@ -77,7 +77,7 @@ export const REVIEWED_AT_FINAL_COURSE_ADDITIONS: ReviewedAtMissingCourseAddition
     city: 'Waidhofen an der Thaya',
     region: 'Niederösterreich',
     postalCode: '3830',
-    holes: 3,
+    holes: 6,
     website: 'https://golfklinik.at/',
     lat: 48.8195299,
     lon: 15.3041371,
