@@ -412,3 +412,43 @@ npx ts-node scripts/apply-reviewed-at-missing-course-additions-batch-3.ts --appl
 
 The batch uses the same dry-run, collision, manifest, transaction, PostGIS,
 active-count, and idempotence safeguards as the preceding additions.
+
+
+## Final reviewed Austria course reconciliation
+
+After the three ten-course addition batches, the remaining discovery report is
+closed in one consolidated reconciliation instead of further artificial
+batches. It adds seven current outdoor facilities:
+
+- Golfclub Salzburg – Golfacademy Rif
+- Golfclub GolfMaxX
+- Golfclub Tuttendörfl
+- Golfclub Waldhof
+- Öko Golf Neusiedler Csarda
+- Golfpark & Trainingszentrum Waidhofen/Thaya
+- Golf-Club Arlberg
+
+GolfMaxX and Tuttendörfl are retained as separate markers because they are
+separate neighbouring nine-hole courses. Citygolf Vienna is not added because
+it belongs to the already represented Golfpark Vienna / GC Wien-Süßenbrunn
+site. The former Waidhofen nine-hole course remains closed; the reviewed record
+represents the current three-hole compact training facility.
+
+Dry-run:
+
+```powershell
+npx ts-node scripts/apply-reviewed-at-final-course-reconciliation.ts
+```
+
+After batch 3 has been applied, the expected preflight is seven creates with an
+active AT count increasing from 129 to 136. Apply remains separate:
+
+```powershell
+npx ts-node scripts/apply-reviewed-at-final-course-reconciliation.ts --apply --confirm-reviewed-at-final-course-reconciliation
+```
+
+The command validates the reviewed definitions, checks database names and
+50-metre collisions, writes an ignored JSON manifest, applies all changes in one
+transaction, updates PostGIS points, verifies the final active count, and is
+idempotent on a second dry-run. Important rejected discovery rows are retained
+as reviewed exclusions in the source definition.
