@@ -229,3 +229,34 @@ manifest before one transaction, creates or reactivates only approved rows,
 updates the PostGIS point, verifies the final active-country count, and is
 idempotent on a second dry-run.
 
+
+
+## Reviewed Austria facility reconciliation
+
+Fairwayd uses one map marker per golf facility. Separate layouts at the same
+facility, such as academy, compact, park, south, 9-hole, or additional 18-hole
+courses, do not receive their own course record. Independent nearby facilities
+remain separate.
+
+The first reviewed AT reconciliation contains 14 clear duplicate or
+facility-variant records and two wrong-country records. Ambiguous historical
+records are deliberately excluded. The preflight verifies immutable IDs, names,
+countries, and original coordinates, requires every canonical facility to
+remain active, and reports dependency counts.
+
+Dry-run:
+
+```powershell
+npx ts-node scripts/apply-reviewed-at-facility-reconciliation.ts
+```
+
+No database rows are changed. Apply is a separate operation and requires:
+
+```powershell
+npx ts-node scripts/apply-reviewed-at-facility-reconciliation.ts --apply --confirm-reviewed-at-facility-reconciliation
+```
+
+Apply is blocked when a record selected for deactivation has followers,
+ratings, posts, reviews, or trip items. Those relations must first be reviewed
+and migrated to the canonical facility. A JSON manifest is written before the
+single transaction, and deactivation is soft rather than destructive.
