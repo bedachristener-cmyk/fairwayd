@@ -482,8 +482,10 @@ is not sufficient evidence for a database mutation.
 
 ## Consolidated Austria directory candidate review
 
-The independent directory audit leaves 25 physically distinct, currently active
-facilities that are not represented by an active database marker. Harmless name
+The independent directory audit and database collision preflight leave 24
+physically distinct, currently active facilities that are not represented by an
+active database marker. `Golfclub Gut Richardhof` is excluded because the same
+facility is already active as `Golfclub Richardshof`. Other harmless name
 variants are excluded. The closed Bad Gleichenberg course is also excluded
 because its operator ended golf-course operations on 31 December 2025.
 
@@ -495,7 +497,7 @@ npx ts-node scripts/google-places-at-directory-missing-course-review.ts `
   --confirm-google-places-requests
 ```
 
-The command makes exactly 25 Text Search requests and writes
+The command makes exactly 24 Text Search requests and writes
 `course-audits/at-directory-missing-course-google-candidates.csv`. It never
 changes the database. One physical facility receives one candidate definition,
 even when it has multiple layouts. Nearby independent sites such as
@@ -503,7 +505,7 @@ Seefeld-Reith and Seefeld-Wildmoos, Kitzbühel-Kaps and Schwarzsee, Rasmushof,
 Mühlberghof and Wilder Kaiser, and Linsberg and Föhrenwald remain separate.
 
 The reviewed file selected the golf-club result for Seefeld-Reith and the
-golf-course result for Rasmushof. All 25 selected Place IDs and coordinates are
+golf-course result for Rasmushof. All 24 selected Place IDs and coordinates are
 unique. No candidate is applied automatically.
 
 Run the complete guarded preflight:
@@ -513,7 +515,7 @@ npx ts-node scripts/apply-reviewed-at-directory-course-reconciliation.ts
 ```
 
 With the reviewed state at 135 active Austrian facilities, the expected result
-is 25 creates and `active_AT_expected=160`. The preflight checks same-name
+is 24 creates and `active_AT_expected=159`. The preflight checks same-name
 rows, all active facilities within 50 metres, pairwise candidate proximity,
 metadata, coordinates and Place IDs.
 
