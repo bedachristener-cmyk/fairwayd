@@ -113,6 +113,7 @@ async function main() {
       (typeof REVIEWED_AT_DIRECTORY_COURSE_ADDITIONS)[number];
     action: 'create' | 'reactivate' | 'already-present';
   }> = [];
+  const preflightErrors: string[] = [];
 
   for (const definition of REVIEWED_AT_DIRECTORY_COURSE_ADDITIONS) {
     const sameName = existingCourses.filter(
@@ -122,9 +123,10 @@ async function main() {
     );
 
     if (sameName.length > 1) {
-      throw new Error(
+      preflightErrors.push(
         `Expected at most one AT row for "${definition.name}", found ${sameName.length}`,
       );
+      continue;
     }
 
     const existing = sameName[0] ?? null;
@@ -138,9 +140,10 @@ async function main() {
       ) ||
         existing.holes !== definition.holes)
     ) {
-      throw new Error(
+      preflightErrors.push(
         `Existing course does not match reviewed definition: "${definition.name}" id=${existing.id}`,
       );
+      continue;
     }
 
     const nearbyCollision = existingCourses.find(
@@ -150,9 +153,10 @@ async function main() {
         courseDistanceKm(course, definition) <= 0.05,
     );
     if (nearbyCollision) {
-      throw new Error(
+      preflightErrors.push(
         `Reviewed addition "${definition.name}" is within 50m of active id=${nearbyCollision.id} name="${nearbyCollision.name}"; review as one facility`,
       );
+      continue;
     }
 
     plans.push({
@@ -164,6 +168,12 @@ async function main() {
           ? 'already-present'
           : 'reactivate',
     });
+  }
+
+  if (preflightErrors.length > 0) {
+    throw new Error(
+      `Reviewed AT directory preflight failed with ${preflightErrors.length} issue(s):\n${preflightErrors.join('\n')}`,
+    );
   }
 
   const createCount = plans.filter((plan) => plan.action === 'create').length;
