@@ -85,22 +85,14 @@ export const REVIEWED_AT_FINAL_COURSE_ADDITIONS: ReviewedAtMissingCourseAddition
     evidenceUrl: 'https://golfklinik.at/',
     googlePlaceId: 'ChIJz6lqWMPFckcR1QLQgJzIq6E',
   },
-  {
-    name: 'Golf-Club Arlberg',
-    city: 'St. Anton am Arlberg',
-    region: 'Tirol',
-    postalCode: '6580',
-    holes: 9,
-    website: 'https://www.golfarlberg.at/',
-    lat: 47.13443,
-    lon: 10.2705757,
-    coordinateSource: 'Google Places discovery candidate cross-checked against official course website',
-    evidenceUrl: 'https://www.golfarlberg.at/de/golfplatz/',
-    googlePlaceId: 'ChIJ49A1I26wnEcRMLiYYdFAixU',
-  },
 ];
 
 export const REVIEWED_AT_FINAL_EXCLUSIONS: ReviewedAtFinalExclusion[] = [
+  {
+    discoveryName: 'Golf-Club Arlberg',
+    reason: 'already represented by active course id cmlsfzu5g00g4bkuwgfy70jpi named Golf Club Arlberg within 50 metres',
+    evidenceUrl: 'https://www.golfarlberg.at/de/golfplatz/',
+  },
   {
     discoveryName: 'Citygolf Vienna',
     reason: 'same operated Golfpark Vienna site as the active Golf Club Wien-Süßenbrunn marker',
