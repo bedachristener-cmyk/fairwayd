@@ -292,3 +292,33 @@ name-coordinate tuples, active target-name collisions, and the expected active
 AT count. Apply writes an ignored JSON manifest before one transaction, updates
 the PostGIS geography points together with latitude and longitude, and is
 idempotent on a second dry-run.
+
+
+## Final reviewed Austria unresolved-course cleanup
+
+The remaining three ambiguous AT records are resolved conservatively using
+official regional inventories and a verified regional tourism coordinate.
+
+- `Golfclub Thayatal` is retained, renamed to
+  `Golfclub Thayatal-Drosendorf`, and moved to the reviewed Autendorf
+  facility coordinate.
+- `Golfclub Dornbirn` and `Golfclub Weststmk` are unsupported synthetic
+  records and are selected for guarded soft-deactivation.
+- No nearby real facility is reused as a substitute for either invalid record.
+
+Dry-run:
+
+```powershell
+npx ts-node scripts/apply-reviewed-at-unresolved-course-reconciliation.ts
+```
+
+Apply only after confirming both invalid records have zero dependencies:
+
+```powershell
+npx ts-node scripts/apply-reviewed-at-unresolved-course-reconciliation.ts --apply --confirm-reviewed-at-unresolved-course-reconciliation
+```
+
+The command verifies immutable IDs, original or already-applied name-coordinate
+tuples, target-name collisions, dependency counts, and the expected active AT
+count. It writes an ignored JSON manifest before one transaction and updates
+the PostGIS point together with the Thayatal latitude and longitude.
