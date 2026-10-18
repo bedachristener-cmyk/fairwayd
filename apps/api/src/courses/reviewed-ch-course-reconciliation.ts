@@ -43,7 +43,7 @@ export function validateReviewedChReconciliation(): string[] {
   const names = new Set<string>();
 
   for (const item of REVIEWED_CH_DUPLICATES) {
-    if (item.duplicateName === item.canonicalName) {
+    if (String(item.duplicateName) === String(item.canonicalName)) {
       errors.push(`duplicate and canonical names match: ${item.duplicateName}`);
     }
     for (const name of [item.duplicateName, item.canonicalName]) {
@@ -52,7 +52,7 @@ export function validateReviewedChReconciliation(): string[] {
   }
 
   for (const item of REVIEWED_CH_RENAMES) {
-    if (item.currentName === item.newName) {
+    if (String(item.currentName) === String(item.newName)) {
       errors.push(`rename is unchanged: ${item.currentName}`);
     }
     if (names.has(item.currentName) || names.has(item.newName)) {
