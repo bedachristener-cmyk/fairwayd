@@ -5,12 +5,12 @@ import {
 } from './reviewed-at-final-course-reconciliation';
 
 describe('final reviewed Austrian course reconciliation', () => {
-  it('contains the seven remaining reviewed outdoor facilities', () => {
-    expect(REVIEWED_AT_FINAL_COURSE_ADDITIONS).toHaveLength(7);
+  it('contains the six remaining reviewed outdoor facilities', () => {
+    expect(REVIEWED_AT_FINAL_COURSE_ADDITIONS).toHaveLength(6);
     expect(
       new Set(REVIEWED_AT_FINAL_COURSE_ADDITIONS.map((course) => course.name))
         .size,
-    ).toBe(7);
+    ).toBe(6);
   });
 
   it('keeps independently operated nearby courses separate', () => {
@@ -38,6 +38,7 @@ describe('final reviewed Austrian course reconciliation', () => {
   it('documents important rejected discovery rows', () => {
     expect(REVIEWED_AT_FINAL_EXCLUSIONS).toEqual(
       expect.arrayContaining([
+        expect.objectContaining({ discoveryName: 'Golf-Club Arlberg' }),
         expect.objectContaining({ discoveryName: 'Citygolf Vienna' }),
         expect.objectContaining({ discoveryName: 'Golfschule Rif' }),
         expect.objectContaining({
