@@ -477,3 +477,29 @@ database. `MATCHED` means a conservative name-and-city match. Every `REVIEW`
 row must be checked manually against the operator or regional association before
 an addition, rename, merge, or exclusion is prepared. Directory presence alone
 is not sufficient evidence for a database mutation.
+
+
+## Consolidated Austria directory candidate review
+
+The independent directory audit leaves 25 physically distinct, currently active
+facilities that are not represented by an active database marker. Harmless name
+variants are excluded. The closed Bad Gleichenberg course is also excluded
+because its operator ended golf-course operations on 31 December 2025.
+
+Generate all Google Places candidates in one consolidated read-only run:
+
+```powershell
+npx ts-node scripts/google-places-at-directory-missing-course-review.ts `
+  --dry-run `
+  --confirm-google-places-requests
+```
+
+The command makes exactly 25 Text Search requests and writes
+`course-audits/at-directory-missing-course-google-candidates.csv`. It never
+changes the database. One physical facility receives one candidate definition,
+even when it has multiple layouts. Nearby independent sites such as
+Seefeld-Reith and Seefeld-Wildmoos, Kitzbühel-Kaps and Schwarzsee, Rasmushof,
+Mühlberghof and Wilder Kaiser, and Linsberg and Föhrenwald remain separate.
+
+Review the candidate file before preparing one final guarded reconciliation.
+No candidate is applied automatically.
