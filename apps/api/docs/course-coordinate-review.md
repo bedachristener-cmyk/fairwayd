@@ -260,3 +260,35 @@ Apply is blocked when a record selected for deactivation has followers,
 ratings, posts, reviews, or trip items. Those relations must first be reviewed
 and migrated to the canonical facility. A JSON manifest is written before the
 single transaction, and deactivation is soft rather than destructive.
+
+
+## Reviewed Austria reconciliation batch 2
+
+The second reviewed AT batch combines 21 confirmed coordinate corrections with
+reviewed current facility names. It preserves separate markers for physically
+separate sites: the Rinn course remains `Golfclub Innsbruck-Igls`, while the
+independent nine-hole site is corrected to `Olympia Golf Igls`.
+
+Three unresolved records are deliberately excluded from all changes:
+`Golfclub Dornbirn`, `Golfclub Thayatal`, and `Golfclub Weststmk`.
+The unverified `Golfclub am Orient` record is handled separately as a guarded
+soft-deactivation candidate. Apply is blocked if that record has followers,
+ratings, posts, reviews, or trip items.
+
+Dry-run:
+
+```powershell
+npx ts-node scripts/apply-reviewed-at-course-reconciliation-batch-2.ts
+```
+
+Apply only after reviewing every preflight row:
+
+```powershell
+npx ts-node scripts/apply-reviewed-at-course-reconciliation-batch-2.ts --apply --confirm-reviewed-at-course-reconciliation-batch-2
+```
+
+The command validates immutable IDs, country, original or already-applied
+name-coordinate tuples, active target-name collisions, and the expected active
+AT count. Apply writes an ignored JSON manifest before one transaction, updates
+the PostGIS geography points together with latitude and longitude, and is
+idempotent on a second dry-run.
