@@ -130,3 +130,20 @@ that the database record is wrong; private or small courses may not be
 categorized as `golf_course` by Google. If any search cell returns Google's
 20-result maximum, the command warns that coverage may be truncated. This
 workflow never writes to the database.
+
+
+## Reviewed missing Switzerland courses
+
+The completeness comparison identified 17 reviewed outdoor courses that are not
+represented by an active database course. Before creating records, generate a
+small Google candidate file to verify the exact Place IDs, addresses, and
+coordinates:
+
+```powershell
+npx ts-node scripts/google-places-missing-ch-course-review.ts --dry-run --confirm-google-places-requests
+```
+
+This performs 17 Text Search requests and writes
+`course-audits/ch-missing-course-google-candidates.csv`. It never updates the
+database. Review every course and select at most one candidate before preparing
+a guarded database correction.
