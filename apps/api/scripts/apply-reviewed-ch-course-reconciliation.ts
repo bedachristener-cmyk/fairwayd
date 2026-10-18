@@ -359,7 +359,7 @@ async function main() {
   let deactivated = 0;
   let renamed = 0;
 
-  await prisma.$transaction(async (tx) => {
+  const activeAfter = await prisma.$transaction(async (tx) => {
     for (const plan of duplicatePlans) {
       if (plan.action !== 'deactivate') continue;
       await tx.course.update({
@@ -448,16 +448,17 @@ async function main() {
       `);
       created++;
     }
-  });
 
-  const activeAfter = await prisma.course.count({
-    where: { country: 'CH', active: true },
+    const transactionActiveAfter = await tx.course.count({
+      where: { country: 'CH', active: true },
+    });
+    if (transactionActiveAfter !== expectedActiveAfter) {
+      throw new Error(
+        `Postflight active CH count mismatch: expected ${expectedActiveAfter}, found ${transactionActiveAfter}`,
+      );
+    }
+    return transactionActiveAfter;
   });
-  if (activeAfter !== expectedActiveAfter) {
-    throw new Error(
-      `Postflight active CH count mismatch: expected ${expectedActiveAfter}, found ${activeAfter}`,
-    );
-  }
 
   console.log(
     `Summary: mode=apply deactivated=${deactivated} renamed=${renamed} created=${created} reactivated=${reactivated} active_CH=${activeAfter}`,
