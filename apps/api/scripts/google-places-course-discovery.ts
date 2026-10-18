@@ -161,10 +161,8 @@ async function main() {
     process.exit(1);
   }
 
-  const centers = buildDiscoveryGrid(
-    config.bounds,
-    config.latStep,
-    config.lonStep,
+  const centers = config.areas.flatMap((area) =>
+    buildDiscoveryGrid(area, config.latStep, config.lonStep),
   );
   console.log(
     `Read-only discovery: country=${country} requests=${centers.length} radius_km=${config.searchRadiusMeters / 1000}`,
