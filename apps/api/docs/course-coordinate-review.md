@@ -322,3 +322,38 @@ The command verifies immutable IDs, original or already-applied name-coordinate
 tuples, target-name collisions, dependency counts, and the expected active AT
 count. It writes an ignored JSON manifest before one transaction and updates
 the PostGIS point together with the Thayatal latitude and longitude.
+
+
+## Reviewed Austria missing-course additions batch 1
+
+The first additions batch contains ten manually reviewed outdoor facilities that
+were absent after the existing Austrian records were reconciled. It deliberately
+excludes ambiguous discovery results, indoor golf, shops, hotels, and duplicate
+Google entries for the same facility.
+
+Fairwayd continues to use one marker per physical site. Therefore the 18-hole
+and 9-hole layouts at Traminergolf Klöch are represented by one 27-hole facility
+record. The separate nine-hole site at Lans receives its own marker and is not
+merged into the existing Rinn site.
+
+Dry-run:
+
+```powershell
+npx ts-node scripts/apply-reviewed-at-missing-course-additions-batch-1.ts
+```
+
+The preflight checks reviewed metadata, duplicate names, pairwise proximity,
+same-name database rows, and active facilities within 50 metres. With the
+reviewed state after the final Austria cleanup, it should report ten creates and
+an expected active AT count of 109.
+
+Apply only after reviewing all ten rows:
+
+```powershell
+npx ts-node scripts/apply-reviewed-at-missing-course-additions-batch-1.ts --apply --confirm-reviewed-at-missing-course-additions-batch-1
+```
+
+Apply writes an ignored JSON manifest before one transaction, creates or
+reactivates the reviewed records, updates every PostGIS geography point, and
+verifies the final active-country count. A second dry-run must report zero
+creates and ten already-present records.
