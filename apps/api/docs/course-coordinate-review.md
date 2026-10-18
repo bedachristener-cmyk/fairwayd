@@ -147,3 +147,31 @@ This performs 17 Text Search requests and writes
 `course-audits/ch-missing-course-google-candidates.csv`. It never updates the
 database. Review every course and select at most one candidate before preparing
 a guarded database correction.
+
+
+## Reviewed Switzerland reconciliation
+
+After the 17 Google candidates have been manually confirmed, run the guarded
+reconciliation preflight:
+
+```powershell
+npx ts-node scripts/apply-reviewed-ch-course-reconciliation.ts
+```
+
+The dry-run verifies all current names and coordinates, checks the three
+duplicate records against their active canonical records, reports dependency
+counts, validates the two reviewed renames, and checks every new coordinate for
+an active collision. No database rows are changed.
+
+Apply is intentionally separate and requires the explicit confirmation flag:
+
+```powershell
+npx ts-node scripts/apply-reviewed-ch-course-reconciliation.ts --apply --confirm-reviewed-ch-course-reconciliation
+```
+
+Apply writes an ignored JSON manifest before one database transaction. It
+creates or reactivates the 17 reviewed courses, updates their PostGIS points,
+renames the two reviewed records without changing their IDs, and soft-deactivates
+the three exact-coordinate duplicates. Apply stops before the transaction when
+an active duplicate has dependent followers, ratings, posts, reviews, or trip
+items. Re-running is idempotent when the reviewed state is already present.
