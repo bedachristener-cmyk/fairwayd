@@ -5,13 +5,13 @@ import {
 } from './reviewed-at-directory-course-reconciliation';
 
 describe('final Austrian directory course reconciliation', () => {
-  it('contains exactly the 25 reviewed missing facilities', () => {
-    expect(REVIEWED_AT_DIRECTORY_COURSE_ADDITIONS).toHaveLength(25);
+  it('contains exactly the 24 reviewed missing facilities', () => {
+    expect(REVIEWED_AT_DIRECTORY_COURSE_ADDITIONS).toHaveLength(24);
     expect(
       new Set(
         REVIEWED_AT_DIRECTORY_COURSE_ADDITIONS.map((course) => course.name),
       ).size,
-    ).toBe(25);
+    ).toBe(24);
     expect(validateReviewedAtDirectoryCourseReconciliation()).toEqual([]);
   });
 
@@ -67,7 +67,14 @@ describe('final Austrian directory course reconciliation', () => {
     ).toMatchObject({ holes: 36 });
   });
 
-  it('documents the closed Bad Gleichenberg facility as excluded', () => {
+  it('documents the existing Richardshof alias and closed Bad Gleichenberg facility as excluded', () => {
+    expect(REVIEWED_AT_DIRECTORY_EXCLUSIONS).toContainEqual(
+      expect.objectContaining({
+        name: 'Golfclub Gut Richardhof',
+        reason:
+          'already represented by active Golfclub Richardshof at the same physical facility',
+      }),
+    );
     expect(
       REVIEWED_AT_DIRECTORY_COURSE_ADDITIONS.some(
         (course) => course.name === 'Golfclub Bad Gleichenberg',
