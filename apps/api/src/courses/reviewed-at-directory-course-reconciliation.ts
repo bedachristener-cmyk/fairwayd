@@ -275,19 +275,6 @@ export const REVIEWED_AT_DIRECTORY_COURSE_ADDITIONS: ReviewedAtMissingCourseAddi
     "googlePlaceId": "ChIJl-uq4J9JdkcRCNxs1gHptZU"
   },
   {
-    "name": "Grazer Golfclub Thalersee",
-    "city": "Thal",
-    "region": "Steiermark",
-    "postalCode": "8051",
-    "holes": 27,
-    "website": "https://www.grazergolf.at/",
-    "lat": 47.066560700000004,
-    "lon": 15.363482000000001,
-    "coordinateSource": "Google Places candidate cross-checked against the official combined 18-hole and 9-hole facility",
-    "evidenceUrl": "https://www.grazergolf.at/",
-    "googlePlaceId": "ChIJMYHAUpM0bkcRzPbyoDVDNEM"
-  },
-  {
     "name": "Linsberg Golf",
     "city": "Lanzenkirchen",
     "region": "Niederösterreich",
@@ -303,6 +290,11 @@ export const REVIEWED_AT_DIRECTORY_COURSE_ADDITIONS: ReviewedAtMissingCourseAddi
 ];
 
 export const REVIEWED_AT_DIRECTORY_EXCLUSIONS = [
+  {
+    name: 'Grazer Golfclub Thalersee',
+    reason: 'already represented by active Golfclub Graz-Thalersee at the same physical facility',
+    evidenceUrl: 'https://www.grazergolf.at/',
+  },
   {
     name: 'Golfpark Klopeinersee-Südkärnten',
     reason: 'already represented by active Golfpark Klopeinersee at the same physical facility',
