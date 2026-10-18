@@ -93,19 +93,6 @@ export const REVIEWED_AT_DIRECTORY_COURSE_ADDITIONS: ReviewedAtMissingCourseAddi
     "googlePlaceId": "ChIJNwr_hB5cd0cRcNd0z8twbl0"
   },
   {
-    "name": "Golfclub Gut Richardhof",
-    "city": "Gumpoldskirchen",
-    "region": "Niederösterreich",
-    "postalCode": "2352",
-    "holes": 9,
-    "website": "https://www.cityandcountry.at/",
-    "lat": 48.055766899999995,
-    "lon": 16.2753439,
-    "coordinateSource": "Google Places directory candidate cross-checked against the official operator inventory",
-    "evidenceUrl": "https://www.cityandcountry.at/",
-    "googlePlaceId": "ChIJ0WlasmOvbUcR-M6KV62qTPA"
-  },
-  {
     "name": "Golfclub Kitzbühel – Kaps",
     "city": "Kitzbühel",
     "region": "Tirol",
@@ -329,6 +316,11 @@ export const REVIEWED_AT_DIRECTORY_COURSE_ADDITIONS: ReviewedAtMissingCourseAddi
 ];
 
 export const REVIEWED_AT_DIRECTORY_EXCLUSIONS = [
+  {
+    name: 'Golfclub Gut Richardhof',
+    reason: 'already represented by active Golfclub Richardshof at the same physical facility',
+    evidenceUrl: 'https://www.cityandcountry.at/',
+  },
   {
     name: 'Golfclub Bad Gleichenberg',
     reason: 'operator ended golf-course operations on 2025-12-31',
