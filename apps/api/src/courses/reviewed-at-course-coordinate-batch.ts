@@ -780,9 +780,9 @@ export function validateReviewedAtCoordinateBatch(): string[] {
     if (!item.id || !item.name || !item.placeId || !item.displayName) {
       errors.push('complete course and Google Place metadata is required');
     }
-    if (ids.has(item.id)) errors.push(\`duplicate course ID: \${item.id}\`);
+    if (ids.has(item.id)) errors.push(`duplicate course ID: ${item.id}`);
     if (placeIds.has(item.placeId)) {
-      errors.push(\`duplicate Google Place ID: \${item.placeId}\`);
+      errors.push(`duplicate Google Place ID: ${item.placeId}`);
     }
     ids.add(item.id);
     placeIds.add(item.placeId);
@@ -792,7 +792,7 @@ export function validateReviewedAtCoordinateBatch(): string[] {
       ['new', item.newLat, item.newLon],
     ] as const) {
       if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
-        errors.push(\`\${label} coordinates out of range: \${item.name}\`);
+        errors.push(`${label} coordinates out of range: ${item.name}`);
       }
     }
   }
