@@ -5,8 +5,8 @@ import {
 } from './reviewed-at-directory-missing-courses';
 
 describe('reviewed Austrian directory missing-course candidates', () => {
-  it('contains the 23 independently reviewed missing physical facilities', () => {
-    expect(REVIEWED_AT_DIRECTORY_MISSING_COURSES).toHaveLength(23);
+  it('contains the 22 independently reviewed missing physical facilities', () => {
+    expect(REVIEWED_AT_DIRECTORY_MISSING_COURSES).toHaveLength(22);
     expect(validateReviewedAtDirectoryMissingCourses()).toEqual([]);
   });
 
@@ -50,6 +50,16 @@ describe('reviewed Austrian directory missing-course candidates', () => {
   });
 
   it('does not propose the existing Richardshof alias or closed Bad Gleichenberg course', () => {
+    expect(
+      REVIEWED_AT_DIRECTORY_MISSING_COURSES.some(
+        (course) => course.name === 'Grazer Golfclub Thalersee',
+      ),
+    ).toBe(false);
+    expect(REVIEWED_AT_DIRECTORY_EXCLUSIONS).toContainEqual({
+      name: 'Grazer Golfclub Thalersee',
+      reason:
+        'already represented by active Golfclub Graz-Thalersee at the same physical facility',
+    });
     expect(
       REVIEWED_AT_DIRECTORY_MISSING_COURSES.some(
         (course) => course.name === 'Golfpark Klopeinersee-Südkärnten',
