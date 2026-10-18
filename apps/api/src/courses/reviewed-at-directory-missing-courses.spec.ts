@@ -1,0 +1,63 @@
+import {
+  REVIEWED_AT_DIRECTORY_EXCLUSIONS,
+  REVIEWED_AT_DIRECTORY_MISSING_COURSES,
+  validateReviewedAtDirectoryMissingCourses,
+} from './reviewed-at-directory-missing-courses';
+
+describe('reviewed Austrian directory missing-course candidates', () => {
+  it('contains the 25 independently reviewed physical facilities', () => {
+    expect(REVIEWED_AT_DIRECTORY_MISSING_COURSES).toHaveLength(25);
+    expect(validateReviewedAtDirectoryMissingCourses()).toEqual([]);
+  });
+
+  it('keeps distinct nearby facilities separate', () => {
+    const names = REVIEWED_AT_DIRECTORY_MISSING_COURSES.map(
+      (course) => course.name,
+    );
+
+    expect(names).toEqual(
+      expect.arrayContaining([
+        'Golfclub Seefeld-Reith',
+        'Golfclub Kitzbühel – Kaps',
+        'Golfclub Rasmushof',
+        'Golfplatz Mühlberghof',
+        'Linsberg Golf',
+      ]),
+    );
+  });
+
+  it('uses one marker for multiple layouts at the same facility', () => {
+    const vienna = REVIEWED_AT_DIRECTORY_MISSING_COURSES.filter((course) =>
+      course.name.includes('Golfpark Vienna'),
+    );
+    expect(vienna).toEqual([
+      expect.objectContaining({
+        name: 'Golfpark Vienna – GC Wien-Süßenbrunn & Citygolf',
+        holes: 27,
+      }),
+    ]);
+
+    expect(
+      REVIEWED_AT_DIRECTORY_MISSING_COURSES.find(
+        (course) => course.name === 'Golfclub St. Pölten',
+      ),
+    ).toMatchObject({ holes: 27 });
+    expect(
+      REVIEWED_AT_DIRECTORY_MISSING_COURSES.find(
+        (course) => course.name === 'Golfclub Dolomitengolf Osttirol',
+      ),
+    ).toMatchObject({ holes: 36 });
+  });
+
+  it('does not propose the closed Bad Gleichenberg course', () => {
+    expect(
+      REVIEWED_AT_DIRECTORY_MISSING_COURSES.some(
+        (course) => course.name === 'Golfclub Bad Gleichenberg',
+      ),
+    ).toBe(false);
+    expect(REVIEWED_AT_DIRECTORY_EXCLUSIONS).toContainEqual({
+      name: 'Golfclub Bad Gleichenberg',
+      reason: 'operator ended golf-course operations on 2025-12-31',
+    });
+  });
+});
