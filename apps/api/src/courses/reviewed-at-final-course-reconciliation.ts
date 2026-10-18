@@ -95,7 +95,7 @@ export const REVIEWED_AT_FINAL_EXCLUSIONS: ReviewedAtFinalExclusion[] = [
   },
   {
     discoveryName: 'Citygolf Vienna',
-    reason: 'same operated Golfpark Vienna site as the active Golf Club Wien-Süßenbrunn marker',
+    reason: 'deferred from this earlier discovery batch; later directory review confirmed Golfpark Vienna as distinct from Golf Club Wien',
     evidenceUrl: 'https://golfpark-vienna.at/plaetze/',
   },
   {
