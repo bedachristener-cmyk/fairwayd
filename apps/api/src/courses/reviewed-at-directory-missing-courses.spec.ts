@@ -5,8 +5,8 @@ import {
 } from './reviewed-at-directory-missing-courses';
 
 describe('reviewed Austrian directory missing-course candidates', () => {
-  it('contains the 25 independently reviewed physical facilities', () => {
-    expect(REVIEWED_AT_DIRECTORY_MISSING_COURSES).toHaveLength(25);
+  it('contains the 24 independently reviewed missing physical facilities', () => {
+    expect(REVIEWED_AT_DIRECTORY_MISSING_COURSES).toHaveLength(24);
     expect(validateReviewedAtDirectoryMissingCourses()).toEqual([]);
   });
 
@@ -49,7 +49,17 @@ describe('reviewed Austrian directory missing-course candidates', () => {
     ).toMatchObject({ holes: 36 });
   });
 
-  it('does not propose the closed Bad Gleichenberg course', () => {
+  it('does not propose the existing Richardshof alias or closed Bad Gleichenberg course', () => {
+    expect(
+      REVIEWED_AT_DIRECTORY_MISSING_COURSES.some(
+        (course) => course.name === 'Golfclub Gut Richardhof',
+      ),
+    ).toBe(false);
+    expect(REVIEWED_AT_DIRECTORY_EXCLUSIONS).toContainEqual({
+      name: 'Golfclub Gut Richardhof',
+      reason:
+        'already represented by active Golfclub Richardshof at the same physical facility',
+    });
     expect(
       REVIEWED_AT_DIRECTORY_MISSING_COURSES.some(
         (course) => course.name === 'Golfclub Bad Gleichenberg',
