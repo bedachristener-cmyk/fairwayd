@@ -6,7 +6,9 @@ import { PrismaPg } from '@prisma/adapter-pg';
 
 const connectionString =
   process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
-const googleApiKey = process.env.GOOGLE_MAPS_API_KEY;
+const googleApiKey =
+  process.env.GOOGLE_PLACES_REVIEW_API_KEY ||
+  process.env.GOOGLE_MAPS_API_KEY;
 
 if (!connectionString) {
   console.error(
@@ -16,7 +18,9 @@ if (!connectionString) {
 }
 
 if (!googleApiKey) {
-  console.error('GOOGLE_MAPS_API_KEY is missing. Check apps/api/.env');
+  console.error(
+    'GOOGLE_PLACES_REVIEW_API_KEY or GOOGLE_MAPS_API_KEY is missing. Check apps/api/.env',
+  );
   process.exit(1);
 }
 
@@ -142,16 +146,26 @@ async function textSearch(query: string, country: string) {
   );
 
   if (!response.ok) {
-    const body = await response.text();
-    console.error('Google Places request failed');
-    console.error(`Status: ${response.status}`);
-    console.error(`Status text: ${response.statusText}`);
-    console.error(`Response body: ${body}`);
-    return undefined;
+    let detail = response.statusText || 'request rejected';
+
+    try {
+      const body = (await response.json()) as {
+        error?: { message?: string; status?: string };
+      };
+      detail = [body.error?.status, body.error?.message]
+        .filter(Boolean)
+        .join(': ') || detail;
+    } catch {
+      // Keep the HTTP status text when Google did not return JSON.
+    }
+
+    throw new Error(
+      `Google Places request failed: ${response.status} ${detail}`,
+    );
   }
 
   const json = (await response.json()) as { places?: GooglePlace[] };
-  return Array.isArray(json.places) ? json.places[0] : undefined;
+  return Array.isArray(json.places) ? json.places.slice(0, 3) : [];
 }
 
 async function main() {
@@ -168,7 +182,7 @@ async function main() {
 
   const limit = Number.isFinite(limitArg) && limitArg > 0 ? limitArg : 10;
   const outputPath = path.resolve(
-    `data/review/${country.toLowerCase()}-google-places-candidates.csv`,
+    `course-audits/${country.toLowerCase()}-google-places-candidates.csv`,
   );
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 
@@ -190,11 +204,14 @@ async function main() {
   const rows = [
     [
       'id',
+      'country',
       'name',
       'city',
       'region',
       'currentLat',
       'currentLon',
+      'currentGoogleMapsUri',
+      'candidateRank',
       'googleLat',
       'googleLon',
       'placeId',
@@ -203,54 +220,58 @@ async function main() {
       'googleMapsUri',
       'distanceKm',
       'confidenceReason',
+      'reviewDecision',
+      'reviewNotes',
     ].join(','),
   ];
 
   for (let i = 0; i < courses.length; i++) {
     const course = courses[i];
-    let place: GooglePlace | undefined;
+    const places = await textSearch(buildQuery(course), country);
+    const candidates: Array<GooglePlace | undefined> =
+      places.length > 0 ? places : [undefined];
 
-    try {
-      place = await textSearch(buildQuery(course), country);
-    } catch (error: any) {
-      console.error(
-        `Google Places error for ${course.name}: ${error?.message ?? error}`,
+    candidates.forEach((place, candidateIndex) => {
+      const googleLat = place?.location?.latitude ?? null;
+      const googleLon = place?.location?.longitude ?? null;
+      const distance =
+        Number.isFinite(googleLat) && Number.isFinite(googleLon)
+          ? distanceKm(
+              { lat: course.lat, lon: course.lon },
+              { lat: googleLat as number, lon: googleLon as number },
+            )
+          : null;
+
+      rows.push(
+        [
+          course.id,
+          course.country,
+          course.name,
+          course.city,
+          course.region,
+          course.lat,
+          course.lon,
+          `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${course.lat},${course.lon}`)}`,
+          place ? candidateIndex + 1 : '',
+          googleLat,
+          googleLon,
+          place?.id,
+          place?.displayName?.text,
+          place?.formattedAddress,
+          place?.googleMapsUri,
+          distance === null ? '' : distance.toFixed(2),
+          confidenceReason(course, place),
+          '',
+          '',
+        ]
+          .map(csvCell)
+          .join(','),
       );
-      place = undefined;
-    }
+    });
 
-    const googleLat = place?.location?.latitude ?? null;
-    const googleLon = place?.location?.longitude ?? null;
-    const distance =
-      Number.isFinite(googleLat) && Number.isFinite(googleLon)
-        ? distanceKm(
-            { lat: course.lat, lon: course.lon },
-            { lat: googleLat as number, lon: googleLon as number },
-          )
-        : null;
-
-    rows.push(
-      [
-        course.id,
-        course.name,
-        course.city,
-        course.region,
-        course.lat,
-        course.lon,
-        googleLat,
-        googleLon,
-        place?.id,
-        place?.displayName?.text,
-        place?.formattedAddress,
-        place?.googleMapsUri,
-        distance === null ? '' : distance.toFixed(2),
-        confidenceReason(course, place),
-      ]
-        .map(csvCell)
-        .join(','),
+    console.log(
+      `Reviewed ${i + 1}/${courses.length}: ${course.name} candidates=${places.length}`,
     );
-
-    console.log(`Reviewed ${i + 1}/${courses.length}: ${course.name}`);
   }
 
   fs.writeFileSync(outputPath, `${rows.join('\n')}\n`, 'utf-8');
