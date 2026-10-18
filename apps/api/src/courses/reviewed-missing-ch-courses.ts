@@ -20,7 +20,7 @@ export const REVIEWED_MISSING_CH_COURSES: ReviewedMissingChCourse[] = [
     website: 'https://www.golfascona.ch/',
     lat: 46.1490234,
     lon: 8.7826716,
-    googlePlaceId: 'ChIJ-3wgNnEZhEcR7HxmoM1CpXo',
+    googlePlaceId: 'ChIJSzIY9U3IhUcRGOGmLf0FfSo',
   },
   {
     name: 'Golfclub Aaretal',
@@ -31,7 +31,7 @@ export const REVIEWED_MISSING_CH_COURSES: ReviewedMissingChCourse[] = [
     website: 'https://www.golfaaretal.ch/',
     lat: 46.812303,
     lon: 7.5837075999999985,
-    googlePlaceId: 'ChIJ_2JYHuE5jkcR5I8rDrSHdpo',
+    googlePlaceId: 'ChIJA7eSRmNLjkcROAJ8OauI_fE',
   },
   {
     name: 'Andermatt Golf Course',
@@ -42,7 +42,7 @@ export const REVIEWED_MISSING_CH_COURSES: ReviewedMissingChCourse[] = [
     website: 'https://www.andermatt-swissalps.ch/',
     lat: 46.634141500000005,
     lon: 8.5838584,
-    googlePlaceId: 'ChIJpZs2MsyahUcRihPAeHoJ2ao',
+    googlePlaceId: 'ChIJjZ8MdYtxhUcRittsiDGa2qo',
   },
   {
     name: 'Golf Brigels',
@@ -53,7 +53,7 @@ export const REVIEWED_MISSING_CH_COURSES: ReviewedMissingChCourse[] = [
     website: 'https://www.golfidyll.ch/',
     lat: 46.767692499999995,
     lon: 9.0716714,
-    googlePlaceId: 'ChIJMzQRm-d4hUcR0mZFWGHZzKY',
+    googlePlaceId: 'ChIJNYcAmHofhUcRqdnwHmprqgI',
   },
   {
     name: 'Golf Club Domaine du Brésil',
@@ -64,7 +64,7 @@ export const REVIEWED_MISSING_CH_COURSES: ReviewedMissingChCourse[] = [
     website: 'https://www.golfbresil.ch/',
     lat: 46.673961999999996,
     lon: 6.591392000000001,
-    googlePlaceId: 'ChIJW5j2DlZGjEcRUc5KZ_6xxX0',
+    googlePlaceId: 'ChIJsZGOHTvNjUcRHr3XUc65VWQ',
   },
   {
     name: 'Dolder Golfclub Zürich',
@@ -75,7 +75,7 @@ export const REVIEWED_MISSING_CH_COURSES: ReviewedMissingChCourse[] = [
     website: 'https://www.doldergolf.ch/',
     lat: 47.3723068,
     lon: 8.5739555,
-    googlePlaceId: 'ChIJpxILe5wLkEcRwcIOhvDoJzw',
+    googlePlaceId: 'ChIJqWxwyM6gmkcRPFYZ79NDKA4',
   },
   {
     name: 'Golfclub Entfelden',
@@ -86,7 +86,7 @@ export const REVIEWED_MISSING_CH_COURSES: ReviewedMissingChCourse[] = [
     website: 'https://www.aarau-west.ch/golf/',
     lat: 47.3478704,
     lon: 8.0482134,
-    googlePlaceId: 'ChIJO0yjhw4AkEcR1Bn_pVCrCJs',
+    googlePlaceId: 'ChIJeV79hWE7kEcRNmT5OSsVaU0',
   },
   {
     name: 'Golf Club Heidiland',
@@ -97,7 +97,7 @@ export const REVIEWED_MISSING_CH_COURSES: ReviewedMissingChCourse[] = [
     website: 'https://www.gcheidiland.ch/',
     lat: 46.9991938,
     lon: 9.516690299999999,
-    googlePlaceId: 'ChIJIe06QKv5hUcRS7AA0ah3tA8',
+    googlePlaceId: 'ChIJTyGQAZTLhEcRrAkVrpCaCuk',
   },
   {
     name: 'Golfclub Lenzerheide',
@@ -108,7 +108,7 @@ export const REVIEWED_MISSING_CH_COURSES: ReviewedMissingChCourse[] = [
     website: 'https://golflenzerheide.ch/',
     lat: 46.7132777,
     lon: 9.5576907,
-    googlePlaceId: 'ChIJb1eUayR_hUcRaKrDKk_M4do',
+    googlePlaceId: 'ChIJafpQCaWVhEcRXH6KxnoZrPU',
   },
   {
     name: 'Ostschweizerischer Golfclub',
@@ -119,7 +119,7 @@ export const REVIEWED_MISSING_CH_COURSES: ReviewedMissingChCourse[] = [
     website: 'https://www.osgc.ch/',
     lat: 47.4713529,
     lon: 9.1948636,
-    googlePlaceId: 'ChIJs6jhlS-jmkcRAYfVyV6d44U',
+    googlePlaceId: 'ChIJ3-Yq-HbmmkcR_56BgP4eH4U',
   },
   {
     name: 'Golfclub Riederalp',
@@ -130,7 +130,7 @@ export const REVIEWED_MISSING_CH_COURSES: ReviewedMissingChCourse[] = [
     website: 'https://www.golfclub-riederalp.ch/',
     lat: 46.378063,
     lon: 8.033187999999999,
-    googlePlaceId: 'ChIJFVmp2AY9j0cRj-tzl3N8QOQ',
+    googlePlaceId: 'ChIJx4qdrMRvj0cR6f6DTAwd9pk',
   },
   {
     name: 'Golf Club Sierre',
@@ -141,7 +141,7 @@ export const REVIEWED_MISSING_CH_COURSES: ReviewedMissingChCourse[] = [
     website: 'https://www.golfsierre.ch/',
     lat: 46.2546323,
     lon: 7.453998500000001,
-    googlePlaceId: 'ChIJoT0W6r7pjkcRVvRSGwKtP64',
+    googlePlaceId: 'ChIJO2geQpXfjkcR1MyC9Yg7WS4',
   },
   {
     name: 'Golf Club Thunersee',
@@ -152,7 +152,7 @@ export const REVIEWED_MISSING_CH_COURSES: ReviewedMissingChCourse[] = [
     website: 'https://www.golfclub-thunersee.ch/',
     lat: 46.746565,
     lon: 7.596743999999998,
-    googlePlaceId: 'ChIJszDT25V5j0cRn4uk3XRXqFE',
+    googlePlaceId: 'ChIJLcNDYDVNjkcRytIbdNtnn3w',
   },
   {
     name: 'Golf Club Zumikon',
@@ -163,7 +163,7 @@ export const REVIEWED_MISSING_CH_COURSES: ReviewedMissingChCourse[] = [
     website: 'https://www.gccz.ch/',
     lat: 47.335318,
     lon: 8.626083,
-    googlePlaceId: 'ChIJNfp4kXAJkEcRKM26WLlgj0M',
+    googlePlaceId: 'ChIJMYEYNp-mmkcRudVkv3TJ4Rw',
   },
   {
     name: 'Golf Augwil',
@@ -174,7 +174,7 @@ export const REVIEWED_MISSING_CH_COURSES: ReviewedMissingChCourse[] = [
     website: 'https://www.golfaugwil.ch/',
     lat: 47.4738755,
     lon: 8.6044505,
-    googlePlaceId: 'ChIJgRJ1xzIGkEcR5n8NZJouJZg',
+    googlePlaceId: 'ChIJC6z-L7GfmkcRfMp232CNbbY',
   },
   {
     name: 'Golf Grindelwald',
@@ -185,7 +185,7 @@ export const REVIEWED_MISSING_CH_COURSES: ReviewedMissingChCourse[] = [
     website: 'https://golf-grindelwald.ch/',
     lat: 46.6169635,
     lon: 8.0412825,
-    googlePlaceId: 'ChIJy1T_yhr7j0cR8hFoSIXG1FM',
+    googlePlaceId: 'ChIJK8hsxgacj0cR9iOiEqQ-spo',
   },
   {
     name: 'Golf de la Vieille-Bâtie',
@@ -196,7 +196,7 @@ export const REVIEWED_MISSING_CH_COURSES: ReviewedMissingChCourse[] = [
     website: 'https://www.golf-vieille-batie.ch/',
     lat: 46.2899118,
     lon: 6.1191815,
-    googlePlaceId: 'ChIJ89tALuNkjEcRY0bN4fQ-p6c',
+    googlePlaceId: 'ChIJ25OhdLRmjEcRQldnWxGyLCg',
   },
 ];
 
