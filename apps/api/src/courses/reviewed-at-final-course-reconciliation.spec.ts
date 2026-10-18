@@ -23,14 +23,14 @@ describe('final reviewed Austrian course reconciliation', () => {
     );
   });
 
-  it('represents the current Waidhofen compact course, not the closed nine-hole course', () => {
+  it('represents the current Waidhofen six-hole compact course, not the closed nine-hole course', () => {
     expect(
       REVIEWED_AT_FINAL_COURSE_ADDITIONS.find((course) =>
         course.name.includes('Waidhofen'),
       ),
     ).toMatchObject({
       name: 'Golfpark & Trainingszentrum Waidhofen/Thaya',
-      holes: 3,
+      holes: 6,
       website: 'https://golfklinik.at/',
     });
   });
