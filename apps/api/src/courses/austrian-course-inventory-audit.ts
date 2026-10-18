@@ -84,7 +84,7 @@ export function parseAustrianCourseInventoryHtml(
       cells.push(decodeHtml(cellMatch[1]));
     }
 
-    if (cells.length < 8 || !/^[BKNOSTVW]$/i.test(cells[0])) continue;
+    if (cells.length < 8 || !/^(?:B|K|N|O|S|ST|T|V|W)$/i.test(cells[0])) continue;
 
     const locationMatch = cells[3].match(/^(\d{4})\s+(.+)$/);
     if (!locationMatch || !cells[1]) continue;
