@@ -418,7 +418,7 @@ active-count, and idempotence safeguards as the preceding additions.
 
 After the three ten-course addition batches, the remaining discovery report is
 closed in one consolidated reconciliation instead of further artificial
-batches. It adds seven current outdoor facilities:
+batches. It adds six current outdoor facilities:
 
 - Golfclub Salzburg – Golfacademy Rif
 - Golfclub GolfMaxX
@@ -426,10 +426,11 @@ batches. It adds seven current outdoor facilities:
 - Golfclub Waldhof
 - Öko Golf Neusiedler Csarda
 - Golfpark & Trainingszentrum Waidhofen/Thaya
-- Golf-Club Arlberg
 
 GolfMaxX and Tuttendörfl are retained as separate markers because they are
-separate neighbouring nine-hole courses. Citygolf Vienna is not added because
+separate neighbouring nine-hole courses. Golf-Club Arlberg is not added because
+an active marker for the same facility already exists within 50 metres.
+Citygolf Vienna is not added because
 it belongs to the already represented Golfpark Vienna / GC Wien-Süßenbrunn
 site. The former Waidhofen nine-hole course remains closed; the reviewed record
 represents the current six-hole compact training facility.
@@ -440,8 +441,8 @@ Dry-run:
 npx ts-node scripts/apply-reviewed-at-final-course-reconciliation.ts
 ```
 
-After batch 3 has been applied, the expected preflight is seven creates with an
-active AT count increasing from 129 to 136. Apply remains separate:
+After batch 3 has been applied, the expected preflight is six creates with an
+active AT count increasing from 129 to 135. Apply remains separate:
 
 ```powershell
 npx ts-node scripts/apply-reviewed-at-final-course-reconciliation.ts --apply --confirm-reviewed-at-final-course-reconciliation
