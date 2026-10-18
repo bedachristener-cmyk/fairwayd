@@ -107,6 +107,16 @@ async function main() {
       `duplicate approved Google Place IDs: ${[...new Set(duplicatePlaceIds)].join(', ')}`,
     );
   }
+  for (let index = 0; index < approved.length; index++) {
+    for (let otherIndex = index + 1; otherIndex < approved.length; otherIndex++) {
+      const distance = courseDistanceKm(approved[index], approved[otherIndex]);
+      if (distance <= 0.05) {
+        invalid.push(
+          `approved additions within 50m: "${approved[index].name}" and "${approved[otherIndex].name}"; review as duplicate or multi-course facility`,
+        );
+      }
+    }
+  }
   if (invalid.length > 0) {
     console.error('Preflight failed: invalid reviewed rows');
     invalid.forEach((message) => console.error(`- ${message}`));
