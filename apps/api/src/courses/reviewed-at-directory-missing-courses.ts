@@ -221,16 +221,6 @@ export const REVIEWED_AT_DIRECTORY_MISSING_COURSES: ReviewedAtDirectoryMissingCo
     evidence: 'official operator; separate public 9-hole facility',
   },
   {
-    name: 'Grazer Golfclub Thalersee',
-    searchQuery: 'Grazer Golfclub Thalersee Golfweg 1 Thal Austria',
-    city: 'Thal',
-    region: 'Steiermark',
-    postalCode: '8051',
-    holes: 27,
-    website: 'https://www.grazergolf.at/',
-    evidence: 'official operator; one facility with 18-hole and 9-hole layouts',
-  },
-  {
     name: 'Linsberg Golf',
     searchQuery: 'Linsberg Golf Föhrenauer Straße 8 Lanzenkirchen Austria',
     city: 'Lanzenkirchen',
@@ -243,6 +233,10 @@ export const REVIEWED_AT_DIRECTORY_MISSING_COURSES: ReviewedAtDirectoryMissingCo
 ];
 
 export const REVIEWED_AT_DIRECTORY_EXCLUSIONS = [
+  {
+    name: 'Grazer Golfclub Thalersee',
+    reason: 'already represented by active Golfclub Graz-Thalersee at the same physical facility',
+  },
   {
     name: 'Golfpark Klopeinersee-Südkärnten',
     reason: 'already represented by active Golfpark Klopeinersee at the same physical facility',
