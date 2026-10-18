@@ -175,3 +175,57 @@ renames the two reviewed records without changing their IDs, and soft-deactivate
 the three exact-coordinate duplicates. Apply stops before the transaction when
 an active duplicate has dependent followers, ratings, posts, reviews, or trip
 items. Re-running is idempotent when the reviewed state is already present.
+
+## Country-neutral review pipeline
+
+The reusable pipeline separates discovery, human review, coordinate updates,
+and additions. Google results are never applied automatically.
+
+Supported discovery country profiles are defined explicitly in
+`src/courses/course-discovery-country.ts`. A profile contains reviewed country
+bounds, overlapping grid spacing, and a search radius. Unsupported countries
+fail closed instead of accepting arbitrary bounds.
+
+Generate the read-only discovery report for a supported country:
+
+```powershell
+npx ts-node scripts/google-places-course-discovery.ts AT --dry-run --confirm-google-places-requests
+```
+
+The Austrian profile currently plans 220 Nearby Search requests. The command
+prints the request count before the first request, writes
+`course-audits/at-google-places-discovery.csv`, and never updates the database.
+The CSV includes editable metadata columns for reviewed additions. Only
+`POSSIBLE_MISSING` and unresolved nearby rows should be considered; Google
+results such as driving ranges, indoor golf, shops, hotels, and disc golf must
+be rejected manually.
+
+For existing records, continue with the generic name-by-name candidate review
+and coordinate apply workflow described above.
+
+For a genuinely missing outdoor course, fill `country`, `name`, `city`,
+`region`, `postalCode`, `holes`, and `website` in a copy of the discovery
+CSV. Retain the selected `placeId`, `googleLat`, and `googleLon`, then set
+`reviewDecision=APPROVE`. At most one approved row may use a name or Google
+Place ID.
+
+Dry-run reviewed additions:
+
+```powershell
+npx ts-node scripts/apply-reviewed-course-additions.ts <review.csv> --country AT
+```
+
+Apply only after the dry-run and manual review:
+
+```powershell
+npx ts-node scripts/apply-reviewed-course-additions.ts <review.csv> --country AT --apply --confirm-reviewed-course-additions
+```
+
+The additions importer rejects invalid metadata, country mismatches, duplicate
+names or Place IDs, an existing same-name course at other coordinates, and any
+active course within 50 metres. Nearby multi-course facilities and duplicates
+therefore require explicit reconciliation. Apply writes an ignored JSON
+manifest before one transaction, creates or reactivates only approved rows,
+updates the PostGIS point, verifies the final active-country count, and is
+idempotent on a second dry-run.
+
