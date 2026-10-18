@@ -357,3 +357,30 @@ Apply writes an ignored JSON manifest before one transaction, creates or
 reactivates the reviewed records, updates every PostGIS geography point, and
 verifies the final active-country count. A second dry-run must report zero
 creates and ten already-present records.
+
+
+## Reviewed Austria missing-course additions batch 2
+
+The second additions batch contains ten further manually reviewed outdoor
+facilities. Duplicate discovery results for the same site are represented once.
+The facility rule also applies to course layouts: Pischelsdorf combines its
+18-hole and 6-hole layouts in one 24-hole record, and Römergolf combines its
+18-hole and 9-hole layouts in one 27-hole record.
+
+Dry-run:
+
+```powershell
+npx ts-node scripts/apply-reviewed-at-missing-course-additions-batch-2.ts
+```
+
+After batch 1 has been applied, the expected preflight is ten creates with an
+active AT count increasing from 109 to 119. Apply remains separate:
+
+```powershell
+npx ts-node scripts/apply-reviewed-at-missing-course-additions-batch-2.ts --apply --confirm-reviewed-at-missing-course-additions-batch-2
+```
+
+The same safeguards as batch 1 apply: reviewed-definition validation, name and
+50-metre collision checks, dry-run by default, an ignored JSON manifest before
+the transaction, PostGIS point updates, final active-count verification, and an
+idempotent control run.
