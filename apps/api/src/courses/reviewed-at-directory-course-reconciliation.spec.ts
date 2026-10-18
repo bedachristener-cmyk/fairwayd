@@ -5,13 +5,13 @@ import {
 } from './reviewed-at-directory-course-reconciliation';
 
 describe('final Austrian directory course reconciliation', () => {
-  it('contains exactly the 24 reviewed missing facilities', () => {
-    expect(REVIEWED_AT_DIRECTORY_COURSE_ADDITIONS).toHaveLength(24);
+  it('contains exactly the 23 reviewed missing facilities', () => {
+    expect(REVIEWED_AT_DIRECTORY_COURSE_ADDITIONS).toHaveLength(23);
     expect(
       new Set(
         REVIEWED_AT_DIRECTORY_COURSE_ADDITIONS.map((course) => course.name),
       ).size,
-    ).toBe(24);
+    ).toBe(23);
     expect(validateReviewedAtDirectoryCourseReconciliation()).toEqual([]);
   });
 
@@ -68,6 +68,13 @@ describe('final Austrian directory course reconciliation', () => {
   });
 
   it('documents the existing Richardshof alias and closed Bad Gleichenberg facility as excluded', () => {
+    expect(REVIEWED_AT_DIRECTORY_EXCLUSIONS).toContainEqual(
+      expect.objectContaining({
+        name: 'Golfpark Klopeinersee-Südkärnten',
+        reason:
+          'already represented by active Golfpark Klopeinersee at the same physical facility',
+      }),
+    );
     expect(REVIEWED_AT_DIRECTORY_EXCLUSIONS).toContainEqual(
       expect.objectContaining({
         name: 'Golfclub Gut Richardhof',
