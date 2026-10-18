@@ -211,16 +211,6 @@ export const REVIEWED_AT_DIRECTORY_MISSING_COURSES: ReviewedAtDirectoryMissingCo
     evidence: 'official operator; active 9-hole course',
   },
   {
-    name: 'Golfpark Klopeinersee-Südkärnten',
-    searchQuery: 'Golfpark Klopeinersee Südkärnten Am Golfpark 7 Austria',
-    city: 'Grabelsdorf',
-    region: 'Kärnten',
-    postalCode: '9122',
-    holes: 18,
-    website: 'https://www.golfklopein.at/',
-    evidence: 'official operator; active 18-hole course',
-  },
-  {
     name: 'Golfplatz Mühlberghof',
     searchQuery: 'Golfplatz Mühlberghof Steinerner Tisch 17 Ellmau Austria',
     city: 'Ellmau',
@@ -253,6 +243,10 @@ export const REVIEWED_AT_DIRECTORY_MISSING_COURSES: ReviewedAtDirectoryMissingCo
 ];
 
 export const REVIEWED_AT_DIRECTORY_EXCLUSIONS = [
+  {
+    name: 'Golfpark Klopeinersee-Südkärnten',
+    reason: 'already represented by active Golfpark Klopeinersee at the same physical facility',
+  },
   {
     name: 'Golfclub Gut Richardhof',
     reason: 'already represented by active Golfclub Richardshof at the same physical facility',
