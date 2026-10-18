@@ -262,19 +262,6 @@ export const REVIEWED_AT_DIRECTORY_COURSE_ADDITIONS: ReviewedAtMissingCourseAddi
     "googlePlaceId": "ChIJaS9n8nQhcEcRthNooYBJQ6I"
   },
   {
-    "name": "Golfpark Klopeinersee-Südkärnten",
-    "city": "Grabelsdorf",
-    "region": "Kärnten",
-    "postalCode": "9122",
-    "holes": 18,
-    "website": "https://www.golfklopein.at/",
-    "lat": 46.591575000000006,
-    "lon": 14.585889,
-    "coordinateSource": "Google Places directory candidate cross-checked against the official 18-hole course website",
-    "evidenceUrl": "https://www.golfklopein.at/",
-    "googlePlaceId": "ChIJkU0ChoAGcEcRlTfuMvWjW1o"
-  },
-  {
     "name": "Golfplatz Mühlberghof",
     "city": "Ellmau",
     "region": "Tirol",
@@ -316,6 +303,11 @@ export const REVIEWED_AT_DIRECTORY_COURSE_ADDITIONS: ReviewedAtMissingCourseAddi
 ];
 
 export const REVIEWED_AT_DIRECTORY_EXCLUSIONS = [
+  {
+    name: 'Golfpark Klopeinersee-Südkärnten',
+    reason: 'already represented by active Golfpark Klopeinersee at the same physical facility',
+    evidenceUrl: 'https://www.golfklopein.at/',
+  },
   {
     name: 'Golfclub Gut Richardhof',
     reason: 'already represented by active Golfclub Richardshof at the same physical facility',
