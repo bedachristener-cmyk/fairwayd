@@ -10,6 +10,10 @@ import {
   nearestCourse,
   type CourseDiscoveryPoint,
 } from '../src/courses/course-completeness-review';
+import {
+  courseDiscoveryCountryConfig,
+  supportedCourseDiscoveryCountries,
+} from '../src/courses/course-discovery-country';
 
 const connectionString =
   process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
@@ -33,16 +37,6 @@ if (!googleApiKey) {
 
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter, log: ['error'] });
-
-const SWITZERLAND_BOUNDS = {
-  minLat: 45.82,
-  maxLat: 47.82,
-  minLon: 5.96,
-  maxLon: 10.5,
-};
-const GRID_LAT_STEP = 0.25;
-const GRID_LON_STEP = 0.36;
-const SEARCH_RADIUS_METERS = 22_000;
 const MAX_RESULTS_PER_CELL = 20;
 
 type AddressComponent = {
@@ -76,7 +70,7 @@ function csvCell(value: unknown): string {
   return text;
 }
 
-function countryCode(place: GooglePlace): string {
+function placeCountryCode(place: GooglePlace): string {
   const component = place.addressComponents?.find((item) =>
     item.types?.includes('country'),
   );
@@ -94,7 +88,11 @@ function validPlace(place: GooglePlace): place is GooglePlace & {
   );
 }
 
-async function nearbySearch(center: { lat: number; lon: number }) {
+async function nearbySearch(
+  center: { lat: number; lon: number },
+  country: string,
+  searchRadiusMeters: number,
+) {
   const response = await fetch(
     'https://places.googleapis.com/v1/places:searchNearby',
     {
@@ -110,14 +108,14 @@ async function nearbySearch(center: { lat: number; lon: number }) {
         maxResultCount: MAX_RESULTS_PER_CELL,
         rankPreference: 'DISTANCE',
         languageCode: 'en',
-        regionCode: 'CH',
+        regionCode: country,
         locationRestriction: {
           circle: {
             center: {
               latitude: center.lat,
               longitude: center.lon,
             },
-            radius: SEARCH_RADIUS_METERS,
+            radius: searchRadiusMeters,
           },
         },
       }),
@@ -150,28 +148,30 @@ async function main() {
     .trim()
     .toUpperCase();
   const dryRun = process.argv.includes('--dry-run');
-  const confirmed = process.argv.includes(
-    '--confirm-google-places-requests',
-  );
+  const confirmed = process.argv.includes('--confirm-google-places-requests');
+  const config = courseDiscoveryCountryConfig(country);
 
-  if (country !== 'CH' || !dryRun || !confirmed) {
+  if (!config || !dryRun || !confirmed) {
     console.error(
-      'Usage: npx ts-node scripts/google-places-course-discovery.ts CH --dry-run --confirm-google-places-requests',
+      'Usage: npx ts-node scripts/google-places-course-discovery.ts <countryCode> --dry-run --confirm-google-places-requests',
+    );
+    console.error(
+      `Supported countries: ${supportedCourseDiscoveryCountries().join(', ')}`,
     );
     process.exit(1);
   }
 
   const centers = buildDiscoveryGrid(
-    SWITZERLAND_BOUNDS,
-    GRID_LAT_STEP,
-    GRID_LON_STEP,
+    config.bounds,
+    config.latStep,
+    config.lonStep,
   );
   console.log(
-    `Read-only discovery: country=CH requests=${centers.length} radius_km=${SEARCH_RADIUS_METERS / 1000}`,
+    `Read-only discovery: country=${country} requests=${centers.length} radius_km=${config.searchRadiusMeters / 1000}`,
   );
 
   const courses = (await prisma.course.findMany({
-    where: { country: 'CH', active: true },
+    where: { country, active: true },
     orderBy: [{ name: 'asc' }, { city: 'asc' }],
     select: {
       id: true,
@@ -185,11 +185,15 @@ async function main() {
 
   const placesById = new Map<string, GooglePlace>();
   const saturatedCells: string[] = [];
-  let discardedOutsideSwitzerland = 0;
+  let discardedOutsideCountry = 0;
 
   for (let index = 0; index < centers.length; index++) {
     const center = centers[index];
-    const places = await nearbySearch(center);
+    const places = await nearbySearch(
+      center,
+      country,
+      config.searchRadiusMeters,
+    );
 
     if (places.length === MAX_RESULTS_PER_CELL) {
       saturatedCells.push(`${center.lat},${center.lon}`);
@@ -197,8 +201,8 @@ async function main() {
 
     for (const place of places) {
       if (!validPlace(place)) continue;
-      if (countryCode(place) !== 'CH') {
-        discardedOutsideSwitzerland++;
+      if (placeCountryCode(place) !== country) {
+        discardedOutsideCountry++;
         continue;
       }
       placesById.set(place.id, place);
@@ -206,19 +210,26 @@ async function main() {
 
     if ((index + 1) % 10 === 0 || index + 1 === centers.length) {
       console.log(
-        `Queried ${index + 1}/${centers.length} cells; unique_CH_places=${placesById.size}`,
+        `Queried ${index + 1}/${centers.length} cells; unique_${country}_places=${placesById.size}`,
       );
     }
   }
 
   const outputPath = path.resolve(
-    'course-audits/ch-google-places-discovery.csv',
+    `course-audits/${country.toLowerCase()}-google-places-discovery.csv`,
   );
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 
   const header = [
     'recordType',
     'status',
+    'country',
+    'name',
+    'city',
+    'region',
+    'postalCode',
+    'holes',
+    'website',
     'placeId',
     'googleName',
     'formattedAddress',
@@ -261,9 +272,7 @@ async function main() {
       : 'POSSIBLE_MISSING';
 
     statusCounts[status]++;
-    if (match && status === 'MATCHED') {
-      matchedCourseIds.add(match.course.id);
-    }
+    if (match && status === 'MATCHED') matchedCourseIds.add(match.course.id);
 
     const course = match
       ? courses.find((item) => item.id === match.course.id)
@@ -272,6 +281,13 @@ async function main() {
       [
         'GOOGLE',
         status,
+        country,
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
         place.id,
         place.displayName?.text,
         place.formattedAddress,
@@ -310,6 +326,13 @@ async function main() {
       [
         'DATABASE',
         'DATABASE_ONLY',
+        country,
+        course.name,
+        course.city,
+        course.region,
+        '',
+        '',
+        '',
         '',
         '',
         '',
@@ -336,7 +359,7 @@ async function main() {
     `Summary: database=${courses.length} google_unique=${places.length} matched=${statusCounts.MATCHED} review_nearby=${statusCounts.REVIEW_NEARBY} possible_missing=${statusCounts.POSSIBLE_MISSING} database_only=${statusCounts.DATABASE_ONLY}`,
   );
   console.log(
-    `Coverage: requests=${centers.length} saturated_cells=${saturatedCells.length} discarded_non_CH=${discardedOutsideSwitzerland}`,
+    `Coverage: requests=${centers.length} saturated_cells=${saturatedCells.length} discarded_non_${country}=${discardedOutsideCountry}`,
   );
   if (saturatedCells.length > 0) {
     console.warn(
