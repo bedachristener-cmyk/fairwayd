@@ -35,6 +35,22 @@ describe('Austrian course inventory audit', () => {
     ]);
   });
 
+  it('parses the two-character Styrian region code', () => {
+    const html = `
+      <table><tr>
+        <td>St</td><td>Golfclub Test</td><td>Golfweg 1</td>
+        <td>8000 Graz</td><td>9-Loch</td><td></td><td></td>
+        <td><a href="https://example.test/">Web</a></td>
+      </tr></table>
+    `;
+
+    expect(parseAustrianCourseInventoryHtml(html)[0]).toMatchObject({
+      regionCode: 'ST',
+      name: 'Golfclub Test',
+      city: 'Graz',
+    });
+  });
+
   it('matches harmless naming variants', () => {
     expect(
       courseInventoryNameSimilarity(
