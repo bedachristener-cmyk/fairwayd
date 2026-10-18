@@ -430,9 +430,10 @@ batches. It adds six current outdoor facilities:
 GolfMaxX and Tuttendörfl are retained as separate markers because they are
 separate neighbouring nine-hole courses. Golf-Club Arlberg is not added because
 an active marker for the same facility already exists within 50 metres.
-Citygolf Vienna is not added because
-it belongs to the already represented Golfpark Vienna / GC Wien-Süßenbrunn
-site. The former Waidhofen nine-hole course remains closed; the reviewed record
+Citygolf Vienna was deferred from this earlier discovery batch. The later
+directory review confirmed that Golfpark Vienna / GC Wien-Süßenbrunn is a
+distinct physical facility from the active Golf Club Wien marker and adds the
+combined facility in the directory reconciliation. The former Waidhofen nine-hole course remains closed; the reviewed record
 represents the current six-hole compact training facility.
 
 Dry-run:
@@ -501,5 +502,29 @@ even when it has multiple layouts. Nearby independent sites such as
 Seefeld-Reith and Seefeld-Wildmoos, Kitzbühel-Kaps and Schwarzsee, Rasmushof,
 Mühlberghof and Wilder Kaiser, and Linsberg and Föhrenwald remain separate.
 
-Review the candidate file before preparing one final guarded reconciliation.
-No candidate is applied automatically.
+The reviewed file selected the golf-club result for Seefeld-Reith and the
+golf-course result for Rasmushof. All 25 selected Place IDs and coordinates are
+unique. No candidate is applied automatically.
+
+Run the complete guarded preflight:
+
+```powershell
+npx ts-node scripts/apply-reviewed-at-directory-course-reconciliation.ts
+```
+
+With the reviewed state at 135 active Austrian facilities, the expected result
+is 25 creates and `active_AT_expected=160`. The preflight checks same-name
+rows, all active facilities within 50 metres, pairwise candidate proximity,
+metadata, coordinates and Place IDs.
+
+Apply only after reviewing the complete preflight:
+
+```powershell
+npx ts-node scripts/apply-reviewed-at-directory-course-reconciliation.ts `
+  --apply `
+  --confirm-reviewed-at-directory-course-reconciliation
+```
+
+Apply writes an ignored JSON manifest before one database transaction, creates
+or reactivates all reviewed facilities, updates every PostGIS point, verifies
+the final active-country count and is idempotent on a second dry-run.
