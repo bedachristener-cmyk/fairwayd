@@ -432,7 +432,7 @@ GolfMaxX and Tuttendörfl are retained as separate markers because they are
 separate neighbouring nine-hole courses. Citygolf Vienna is not added because
 it belongs to the already represented Golfpark Vienna / GC Wien-Süßenbrunn
 site. The former Waidhofen nine-hole course remains closed; the reviewed record
-represents the current three-hole compact training facility.
+represents the current six-hole compact training facility.
 
 Dry-run:
 
