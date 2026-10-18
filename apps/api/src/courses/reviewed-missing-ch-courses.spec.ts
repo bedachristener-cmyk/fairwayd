@@ -1,4 +1,7 @@
-import { REVIEWED_MISSING_CH_COURSES } from './reviewed-missing-ch-courses';
+import {
+  REVIEWED_MISSING_CH_COURSES,
+  validateReviewedMissingChCourses,
+} from './reviewed-missing-ch-courses';
 
 describe('reviewed missing CH courses', () => {
   it('contains the 17 reviewed outdoor courses exactly once', () => {
@@ -13,8 +16,15 @@ describe('reviewed missing CH courses', () => {
       expect(course.name.trim()).toBe(course.name);
       expect(course.city).toBeTruthy();
       expect(course.region).toMatch(/^[A-Z]{2}$/);
+      expect(course.postalCode).toMatch(/^[0-9]{4}$/);
       expect([9, 18]).toContain(course.holes);
       expect(new URL(course.website).protocol).toBe('https:');
+      expect(course.lat).toBeGreaterThanOrEqual(-90);
+      expect(course.lat).toBeLessThanOrEqual(90);
+      expect(course.lon).toBeGreaterThanOrEqual(-180);
+      expect(course.lon).toBeLessThanOrEqual(180);
+      expect(course.googlePlaceId).toMatch(/^ChIJ/);
     }
+    expect(validateReviewedMissingChCourses()).toEqual([]);
   });
 });
