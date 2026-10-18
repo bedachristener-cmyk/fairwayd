@@ -77,3 +77,26 @@ Only after checking every approved row and the dry-run output:
 ```powershell
 npx ts-node scripts/apply-reviewed-course-coordinates.ts <review.csv> --country CH --apply --confirm-reviewed-course-coordinates
 ```
+
+## Reviewed Switzerland correction
+
+The reviewed CH correction is intentionally separate from the candidate CSV. It
+soft-deactivates the false `Golf Club Langenthal` duplicate after confirming
+that it still shares the reviewed Golf Limpachtal coordinates, and creates the
+missing verified `Golf Emmental` record. It never hard-deletes a course or its
+relations.
+
+Dry-run:
+
+```powershell
+npx ts-node scripts/apply-reviewed-ch-course-corrections.ts
+```
+
+Apply only after reviewing the preflight output:
+
+```powershell
+npx ts-node scripts/apply-reviewed-ch-course-corrections.ts --apply --confirm-reviewed-ch-course-corrections
+```
+
+Apply mode writes an ignored JSON manifest before the transaction. Re-running
+the command is idempotent when the reviewed state is already present.
