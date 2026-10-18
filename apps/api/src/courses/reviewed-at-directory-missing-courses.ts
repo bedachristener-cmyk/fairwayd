@@ -81,16 +81,6 @@ export const REVIEWED_AT_DIRECTORY_MISSING_COURSES: ReviewedAtDirectoryMissingCo
     evidence: 'official operator; one 36-hole facility',
   },
   {
-    name: 'Golfclub Gut Richardhof',
-    searchQuery: 'Golfclub Gut Richardhof Gumpoldskirchen Austria',
-    city: 'Gumpoldskirchen',
-    region: 'Niederösterreich',
-    postalCode: '2352',
-    holes: 9,
-    website: 'https://www.cityandcountry.at/',
-    evidence: 'official operator inventory; distinct physical site',
-  },
-  {
     name: 'Golfclub Kitzbühel – Kaps',
     searchQuery: 'Golfclub Kitzbühel Kaps Ried Kaps 3 Austria',
     city: 'Kitzbühel',
@@ -263,6 +253,10 @@ export const REVIEWED_AT_DIRECTORY_MISSING_COURSES: ReviewedAtDirectoryMissingCo
 ];
 
 export const REVIEWED_AT_DIRECTORY_EXCLUSIONS = [
+  {
+    name: 'Golfclub Gut Richardhof',
+    reason: 'already represented by active Golfclub Richardshof at the same physical facility',
+  },
   {
     name: 'Golfclub Bad Gleichenberg',
     reason: 'operator ended golf-course operations on 2025-12-31',
