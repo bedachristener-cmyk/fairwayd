@@ -453,3 +453,27 @@ The command validates the reviewed definitions, checks database names and
 transaction, updates PostGIS points, verifies the final active count, and is
 idempotent on a second dry-run. Important rejected discovery rows are retained
 as reviewed exclusions in the source definition.
+
+
+## Austria directory completeness audit
+
+Google Places Nearby Search is not a complete national inventory. Facilities
+can be absent when Google categorizes them as a golf school, training facility,
+or another place type. `Golfclub Seefeld-Reith` is the confirmed example: it is
+a separate active nine-hole course from `Golfclub Seefeld-Wildmoos`, but it was
+not returned as a distinct golf-course discovery.
+
+Run the independent read-only directory comparison after every Austrian
+reconciliation:
+
+```powershell
+npx ts-node scripts/audit-austrian-course-inventory.ts
+```
+
+The command downloads the current Austrian directory table, requires at least
+120 parsed rows, compares it with all active AT database courses, and writes
+`course-audits/at-directory-inventory-audit.csv`. It never changes the
+database. `MATCHED` means a conservative name-and-city match. Every `REVIEW`
+row must be checked manually against the operator or regional association before
+an addition, rename, merge, or exclusion is prepared. Directory presence alone
+is not sufficient evidence for a database mutation.
