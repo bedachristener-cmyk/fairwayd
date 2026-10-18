@@ -384,3 +384,31 @@ The same safeguards as batch 1 apply: reviewed-definition validation, name and
 50-metre collision checks, dry-run by default, an ignored JSON manifest before
 the transaction, PostGIS point updates, final active-count verification, and an
 idempotent control run.
+
+
+## Reviewed Austria missing-course additions batch 3
+
+The third additions batch contains ten further current outdoor facilities.
+Historical Golfclub Waidhofen is deliberately excluded: available evidence
+marks the former nine-hole course as closed, while the current site is described
+as a separate three-hole compact training facility and requires its own review.
+
+Open Golf St. Johann is represented once as an 18-hole physical facility
+comprising two nine-hole layouts. The remaining reviewed sites each receive one
+marker.
+
+Dry-run:
+
+```powershell
+npx ts-node scripts/apply-reviewed-at-missing-course-additions-batch-3.ts
+```
+
+After batches 1 and 2, the expected preflight is ten creates with an active AT
+count increasing from 119 to 129. Apply remains separate:
+
+```powershell
+npx ts-node scripts/apply-reviewed-at-missing-course-additions-batch-3.ts --apply --confirm-reviewed-at-missing-course-additions-batch-3
+```
+
+The batch uses the same dry-run, collision, manifest, transaction, PostGIS,
+active-count, and idempotence safeguards as the preceding additions.
