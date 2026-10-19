@@ -47,7 +47,7 @@ export function validateReviewedThBarcelonaValleyCourses(): string[] {
     if (names.has(normalizedName)) errors.push(`duplicate name: ${course.name}`);
     names.add(normalizedName);
 
-    if (!course.expectedNames.includes(course.name)) {
+    if (!(course.expectedNames as readonly string[]).includes(course.name)) {
       errors.push(`final name is not accepted for id=${course.id}`);
     }
     if (
