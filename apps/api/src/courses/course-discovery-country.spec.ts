@@ -17,9 +17,10 @@ function requestCount(country: string): number {
 
 describe('course discovery country configuration', () => {
   it('keeps supported countries explicit and deterministic', () => {
-    expect(supportedCourseDiscoveryCountries()).toEqual(['AT', 'CH', 'TH']);
+    expect(supportedCourseDiscoveryCountries()).toEqual(['AT', 'CH', 'TH', 'TR']);
     expect(courseDiscoveryCountryConfig('at')?.country).toBe('AT');
     expect(courseDiscoveryCountryConfig('th')?.country).toBe('TH');
+    expect(courseDiscoveryCountryConfig('tr')?.country).toBe('TR');
     expect(courseDiscoveryCountryConfig('DE')).toBeNull();
   });
 
@@ -34,5 +35,13 @@ describe('course discovery country configuration', () => {
     expect(config!.areas).toHaveLength(4);
     expect(config!.searchRadiusMeters).toBe(40_000);
     expect(requestCount('TH')).toBe(419);
+  });
+
+  it('covers Turkey nationwide with a bounded request plan', () => {
+    const config = courseDiscoveryCountryConfig('TR');
+    expect(config).not.toBeNull();
+    expect(config!.areas).toHaveLength(1);
+    expect(config!.searchRadiusMeters).toBe(45_000);
+    expect(requestCount('TR')).toBe(390);
   });
 });
