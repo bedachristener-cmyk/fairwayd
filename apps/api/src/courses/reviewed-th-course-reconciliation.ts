@@ -54,12 +54,12 @@ export const REVIEWED_TH_COURSE_UPDATES: ReviewedThCourseUpdate[] = [
   {
     "id": "cmoybno310003a8uw16zmwtu7",
     "expectedName": "Barcelona Valley Golf Club",
-    "newName": "Barcelona Valley Golf Club",
+    "newName": "Barcelona Valley - Valley Course (Rayong Green Valley)",
     "oldLat": 12.8095597,
     "oldLon": 101.0593819,
-    "lat": 12.8136587,
-    "lon": 101.0681114,
-    "evidence": "Current Barcelona Valley facility marker"
+    "lat": 12.813468,
+    "lon": 101.0681995,
+    "evidence": "Current Barcelona Valley Valley Course / former Rayong Green Valley marker"
   },
   {
     "id": "cmlsg0afs010nbkuw5cdb4s3x",
@@ -253,18 +253,6 @@ export const REVIEWED_TH_COURSE_DEACTIVATIONS: ReviewedThCourseDeactivation[] = 
   {
     "id": "cmlsg0c2k012nbkuw1x425hni",
     "expectedName": "Rayong Green Valley",
-    "canonicalId": "cmoybno310003a8uw16zmwtu7",
-    "reason": "layout at Barcelona Valley facility"
-  },
-  {
-    "id": "cmlsg0cp5013gbkuwd9t37q0y",
-    "expectedName": "St. Andrews 2000 Golf Club",
-    "canonicalId": "cmoybno310003a8uw16zmwtu7",
-    "reason": "layout at Barcelona Valley facility"
-  },
-  {
-    "id": "cmoybnp5m001ia8uwnrf3ntyq",
-    "expectedName": "Silky Oak Country Club",
     "canonicalId": "cmoybno310003a8uw16zmwtu7",
     "reason": "layout at Barcelona Valley facility"
   },
