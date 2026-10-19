@@ -34,6 +34,24 @@ if (!apply && confirmed) {
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter, log: ['error'] });
 
+type ExistingAdditionCourse = {
+  id: string;
+  name: string;
+  country: string;
+  city: string | null;
+  region: string | null;
+  holes: number | null;
+  lat: number;
+  lon: number;
+  active: boolean;
+};
+
+type AdditionPlan = {
+  definition: (typeof REVIEWED_TR_COURSE_ADDITIONS)[number];
+  existing: ExistingAdditionCourse | null;
+  action: 'create' | 'reactivate' | 'update-existing' | 'already-present';
+};
+
 function coordinatesMatch(
   actualLat: number,
   actualLon: number,
@@ -176,7 +194,7 @@ async function main() {
   });
 
   const protectedIds = new Set(updateIds);
-  const additionPlans = REVIEWED_TR_COURSE_ADDITIONS.flatMap((definition) => {
+  const additionPlans = REVIEWED_TR_COURSE_ADDITIONS.flatMap<AdditionPlan>((definition) => {
     const existing = additionsByName.get(definition.name);
 
     if (!existing && !definition.sharedFacilityGroup) {
