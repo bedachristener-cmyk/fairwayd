@@ -103,7 +103,11 @@ function isSupportedPostImageFile(file: File) {
   );
 }
 
-const FEED_FILTERS: { value: FeedFilter; icon: string; labelKey: "following" | "golf_courses" | "travel" | "trending" }[] = [
+const FEED_FILTERS: {
+  value: FeedFilter;
+  icon: string;
+  labelKey: "following" | "golf_courses" | "travel" | "trending" | "my_posts";
+}[] = [
   { value: "following", icon: "👥", labelKey: "following" },
   { value: "courses", icon: "⛳", labelKey: "golf_courses" },
   { value: "destinations", icon: "🌍", labelKey: "travel" },
