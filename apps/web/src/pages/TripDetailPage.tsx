@@ -1575,13 +1575,6 @@ function isFlightItem(item: TripItem) {
 }
 
 function tripItemActionStyles(item: TripItem) {
-  if (!isFlightItem(item)) {
-    return {
-      primary: primaryButtonStyle,
-      secondary: secondaryButtonStyle,
-    };
-  }
-
   const accent = calendarItemAccent(item);
   return {
     primary: {
@@ -10181,10 +10174,10 @@ export default function TripDetailPage() {
                                         padding: "8px 10px",
                                         borderRadius: 14,
                                         border: selected
-                                          ? "1px solid var(--accent-strong)"
+                                          ? `1px solid ${accent.border}`
                                           : "1px solid var(--border)",
                                         background: selected
-                                          ? "var(--accent-soft)"
+                                          ? `color-mix(in srgb, ${accent.header} 14%, var(--card))`
                                           : documentIndex % 2 === 0
                                             ? "color-mix(in srgb, var(--card) 78%, var(--bg))"
                                             : "color-mix(in srgb, var(--bg) 88%, var(--card))",
@@ -10355,13 +10348,13 @@ export default function TripDetailPage() {
                                                     padding: "5px 7px",
                                                     borderRadius: 9,
                                                     border: active
-                                                      ? "1px solid var(--accent-strong)"
+                                                      ? `1px solid ${accent.border}`
                                                       : "1px solid transparent",
                                                     background: active
-                                                      ? "var(--accent-soft)"
+                                                      ? `color-mix(in srgb, ${accent.header} 14%, var(--card))`
                                                       : "transparent",
                                                     color: active
-                                                      ? "var(--accent-strong)"
+                                                      ? accent.header
                                                       : "var(--sub)",
                                                     cursor: "pointer",
                                                     font: "inherit",
@@ -10388,7 +10381,7 @@ export default function TripDetailPage() {
                                                   borderRadius: 11,
                                                   border: "1px solid var(--border)",
                                                   background:
-                                                    "color-mix(in srgb, var(--card) 88%, var(--accent-soft))",
+                                                    `color-mix(in srgb, ${accent.header} 10%, var(--card))`,
                                                 }}
                                               >
                                                 <div
@@ -10570,8 +10563,10 @@ export default function TripDetailPage() {
                                 height: 30,
                                 padding: "0 12px",
                                 borderRadius: 999,
-                                border: "1px solid var(--border)",
-                                ...primaryButtonStyle,
+                                border: `1px solid ${accent.border}`,
+                                background: accent.header,
+                                color: accent.headerText,
+                                boxShadow: `0 8px 18px color-mix(in srgb, ${accent.header} 24%, transparent)`,
                                 cursor:
                                   savingItemId === item.id
                                     ? "default"

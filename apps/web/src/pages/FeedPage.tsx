@@ -71,7 +71,8 @@ type Course = {
 
 type CourseRatingMap = Record<string, RatingSummary | null>;
 
-type FeedFilter = "following" | "courses" | "destinations" | "trending";
+type FeedFilter = "following" | "courses" | "destinations" | "trending" | "mine";
+type PostVisibilityFilter = "ALL" | "PUBLIC" | "FOLLOWERS" | "PRIVATE";
 const MAX_POST_IMAGES = 5;
 const SUPPORTED_POST_IMAGE_TYPES = new Set([
   "image/jpeg",
@@ -102,11 +103,30 @@ function isSupportedPostImageFile(file: File) {
   );
 }
 
-const FEED_FILTERS: { value: FeedFilter; icon: string; labelKey: "following" | "golf_courses" | "travel" | "trending" }[] = [
+const FEED_FILTERS: {
+  value: FeedFilter;
+  icon: string;
+  labelKey: "following" | "golf_courses" | "travel" | "trending" | "my_posts";
+}[] = [
   { value: "following", icon: "👥", labelKey: "following" },
+  { value: "mine", icon: "👤", labelKey: "my_posts" },
   { value: "courses", icon: "⛳", labelKey: "golf_courses" },
   { value: "destinations", icon: "🌍", labelKey: "travel" },
   { value: "trending", icon: "🔥", labelKey: "trending" },
+];
+
+const POST_VISIBILITY_FILTERS: {
+  value: PostVisibilityFilter;
+  labelKey:
+    | "all"
+    | "visibility_public"
+    | "visibility_followers"
+    | "visibility_private";
+}[] = [
+  { value: "ALL", labelKey: "all" },
+  { value: "PRIVATE", labelKey: "visibility_private" },
+  { value: "FOLLOWERS", labelKey: "visibility_followers" },
+  { value: "PUBLIC", labelKey: "visibility_public" },
 ];
 
 async function resizeImage(file: File): Promise<File> {
@@ -343,6 +363,8 @@ export default function FeedPage() {
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [feedFilter, setFeedFilter] = useState<FeedFilter>("following");
+  const [postVisibilityFilter, setPostVisibilityFilter] =
+    useState<PostVisibilityFilter>("ALL");
   const [courses, setCourses] = useState<Course[]>([]);
   const [courseRatings, setCourseRatings] = useState<CourseRatingMap>({});
   const [myRatings, setMyRatings] = useState<Record<string, MyRating | null>>(
@@ -524,7 +546,7 @@ export default function FeedPage() {
       setFeedLoading(true);
       setErr(null);
 
-      const res = await fetch(`${API_BASE}/posts/feed`, {
+      const res = await fetch(`${API_BASE}/posts/feed?take=100`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -1143,6 +1165,20 @@ export default function FeedPage() {
   const myUserId = me?.id || user?.id || "";
 
   const filteredPosts = useMemo(() => {
+    if (feedFilter === "mine") {
+      const myPosts = posts.filter(
+        (post) =>
+          post.user.id === "me" ||
+          (!!myUserId && post.user.id === myUserId),
+      );
+
+      if (postVisibilityFilter === "ALL") return myPosts;
+
+      return myPosts.filter(
+        (post) => post.visibility === postVisibilityFilter,
+      );
+    }
+
     if (feedFilter === "following") {
       return posts.filter(
         (post) =>
@@ -1179,6 +1215,7 @@ export default function FeedPage() {
     followedDestinationCodes,
     followedUserIds,
     myUserId,
+    postVisibilityFilter,
     posts,
   ]);
 
@@ -2700,6 +2737,56 @@ export default function FeedPage() {
               })}
             </div>
 
+            {feedFilter === "mine" ? (
+              <div
+                className="fw-post-visibility-filters"
+                aria-label={t("post_visibility_filter")}
+                style={{
+                  display: "flex",
+                  gap: 7,
+                  overflowX: "auto",
+                  maxWidth: "100%",
+                  minWidth: 0,
+                  boxSizing: "border-box",
+                  padding: isMobile ? "0 12px 3px" : "0 0 2px",
+                  scrollbarWidth: "none",
+                  msOverflowStyle: "none",
+                  WebkitOverflowScrolling: "touch",
+                }}
+              >
+                {POST_VISIBILITY_FILTERS.map((filter) => {
+                  const active = postVisibilityFilter === filter.value;
+
+                  return (
+                    <button
+                      key={filter.value}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => setPostVisibilityFilter(filter.value)}
+                      style={{
+                        flex: "0 0 auto",
+                        borderRadius: 999,
+                        border: active
+                          ? "1px solid var(--accent-strong)"
+                          : "1px solid var(--border)",
+                        background: active
+                          ? "color-mix(in srgb, var(--accent) 18%, var(--card))"
+                          : "var(--card)",
+                        color: "var(--text)",
+                        fontSize: 12,
+                        fontWeight: 750,
+                        padding: "8px 12px",
+                        lineHeight: 1,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {t(filter.labelKey)}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+
             {feedLoading && posts.length === 0 ? (
               <FeedCardsSkeleton count={2} />
             ) : null}
@@ -2712,6 +2799,23 @@ export default function FeedPage() {
                 onExploreMap={() => nav("/map")}
                 onCompleteProfile={() => nav("/profile")}
               />
+            ) : null}
+
+            {!feedLoading && posts.length > 0 && filteredPosts.length === 0 ? (
+              <div
+                style={{
+                  margin: isMobile ? "0 12px" : 0,
+                  padding: "20px 16px",
+                  borderRadius: 18,
+                  border: "1px solid var(--border)",
+                  background: "var(--card)",
+                  color: "var(--sub)",
+                  textAlign: "center",
+                  fontSize: 14,
+                }}
+              >
+                {t("no_posts_match_filter")}
+              </div>
             ) : null}
 
             {!feedLoading && filteredPosts.map((p) => {
