@@ -575,6 +575,9 @@ async function main() {
       );
     }
     return transactionActiveAfter;
+  }, {
+    maxWait: 10_000,
+    timeout: 120_000,
   });
 
   console.log(
