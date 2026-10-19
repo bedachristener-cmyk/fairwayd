@@ -1575,13 +1575,6 @@ function isFlightItem(item: TripItem) {
 }
 
 function tripItemActionStyles(item: TripItem) {
-  if (!isFlightItem(item)) {
-    return {
-      primary: primaryButtonStyle,
-      secondary: secondaryButtonStyle,
-    };
-  }
-
   const accent = calendarItemAccent(item);
   return {
     primary: {
