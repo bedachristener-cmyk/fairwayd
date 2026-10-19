@@ -32,6 +32,17 @@ const COUNTRY_CONFIGS: Record<string, CourseDiscoveryCountryConfig> = {
     lonStep: 0.36,
     searchRadiusMeters: 22_000,
   },
+  TR: {
+    country: 'TR',
+    areas: [
+      // Nationwide coverage, including Belek/Antalya, Istanbul, Izmir,
+      // Bodrum, Ankara and the Black Sea golf regions.
+      { minLat: 35.75, maxLat: 42.15, minLon: 25.65, maxLon: 44.85 },
+    ],
+    latStep: 0.52,
+    lonStep: 0.65,
+    searchRadiusMeters: 45_000,
+  },
   TH: {
     country: 'TH',
     areas: [
