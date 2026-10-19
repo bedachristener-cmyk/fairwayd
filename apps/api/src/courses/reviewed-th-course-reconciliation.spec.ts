@@ -23,11 +23,16 @@ describe('reviewed Thailand course reconciliation', () => {
     expect(additions.has('Ingkhayut Borihan Camp Golf Course')).toBe(false);
   });
 
-  it('collapses known multi-layout facilities to one marker', () => {
+  it('keeps independently searchable Barcelona Valley courses separate', () => {
+    const names = new Set(REVIEWED_TH_COURSE_DEACTIVATIONS.map((item) => item.expectedName));
+    expect(names.has('Rayong Green Valley')).toBe(true);
+    expect(names.has('St. Andrews 2000 Golf Club')).toBe(false);
+    expect(names.has('Silky Oak Country Club')).toBe(false);
+  });
+
+  it('still collapses non-searchable facility variants', () => {
     const names = new Set(REVIEWED_TH_COURSE_DEACTIVATIONS.map((item) => item.expectedName));
     expect(names.has('Blue Canyon Country Club (Lakes)')).toBe(true);
-    expect(names.has('St. Andrews 2000 Golf Club')).toBe(true);
-    expect(names.has('Silky Oak Country Club')).toBe(true);
     expect(names.has('Royal Thai Army Golf Club (Old)')).toBe(true);
   });
 });
