@@ -116,6 +116,10 @@ export const STRINGS = {
     visibility_public: "Public",
     visibility_followers: "Followers",
     visibility_private: "Private",
+    all: "All",
+    my_posts: "My posts",
+    post_visibility_filter: "Filter my posts by visibility",
+    no_posts_match_filter: "No posts match this filter.",
 
     // profile
     back: "Back",
@@ -401,6 +405,10 @@ export const STRINGS = {
     visibility_public: "Oeffentlich",
     visibility_followers: "Follower",
     visibility_private: "Privat",
+    all: "Alle",
+    my_posts: "Meine Posts",
+    post_visibility_filter: "Meine Posts nach Sichtbarkeit filtern",
+    no_posts_match_filter: "Keine Posts entsprechen diesem Filter.",
 
     back: "Zurueck",
     edit: "Bearbeiten",
@@ -683,6 +691,10 @@ export const STRINGS = {
     visibility_public: "Public",
     visibility_followers: "Abonnes",
     visibility_private: "Prive",
+    all: "Tous",
+    my_posts: "Mes publications",
+    post_visibility_filter: "Filtrer mes publications par visibilité",
+    no_posts_match_filter: "Aucune publication ne correspond à ce filtre.",
 
     back: "Retour",
     edit: "Modifier",
@@ -964,6 +976,10 @@ export const STRINGS = {
     visibility_public: "Pubblico",
     visibility_followers: "Follower",
     visibility_private: "Privato",
+    all: "Tutti",
+    my_posts: "I miei post",
+    post_visibility_filter: "Filtra i miei post per visibilità",
+    no_posts_match_filter: "Nessun post corrisponde a questo filtro.",
 
     back: "Indietro",
     edit: "Modifica",
@@ -1246,6 +1262,10 @@ export const STRINGS = {
     visibility_public: "Publico",
     visibility_followers: "Seguidores",
     visibility_private: "Privado",
+    all: "Todos",
+    my_posts: "Mis publicaciones",
+    post_visibility_filter: "Filtrar mis publicaciones por visibilidad",
+    no_posts_match_filter: "Ninguna publicación coincide con este filtro.",
 
     back: "Atras",
     edit: "Editar",
@@ -1527,6 +1547,10 @@ export const STRINGS = {
     visibility_public: "공개",
     visibility_followers: "팔로워",
     visibility_private: "비공개",
+    all: "전체",
+    my_posts: "내 게시물",
+    post_visibility_filter: "공개 범위로 내 게시물 필터링",
+    no_posts_match_filter: "이 필터와 일치하는 게시물이 없습니다.",
 
     back: "뒤로",
     edit: "수정",
@@ -1807,6 +1831,10 @@ export const STRINGS = {
     visibility_public: "สาธารณะ",
     visibility_followers: "ผู้ติดตาม",
     visibility_private: "ส่วนตัว",
+    all: "ทั้งหมด",
+    my_posts: "โพสต์ของฉัน",
+    post_visibility_filter: "กรองโพสต์ของฉันตามการมองเห็น",
+    no_posts_match_filter: "ไม่มีโพสต์ที่ตรงกับตัวกรองนี้",
 
     back: "กลับ",
     edit: "แก้ไข",
