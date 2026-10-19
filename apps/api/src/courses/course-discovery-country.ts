@@ -1,11 +1,13 @@
+export type CourseDiscoveryBounds = {
+  minLat: number;
+  maxLat: number;
+  minLon: number;
+  maxLon: number;
+};
+
 export type CourseDiscoveryCountryConfig = {
   country: string;
-  bounds: {
-    minLat: number;
-    maxLat: number;
-    minLon: number;
-    maxLon: number;
-  };
+  areas: CourseDiscoveryBounds[];
   latStep: number;
   lonStep: number;
   searchRadiusMeters: number;
@@ -14,17 +16,37 @@ export type CourseDiscoveryCountryConfig = {
 const COUNTRY_CONFIGS: Record<string, CourseDiscoveryCountryConfig> = {
   CH: {
     country: 'CH',
-    bounds: { minLat: 45.82, maxLat: 47.82, minLon: 5.96, maxLon: 10.5 },
+    areas: [
+      { minLat: 45.82, maxLat: 47.82, minLon: 5.96, maxLon: 10.5 },
+    ],
     latStep: 0.25,
     lonStep: 0.36,
     searchRadiusMeters: 22_000,
   },
   AT: {
     country: 'AT',
-    bounds: { minLat: 46.35, maxLat: 49.05, minLon: 9.45, maxLon: 17.2 },
+    areas: [
+      { minLat: 46.35, maxLat: 49.05, minLon: 9.45, maxLon: 17.2 },
+    ],
     latStep: 0.28,
     lonStep: 0.36,
     searchRadiusMeters: 22_000,
+  },
+  TH: {
+    country: 'TH',
+    areas: [
+      // Northern Thailand, including Chiang Mai, Chiang Rai and Mae Hong Son.
+      { minLat: 16.0, maxLat: 20.6, minLon: 97.2, maxLon: 101.3 },
+      // Central and eastern Thailand, including Bangkok, Hua Hin, Pattaya and Trat.
+      { minLat: 12.5, maxLat: 16.4, minLon: 98.0, maxLon: 102.8 },
+      // Northeastern Thailand.
+      { minLat: 14.0, maxLat: 18.7, minLon: 102.4, maxLon: 105.7 },
+      // Southern peninsula and islands, including Phuket and Ko Samui.
+      { minLat: 5.5, maxLat: 13.0, minLon: 98.0, maxLon: 102.2 },
+    ],
+    latStep: 0.45,
+    lonStep: 0.5,
+    searchRadiusMeters: 40_000,
   },
 };
 

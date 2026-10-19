@@ -45,7 +45,7 @@ Generate Google Places candidates for one country. This performs external API
 requests but never updates the database:
 
 ```powershell
-npx ts-node scripts/google-places-course-review.ts CH 91 --dry-run
+npx ts-node scripts/google-places-course-review.ts CH 91 --dry-run --confirm-google-places-requests
 ```
 
 The generated CSV includes `country`, `candidateRank`, `reviewDecision`,
@@ -532,3 +532,47 @@ npx ts-node scripts/apply-reviewed-at-directory-course-reconciliation.ts `
 Apply writes an ignored JSON manifest before one database transaction, creates
 or reactivates all reviewed facilities, updates every PostGIS point, verifies
 the final active-country count and is idempotent on a second dry-run.
+
+
+## Thailand consolidated review
+
+Thailand is reviewed as one complete country workflow rather than artificial
+addition batches. The database currently contains approximately 249 active TH
+records; the audit command prints the authoritative current count.
+
+Run the database-only audit first:
+
+```powershell
+npx ts-node scripts/audit-course-coordinates.ts --country TH
+```
+
+Review every active Thailand record in one Text Search run:
+
+```powershell
+npx ts-node scripts/google-places-course-review.ts TH all `
+  --dry-run `
+  --confirm-google-places-requests
+```
+
+The command prints the exact active-course and request count before the first
+request and writes `course-audits/th-google-places-candidates.csv`. It never
+updates the database.
+
+Run the independent completeness discovery once:
+
+```powershell
+npx ts-node scripts/google-places-course-discovery.ts TH `
+  --dry-run `
+  --confirm-google-places-requests
+```
+
+The Thailand profile uses four reviewed geographic areas for northern, central
+and eastern, northeastern, and southern Thailand. This covers the country with
+419 Nearby Search requests instead of querying a large rectangular area over
+neighbouring countries and the sea. The output is
+`course-audits/th-google-places-discovery.csv`.
+
+Both reports are read-only. They must be reviewed together to resolve
+coordinates, aliases, closed or invalid records, multi-course facilities, and
+genuinely missing courses. Only then is one final guarded and idempotent
+Thailand reconciliation prepared.

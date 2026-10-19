@@ -170,17 +170,21 @@ async function textSearch(query: string, country: string) {
 
 async function main() {
   const country = norm(process.argv[2]).toUpperCase();
-  const limitArg = Number(process.argv[3] || 10);
+  const limitText = norm(process.argv[3] || '10').toLowerCase();
+  const allCourses = limitText === 'all';
+  const limitArg = Number(limitText);
   const dryRun = process.argv.includes('--dry-run');
+  const confirmed = process.argv.includes('--confirm-google-places-requests');
 
-  if (!country || !dryRun) {
+  if (!country || !dryRun || !confirmed) {
     console.error(
-      'Usage: npx ts-node scripts/google-places-course-review.ts <countryCode> <limit> --dry-run',
+      'Usage: npx ts-node scripts/google-places-course-review.ts <countryCode> <limit|all> --dry-run --confirm-google-places-requests',
     );
     process.exit(1);
   }
 
-  const limit = Number.isFinite(limitArg) && limitArg > 0 ? limitArg : 10;
+  const limit =
+    !allCourses && Number.isFinite(limitArg) && limitArg > 0 ? limitArg : 10;
   const outputPath = path.resolve(
     `course-audits/${country.toLowerCase()}-google-places-candidates.csv`,
   );
@@ -189,7 +193,7 @@ async function main() {
   const courses = await prisma.course.findMany({
     where: { country, active: true },
     orderBy: [{ name: 'asc' }, { city: 'asc' }],
-    take: limit,
+    ...(allCourses ? {} : { take: limit }),
     select: {
       id: true,
       country: true,
@@ -200,6 +204,10 @@ async function main() {
       lon: true,
     },
   });
+
+  console.log(
+    `Read-only course review: country=${country} courses=${courses.length} requests=${courses.length}`,
+  );
 
   const rows = [
     [
