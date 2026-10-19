@@ -79,6 +79,46 @@ function dependencyTotal(course: LoadedCourse): number {
   return Object.values(course._count).reduce((sum, count) => sum + count, 0);
 }
 
+async function migrateDependencies(
+  tx: Prisma.TransactionClient,
+  sourceId: string,
+  canonicalId: string,
+) {
+  const canonicalFollowerUsers = await tx.courseFollow.findMany({
+    where: { courseId: canonicalId },
+    select: { userId: true },
+  });
+  if (canonicalFollowerUsers.length > 0) {
+    await tx.courseFollow.deleteMany({
+      where: {
+        courseId: sourceId,
+        userId: { in: canonicalFollowerUsers.map((item) => item.userId) },
+      },
+    });
+  }
+
+  await tx.courseFollow.updateMany({
+    where: { courseId: sourceId },
+    data: { courseId: canonicalId },
+  });
+  await tx.courseRating.updateMany({
+    where: { courseId: sourceId },
+    data: { courseId: canonicalId },
+  });
+  await tx.review.updateMany({
+    where: { courseId: sourceId },
+    data: { courseId: canonicalId },
+  });
+  await tx.post.updateMany({
+    where: { courseId: sourceId },
+    data: { courseId: canonicalId },
+  });
+  await tx.tripItem.updateMany({
+    where: { courseId: sourceId },
+    data: { courseId: canonicalId },
+  });
+}
+
 async function updateLocation(
   tx: Prisma.TransactionClient,
   courseId: string,
@@ -212,6 +252,56 @@ async function main() {
       .map((plan) => plan.course.id),
   );
 
+  for (const plan of deactivationPlans) {
+    if (
+      plan.action === 'deactivate' &&
+      dependencyTotal(plan.course) > 0 &&
+      !plan.definition.canonicalId
+    ) {
+      preflightErrors.push(
+        `Cannot deactivate used non-course without canonical target: "${plan.course.name}" dependencies=${dependencyTotal(plan.course)}`,
+      );
+      continue;
+    }
+    if (plan.action !== 'deactivate' || !plan.definition.canonicalId) continue;
+
+    const [sourceRatings, sourceReviews] = await Promise.all([
+      prisma.courseRating.findMany({
+        where: { courseId: plan.course.id },
+        select: { userId: true },
+      }),
+      prisma.review.findMany({
+        where: { courseId: plan.course.id },
+        select: { userId: true },
+      }),
+    ]);
+
+    const [ratingConflicts, reviewConflicts] = await Promise.all([
+      sourceRatings.length === 0
+        ? Promise.resolve(0)
+        : prisma.courseRating.count({
+            where: {
+              courseId: plan.definition.canonicalId,
+              userId: { in: sourceRatings.map((item) => item.userId) },
+            },
+          }),
+      sourceReviews.length === 0
+        ? Promise.resolve(0)
+        : prisma.review.count({
+            where: {
+              courseId: plan.definition.canonicalId,
+              userId: { in: sourceReviews.map((item) => item.userId) },
+            },
+          }),
+    ]);
+
+    if (ratingConflicts > 0 || reviewConflicts > 0) {
+      preflightErrors.push(
+        `Dependency migration conflict for "${plan.course.name}": ratings=${ratingConflicts} reviews=${reviewConflicts}`,
+      );
+    }
+  }
+
   const additionPlans: Array<{
     existing: LoadedCourse | null;
     definition: (typeof REVIEWED_TH_COURSE_ADDITIONS)[number];
@@ -334,11 +424,13 @@ async function main() {
 
   const blocked = deactivationPlans.filter(
     (plan) =>
-      plan.action === 'deactivate' && dependencyTotal(plan.course) > 0,
+      plan.action === 'deactivate' &&
+      dependencyTotal(plan.course) > 0 &&
+      !plan.definition.canonicalId,
   );
   if (blocked.length > 0) {
     throw new Error(
-      `Apply blocked: deactivation dependencies must be reviewed first: ${blocked
+      `Apply blocked: used non-course records have no canonical target: ${blocked
         .map((plan) => `${plan.course.name}=${dependencyTotal(plan.course)}`)
         .join(', ')}`,
     );
@@ -401,6 +493,16 @@ async function main() {
 
     for (const plan of deactivationPlans) {
       if (plan.action !== 'deactivate') continue;
+      if (
+        plan.definition.canonicalId &&
+        dependencyTotal(plan.course) > 0
+      ) {
+        await migrateDependencies(
+          tx,
+          plan.course.id,
+          plan.definition.canonicalId,
+        );
+      }
       await tx.course.update({
         where: { id: plan.course.id },
         data: {
