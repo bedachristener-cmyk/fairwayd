@@ -109,10 +109,10 @@ const FEED_FILTERS: {
   labelKey: "following" | "golf_courses" | "travel" | "trending" | "my_posts";
 }[] = [
   { value: "following", icon: "👥", labelKey: "following" },
+  { value: "mine", icon: "👤", labelKey: "my_posts" },
   { value: "courses", icon: "⛳", labelKey: "golf_courses" },
   { value: "destinations", icon: "🌍", labelKey: "travel" },
   { value: "trending", icon: "🔥", labelKey: "trending" },
-  { value: "mine", icon: "👤", labelKey: "my_posts" },
 ];
 
 const POST_VISIBILITY_FILTERS: {
@@ -546,7 +546,7 @@ export default function FeedPage() {
       setFeedLoading(true);
       setErr(null);
 
-      const res = await fetch(`${API_BASE}/posts/feed`, {
+      const res = await fetch(`${API_BASE}/posts/feed?take=100`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
