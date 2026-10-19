@@ -38,6 +38,15 @@ if (!googleApiKey) {
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter, log: ['error'] });
 const MAX_RESULTS_PER_CELL = 20;
+const MAX_GOOGLE_REQUEST_ATTEMPTS = 6;
+const GOOGLE_REQUEST_DELAY_MS = 300;
+const GOOGLE_RETRY_BASE_DELAY_MS = 2_000;
+const GOOGLE_RETRY_MAX_DELAY_MS = 30_000;
+const RETRYABLE_GOOGLE_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
+
+function sleep(milliseconds: number) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
 
 type AddressComponent = {
   longText?: string;
@@ -93,36 +102,41 @@ async function nearbySearch(
   country: string,
   searchRadiusMeters: number,
 ) {
-  const response = await fetch(
-    'https://places.googleapis.com/v1/places:searchNearby',
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': googleApiKey as string,
-        'X-Goog-FieldMask':
-          'places.id,places.displayName,places.formattedAddress,places.addressComponents,places.location,places.googleMapsUri',
-      },
-      body: JSON.stringify({
-        includedTypes: ['golf_course'],
-        maxResultCount: MAX_RESULTS_PER_CELL,
-        rankPreference: 'DISTANCE',
-        languageCode: 'en',
-        regionCode: country,
-        locationRestriction: {
-          circle: {
-            center: {
-              latitude: center.lat,
-              longitude: center.lon,
-            },
-            radius: searchRadiusMeters,
-          },
+  for (let attempt = 1; attempt <= MAX_GOOGLE_REQUEST_ATTEMPTS; attempt++) {
+    const response = await fetch(
+      'https://places.googleapis.com/v1/places:searchNearby',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': googleApiKey as string,
+          'X-Goog-FieldMask':
+            'places.id,places.displayName,places.formattedAddress,places.addressComponents,places.location,places.googleMapsUri',
         },
-      }),
-    },
-  );
+        body: JSON.stringify({
+          includedTypes: ['golf_course'],
+          maxResultCount: MAX_RESULTS_PER_CELL,
+          rankPreference: 'DISTANCE',
+          languageCode: 'en',
+          regionCode: country,
+          locationRestriction: {
+            circle: {
+              center: {
+                latitude: center.lat,
+                longitude: center.lon,
+              },
+              radius: searchRadiusMeters,
+            },
+          },
+        }),
+      },
+    );
 
-  if (!response.ok) {
+    if (response.ok) {
+      const body = (await response.json()) as { places?: GooglePlace[] };
+      return Array.isArray(body.places) ? body.places : [];
+    }
+
     let detail = response.statusText || 'request rejected';
     try {
       const body = (await response.json()) as {
@@ -134,13 +148,28 @@ async function nearbySearch(
     } catch {
       // Keep the HTTP status text when Google did not return JSON.
     }
-    throw new Error(
-      `Google Places request failed: ${response.status} ${detail}`,
+
+    const message = `Google Places request failed: ${response.status} ${detail}`;
+    const retryable = RETRYABLE_GOOGLE_STATUS_CODES.has(response.status);
+    if (!retryable || attempt === MAX_GOOGLE_REQUEST_ATTEMPTS) {
+      throw new Error(message);
+    }
+
+    const retryAfterSeconds = Number(response.headers.get('retry-after'));
+    const delayMilliseconds = Number.isFinite(retryAfterSeconds)
+      ? Math.max(retryAfterSeconds * 1_000, GOOGLE_RETRY_BASE_DELAY_MS)
+      : Math.min(
+          GOOGLE_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1),
+          GOOGLE_RETRY_MAX_DELAY_MS,
+        );
+
+    console.warn(
+      `${message}; retry ${attempt + 1}/${MAX_GOOGLE_REQUEST_ATTEMPTS} in ${Math.round(delayMilliseconds / 1_000)}s`,
     );
+    await sleep(delayMilliseconds);
   }
 
-  const body = (await response.json()) as { places?: GooglePlace[] };
-  return Array.isArray(body.places) ? body.places : [];
+  throw new Error('Google Places request failed after retries');
 }
 
 async function main() {
@@ -210,6 +239,10 @@ async function main() {
       console.log(
         `Queried ${index + 1}/${centers.length} cells; unique_${country}_places=${placesById.size}`,
       );
+    }
+
+    if (index + 1 < centers.length) {
+      await sleep(GOOGLE_REQUEST_DELAY_MS);
     }
   }
 
