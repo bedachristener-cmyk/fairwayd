@@ -27,6 +27,9 @@ type Course = {
   region?: string | null;
   country?: string | null;
   website?: string | null;
+  phone?: string | null;
+  postalCode?: string | null;
+  description?: string | null;
   holes?: number | null;
   par?: number | null;
   access?: string | null;
@@ -873,6 +876,12 @@ export default function CoursesMap() {
               .filter(Boolean)
               .join(", ");
             const websiteUrl = normalizeWebsite(c.website);
+            const addressLine = [c.postalCode, c.city, c.region, c.country]
+              .filter(Boolean)
+              .join(", ");
+            const hasCourseDetails = Boolean(
+              websiteUrl || c.phone || c.postalCode || c.description,
+            );
             const golfMeta = [c.holes ? `${c.holes} ${t("holes")}` : null, c.par ? `Par ${c.par}` : null]
               .filter(Boolean)
               .join(" / ");
@@ -1106,24 +1115,73 @@ export default function CoursesMap() {
                     </a>
                   </div>
 
-                  {websiteUrl ? (
-                    <a
-                      href={websiteUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      onMouseDown={stopBtn}
-                      onClick={(e) => e.stopPropagation()}
+                  {hasCourseDetails ? (
+                    <details
+                      onMouseDown={(event) => event.stopPropagation()}
+                      onClick={(event) => event.stopPropagation()}
                       style={{
-                        color: "var(--green)",
-                        fontSize: 12,
-                        fontWeight: 800,
-                        lineHeight: 1.35,
-                        textAlign: "center",
-                        textDecoration: "none",
+                        borderTop: "1px solid var(--border)",
+                        paddingTop: 9,
                       }}
                     >
-                      {t("visit_website")}
-                    </a>
+                      <summary
+                        style={{
+                          color: "var(--text)",
+                          cursor: "pointer",
+                          fontSize: 12,
+                          fontWeight: 850,
+                          listStylePosition: "inside",
+                          textAlign: "center",
+                        }}
+                      >
+                        {t("more_information")}
+                      </summary>
+
+                      <div
+                        style={{
+                          display: "grid",
+                          gap: 8,
+                          marginTop: 9,
+                          padding: "9px 10px",
+                          borderRadius: 14,
+                          background: "var(--muted)",
+                          color: "var(--sub)",
+                          fontSize: 12,
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {addressLine ? (
+                          <div>
+                            <strong style={{ color: "var(--text)" }}>
+                              {t("address")}:
+                            </strong>{" "}
+                            {addressLine}
+                          </div>
+                        ) : null}
+
+                        {c.phone ? (
+                          <a
+                            href={`tel:${c.phone.replace(/[^+\\d]/g, "")}`}
+                            style={{ color: "var(--green)", fontWeight: 800 }}
+                          >
+                            {t("phone")}: {c.phone}
+                          </a>
+                        ) : null}
+
+                        {websiteUrl ? (
+                          <a
+                            href={websiteUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ color: "var(--green)", fontWeight: 800 }}
+                          >
+                            {t("visit_website")}
+                          </a>
+                        ) : null}
+
+                        {c.description ? <div>{c.description}</div> : null}
+                      </div>
+                    </details>
                   ) : null}
                 </div>
               </Popup>
