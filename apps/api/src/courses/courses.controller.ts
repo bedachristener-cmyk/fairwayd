@@ -11,12 +11,16 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CoursesService } from './courses.service';
+import { CourseContoursService } from './course-contours.service';
 import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('courses')
 @Controller('courses')
 export class CoursesController {
-  constructor(private readonly coursesService: CoursesService) {}
+  constructor(
+    private readonly coursesService: CoursesService,
+    private readonly courseContoursService: CourseContoursService,
+  ) {}
 
   @Get()
   async findAll() {
@@ -56,6 +60,24 @@ export class CoursesController {
       country,
       region,
       take: Math.min(parseInt(take || '1000', 10) || 1000, 5000),
+    });
+  }
+
+  @Get('contours/in-bounds')
+  @ApiOperation({
+    summary: 'Load OpenStreetMap golf contours for a small map viewport',
+  })
+  async contoursInBounds(
+    @Query('minLat') minLat?: string,
+    @Query('maxLat') maxLat?: string,
+    @Query('minLon') minLon?: string,
+    @Query('maxLon') maxLon?: string,
+  ) {
+    return this.courseContoursService.inBounds({
+      minLat: Number(minLat),
+      maxLat: Number(maxLat),
+      minLon: Number(minLon),
+      maxLon: Number(maxLon),
     });
   }
 
