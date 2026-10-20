@@ -374,6 +374,151 @@ function ClusteredCourseMarkers({
   return null;
 }
 
+
+type CourseContourResponse = {
+  type: "FeatureCollection";
+  features: Array<{
+    type: "Feature";
+    id: string;
+    properties: {
+      kind: "course" | "fairway" | "green" | "tee" | "bunker";
+      name: string | null;
+    };
+    geometry: {
+      type: "Polygon";
+      coordinates: number[][][];
+    };
+  }>;
+  attribution: string;
+  cached: boolean;
+};
+
+function CourseContoursLayer() {
+  const map = useMap();
+  const layerRef = useRef<L.GeoJSON | null>(null);
+  const requestSequenceRef = useRef(0);
+
+  useEffect(() => {
+    let debounceTimer: number | null = null;
+    let disposed = false;
+
+    const removeLayer = () => {
+      if (!layerRef.current) return;
+      map.removeLayer(layerRef.current);
+      layerRef.current = null;
+    };
+
+    const loadContours = async () => {
+      if (map.getZoom() < 14) {
+        requestSequenceRef.current += 1;
+        removeLayer();
+        return;
+      }
+
+      const bounds = map.getBounds();
+      const requestSequence = ++requestSequenceRef.current;
+
+      try {
+        const data = await apiGet<CourseContourResponse>(
+          "/courses/contours/in-bounds",
+          {
+            query: {
+              minLat: bounds.getSouth().toFixed(6),
+              maxLat: bounds.getNorth().toFixed(6),
+              minLon: bounds.getWest().toFixed(6),
+              maxLon: bounds.getEast().toFixed(6),
+            },
+          },
+        );
+
+        if (disposed || requestSequence !== requestSequenceRef.current) return;
+
+        removeLayer();
+        if (!Array.isArray(data.features) || data.features.length === 0) return;
+
+        layerRef.current = L.geoJSON(data as any, {
+          interactive: false,
+          style: (feature) => {
+            const kind = feature?.properties?.kind;
+
+            if (kind === "bunker") {
+              return {
+                color: "#b58b45",
+                weight: 1,
+                fillColor: "#e7c77f",
+                fillOpacity: 0.5,
+              };
+            }
+            if (kind === "green") {
+              return {
+                color: "#1f8a3b",
+                weight: 1,
+                fillColor: "#57c96f",
+                fillOpacity: 0.42,
+              };
+            }
+            if (kind === "tee") {
+              return {
+                color: "#266f38",
+                weight: 1,
+                fillColor: "#80c98d",
+                fillOpacity: 0.4,
+              };
+            }
+            if (kind === "fairway") {
+              return {
+                color: "#2f8c45",
+                weight: 1,
+                fillColor: "#66b978",
+                fillOpacity: 0.27,
+              };
+            }
+
+            return {
+              color: "#167a35",
+              weight: 2,
+              fillColor: "#2e9d50",
+              fillOpacity: 0.06,
+              dashArray: "6 4",
+            };
+          },
+        }).addTo(map);
+      } catch (error) {
+        if (!disposed && requestSequence === requestSequenceRef.current) {
+          removeLayer();
+          console.debug("Golf contours unavailable", error);
+        }
+      }
+    };
+
+    const scheduleLoad = () => {
+      if (debounceTimer !== null) window.clearTimeout(debounceTimer);
+      debounceTimer = window.setTimeout(loadContours, 450);
+    };
+
+    map.attributionControl.addAttribution(
+      '&copy; OpenStreetMap contributors (golf contours)',
+    );
+    map.on("moveend", scheduleLoad);
+    map.on("zoomend", scheduleLoad);
+    scheduleLoad();
+
+    return () => {
+      disposed = true;
+      requestSequenceRef.current += 1;
+      if (debounceTimer !== null) window.clearTimeout(debounceTimer);
+      map.off("moveend", scheduleLoad);
+      map.off("zoomend", scheduleLoad);
+      map.attributionControl.removeAttribution(
+        '&copy; OpenStreetMap contributors (golf contours)',
+      );
+      removeLayer();
+    };
+  }, [map]);
+
+  return null;
+}
+
 export default function CoursesMap() {
   useEffect(() => {
     localStorage.removeItem("fairwayd-map-view");
@@ -840,6 +985,7 @@ export default function CoursesMap() {
 
         <FixLeafletSize />
         <PersistMapView />
+        <CourseContoursLayer />
 
         <FitToData
           userPos={userPos}
