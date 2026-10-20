@@ -18,6 +18,7 @@ type CacheEntry = {
 };
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
+const SWISS_OVERPASS_ENDPOINT = 'https://overpass.osm.ch/api/interpreter';
 const DEFAULT_OVERPASS_ENDPOINTS = [
   'https://overpass.kumi.systems/api/interpreter',
   'https://overpass-api.de/api/interpreter',
@@ -50,6 +51,7 @@ export class CourseContoursService {
     try {
       const payload = await this.fetchPayload(
         buildCourseContourOverpassQuery(bounds),
+        bounds,
       );
       const features = parseCourseContourFeatures(payload);
 
@@ -68,11 +70,16 @@ export class CourseContoursService {
     }
   }
 
-  private async fetchPayload(query: string): Promise<OverpassPayload> {
+  private async fetchPayload(
+    query: string,
+    bounds: CourseContourBounds,
+  ): Promise<OverpassPayload> {
     const configuredEndpoint = process.env.OSM_OVERPASS_ENDPOINT?.trim();
     const endpoints = configuredEndpoint
       ? [configuredEndpoint]
-      : DEFAULT_OVERPASS_ENDPOINTS;
+      : this.isSwissViewport(bounds)
+        ? [SWISS_OVERPASS_ENDPOINT, ...DEFAULT_OVERPASS_ENDPOINTS]
+        : DEFAULT_OVERPASS_ENDPOINTS;
     const failures: string[] = [];
 
     for (const endpoint of endpoints) {
@@ -105,6 +112,18 @@ export class CourseContoursService {
     }
 
     throw new Error(failures.join('; '));
+  }
+
+  private isSwissViewport(bounds: CourseContourBounds): boolean {
+    const centerLat = (bounds.minLat + bounds.maxLat) / 2;
+    const centerLon = (bounds.minLon + bounds.maxLon) / 2;
+
+    return (
+      centerLat >= 45.7 &&
+      centerLat <= 47.9 &&
+      centerLon >= 5.8 &&
+      centerLon <= 10.7
+    );
   }
 
   private response(features: CourseContourFeature[], cached: boolean) {
