@@ -14,6 +14,21 @@ export type CourseDiscoveryCountryConfig = {
 };
 
 const COUNTRY_CONFIGS: Record<string, CourseDiscoveryCountryConfig> = {
+  AE: {
+    country: 'AE',
+    areas: [
+      // Abu Dhabi and the western coastal corridor.
+      { minLat: 23.8, maxLat: 25.1, minLon: 52.5, maxLon: 55.0 },
+      // Dubai and the northern emirates, including Sharjah, Ajman,
+      // Umm Al Quwain, Ras Al Khaimah and Fujairah.
+      { minLat: 24.5, maxLat: 26.2, minLon: 54.7, maxLon: 56.6 },
+      // Al Ain and the eastern inland corridor.
+      { minLat: 23.8, maxLat: 24.6, minLon: 55.2, maxLon: 56.1 },
+    ],
+    latStep: 0.25,
+    lonStep: 0.3,
+    searchRadiusMeters: 22_000,
+  },
   CH: {
     country: 'CH',
     areas: [
