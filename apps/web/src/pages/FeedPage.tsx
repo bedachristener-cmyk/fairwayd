@@ -2871,36 +2871,114 @@ export default function FeedPage() {
                 aria-label={t("saved_posts")}
                 style={{
                   display: "flex",
-                  gap: 7,
+                  gap: 11,
                   overflowX: "auto",
-                  padding: isMobile ? "0 12px 3px" : "0 0 2px",
+                  padding: isMobile ? "2px 12px 6px" : "2px 0 7px",
                   scrollbarWidth: "none",
+                  scrollSnapType: "x proximity",
                 }}
               >
-                {collections.map((collection) => {
+                {collections.map((collection, index) => {
                   const active = selectedCollectionId === collection.id;
+                  const cover = collection.coverImageUrl
+                    ? fileUrl(collection.coverImageUrl)
+                    : null;
                   return (
                     <button
                       key={collection.id}
                       type="button"
+                      aria-pressed={active}
                       onClick={() => setSelectedCollectionId(collection.id)}
                       style={{
-                        flex: "0 0 auto",
-                        borderRadius: 999,
+                        position: "relative",
+                        flex: isMobile ? "0 0 148px" : "0 0 172px",
+                        aspectRatio: "1.42 / 1",
+                        overflow: "hidden",
+                        scrollSnapAlign: "start",
+                        borderRadius: 18,
                         border: active
-                          ? "1px solid var(--accent-strong)"
-                          : "1px solid var(--border)",
-                        background: active
-                          ? "color-mix(in srgb, var(--accent) 18%, var(--card))"
-                          : "var(--card)",
-                        color: "var(--text)",
-                        fontSize: 12,
-                        fontWeight: 800,
-                        padding: "8px 12px",
+                          ? "2px solid var(--accent-strong)"
+                          : "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
+                        background: cover
+                          ? `url("${cover}") center / cover no-repeat`
+                          : index % 3 === 0
+                            ? "linear-gradient(145deg, #315b48, #152d25)"
+                            : index % 3 === 1
+                              ? "linear-gradient(145deg, #496274, #202e39)"
+                              : "linear-gradient(145deg, #725c44, #33281e)",
+                        color: "#fff",
+                        padding: 0,
                         cursor: "pointer",
+                        textAlign: "left",
+                        boxShadow: active
+                          ? "0 9px 24px color-mix(in srgb, var(--accent) 24%, transparent)"
+                          : "0 7px 18px rgba(0,0,0,.10)",
+                        transform: active ? "translateY(-1px)" : "none",
+                        transition:
+                          "transform .16s ease, border-color .16s ease, box-shadow .16s ease",
                       }}
                     >
-                      {collection.name} · {collection.postCount}
+                      <span
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          background:
+                            "linear-gradient(180deg, rgba(0,0,0,.02) 20%, rgba(0,0,0,.78) 100%)",
+                        }}
+                      />
+                      {active ? (
+                        <span
+                          style={{
+                            position: "absolute",
+                            top: 9,
+                            right: 9,
+                            width: 25,
+                            height: 25,
+                            borderRadius: 999,
+                            display: "grid",
+                            placeItems: "center",
+                            background: "var(--accent-strong)",
+                            border: "1px solid rgba(255,255,255,.9)",
+                            color: "#fff",
+                            fontSize: 13,
+                            fontWeight: 950,
+                          }}
+                        >
+                          ✓
+                        </span>
+                      ) : null}
+                      <span
+                        style={{
+                          position: "absolute",
+                          left: 12,
+                          right: 12,
+                          bottom: 10,
+                          display: "grid",
+                          gap: 3,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 900,
+                            lineHeight: 1.15,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            textShadow: "0 1px 4px rgba(0,0,0,.4)",
+                          }}
+                        >
+                          {collection.name}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: "rgba(255,255,255,.78)",
+                          }}
+                        >
+                          {collection.postCount}
+                        </span>
+                      </span>
                     </button>
                   );
                 })}
