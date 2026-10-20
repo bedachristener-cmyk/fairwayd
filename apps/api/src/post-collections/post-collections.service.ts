@@ -73,6 +73,27 @@ export class PostCollectionsService {
               items: true,
             },
           },
+          items: {
+            where: {
+              post: visiblePostWhere(ownerId),
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+            take: 1,
+            select: {
+              post: {
+                select: {
+                  images: {
+                    take: 1,
+                    select: {
+                      url: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       }),
       normalizedPostId
@@ -101,6 +122,7 @@ export class PostCollectionsService {
         createdAt: collection.createdAt,
         updatedAt: collection.updatedAt,
         postCount: collection._count.items,
+        coverImageUrl: collection.items[0]?.post.images[0]?.url ?? null,
         saved: savedCollectionIds.has(collection.id),
       })),
     };
