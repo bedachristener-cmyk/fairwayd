@@ -10,7 +10,7 @@ export const REVIEWED_AE_COURSE_INVENTORY_TARGETS: ReviewedAeCourseInventoryTarg
   { name: 'Abu Dhabi Golf Club - National Course', query: 'Abu Dhabi Golf Club National Course United Arab Emirates', expectedHoles: 18, category: 'ABU_DHABI' },
   { name: 'Abu Dhabi Golf Club - Garden Course', query: 'Abu Dhabi Golf Club Garden Course United Arab Emirates', expectedHoles: 9, category: 'ABU_DHABI' },
   { name: 'Al Ain Equestrian, Shooting & Golf Club', query: 'Al Ain Equestrian Shooting Golf Club United Arab Emirates', expectedHoles: 27, category: 'ABU_DHABI' },
-  { name: 'Al Dhafra Golf Club', query: 'Al Dhafra Golf Club Madinat Zayed United Arab Emirates', expectedHoles: 18, category: 'ABU_DHABI' },
+  { name: 'Al Dhafra Golf Club', query: 'Al Dhafra Golf Club Al Ruwais Jebel Dhanna United Arab Emirates', expectedHoles: 9, category: 'ABU_DHABI' },
   { name: 'Al Dhannah Golf Club', query: 'Al Dhannah Golf Club United Arab Emirates', expectedHoles: 9, category: 'ABU_DHABI' },
   { name: 'Al Ghazal Golf Club', query: 'Al Ghazal Golf Club Abu Dhabi United Arab Emirates', expectedHoles: 18, category: 'ABU_DHABI' },
   { name: 'Saadiyat Beach Golf Club', query: 'Saadiyat Beach Golf Club United Arab Emirates', expectedHoles: 18, category: 'ABU_DHABI' },
