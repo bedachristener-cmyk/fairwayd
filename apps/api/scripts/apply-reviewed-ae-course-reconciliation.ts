@@ -118,7 +118,7 @@ async function main() {
       region: true,
       holes: true,
       website: true,
-      lat: true;
+      lat: true,
       lon: true,
       active: true,
     },
