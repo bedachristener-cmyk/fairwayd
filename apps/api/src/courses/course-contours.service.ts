@@ -18,9 +18,10 @@ type CacheEntry = {
 };
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
-const OVERPASS_ENDPOINT =
-  process.env.OSM_OVERPASS_ENDPOINT ||
-  'https://overpass-api.de/api/interpreter';
+const DEFAULT_OVERPASS_ENDPOINTS = [
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass-api.de/api/interpreter',
+];
 
 @Injectable()
 export class CourseContoursService {
@@ -46,27 +47,10 @@ export class CourseContoursService {
       return this.response(cached.features, true);
     }
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 18_000);
-
     try {
-      const response = await fetch(OVERPASS_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-          'User-Agent': 'Fairwayd/1.0 golf-course-contours-poc',
-        },
-        body: new URLSearchParams({
-          data: buildCourseContourOverpassQuery(bounds),
-        }),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Overpass returned HTTP ${response.status}`);
-      }
-
-      const payload = (await response.json()) as OverpassPayload;
+      const payload = await this.fetchPayload(
+        buildCourseContourOverpassQuery(bounds),
+      );
       const features = parseCourseContourFeatures(payload);
 
       this.cache.set(cacheKey, {
@@ -81,9 +65,46 @@ export class CourseContoursService {
       throw new BadGatewayException(
         `Golf contour source is temporarily unavailable: ${message}`,
       );
-    } finally {
-      clearTimeout(timeout);
     }
+  }
+
+  private async fetchPayload(query: string): Promise<OverpassPayload> {
+    const configuredEndpoint = process.env.OSM_OVERPASS_ENDPOINT?.trim();
+    const endpoints = configuredEndpoint
+      ? [configuredEndpoint]
+      : DEFAULT_OVERPASS_ENDPOINTS;
+    const failures: string[] = [];
+
+    for (const endpoint of endpoints) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 18_000);
+
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+            'User-Agent': 'Fairwayd/1.0 golf-course-contours-poc',
+          },
+          body: new URLSearchParams({ data: query }),
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        return (await response.json()) as OverpassPayload;
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'unknown failure';
+        failures.push(`${endpoint}: ${message}`);
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
+    throw new Error(failures.join('; '));
   }
 
   private response(features: CourseContourFeature[], cached: boolean) {
