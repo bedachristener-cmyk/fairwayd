@@ -42,6 +42,7 @@ type ExistingCourse = {
   city: string | null;
   region: string | null;
   holes: number | null;
+  website: string | null;
   lat: number;
   lon: number;
   active: boolean;
@@ -116,7 +117,8 @@ async function main() {
       city: true,
       region: true,
       holes: true,
-      lat: true,
+      website: true,
+      lat: true;
       lon: true,
       active: true,
     },
@@ -148,6 +150,7 @@ async function main() {
       course.city === definition.city &&
       course.region === definition.region &&
       course.holes === definition.holes &&
+      course.website === definition.website &&
       coordinatesMatch(course.lat, course.lon, definition.lat, definition.lon) &&
       course.active;
     const action = finalState
@@ -197,6 +200,7 @@ async function main() {
         existing.city === definition.city &&
         existing.region === definition.region &&
         existing.holes === definition.holes &&
+        existing.website === definition.website &&
         coordinatesMatch(
           existing.lat,
           existing.lon,
@@ -357,6 +361,7 @@ async function main() {
             city: plan.definition.city,
             region: plan.definition.region,
             holes: plan.definition.holes,
+            website: plan.definition.website,
             lat: plan.definition.lat,
             lon: plan.definition.lon,
             active: true,
@@ -386,6 +391,7 @@ async function main() {
               city: plan.definition.city,
               region: plan.definition.region,
               holes: plan.definition.holes,
+              website: plan.definition.website,
               lat: plan.definition.lat,
               lon: plan.definition.lon,
               active: true,
@@ -405,6 +411,7 @@ async function main() {
               city: plan.definition.city,
               region: plan.definition.region,
               holes: plan.definition.holes,
+              website: plan.definition.website,
               lat: plan.definition.lat,
               lon: plan.definition.lon,
               active: true,
