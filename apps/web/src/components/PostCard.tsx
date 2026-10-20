@@ -67,6 +67,8 @@ type PostCardProps = {
   onSelectCourse?: () => void;
   onCommentClick?: (postId: string) => void;
   onOpenPost?: (postId: string) => void;
+  onSaveClick?: (postId: string) => void;
+  saved?: boolean;
   courseFollowed?: boolean;
   courseFollowBusy?: boolean;
   onCourseFollowToggle?: (courseId: string) => void;
@@ -84,6 +86,8 @@ export default function PostCard({
   onSelectCourse,
   onCommentClick,
   onOpenPost,
+  onSaveClick,
+  saved = false,
   courseFollowed,
   courseFollowBusy,
   onCourseFollowToggle,
@@ -1471,6 +1475,43 @@ export default function PostCard({
         >
           {isMobile ? `💬 ${commentCount}` : `💬 ${t("comments")} ${commentCount}`}
         </button>
+
+        {onSaveClick ? (
+          <button
+            type="button"
+            className="fw-pill fw-pill--meta fw-pill--info"
+            style={{
+              ...actionButtonStyle,
+              color: saved ? "var(--accent-strong)" : "var(--sub)",
+              background: saved
+                ? "color-mix(in srgb, var(--accent) 12%, var(--card))"
+                : "var(--card)",
+            }}
+            aria-pressed={saved}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSaveClick(post.id);
+            }}
+            title={t("save_post")}
+          >
+            <svg
+              width="17"
+              height="17"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              style={{ display: "block" }}
+            >
+              <path
+                d="M6.5 4.75c0-.97.78-1.75 1.75-1.75h7.5c.97 0 1.75.78 1.75 1.75V21l-5.5-3.45L6.5 21V4.75Z"
+                fill={saved ? "currentColor" : "none"}
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinejoin="round"
+              />
+            </svg>
+            {!isMobile ? t("save") : null}
+          </button>
+        ) : null}
 
         <button
           type="button"
