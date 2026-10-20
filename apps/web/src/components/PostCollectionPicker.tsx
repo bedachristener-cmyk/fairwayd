@@ -164,7 +164,7 @@ export default function PostCollectionPicker({
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 500,
+        zIndex: 2147483000,
         background: "rgba(8,12,10,.58)",
         backdropFilter: "blur(5px)",
         display: "flex",
