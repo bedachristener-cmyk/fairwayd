@@ -446,7 +446,7 @@ function CourseContoursLayer() {
                 color: "#b58b45",
                 weight: 1,
                 fillColor: "#e7c77f",
-                fillOpacity: 0.5,
+                fillOpacity: 0.38,
               };
             }
             if (kind === "green") {
@@ -454,7 +454,7 @@ function CourseContoursLayer() {
                 color: "#1f8a3b",
                 weight: 1,
                 fillColor: "#57c96f",
-                fillOpacity: 0.42,
+                fillOpacity: 0.28,
               };
             }
             if (kind === "tee") {
@@ -462,7 +462,7 @@ function CourseContoursLayer() {
                 color: "#266f38",
                 weight: 1,
                 fillColor: "#80c98d",
-                fillOpacity: 0.4,
+                fillOpacity: 0.25,
               };
             }
             if (kind === "fairway") {
@@ -470,7 +470,7 @@ function CourseContoursLayer() {
                 color: "#2f8c45",
                 weight: 1,
                 fillColor: "#66b978",
-                fillOpacity: 0.27,
+                fillOpacity: 0.15,
               };
             }
 
@@ -478,7 +478,7 @@ function CourseContoursLayer() {
               color: "#167a35",
               weight: 2,
               fillColor: "#2e9d50",
-              fillOpacity: 0.06,
+              fillOpacity: 0.025,
               dashArray: "6 4",
             };
           },
