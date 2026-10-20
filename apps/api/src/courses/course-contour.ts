@@ -86,7 +86,10 @@ export function buildCourseContourOverpassQuery(
     '[out:json][timeout:15];',
     '(',
     `way["leisure"="golf_course"](${bbox});`,
-    `way["golf"~"^(fairway|green|tee|bunker)$"](${bbox});`,
+    `way["golf"="fairway"](${bbox});`,
+    `way["golf"="green"](${bbox});`,
+    `way["golf"="tee"](${bbox});`,
+    `way["golf"="bunker"](${bbox});`,
     ');',
     'out tags geom;',
   ].join('');
