@@ -31,6 +31,11 @@ export class PostCollectionsController {
     return this.collections.list(this.userId(req), postId);
   }
 
+  @Get('memberships')
+  memberships(@Req() req: any) {
+    return this.collections.memberships(this.userId(req));
+  }
+
   @Post()
   create(@Req() req: any, @Body() body: CollectionBody) {
     return this.collections.create(this.userId(req), body?.name);
