@@ -1492,7 +1492,7 @@ export default function PostCard({
               e.stopPropagation();
               onSaveClick(post.id);
             }}
-            title={t("save_post")}
+            title={saved ? t("saved_posts") : t("save_post")}
           >
             <svg
               width="17"
@@ -1509,7 +1509,7 @@ export default function PostCard({
                 strokeLinejoin="round"
               />
             </svg>
-            {!isMobile ? t("save") : null}
+            {!isMobile ? (saved ? t("saved_posts") : t("save")) : null}
           </button>
         ) : null}
 
