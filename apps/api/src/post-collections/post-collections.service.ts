@@ -106,6 +106,25 @@ export class PostCollectionsService {
     };
   }
 
+  async memberships(userId: string) {
+    const ownerId = this.requireUserId(userId);
+    const items = await this.prisma.postCollectionItem.findMany({
+      where: {
+        collection: {
+          userId: ownerId,
+        },
+      },
+      distinct: ['postId'],
+      select: {
+        postId: true,
+      },
+    });
+
+    return {
+      postIds: items.map((item) => item.postId),
+    };
+  }
+
   async create(userId: string, rawName: unknown) {
     const ownerId = this.requireUserId(userId);
     const name = normalizePostCollectionName(rawName);
