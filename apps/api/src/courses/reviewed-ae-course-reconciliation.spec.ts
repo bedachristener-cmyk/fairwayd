@@ -12,6 +12,18 @@ describe('reviewed UAE course reconciliation', () => {
     expect(validateReviewedAeCourseReconciliation()).toEqual([]);
   });
 
+  it('keeps one reviewed official website for every active course', () => {
+    const courses = [
+      ...REVIEWED_AE_COURSE_UPDATES,
+      ...REVIEWED_AE_COURSE_ADDITIONS,
+    ];
+
+    expect(courses).toHaveLength(25);
+    for (const course of courses) {
+      expect(course.website).toMatch(/^https:\/\//);
+    }
+  });
+
   it('keeps independently searchable championship courses separate', () => {
     const names = [
       ...REVIEWED_AE_COURSE_UPDATES.map((course) => course.name),
