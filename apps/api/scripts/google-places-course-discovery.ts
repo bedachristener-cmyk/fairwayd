@@ -59,6 +59,10 @@ type GooglePlace = {
   displayName?: { text?: string };
   formattedAddress?: string;
   googleMapsUri?: string;
+  businessStatus?: string;
+  primaryType?: string;
+  types?: string[];
+  movedPlaceId?: string;
   addressComponents?: AddressComponent[];
   location?: {
     latitude?: number;
@@ -79,11 +83,40 @@ function csvCell(value: unknown): string {
   return text;
 }
 
+function placeAddressComponent(
+  place: GooglePlace,
+  types: string[],
+  preferShortText = false,
+): string {
+  for (const type of types) {
+    const component = place.addressComponents?.find((item) =>
+      item.types?.includes(type),
+    );
+    const value = preferShortText ? component?.shortText : component?.longText;
+    if (value) return String(value).trim();
+  }
+  return '';
+}
+
 function placeCountryCode(place: GooglePlace): string {
-  const component = place.addressComponents?.find((item) =>
-    item.types?.includes('country'),
-  );
-  return String(component?.shortText ?? '').trim().toUpperCase();
+  return placeAddressComponent(place, ['country'], true).toUpperCase();
+}
+
+function placeCity(place: GooglePlace): string {
+  return placeAddressComponent(place, [
+    'locality',
+    'postal_town',
+    'administrative_area_level_2',
+    'sublocality_level_1',
+  ]);
+}
+
+function placeRegion(place: GooglePlace): string {
+  return placeAddressComponent(place, ['administrative_area_level_1']);
+}
+
+function placePostalCode(place: GooglePlace): string {
+  return placeAddressComponent(place, ['postal_code']);
 }
 
 function validPlace(place: GooglePlace): place is GooglePlace & {
@@ -111,7 +144,7 @@ async function nearbySearch(
           'Content-Type': 'application/json',
           'X-Goog-Api-Key': googleApiKey as string,
           'X-Goog-FieldMask':
-            'places.id,places.displayName,places.formattedAddress,places.addressComponents,places.location,places.googleMapsUri',
+            'places.id,places.displayName,places.formattedAddress,places.addressComponents,places.location,places.googleMapsUri,places.businessStatus,places.primaryType,places.types,places.movedPlaceId',
         },
         body: JSON.stringify({
           includedTypes: ['golf_course'],
@@ -263,6 +296,10 @@ async function main() {
     'website',
     'placeId',
     'googleName',
+    'googleBusinessStatus',
+    'googlePrimaryType',
+    'googleTypes',
+    'movedPlaceId',
     'formattedAddress',
     'googleLat',
     'googleLon',
@@ -314,13 +351,17 @@ async function main() {
         status,
         country,
         '',
-        '',
-        '',
-        '',
+        placeCity(place),
+        placeRegion(place),
+        placePostalCode(place),
         '',
         '',
         place.id,
         place.displayName?.text,
+        place.businessStatus,
+        place.primaryType,
+        place.types?.join('|'),
+        place.movedPlaceId,
         place.formattedAddress,
         place.location.latitude,
         place.location.longitude,
@@ -361,6 +402,10 @@ async function main() {
         course.name,
         course.city,
         course.region,
+        '',
+        '',
+        '',
+        '',
         '',
         '',
         '',
