@@ -16,6 +16,7 @@ import { CourseSubmissionsModule } from './course-submissions/course-submissions
 import { TripsModule } from './trips/trips.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { FxModule } from './fx/fx.module';
+import { PostCollectionsModule } from './post-collections/post-collections.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { FxModule } from './fx/fx.module';
     TripsModule,
     NotificationsModule,
     FxModule,
+    PostCollectionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

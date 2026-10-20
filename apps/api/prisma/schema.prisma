@@ -47,6 +47,7 @@ model User {
   likes                          Like[]
   notifications                  Notification[]
   posts                          Post[]
+  postCollections                PostCollection[]
   reviews                        Review[]
   tripActivities                 TripActivity[]
   createdTrips                   Trip[]                  @relation("TripCreator")
@@ -298,9 +299,36 @@ model Post {
   course     Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
   user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   images     PostImage[]
+  collectionItems PostCollectionItem[]
 
   @@index([courseId, createdAt])
   @@index([lat, lon])
+}
+
+model PostCollection {
+  id        String               @id @default(cuid())
+  userId    String
+  name      String
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     PostCollectionItem[]
+
+  @@unique([userId, name])
+  @@index([userId, updatedAt])
+}
+
+model PostCollectionItem {
+  id           String         @id @default(cuid())
+  collectionId String
+  postId       String
+  createdAt    DateTime       @default(now())
+  collection   PostCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  post         Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, postId])
+  @@index([postId])
+  @@index([collectionId, createdAt])
 }
 
 model PostImage {
