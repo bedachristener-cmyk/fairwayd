@@ -39,7 +39,16 @@ describe('course contour helpers', () => {
       'way["leisure"="golf_course"](47.1,8.1,47.15,8.18)',
     );
     expect(query).toContain(
-      'way["golf"~"^(fairway|green|tee|bunker)$"](47.1,8.1,47.15,8.18)',
+      'way["golf"="fairway"](47.1,8.1,47.15,8.18)',
+    );
+    expect(query).toContain(
+      'way["golf"="green"](47.1,8.1,47.15,8.18)',
+    );
+    expect(query).toContain(
+      'way["golf"="tee"](47.1,8.1,47.15,8.18)',
+    );
+    expect(query).toContain(
+      'way["golf"="bunker"](47.1,8.1,47.15,8.18)',
     );
     expect(query).toContain('[timeout:15]');
   });
