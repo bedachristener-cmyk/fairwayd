@@ -17,11 +17,20 @@ function requestCount(country: string): number {
 
 describe('course discovery country configuration', () => {
   it('keeps supported countries explicit and deterministic', () => {
-    expect(supportedCourseDiscoveryCountries()).toEqual(['AT', 'CH', 'TH', 'TR']);
+    expect(supportedCourseDiscoveryCountries()).toEqual(['AE', 'AT', 'CH', 'TH', 'TR']);
+    expect(courseDiscoveryCountryConfig('ae')?.country).toBe('AE');
     expect(courseDiscoveryCountryConfig('at')?.country).toBe('AT');
     expect(courseDiscoveryCountryConfig('th')?.country).toBe('TH');
     expect(courseDiscoveryCountryConfig('tr')?.country).toBe('TR');
     expect(courseDiscoveryCountryConfig('DE')).toBeNull();
+  });
+
+  it('covers all UAE golf regions with a bounded request plan', () => {
+    const config = courseDiscoveryCountryConfig('AE');
+    expect(config).not.toBeNull();
+    expect(config!.areas).toHaveLength(3);
+    expect(config!.searchRadiusMeters).toBe(22_000);
+    expect(requestCount('AE')).toBe(119);
   });
 
   it('preserves the bounded Austrian request plan', () => {
