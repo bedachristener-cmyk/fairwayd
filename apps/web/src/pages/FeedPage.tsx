@@ -3,11 +3,17 @@ import { createPortal } from "react-dom";
 import ReactCrop, { type Crop, type PixelCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { API_BASE } from "../api/base";
-import { friendlyApiErrorMessage } from "../api/client";
+import {
+  apiGet,
+  friendlyApiErrorMessage,
+} from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { useMe } from "../auth/useMe";
 import CourseDropdown, { type CourseLite } from "../components/CourseDropdown";
 import PostCard from "../components/PostCard";
+import PostCollectionPicker, {
+  type PostCollectionSummary,
+} from "../components/PostCollectionPicker";
 import CommentModal from "../components/CommentModal";
 import BackToTopButton from "../components/BackToTopButton";
 import { FeedCardsSkeleton } from "../components/PolishStates";
@@ -71,7 +77,13 @@ type Course = {
 
 type CourseRatingMap = Record<string, RatingSummary | null>;
 
-type FeedFilter = "following" | "courses" | "destinations" | "trending" | "mine";
+type FeedFilter =
+  | "following"
+  | "courses"
+  | "destinations"
+  | "trending"
+  | "mine"
+  | "saved";
 type PostVisibilityFilter = "ALL" | "PUBLIC" | "FOLLOWERS" | "PRIVATE";
 const MAX_POST_IMAGES = 5;
 const SUPPORTED_POST_IMAGE_TYPES = new Set([
@@ -106,10 +118,17 @@ function isSupportedPostImageFile(file: File) {
 const FEED_FILTERS: {
   value: FeedFilter;
   icon: string;
-  labelKey: "following" | "golf_courses" | "travel" | "trending" | "my_posts";
+  labelKey:
+    | "following"
+    | "golf_courses"
+    | "travel"
+    | "trending"
+    | "my_posts"
+    | "saved_posts";
 }[] = [
   { value: "following", icon: "👥", labelKey: "following" },
   { value: "mine", icon: "👤", labelKey: "my_posts" },
+  { value: "saved", icon: "🔖", labelKey: "saved_posts" },
   { value: "courses", icon: "⛳", labelKey: "golf_courses" },
   { value: "destinations", icon: "🌍", labelKey: "travel" },
   { value: "trending", icon: "🔥", labelKey: "trending" },
@@ -363,6 +382,16 @@ export default function FeedPage() {
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [feedFilter, setFeedFilter] = useState<FeedFilter>("following");
+  const [collections, setCollections] = useState<PostCollectionSummary[]>([]);
+  const [selectedCollectionId, setSelectedCollectionId] = useState<
+    string | null
+  >(null);
+  const [savedPosts, setSavedPosts] = useState<Post[]>([]);
+  const [savedPostIds, setSavedPostIds] = useState<string[]>([]);
+  const [savedPostsLoading, setSavedPostsLoading] = useState(false);
+  const [collectionPickerPostId, setCollectionPickerPostId] = useState<
+    string | null
+  >(null);
   const [postVisibilityFilter, setPostVisibilityFilter] =
     useState<PostVisibilityFilter>("ALL");
   const [courses, setCourses] = useState<Course[]>([]);
@@ -591,6 +620,83 @@ export default function FeedPage() {
     }
   }, [token, logout]);
 
+  const loadCollections = useCallback(async () => {
+    if (!token) {
+      setCollections([]);
+      setSelectedCollectionId(null);
+      return;
+    }
+
+    try {
+      const data = await apiGet<{ items: PostCollectionSummary[] }>(
+        "/post-collections",
+        { token },
+      );
+      const items = Array.isArray(data.items) ? data.items : [];
+      setCollections(items);
+      setSelectedCollectionId((current) => {
+        if (current && items.some((item) => item.id === current)) {
+          return current;
+        }
+        return items[0]?.id ?? null;
+      });
+    } catch (reason) {
+      console.error("Failed to load post collections", reason);
+      setCollections([]);
+      setSelectedCollectionId(null);
+    }
+  }, [token]);
+
+  const loadSavedMemberships = useCallback(async () => {
+    if (!token) {
+      setSavedPostIds([]);
+      return;
+    }
+
+    try {
+      const data = await apiGet<{ postIds: string[] }>(
+        "/post-collections/memberships",
+        { token },
+      );
+      setSavedPostIds(Array.isArray(data.postIds) ? data.postIds : []);
+    } catch (reason) {
+      console.error("Failed to load saved post memberships", reason);
+      setSavedPostIds([]);
+    }
+  }, [token]);
+
+  const loadSavedPosts = useCallback(
+    async (collectionId: string) => {
+      if (!token) return;
+      setSavedPostsLoading(true);
+      try {
+        const data = await apiGet<{ items: Post[] }>(
+          `/post-collections/${collectionId}/posts`,
+          { token },
+        );
+        setSavedPosts(Array.isArray(data.items) ? data.items : []);
+      } catch (reason) {
+        console.error("Failed to load saved posts", reason);
+        setSavedPosts([]);
+      } finally {
+        setSavedPostsLoading(false);
+      }
+    },
+    [token],
+  );
+
+  const refreshSavedPostState = useCallback(async () => {
+    await Promise.all([loadCollections(), loadSavedMemberships()]);
+    if (selectedCollectionId) {
+      await loadSavedPosts(selectedCollectionId);
+    }
+  }, [
+    loadCollections,
+    loadSavedMemberships,
+    loadSavedPosts,
+    selectedCollectionId,
+  ]);
+
   const loadFollowedCourses = useCallback(async () => {
     if (!token) return;
 
@@ -733,6 +839,21 @@ export default function FeedPage() {
     if (!token) return;
     loadFeed();
   }, [loading, token, loadFeed]);
+
+  useEffect(() => {
+    if (loading) return;
+    loadCollections();
+    loadSavedMemberships();
+  }, [loading, loadCollections, loadSavedMemberships]);
+
+  useEffect(() => {
+    if (feedFilter !== "saved") return;
+    if (!selectedCollectionId) {
+      setSavedPosts([]);
+      return;
+    }
+    loadSavedPosts(selectedCollectionId);
+  }, [feedFilter, loadSavedPosts, selectedCollectionId]);
 
   useEffect(() => {
     if (loading) return;
@@ -1165,6 +1286,10 @@ export default function FeedPage() {
   const myUserId = me?.id || user?.id || "";
 
   const filteredPosts = useMemo(() => {
+    if (feedFilter === "saved") {
+      return savedPosts;
+    }
+
     if (feedFilter === "mine") {
       const myPosts = posts.filter(
         (post) =>
@@ -1217,7 +1342,11 @@ export default function FeedPage() {
     myUserId,
     postVisibilityFilter,
     posts,
+    savedPosts,
   ]);
+
+  const visiblePostsLoading =
+    feedFilter === "saved" ? savedPostsLoading : feedLoading;
 
   useEffect(() => {
     if (!focusPostId) return;
@@ -2737,6 +2866,125 @@ export default function FeedPage() {
               })}
             </div>
 
+            {feedFilter === "saved" && collections.length > 0 ? (
+              <div
+                aria-label={t("saved_posts")}
+                style={{
+                  display: "flex",
+                  gap: 11,
+                  overflowX: "auto",
+                  padding: isMobile ? "2px 12px 6px" : "2px 0 7px",
+                  scrollbarWidth: "none",
+                  scrollSnapType: "x proximity",
+                }}
+              >
+                {collections.map((collection, index) => {
+                  const active = selectedCollectionId === collection.id;
+                  const cover = collection.coverImageUrl
+                    ? fileUrl(collection.coverImageUrl)
+                    : null;
+                  return (
+                    <button
+                      key={collection.id}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => setSelectedCollectionId(collection.id)}
+                      style={{
+                        position: "relative",
+                        flex: isMobile ? "0 0 148px" : "0 0 172px",
+                        aspectRatio: "1.42 / 1",
+                        overflow: "hidden",
+                        scrollSnapAlign: "start",
+                        borderRadius: 18,
+                        border: active
+                          ? "2px solid var(--accent-strong)"
+                          : "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
+                        background: cover
+                          ? `url("${cover}") center / cover no-repeat`
+                          : index % 3 === 0
+                            ? "linear-gradient(145deg, #315b48, #152d25)"
+                            : index % 3 === 1
+                              ? "linear-gradient(145deg, #496274, #202e39)"
+                              : "linear-gradient(145deg, #725c44, #33281e)",
+                        color: "#fff",
+                        padding: 0,
+                        cursor: "pointer",
+                        textAlign: "left",
+                        boxShadow: active
+                          ? "0 9px 24px color-mix(in srgb, var(--accent) 24%, transparent)"
+                          : "0 7px 18px rgba(0,0,0,.10)",
+                        transform: active ? "translateY(-1px)" : "none",
+                        transition:
+                          "transform .16s ease, border-color .16s ease, box-shadow .16s ease",
+                      }}
+                    >
+                      <span
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          background:
+                            "linear-gradient(180deg, rgba(0,0,0,.02) 20%, rgba(0,0,0,.78) 100%)",
+                        }}
+                      />
+                      {active ? (
+                        <span
+                          style={{
+                            position: "absolute",
+                            top: 9,
+                            right: 9,
+                            width: 25,
+                            height: 25,
+                            borderRadius: 999,
+                            display: "grid",
+                            placeItems: "center",
+                            background: "var(--accent-strong)",
+                            border: "1px solid rgba(255,255,255,.9)",
+                            color: "#fff",
+                            fontSize: 13,
+                            fontWeight: 950,
+                          }}
+                        >
+                          ✓
+                        </span>
+                      ) : null}
+                      <span
+                        style={{
+                          position: "absolute",
+                          left: 12,
+                          right: 12,
+                          bottom: 10,
+                          display: "grid",
+                          gap: 3,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 900,
+                            lineHeight: 1.15,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            textShadow: "0 1px 4px rgba(0,0,0,.4)",
+                          }}
+                        >
+                          {collection.name}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: "rgba(255,255,255,.78)",
+                          }}
+                        >
+                          {collection.postCount}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+
             {feedFilter === "mine" ? (
               <div
                 className="fw-post-visibility-filters"
@@ -2787,11 +3035,11 @@ export default function FeedPage() {
               </div>
             ) : null}
 
-            {feedLoading && posts.length === 0 ? (
+            {visiblePostsLoading && filteredPosts.length === 0 ? (
               <FeedCardsSkeleton count={2} />
             ) : null}
 
-            {!feedLoading && posts.length === 0 ? (
+            {feedFilter !== "saved" && !feedLoading && posts.length === 0 ? (
               <NewUserFeedWelcomeCard
                 isMobile={isMobile}
                 onDiscoverNearby={() => nav("/map?nearby=true")}
@@ -2801,7 +3049,10 @@ export default function FeedPage() {
               />
             ) : null}
 
-            {!feedLoading && posts.length > 0 && filteredPosts.length === 0 ? (
+            {feedFilter !== "saved" &&
+            !feedLoading &&
+            posts.length > 0 &&
+            filteredPosts.length === 0 ? (
               <div
                 style={{
                   margin: isMobile ? "0 12px" : 0,
@@ -2818,7 +3069,28 @@ export default function FeedPage() {
               </div>
             ) : null}
 
-            {!feedLoading && filteredPosts.map((p) => {
+            {feedFilter === "saved" &&
+            !savedPostsLoading &&
+            filteredPosts.length === 0 ? (
+              <div
+                style={{
+                  margin: isMobile ? "0 12px" : 0,
+                  padding: "22px 16px",
+                  borderRadius: 18,
+                  border: "1px solid var(--border)",
+                  background: "var(--card)",
+                  color: "var(--sub)",
+                  textAlign: "center",
+                  fontSize: 14,
+                }}
+              >
+                {collections.length === 0
+                  ? t("no_collections_yet")
+                  : t("saved_posts_empty")}
+              </div>
+            ) : null}
+
+            {!visiblePostsLoading && filteredPosts.map((p) => {
               const lat = Number(p.course.lat);
               const lon = Number(p.course.lon);
               const canSelectCourse =
@@ -2845,6 +3117,12 @@ export default function FeedPage() {
                     isCommentTarget={activeCommentPostId === p.id}
                     onCommentClick={(postId) => setActiveCommentPostId(postId)}
                     onOpenPost={(postId) => setActiveCommentPostId(postId)}
+                    onSaveClick={
+                      token
+                        ? (postId) => setCollectionPickerPostId(postId)
+                        : undefined
+                    }
+                    saved={savedPostIds.includes(p.id)}
                     onSelectCourse={
                       canSelectCourse
                         ? () => {
@@ -2892,6 +3170,15 @@ export default function FeedPage() {
       </div>
 
       <BackToTopButton />
+
+      {collectionPickerPostId && token ? (
+        <PostCollectionPicker
+          token={token}
+          postId={collectionPickerPostId}
+          onClose={() => setCollectionPickerPostId(null)}
+          onChanged={refreshSavedPostState}
+        />
+      ) : null}
 
       {activeCommentPost ? (
         <CommentModal
