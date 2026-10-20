@@ -7,6 +7,7 @@ export type ReviewedAeCourseUpdate = {
   lat: number;
   lon: number;
   evidence: string;
+  website: string;
 };
 
 export type ReviewedAeCourseAddition = {
@@ -18,6 +19,7 @@ export type ReviewedAeCourseAddition = {
   lon: number;
   evidence: string;
   placeId: string;
+  website: string;
   sharedFacilityGroup?: string;
 };
 
@@ -32,6 +34,7 @@ export const REVIEWED_AE_COURSE_UPDATES: ReviewedAeCourseUpdate[] = [
   {
     expectedNames: ['Abu Dhabi Golf Club', 'Abu Dhabi Golf Club - National Course'],
     name: 'Abu Dhabi Golf Club - National Course',
+    website: 'https://www.abudhabigolfclub.abudhabi/',
     city: 'Abu Dhabi',
     region: 'Abu Dhabi',
     holes: 18,
@@ -42,6 +45,7 @@ export const REVIEWED_AE_COURSE_UPDATES: ReviewedAeCourseUpdate[] = [
   {
     expectedNames: ['Arabian Ranches Golf Club'],
     name: 'Arabian Ranches Golf Club',
+    website: 'https://www.arabianranchesgolfclub.com/',
     city: 'Dubai',
     region: 'Dubai',
     holes: 18,
@@ -52,6 +56,7 @@ export const REVIEWED_AE_COURSE_UPDATES: ReviewedAeCourseUpdate[] = [
   {
     expectedNames: ['Dubai Creek Golf & Yacht Club'],
     name: 'Dubai Creek Golf & Yacht Club',
+    website: 'https://www.dubaigolf.com/dcgyc/',
     city: 'Dubai',
     region: 'Dubai',
     holes: 18,
@@ -62,6 +67,7 @@ export const REVIEWED_AE_COURSE_UPDATES: ReviewedAeCourseUpdate[] = [
   {
     expectedNames: ['Emirates Golf Club', 'Emirates Golf Club - Majlis Course'],
     name: 'Emirates Golf Club - Majlis Course',
+    website: 'https://www.dubaigolf.com/egc/',
     city: 'Dubai',
     region: 'Dubai',
     holes: 18,
@@ -72,6 +78,7 @@ export const REVIEWED_AE_COURSE_UPDATES: ReviewedAeCourseUpdate[] = [
   {
     expectedNames: ['Jumeirah Golf Estates', 'Jumeirah Golf Estates - Earth Course'],
     name: 'Jumeirah Golf Estates - Earth Course',
+    website: 'https://www.dubaigolf.com/jge/',
     city: 'Dubai',
     region: 'Dubai',
     holes: 18,
@@ -82,6 +89,7 @@ export const REVIEWED_AE_COURSE_UPDATES: ReviewedAeCourseUpdate[] = [
   {
     expectedNames: ['Saadiyat Beach Golf Club'],
     name: 'Saadiyat Beach Golf Club',
+    website: 'https://www.viyagolf.com/saadiyat/',
     city: 'Abu Dhabi',
     region: 'Abu Dhabi',
     holes: 18,
@@ -92,6 +100,7 @@ export const REVIEWED_AE_COURSE_UPDATES: ReviewedAeCourseUpdate[] = [
   {
     expectedNames: ['The Els Club Dubai'],
     name: 'The Els Club Dubai',
+    website: 'https://www.elsclubdubai.com/',
     city: 'Dubai',
     region: 'Dubai',
     holes: 18,
@@ -102,6 +111,7 @@ export const REVIEWED_AE_COURSE_UPDATES: ReviewedAeCourseUpdate[] = [
   {
     expectedNames: ['Trump International Golf Club Dubai'],
     name: 'Trump International Golf Club Dubai',
+    website: 'https://www.trumpgolfdubai.com/',
     city: 'Dubai',
     region: 'Dubai',
     holes: 18,
@@ -112,6 +122,7 @@ export const REVIEWED_AE_COURSE_UPDATES: ReviewedAeCourseUpdate[] = [
   {
     expectedNames: ['Yas Links Abu Dhabi'],
     name: 'Yas Links Abu Dhabi',
+    website: 'https://www.viyagolf.com/yaslinks/',
     city: 'Abu Dhabi',
     region: 'Abu Dhabi',
     holes: 18,
@@ -124,6 +135,7 @@ export const REVIEWED_AE_COURSE_UPDATES: ReviewedAeCourseUpdate[] = [
 export const REVIEWED_AE_COURSE_ADDITIONS: ReviewedAeCourseAddition[] = [
   {
     name: 'Abu Dhabi City Golf Club',
+    website: 'https://adcitygolf.com/',
     city: 'Abu Dhabi',
     region: 'Abu Dhabi',
     holes: 9,
@@ -134,6 +146,7 @@ export const REVIEWED_AE_COURSE_ADDITIONS: ReviewedAeCourseAddition[] = [
   },
   {
     name: 'Abu Dhabi Golf Club - Garden Course',
+    website: 'https://www.abudhabigolfclub.abudhabi/',
     city: 'Abu Dhabi',
     region: 'Abu Dhabi',
     holes: 9,
@@ -145,6 +158,7 @@ export const REVIEWED_AE_COURSE_ADDITIONS: ReviewedAeCourseAddition[] = [
   },
   {
     name: 'Al Ain Equestrian, Shooting & Golf Club',
+    website: 'https://www.aesgc.com/',
     city: 'Al Ain',
     region: 'Abu Dhabi',
     holes: 27,
@@ -155,6 +169,7 @@ export const REVIEWED_AE_COURSE_ADDITIONS: ReviewedAeCourseAddition[] = [
   },
   {
     name: 'Al Dhannah Golf Club',
+    website: 'https://aldhannahgolfclub.ae/',
     city: 'Al Dhannah City',
     region: 'Abu Dhabi',
     holes: 9,
@@ -165,6 +180,7 @@ export const REVIEWED_AE_COURSE_ADDITIONS: ReviewedAeCourseAddition[] = [
   },
   {
     name: 'Al Ghazal Golf Club',
+    website: 'https://alghazalgolfclub.ae/',
     city: 'Abu Dhabi',
     region: 'Abu Dhabi',
     holes: 18,
@@ -175,6 +191,7 @@ export const REVIEWED_AE_COURSE_ADDITIONS: ReviewedAeCourseAddition[] = [
   },
   {
     name: 'Yas Acres Golf & Country Club',
+    website: 'https://www.viyagolf.com/yasacres/',
     city: 'Abu Dhabi',
     region: 'Abu Dhabi',
     holes: 9,
@@ -185,6 +202,7 @@ export const REVIEWED_AE_COURSE_ADDITIONS: ReviewedAeCourseAddition[] = [
   },
   {
     name: 'Dubai Hills Golf Club',
+    website: 'https://www.dubaihillsgolfclub.com/',
     city: 'Dubai',
     region: 'Dubai',
     holes: 18,
@@ -195,6 +213,7 @@ export const REVIEWED_AE_COURSE_ADDITIONS: ReviewedAeCourseAddition[] = [
   },
   {
     name: 'Emirates Golf Club - Faldo Course',
+    website: 'https://www.dubaigolf.com/egc/',
     city: 'Dubai',
     region: 'Dubai',
     holes: 18,
@@ -206,6 +225,7 @@ export const REVIEWED_AE_COURSE_ADDITIONS: ReviewedAeCourseAddition[] = [
   },
   {
     name: 'JA The Resort Golf Course',
+    website: 'https://www.jagolf.com/',
     city: 'Dubai',
     region: 'Dubai',
     holes: 9,
@@ -216,6 +236,7 @@ export const REVIEWED_AE_COURSE_ADDITIONS: ReviewedAeCourseAddition[] = [
   },
   {
     name: 'Jumeirah Golf Estates - Fire Course',
+    website: 'https://www.dubaigolf.com/jge/',
     city: 'Dubai',
     region: 'Dubai',
     holes: 18,
@@ -227,6 +248,7 @@ export const REVIEWED_AE_COURSE_ADDITIONS: ReviewedAeCourseAddition[] = [
   },
   {
     name: 'The Montgomerie Dubai',
+    website: 'https://www.montgomeriegolfclub.com/',
     city: 'Dubai',
     region: 'Dubai',
     holes: 18,
@@ -237,6 +259,7 @@ export const REVIEWED_AE_COURSE_ADDITIONS: ReviewedAeCourseAddition[] = [
   },
   {
     name: 'The Track, Meydan Golf',
+    website: 'https://www.meydangolf.com/',
     city: 'Dubai',
     region: 'Dubai',
     holes: 9,
@@ -247,6 +270,7 @@ export const REVIEWED_AE_COURSE_ADDITIONS: ReviewedAeCourseAddition[] = [
   },
   {
     name: 'Al Hamra Golf Club',
+    website: 'https://www.alhamragolf.com/',
     city: 'Ras Al Khaimah',
     region: 'Ras Al Khaimah',
     holes: 18,
@@ -257,6 +281,7 @@ export const REVIEWED_AE_COURSE_ADDITIONS: ReviewedAeCourseAddition[] = [
   },
   {
     name: 'Al Zorah Golf & Yacht Club',
+    website: 'https://www.alzorahgolfclub.ae/',
     city: 'Ajman',
     region: 'Ajman',
     holes: 18,
@@ -267,6 +292,7 @@ export const REVIEWED_AE_COURSE_ADDITIONS: ReviewedAeCourseAddition[] = [
   },
   {
     name: 'Sharjah Golf & Shooting Club',
+    website: 'https://golfandshootingshj.com/',
     city: 'Sharjah',
     region: 'Sharjah',
     holes: 9,
@@ -277,6 +303,7 @@ export const REVIEWED_AE_COURSE_ADDITIONS: ReviewedAeCourseAddition[] = [
   },
   {
     name: 'Tower Links Golf Club',
+    website: 'https://towerlinks.ae/',
     city: 'Ras Al Khaimah',
     region: 'Ras Al Khaimah',
     holes: 18,
@@ -328,7 +355,7 @@ export function validateReviewedAeCourseReconciliation(): string[] {
 }
 
 function validateCourse(
-  course: { name: string; holes: number; lat: number; lon: number },
+  course: { name: string; holes: number; lat: number; lon: number; website: string },
   names: Set<string>,
   errors: string[],
 ) {
@@ -336,6 +363,9 @@ function validateCourse(
   if (names.has(normalizedName)) errors.push(`duplicate final name: ${course.name}`);
   names.add(normalizedName);
 
+  if (!course.website.startsWith('https://')) {
+    errors.push(`invalid official website: ${course.name}`);
+  }
   if (!Number.isInteger(course.holes) || course.holes <= 0) {
     errors.push(`invalid holes: ${course.name}`);
   }
