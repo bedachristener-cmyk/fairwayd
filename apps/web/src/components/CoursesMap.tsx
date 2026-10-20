@@ -1161,7 +1161,7 @@ export default function CoursesMap() {
 
                         {c.phone ? (
                           <a
-                            href={`tel:${c.phone.replace(/[^+\\d]/g, "")}`}
+                            href={`tel:${c.phone.replace(/[^+\d]/g, "")}`}
                             style={{ color: "var(--green)", fontWeight: 800 }}
                           >
                             {t("phone")}: {c.phone}
