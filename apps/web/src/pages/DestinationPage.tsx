@@ -618,7 +618,7 @@ export default function DestinationPage() {
     null,
   );
 
-  const featuredPosts = (posts ?? []).slice(0, 2);
+  const featuredPosts = (posts ?? []).slice(0, 6);
   const info = slug ? DESTINATION_INFO[slug] : undefined;
   const featuredCourses = resolveFeaturedCourses(
     data?.items ?? [],
@@ -3279,7 +3279,10 @@ export default function DestinationPage() {
                     width: isMobile ? "100%" : "auto",
                   }}
                 >
-                  {t("see_all_posts")}
+                  {t("see_all_posts_from").replace(
+                    "{destination}",
+                    data.destination?.name || getCountryName(data.country),
+                  )}
                 </button>
               </div>
 
