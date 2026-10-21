@@ -15,6 +15,7 @@ import ComposePost from "./pages/ComposePost";
 import FeedPage from "./pages/FeedPage";
 import AppShell from "./shell/AppShell";
 import { SelectedCourseProvider } from "./state/SelectedCourseContext";
+import { PostCollectionsProvider } from "./state/PostCollectionsContext";
 import LandingPage from "./pages/LandingPage";
 import FollowRequestsPage from "./pages/FollowRequestsPage";
 import PrivacySecurityPage from "./pages/PrivacySecurityPage";
@@ -138,8 +139,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <SelectedCourseProvider>
-          <Routes>
+        <PostCollectionsProvider>
+          <SelectedCourseProvider>
+            <Routes>
             {/* Public landing (no shell) */}
             <Route path="/" element={<LandingPage />} />
             <Route
@@ -382,8 +384,9 @@ export default function App() {
 
             <Route path="/home" element={<Navigate to="/feed" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </SelectedCourseProvider>
+            </Routes>
+          </SelectedCourseProvider>
+        </PostCollectionsProvider>
       </AuthProvider>
     </BrowserRouter>
   );
