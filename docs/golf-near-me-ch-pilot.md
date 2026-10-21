@@ -292,3 +292,17 @@ The hostname above is **only a placeholder**. Take the hostname after `@` and be
 Expected safe result: host match, database name, read-only transaction `on`, and whether the Golf Services table exists. On a fresh test branch, expect the new table is absent.
 
 **Still prohibited until explicit review:** `prisma migrate deploy`, `prisma migrate dev`, manual SQL writes, data import, activation of `GOLF_SERVICES_API_ENABLED`. Even the branch-specific migration is not applied by the preflight.
+
+## Branch connection and migration-history preflight: first successful check (2026-10-21)
+
+The user ran the explicit read-only branch check using the Neon direct test endpoint:
+
+- Host explicitly matched the supplied expected branch endpoint.
+- Database: `neondb`
+- Read-only transaction: `on`
+- GolfServiceVenue table: `false` (migration not yet run)
+- No data changed. The PostgreSQL driver's `sslmode=require` warning is informational about the next major version; the script now accepts explicit `sslmode=verify-full` for future strict verification.
+
+**Next safety gate:** The same script now also reads `public._prisma_migrations` within the read-only transaction and compares applied migrations to checked-in Prisma migration directories. It only returns `Migration review gate: EXPECTED_SINGLE_PENDING` when the *only* pending migration is `20261021185500_add_golf_service_directory`, with no unresolved failures or database-only migrations and no pre-existing venue table. Any discrepancy returns `REVIEW_REQUIRED` and nonzero exit.
+
+This is a **read-only preflight**, not Prisma's full drift/schema comparison. A green migration-list check is necessary but not sufficient to authorize applying SQL. Do not run `npx prisma migrate deploy` yet. Keep Stage/Production URLs and `apps/api/.env` unchanged.
