@@ -215,3 +215,29 @@ npx prisma validate
 ```
 
 `prisma.config.ts` requires existing `.env` connection variables to parse, but validation does not apply migrations. **Do not run `prisma migrate deploy`, `prisma migrate dev`, or a deployment from this feature branch yet.** Run validation and review before any DB change.
+
+## Read-only service API (disabled until migration + verified pilot data)
+
+Implemented in `apps/api/src/golf-services`, registered by `GolfServicesModule`.
+
+- `GET /api/golf-services/nearby?lat=47.55&lon=7.59&radiusKm=25&category=SIMULATOR` — opt-in client coordinates, country filter optional to include Germany and France within radius. Allowed radius values 10, 25, 50, 100 (km); default 25. Returns exact-distance-sorted **verified** venues with **verified** offerings and **verified** provider links. Maximum 100 returned, plus `count` and `truncated`.
+- `GET /api/golf-services?country=CH&region=Basel-Landschaft&category=SHOP&take=50` — country required; region/category optional; take 1-100. No positional permission needed. Verified records only.
+- API data uses **our independent venue/service database**, not Google Places response snapshots. Internal source review notes and Place IDs are never emitted publicly.
+- **GOLF_SERVICES_API_ENABLED is off by default.** Unless its value is exactly `true`, both routes return HTTP 503 *without querying the new tables*. This is intentional: the database migration has not been applied, and there is not yet public data. The public frontend does not use these endpoints yet.
+- The normal `/api/courses` routes and their data are unaffected.
+- No endpoint can create/update/delete any service. Future imports must be separately approved, independently sourced and reviewed for licenses.
+
+### Local validation — no migration or data writes
+
+Run on the feature branch from `C:\dev\fairwayd\apps\api`:
+
+```powershell
+npx prisma validate
+npx prisma generate
+npx jest golf-services --runInBand
+npm run build
+```
+
+`prisma generate` only updates the generated local Prisma client, and `npm run build` generates and compiles the API; neither applies SQL migrations. The test suite uses Jest mocks and mathematical fixtures, not a live database.
+
+**Do not run the new endpoints with `GOLF_SERVICES_API_ENABLED=true` until a dedicated reviewed migration and pilot dataset have been intentionally deployed.** Do not run `prisma migrate deploy` as part of these validation steps.
