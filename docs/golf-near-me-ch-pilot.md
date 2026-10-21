@@ -306,3 +306,18 @@ The user ran the explicit read-only branch check using the Neon direct test endp
 **Next safety gate:** The same script now also reads `public._prisma_migrations` within the read-only transaction and compares applied migrations to checked-in Prisma migration directories. It only returns `Migration review gate: EXPECTED_SINGLE_PENDING` when the *only* pending migration is `20261021185500_add_golf_service_directory`, with no unresolved failures or database-only migrations and no pre-existing venue table. Any discrepancy returns `REVIEW_REQUIRED` and nonzero exit.
 
 This is a **read-only preflight**, not Prisma's full drift/schema comparison. A green migration-list check is necessary but not sufficient to authorize applying SQL. Do not run `npx prisma migrate deploy` yet. Keep Stage/Production URLs and `apps/api/.env` unchanged.
+
+## Migration drift suspected: six pending on isolated Neon branch (2026-10-21)
+
+The first migration-history preflight to `golf-near-me-dev` reported **REVIEW_REQUIRED**, with five older Fairwayd migrations plus the new golf-service migration still marked pending:
+
+- `20260610120000_add_email_verification`
+- `20260610133000_add_password_reset_codes`
+- `20261007120000_add_user_preferred_currency`
+- `20261008120000_add_trip_document_visibility_members`
+- `20261020193000_add_post_collections`
+- `20261021185500_add_golf_service_directory`
+
+This is **not** evidence all five older features are absent from the physical schema. It could reflect historical schema changes via different tooling without Prisma migration ledger entries. The existing connection was verified read-only and no data were changed.
+
+The preflight script has been extended to inventory tables, columns, enum labels, indexes and foreign keys associated with the pending migrations using catalog-only SELECTs. It prints `PHYSICAL_SCHEMA ... ALL_PRESENT`, `PARTIAL` or `NONE_PRESENT` per migration. **ALL_PRESENT is not proof of identical constraints, backfill or a correctly applied migration**. Do not automatically `migrate deploy`, mark migrations as applied via `prisma migrate resolve`, or use `prisma db push`. First inspect the physical inventory and reconcile migration history deliberately. The expected-single-pending gate remains closed.
