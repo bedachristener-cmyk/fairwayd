@@ -20,6 +20,7 @@ type CacheEntry = {
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const SWISS_OVERPASS_ENDPOINT = 'https://overpass.osm.ch/api/interpreter';
 const DEFAULT_OVERPASS_ENDPOINTS = [
+  'https://overpass.private.coffee/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
   'https://overpass-api.de/api/interpreter',
 ];
