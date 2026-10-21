@@ -716,6 +716,7 @@ model GolfServiceOffering {
   id                String               @id @default(cuid())
   venueId           String
   category          GolfServiceCategory
+  status            GolfServiceStatus     @default(DRAFT)
   label             String?
   description       String?
   unitCount         Int?
@@ -729,7 +730,7 @@ model GolfServiceOffering {
   venue             GolfServiceVenue     @relation(fields: [venueId], references: [id], onDelete: Cascade)
 
   @@unique([venueId, category])
-  @@index([category])
+  @@index([category, status])
 }
 
 /// A golf professional or service operator is not automatically another venue.
@@ -749,6 +750,7 @@ model GolfServiceVenueProvider {
   venueId     String
   providerId  String
   role        GolfServiceProviderRole
+  status      GolfServiceStatus       @default(DRAFT)
   sourceKind  GolfServiceSourceKind?
   sourceUrl   String?
   verifiedAt  DateTime?
