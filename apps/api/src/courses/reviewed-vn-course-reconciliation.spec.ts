@@ -29,9 +29,6 @@ describe('reviewed Vietnam course reconciliation', () => {
       ...REVIEWED_VN_COURSE_ADDITIONS,
     ].map((item) => item.name));
 
-    expect(names).toEqual(expect.objectContaining({
-      has: expect.any(Function),
-    }));
     expect(names.has('PGA NovaWorld Phan Thiet – Garden Course')).toBe(true);
     expect(names.has('PGA NovaWorld Phan Thiet – Ocean Course')).toBe(true);
     expect(names.has('Vietnam Golf & Country Club – East Course')).toBe(true);
