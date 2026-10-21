@@ -23,12 +23,14 @@ describe('course discovery country configuration', () => {
       'CH',
       'TH',
       'TR',
+      'VN',
       'ZA',
     ]);
     expect(courseDiscoveryCountryConfig('ae')?.country).toBe('AE');
     expect(courseDiscoveryCountryConfig('at')?.country).toBe('AT');
     expect(courseDiscoveryCountryConfig('th')?.country).toBe('TH');
     expect(courseDiscoveryCountryConfig('tr')?.country).toBe('TR');
+    expect(courseDiscoveryCountryConfig('vn')?.country).toBe('VN');
     expect(courseDiscoveryCountryConfig('za')?.country).toBe('ZA');
     expect(courseDiscoveryCountryConfig('DE')).toBeNull();
   });
@@ -60,6 +62,15 @@ describe('course discovery country configuration', () => {
     expect(config!.areas).toHaveLength(1);
     expect(config!.searchRadiusMeters).toBe(45_000);
     expect(requestCount('TR')).toBe(390);
+  });
+
+  it('covers Vietnam with three bounded regional request plans', () => {
+    const config = courseDiscoveryCountryConfig('VN');
+    expect(config).not.toBeNull();
+    expect(config!.areas).toHaveLength(3);
+    expect(config!.searchRadiusMeters).toBe(45_000);
+    expect(requestCount('VN')).toBeGreaterThan(250);
+    expect(requestCount('VN')).toBeLessThan(300);
   });
 
   it('covers South Africa nationwide with a bounded request plan', () => {
