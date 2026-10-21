@@ -12,7 +12,7 @@ describe('reviewed South Africa course reconciliation', () => {
   const names = all.map((course) => course.name);
 
   it('contains the single consolidated nationwide review', () => {
-    expect(REVIEWED_ZA_COURSE_UPDATES).toHaveLength(37);
+    expect(REVIEWED_ZA_COURSE_UPDATES).toHaveLength(38);
     expect(REVIEWED_ZA_COURSE_ADDITIONS).toHaveLength(165);
     expect(validateReviewedZaCourseReconciliation()).toEqual([]);
   });
