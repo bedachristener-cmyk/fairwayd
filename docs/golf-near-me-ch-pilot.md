@@ -241,3 +241,25 @@ npm run build
 `prisma generate` only updates the generated local Prisma client, and `npm run build` generates and compiles the API; neither applies SQL migrations. The test suite uses Jest mocks and mathematical fixtures, not a live database.
 
 **Do not run the new endpoints with `GOLF_SERVICES_API_ENABLED=true` until a dedicated reviewed migration and pilot dataset have been intentionally deployed.** Do not run `prisma migrate deploy` as part of these validation steps.
+
+## First human-review fixture — no import (2026-10-21)
+
+Stored in `apps/api/scripts/fixtures/ch-basel-golf-services-pilot.json`, with data provenance attached to each entity:
+
+- **One venue:** The Golf Lounge, Rheinfelden, Quellenstrasse 37, on the [official operator website](https://thegolflounge.ch/).
+- **Four service categories:** SIMULATOR, ACADEMY, SHOP and FITTING. The operator's own site supports the service types. `unitCount=2` for SIMULATOR comes from first-hand user testimony rather than copied Google Places results.
+- **One provider:** SebbyGolf, linked as `GOLF_PRO`. The operator explicitly advertises Golf Lessons with Sebby. Provider type/branding requires final human review before publication.
+- **No coordinates:** location geocoding must be independently verified, not copied from a Google Places response.
+- **No Google Places business-content storage:** the fixture is independently sourced from the operator and the user's own report; no Google-provided address, name or location is imported.
+- All three entity levels stay in `DRAFT` with `verifiedAt=null`. This fixture does **not** seed the database.
+
+Validation-only script and tests (from `apps/api`):
+
+```powershell
+node .\scripts\preview-golf-services-pilot.mjs
+node --test .\scripts\preview-golf-services-pilot.test.mjs
+```
+
+The script only reads the JSON file and prints a summary. It rejects accidental `VERIFIED` statuses, duplicate offerings, invalid coordinates, and Google response data mixed into the reviewed pilot fixture. There is intentionally **no --apply mode**. Validation never touches a database or external API.
+
+Later, before any persistence, we must review the migration target database separately, create a backup/migration plan and an explicit reviewed-only import. No `prisma migrate deploy`, deployment, and no public listing at this stage.
