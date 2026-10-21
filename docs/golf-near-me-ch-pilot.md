@@ -132,3 +132,35 @@ node .\scripts\discover-ch-golf-services-places.mjs --fetch --confirm-google-pla
 ```
 
 Keep the monetization feature flag disabled while piloting services. Cost visibility and supply-side coverage come before partner/referral monetization; revisit once the feature has genuine usage.
+
+## Basel pilot: first Google Places run and independent operator-site review (2026-10-21)
+
+The user explicitly ran the capped pilot's **three** initial Text Search Pro calls:
+- Search 1 (Indoor Golf Basel): 8 candidate entries
+- Search 2 (Simulator Rheinfelden): 2 entries, already present in search 1
+- Search 3 (Golf Shop Pratteln): 2 entries
+- **12 search result rows, 10 unique Google Place IDs**; not 10 independently verified venues.
+- The two Rheinfelden venue results overlap across search queries. The Golf Lounge / SebbyGolf share an address, requiring **venue/brand** deduplication. Avoid conflating same-site offerings with different physical locations.
+
+Independently verified on **operator websites** (not imported from Google content):
+- [Golf Corner](https://www.golf-corner.ch/): indoor golf simulation near Basel SBB; SIMULATOR.
+- [Birdie Amigos](https://www.birdieamigos.com/): indoor TrackMan simulator facilities in Basel; SIMULATOR, coaching optional.
+- [Golfschmiede](https://www.golfschmiede.ch/): TrackMan indoor golf in Rheinfelden; SIMULATOR/ACADEMY.
+- [The Golf Lounge](https://thegolflounge.ch/): simulated golf, lessons and proshop/fitting in Rheinfelden; SIMULATOR/FITTING/SHOP/ACADEMY. Investigate the SebbyGolf brand relationship rather than creating an automatic second venue.
+- [Union Sport Münchenstein](https://www.union-sport.ch/golf): **valid golf service**; operator states 3 indoor TrackMan simulators, 5 indoor driving bays, putting green and academy. Multi-label SIMULATOR/RANGE/ACADEMY.
+- [Golfers Paradise](https://golfersparadise.ch/pages/unsere-filialen): valid golf retailer in Pratteln; **operator gives Hardstrasse 59**, while discovery output had Hardstrasse 57; prefer verified operator details and flag address discrepancy for manual inspection.
+
+Independently rejected:
+- [Erlebniscenter Basel](https://www.erlebniscenter.ch/): operator describes blacklight **mini-golf**, VR and billiards, not golf-simulator practice or normal golf; **reject** for MVP categories.
+
+Still pending independent provider verification:
+- Sport & Golf Outlet (Pratteln)
+- Earlybirdie Indoor Golf (Aarau)
+- SebbyGolf relationship to The Golf Lounge.
+
+**Lessons for the search & data model:**
+1. High-quality Google search does not guarantee category precision: explicit `mini-golf` exclusions are essential.
+2. Allow **multiple categories per physical venue**, not one row per category or a misleading duplicate venue.
+3. Match by identity and verified operator source, not exclusively Google place ID.
+4. Maintain independent source provenance, `verifiedAt`, review notes, and discrepancy flags, but do not persist Google Places response fields as a Fairwayd dataset.
+5. Test the optional two remaining calls for FITTING and RANGE only if needed and explicitly authorized; no further calls are necessary to establish the pilot's main hypothesis.
