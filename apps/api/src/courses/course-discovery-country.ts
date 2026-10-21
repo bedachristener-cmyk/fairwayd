@@ -74,6 +74,20 @@ const COUNTRY_CONFIGS: Record<string, CourseDiscoveryCountryConfig> = {
     lonStep: 0.5,
     searchRadiusMeters: 40_000,
   },
+  VN: {
+    country: 'VN',
+    areas: [
+      // Northern Vietnam, including Hanoi, Ha Long, Hai Phong and the mountain regions.
+      { minLat: 20.0, maxLat: 23.5, minLon: 102.5, maxLon: 108.0 },
+      // Central Vietnam, including Hue, Da Nang, Hoi An, Quy Nhon and the central highlands.
+      { minLat: 14.0, maxLat: 20.5, minLon: 104.5, maxLon: 109.8 },
+      // Southern Vietnam, including Ho Chi Minh City, Da Lat, the Mekong region and Phu Quoc.
+      { minLat: 8.2, maxLat: 14.5, minLon: 103.5, maxLon: 109.5 },
+    ],
+    latStep: 0.55,
+    lonStep: 0.65,
+    searchRadiusMeters: 45_000,
+  },
   ZA: {
     country: 'ZA',
     areas: [
