@@ -39,18 +39,11 @@ describe('course contour helpers', () => {
       'way["leisure"="golf_course"](47.1,8.1,47.15,8.18)',
     );
     expect(query).toContain(
-      'way["golf"="fairway"](47.1,8.1,47.15,8.18)',
+      'way["golf"~"^(fairway|green|tee|bunker)$"](47.1,8.1,47.15,8.18)',
     );
-    expect(query).toContain(
-      'way["golf"="green"](47.1,8.1,47.15,8.18)',
-    );
-    expect(query).toContain(
-      'way["golf"="tee"](47.1,8.1,47.15,8.18)',
-    );
-    expect(query).toContain(
-      'way["golf"="bunker"](47.1,8.1,47.15,8.18)',
-    );
-    expect(query).toContain('[timeout:15]');
+    expect(query).toContain('[timeout:25]');
+    expect(query).toContain('[maxsize:16777216]');
+    expect(query).toContain('out tags geom qt;');
   });
 
   it('converts only valid closed polygon ways to longitude-latitude pairs', () => {
