@@ -71,8 +71,12 @@ function optional(value: string): string | null {
   return normalized || null;
 }
 
-function googleOsmId(definition: ReviewedZaCourseDefinition): string {
-  return `google:${definition.placeId}`;
+function reviewedExternalId(
+  definition: ReviewedZaCourseDefinition,
+): string {
+  return definition.placeId.startsWith('manual:')
+    ? definition.placeId
+    : `google:${definition.placeId}`;
 }
 
 function coordinatesMatch(
@@ -116,7 +120,7 @@ function isFinalState(
     course.holes === definition.holes &&
     course.website === optional(definition.website) &&
     course.phone === optional(definition.phone) &&
-    course.osmId === googleOsmId(definition) &&
+    course.osmId === reviewedExternalId(definition) &&
     coordinatesMatch(course.lat, course.lon, definition.lat, definition.lon) &&
     course.active &&
     course.verified &&
@@ -214,7 +218,7 @@ async function main() {
   const protectedIds = new Set(updatePlans.map((plan) => plan.course.id));
   const additionPlans: AdditionPlan[] = REVIEWED_ZA_COURSE_ADDITIONS.flatMap(
     (definition): AdditionPlan[] => {
-      const expectedOsmId = googleOsmId(definition);
+      const expectedOsmId = reviewedExternalId(definition);
       const matches = allZaCourses.filter(
         (course) =>
           course.osmId === expectedOsmId || course.name === definition.name,
@@ -375,7 +379,7 @@ async function main() {
             holes: plan.definition.holes,
             website: optional(plan.definition.website),
             phone: optional(plan.definition.phone),
-            osmId: googleOsmId(plan.definition),
+            osmId: reviewedExternalId(plan.definition),
             lat: plan.definition.lat,
             lon: plan.definition.lon,
             active: true,
@@ -408,7 +412,7 @@ async function main() {
               holes: plan.definition.holes,
               website: optional(plan.definition.website),
               phone: optional(plan.definition.phone),
-              osmId: googleOsmId(plan.definition),
+              osmId: reviewedExternalId(plan.definition),
               lat: plan.definition.lat,
               lon: plan.definition.lon,
               active: true,
@@ -429,7 +433,7 @@ async function main() {
               holes: plan.definition.holes,
               website: optional(plan.definition.website),
               phone: optional(plan.definition.phone),
-              osmId: googleOsmId(plan.definition),
+              osmId: reviewedExternalId(plan.definition),
               lat: plan.definition.lat,
               lon: plan.definition.lon,
               active: true,
