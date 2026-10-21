@@ -74,7 +74,7 @@ async function run() {
     // Compare migration history without invoking Prisma CLI or allowing writes.
     const migrationsFolder = fileURLToPath(new URL('../prisma/migrations/', import.meta.url));
     const localMigrations = fs.readdirSync(migrationsFolder, { withFileTypes: true })
-      .filter((item) => item.isDirectory() && /^\\d{14}_/.test(item.name))
+      .filter((item) => item.isDirectory() && /^\d{14}_/.test(item.name))
       .map((item) => item.name)
       .sort();
 
