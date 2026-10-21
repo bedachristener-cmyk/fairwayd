@@ -48,8 +48,8 @@ async function run() {
   if (!actualHost.endsWith('.neon.tech')) fail('Database host is not a Neon host.');
   if (actualHost.includes('-pooler.')) fail('Use the direct Neon connection (disable Connection pooling in Neon).');
   if (actualHost !== expectedHost) fail('Hostname does not match the expected test-branch endpoint from Neon console.');
-  if (url.searchParams.get('sslmode') !== 'require') {
-    fail('Connection string must specify sslmode=require.');
+  if (!['require', 'verify-full'].includes(url.searchParams.get('sslmode'))) {
+    fail('Connection string must specify sslmode=require or sslmode=verify-full.');
   }
 
   console.log('Expected test Neon host matches: ' + actualHost);
@@ -70,7 +70,58 @@ async function run() {
     console.log('Database: ' + info.database_name);
     console.log('Read-only transaction: ' + info.read_only);
     console.log('Golf Services tables already present: ' + info.migration_already_present);
-    console.log('SUCCESS: Target endpoint reached. No data changed.');
+
+    // Compare migration history without invoking Prisma CLI or allowing writes.
+    const migrationsFolder = fileURLToPath(new URL('../prisma/migrations/', import.meta.url));
+    const localMigrations = fs.readdirSync(migrationsFolder, { withFileTypes: true })
+      .filter((item) => item.isDirectory() && /^\\d{14}_/.test(item.name))
+      .map((item) => item.name)
+      .sort();
+
+    const historyCheck = await client.query(
+      "SELECT to_regclass('public._prisma_migrations') IS NOT NULL AS has_history"
+    );
+    if (!historyCheck.rows[0].has_history) {
+      fail('Prisma migrations history is missing; do not run migrate deploy.');
+    }
+    const migrationRows = await client.query(
+      'SELECT migration_name, finished_at IS NOT NULL AS finished, ' +
+      'rolled_back_at IS NOT NULL AS rolled_back ' +
+      'FROM public."_prisma_migrations" ORDER BY started_at'
+    );
+    const completed = new Set(
+      migrationRows.rows
+        .filter((entry) => entry.finished && !entry.rolled_back)
+        .map((entry) => entry.migration_name)
+    );
+    const failed = migrationRows.rows
+      .filter((entry) => !entry.finished && !entry.rolled_back)
+      .map((entry) => entry.migration_name);
+    const pending = localMigrations.filter((name) => !completed.has(name));
+    const unexpectedDatabaseMigrations = [...completed]
+      .filter((name) => !localMigrations.includes(name));
+
+    console.log('Applied Prisma migrations: ' + completed.size);
+    console.log('Local migration folders: ' + localMigrations.length);
+    console.log('Pending local migrations: ' + pending.length);
+    for (const name of pending) console.log('  PENDING: ' + name);
+    if (failed.length) {
+      console.log('WARNING: unresolved migration(s): ' + failed.join(', '));
+    }
+    if (unexpectedDatabaseMigrations.length) {
+      console.log('WARNING: database migrations absent locally: ' +
+        unexpectedDatabaseMigrations.join(', '));
+    }
+    const expectedOnly = pending.length === 1 &&
+      pending[0] === '20261021185500_add_golf_service_directory' &&
+      failed.length === 0 && unexpectedDatabaseMigrations.length === 0 &&
+      info.migration_already_present === false;
+    console.log('Migration review gate: ' +
+      (expectedOnly ? 'EXPECTED_SINGLE_PENDING' : 'REVIEW_REQUIRED'));
+    console.log('SUCCESS: Read-only endpoint and history inspected. No data changed.');
+    if (!expectedOnly) {
+      fail('Migration status needs manual review; no deployment is authorized.');
+    }
   } finally {
     if (connected) {
       try { await client.query('ROLLBACK'); } catch { /* best effort */ }
@@ -87,7 +138,9 @@ run().catch((err) => {
       || err.message.startsWith('Connection URL') || err.message.startsWith('Database host')
       || err.message.startsWith('Hostname does not')
       || err.message.startsWith('Invalid PostgreSQL') || err.message.startsWith('Use the direct')
-      || err.message.startsWith('Database did not'))
+      || err.message.startsWith('Database did not')
+      || err.message.startsWith('Prisma migrations history')
+      || err.message.startsWith('Migration status needs'))
     ? err.message
     : 'Unable to connect or complete the read-only check. Confirm the test branch host, credentials, and SSL in Neon.';
   console.error(safePrefix + safeMessage);
