@@ -24,11 +24,15 @@ const query = `[out:json][timeout:120];
 area["ISO3166-1"="CH"]["admin_level"="2"]->.ch;
 (
   nwr["shop"="golf"](area.ch);
+  nwr["shop"="sports"]["sport"="golf"](area.ch);
+  nwr["shop"]["name"~"golf",i](area.ch);
   nwr["golf"="driving_range"](area.ch);
+  nwr["golf:course"="driving_range"](area.ch);
   nwr["golf"="practice"](area.ch);
   nwr["golf"="academy"](area.ch);
+  nwr["leisure"="sports_centre"]["sport"="golf"](area.ch);
   nwr["sport"="golf"]["indoor"="yes"](area.ch);
-  nwr["name"~"golf.?simulator|indoor.?golf|trackman|golf.?fitting|golf.?academy",i](area.ch);
+  nwr["name"~"golf.?simulator|indoor.?golf|trackman|virtual.?golf|golf.?fitting|golf.?academy|golfschule|golf.?shop|golf.?store|golf.?training|golf.?lounge|golf.?studio|club.?fitting|driving.?range",i](area.ch);
 );
 out center tags;`.replaceAll('(area.ch)', swissFilter);
 
@@ -40,15 +44,26 @@ function csvCell(value) {
 function classify(tags) {
   const name = String(tags.name ?? '').toLowerCase();
   const description = String(tags.description ?? '').toLowerCase();
-  const combined = `${name} ${description} ${tags.sport ?? ''}`;
+  const brand = String(tags.brand ?? '').toLowerCase();
+  const combined = `${name} ${brand} ${description}`;
   const categories = [];
-  if (/simulator|indoor.?golf|trackman|virtual.?golf/.test(combined) || (tags.sport === 'golf' && tags.indoor === 'yes')) categories.push('SIMULATOR');
-  if (tags.shop === 'golf' || /golf.?shop|golf.?store|golf.?equipment/.test(combined)) categories.push('SHOP');
-  if (tags.golf === 'driving_range' || /driving.?range/.test(combined)) categories.push('RANGE');
-  if (tags.golf === 'academy' || /golf.?academy|golf.?school|golf.?unterricht|golf.?schule/.test(combined)) categories.push('ACADEMY');
-  if (/club.?fitting|golf.?fitting|schläger.?fitting/.test(combined)) categories.push('FITTING');
-  if (tags.golf === 'practice' && categories.length === 0) categories.push('RANGE');
-  return categories;
+
+  if (/simulator|indoor.?golf|trackman|virtual.?golf|golf.?lounge|golf.?box|golf.?studio/.test(combined)
+      || (tags.sport === 'golf' && tags.indoor === 'yes')) categories.push('SIMULATOR');
+  if (tags.shop === 'golf' || (tags.shop === 'sports' && tags.sport === 'golf')
+      || (tags.shop && /golf.?shop|golf.?store|golf.?equipment/.test(combined))) categories.push('SHOP');
+  if (tags.golf === 'driving_range' || tags['golf:course'] === 'driving_range'
+      || /driving.?range/.test(combined)) categories.push('RANGE');
+  if (tags.golf === 'academy' || /golf.?academy|golf.?school|golfschule|golf.?unterricht|golf.?coaching|golf.?training/.test(combined)) categories.push('ACADEMY');
+  if (/club.?fitting|golf.?fitting|schl[aä]ger.?fitting/.test(combined)) categories.push('FITTING');
+
+  // These tags can denote internal parts of a golf course, not a public service.
+  // Keep as a candidate, not a verified RANGE or a published service.
+  if (categories.length === 0 && (tags.golf === 'practice' ||
+      (tags.leisure === 'sports_centre' && tags.sport === 'golf'))) {
+    categories.push('REVIEW');
+  }
+  return [...new Set(categories)];
 }
 
 function normalize(raw) {
@@ -76,9 +91,14 @@ function normalize(raw) {
       website: t.website ?? t['contact:website'] ?? '',
       phone: t.phone ?? t['contact:phone'] ?? '',
       access: t.access ?? '',
+      primaryOsmTag: [t.shop && `shop=${t.shop}`, t.golf && `golf=${t.golf}`, t['golf:course'] && `golf:course=${t['golf:course']}`, t.leisure && `leisure=${t.leisure}`, t.sport && `sport=${t.sport}`].filter(Boolean).join('|'),
       osmUrl: `https://www.openstreetmap.org/${id}`,
       reviewDecision: 'PENDING',
-      reviewNotes: '',
+      reviewNotes: (!t.name ? 'Name missing; ' : '') +
+        (cats.includes('REVIEW') ? 'Service type uncertain; ' : '') +
+        (t.golf === 'driving_range' ? 'Check public access; ' : '') +
+        (!t.website && !t['contact:website'] ? 'No website in OSM' : ''),
+
     }];
   }).sort((a, b) => a.name.localeCompare(b.name) || a.osmRef.localeCompare(b.osmRef));
 }
@@ -108,7 +128,7 @@ async function main() {
   }
   if (!Array.isArray(data.elements)) throw new Error('Expected Overpass JSON with elements array');
   const rows = normalize(data);
-  const headers = ['source','osmRef','name','categories','lat','lon','city','postcode','street','housenumber','website','phone','access','osmUrl','reviewDecision','reviewNotes'];
+  const headers = ['source','osmRef','name','categories','lat','lon','city','postcode','street','housenumber','website','phone','access','primaryOsmTag','osmUrl','reviewDecision','reviewNotes'];
   const output = path.resolve(`service-audits/ch-golf-services-osm-${region}-review.csv`);
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.writeFileSync(output, [headers.join(','), ...rows.map(row => headers.map(k => csvCell(row[k])).join(','))].join('\n') + '\n', 'utf8');
