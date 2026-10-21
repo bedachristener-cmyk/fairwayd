@@ -83,15 +83,12 @@ export function buildCourseContourOverpassQuery(
   ].join(',');
 
   return [
-    '[out:json][timeout:15];',
+    '[out:json][timeout:25][maxsize:16777216];',
     '(',
     `way["leisure"="golf_course"](${bbox});`,
-    `way["golf"="fairway"](${bbox});`,
-    `way["golf"="green"](${bbox});`,
-    `way["golf"="tee"](${bbox});`,
-    `way["golf"="bunker"](${bbox});`,
+    `way["golf"~"^(fairway|green|tee|bunker)$"](${bbox});`,
     ');',
-    'out tags geom;',
+    'out tags geom qt;',
   ].join('');
 }
 
