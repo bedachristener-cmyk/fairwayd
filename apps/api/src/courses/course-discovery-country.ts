@@ -74,6 +74,17 @@ const COUNTRY_CONFIGS: Record<string, CourseDiscoveryCountryConfig> = {
     lonStep: 0.5,
     searchRadiusMeters: 40_000,
   },
+  ZA: {
+    country: 'ZA',
+    areas: [
+      // Nationwide coverage, including the Western and Eastern Cape,
+      // KwaZulu-Natal, Gauteng, the inland provinces and the northern regions.
+      { minLat: -35.0, maxLat: -22.0, minLon: 16.5, maxLon: 33.0 },
+    ],
+    latStep: 0.6,
+    lonStep: 0.7,
+    searchRadiusMeters: 50_000,
+  },
 };
 
 export function supportedCourseDiscoveryCountries(): string[] {
