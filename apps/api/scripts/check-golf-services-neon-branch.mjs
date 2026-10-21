@@ -234,7 +234,7 @@ async function run() {
       info.migration_already_present === false;
     console.log('Migration review gate: ' +
       (expectedOnly ? 'EXPECTED_SINGLE_PENDING' : 'REVIEW_REQUIRED'));
-    console.log('SUCCESS: Read-only endpoint and history inspected. No data changed.');
+    console.log('Read-only audit completed. No data changed.');
     if (!expectedOnly) {
       fail('Migration status needs manual review; no deployment is authorized.');
     }
@@ -248,7 +248,7 @@ async function run() {
 
 run().catch((err) => {
   // Never echo the URL, password, parsed env values or raw connection exception.
-  const safePrefix = 'Connection check failed: ';
+  const safePrefix = 'Preflight: ';
   const safeMessage = err instanceof Error
     && (err.message.startsWith('Usage:') || err.message.startsWith('Secrets file')
       || err.message.startsWith('Connection URL') || err.message.startsWith('Database host')
