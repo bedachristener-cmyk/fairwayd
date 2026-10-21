@@ -10,6 +10,15 @@ const fetchMode = args.includes('--fetch');
 const inputArg = args.find((arg) => arg.startsWith('--input='));
 const inputPath = inputArg?.slice('--input='.length);
 if (fetchMode && inputPath) throw new Error('Choose --fetch or --input, not both.');
+const regionArg = args.find((arg) => arg.startsWith('--region='));
+const region = (regionArg?.slice('--region='.length) ?? 'switzerland').toLowerCase();
+if (!['basel', 'switzerland'].includes(region)) {
+  throw new Error('Supported regions: basel, switzerland.');
+}
+const swissFilter = region === 'basel'
+  ? '(area.ch)(47.30,7.30,47.80,8.35)'
+  : '(area.ch)';
+const endpoint = 'https://overpass.osm.ch/api/interpreter';
 
 const query = `[out:json][timeout:120];
 area["ISO3166-1"="CH"]["admin_level"="2"]->.ch;
@@ -21,7 +30,7 @@ area["ISO3166-1"="CH"]["admin_level"="2"]->.ch;
   nwr["sport"="golf"]["indoor"="yes"](area.ch);
   nwr["name"~"golf.?simulator|indoor.?golf|trackman|golf.?fitting|golf.?academy",i](area.ch);
 );
-out center tags;`;
+out center tags;`.replaceAll('(area.ch)', swissFilter);
 
 function csvCell(value) {
   const str = String(value ?? '');
@@ -77,7 +86,8 @@ function normalize(raw) {
 async function main() {
   if (!fetchMode && !inputPath) {
     console.log('Golf Near Me CH: preview only. No network request, no DB changes.');
-    console.log('To run one Overpass query: node scripts/discover-ch-golf-services-osm.mjs --fetch');
+    console.log('To run a regional query: node scripts/discover-ch-golf-services-osm.mjs --fetch --region=basel');
+    console.log('Full CH (later): node scripts/discover-ch-golf-services-osm.mjs --fetch --region=switzerland');
     console.log('To convert saved JSON: node scripts/discover-ch-golf-services-osm.mjs --input=C:\\path\\overpass.json');
     console.log(query);
     return;
@@ -86,8 +96,8 @@ async function main() {
   if (inputPath) {
     data = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
   } else {
-    console.log('Requesting one CH-wide OSM Overpass query (public instance; may time out)...');
-    const response = await fetch('https://overpass.kumi.systems/api/interpreter', {
+    console.log(`Requesting one ${region} OSM Overpass query (Swiss public instance; may time out)...`);
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ data: query }),
@@ -99,7 +109,7 @@ async function main() {
   if (!Array.isArray(data.elements)) throw new Error('Expected Overpass JSON with elements array');
   const rows = normalize(data);
   const headers = ['source','osmRef','name','categories','lat','lon','city','postcode','street','housenumber','website','phone','access','osmUrl','reviewDecision','reviewNotes'];
-  const output = path.resolve('service-audits/ch-golf-services-osm-review.csv');
+  const output = path.resolve(`service-audits/ch-golf-services-osm-${region}-review.csv`);
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.writeFileSync(output, [headers.join(','), ...rows.map(row => headers.map(k => csvCell(row[k])).join(','))].join('\n') + '\n', 'utf8');
   console.log(`Candidates: ${rows.length}; output: ${output}`);
