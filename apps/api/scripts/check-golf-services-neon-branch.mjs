@@ -112,6 +112,122 @@ async function run() {
       console.log('WARNING: database migrations absent locally: ' +
         unexpectedDatabaseMigrations.join(', '));
     }
+
+    // Read-only physical schema inventory for missing migration-history entries.
+    // Presence checks do NOT prove equivalence of SQL, constraints or data backfills.
+    const physicalChecks = {
+      '20260610120000_add_email_verification': [
+        ['column', 'User', 'emailVerifiedAt'],
+        ['column', 'User', 'privacyAcceptedAt'],
+        ['column', 'User', 'privacyVersion'],
+        ['table', 'EmailVerificationCode'],
+        ['index', 'EmailVerificationCode_userId_createdAt_idx'],
+        ['index', 'EmailVerificationCode_expiresAt_idx'],
+        ['foreignKey', 'EmailVerificationCode', 'EmailVerificationCode_userId_fkey'],
+      ],
+      '20260610133000_add_password_reset_codes': [
+        ['table', 'PasswordResetCode'],
+        ['index', 'PasswordResetCode_userId_createdAt_idx'],
+        ['index', 'PasswordResetCode_expiresAt_idx'],
+        ['foreignKey', 'PasswordResetCode', 'PasswordResetCode_userId_fkey'],
+      ],
+      '20261007120000_add_user_preferred_currency': [
+        ['column', 'User', 'preferredCurrency'],
+      ],
+      '20261008120000_add_trip_document_visibility_members': [
+        ['enumLabel', 'TripDocumentVisibility', 'SELECTED'],
+        ['table', 'TripDocumentVisibilityMember'],
+        ['index', 'TripDocumentVisibilityMember_tripDocumentId_tripMemberId_key'],
+        ['index', 'TripDocumentVisibilityMember_tripMemberId_idx'],
+        ['foreignKey', 'TripDocumentVisibilityMember', 'TripDocumentVisibilityMember_tripDocumentId_fkey'],
+        ['foreignKey', 'TripDocumentVisibilityMember', 'TripDocumentVisibilityMember_tripMemberId_fkey'],
+      ],
+      '20261020193000_add_post_collections': [
+        ['table', 'PostCollection'],
+        ['table', 'PostCollectionItem'],
+        ['index', 'PostCollection_userId_name_key'],
+        ['index', 'PostCollection_userId_updatedAt_idx'],
+        ['index', 'PostCollectionItem_collectionId_postId_key'],
+        ['index', 'PostCollectionItem_postId_idx'],
+        ['index', 'PostCollectionItem_collectionId_createdAt_idx'],
+        ['foreignKey', 'PostCollection', 'PostCollection_userId_fkey'],
+        ['foreignKey', 'PostCollectionItem', 'PostCollectionItem_collectionId_fkey'],
+        ['foreignKey', 'PostCollectionItem', 'PostCollectionItem_postId_fkey'],
+      ],
+      '20261021185500_add_golf_service_directory': [
+        ['table', 'GolfServiceVenue'],
+        ['table', 'GolfServiceOffering'],
+        ['table', 'GolfServiceProvider'],
+        ['table', 'GolfServiceVenueProvider'],
+        ['enumLabel', 'GolfServiceStatus', 'DRAFT'],
+      ],
+    };
+
+    async function checkObject(entry) {
+      const [kind, name, detail] = entry;
+      if (kind === 'table' || kind === 'index') {
+        const kindCode = kind === 'table' ? ['r', 'p'] : ['i', 'I'];
+        const result = await client.query(
+          'SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_class c ' +
+          'JOIN pg_catalog.pg_namespace ns ON ns.oid = c.relnamespace ' +
+          'WHERE ns.nspname = $1 AND c.relname = $2 AND c.relkind = ANY($3::"char"[])) AS present',
+          ['public', name, kindCode],
+        );
+        return result.rows[0].present;
+      }
+      if (kind === 'column') {
+        const result = await client.query(
+          'SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_attribute a ' +
+          'JOIN pg_catalog.pg_class c ON c.oid = a.attrelid ' +
+          'JOIN pg_catalog.pg_namespace ns ON ns.oid = c.relnamespace ' +
+          'WHERE ns.nspname = $1 AND c.relname = $2 AND a.attname = $3 ' +
+          'AND a.attnum > 0 AND NOT a.attisdropped) AS present',
+          ['public', name, detail],
+        );
+        return result.rows[0].present;
+      }
+      if (kind === 'foreignKey') {
+        const result = await client.query(
+          'SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_constraint co ' +
+          'JOIN pg_catalog.pg_class c ON c.oid = co.conrelid ' +
+          'JOIN pg_catalog.pg_namespace ns ON ns.oid = c.relnamespace ' +
+          "WHERE ns.nspname = $1 AND c.relname = $2 AND co.conname = $3 AND co.contype = 'f') AS present",
+          ['public', name, detail],
+        );
+        return result.rows[0].present;
+      }
+      if (kind === 'enumLabel') {
+        const result = await client.query(
+          'SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_enum e ' +
+          'JOIN pg_catalog.pg_type t ON t.oid = e.enumtypid ' +
+          'JOIN pg_catalog.pg_namespace ns ON ns.oid = t.typnamespace ' +
+          'WHERE ns.nspname = $1 AND t.typname = $2 AND e.enumlabel = $3) AS present',
+          ['public', name, detail],
+        );
+        return result.rows[0].present;
+      }
+      throw new Error('Unsupported physical schema check kind.');
+    }
+
+    for (const migration of pending) {
+      const checks = physicalChecks[migration];
+      if (!checks) {
+        console.log('  PHYSICAL_SCHEMA ' + migration + ': NOT_CATALOGUED');
+        continue;
+      }
+      const absent = [];
+      for (const check of checks) {
+        if (!(await checkObject(check))) absent.push(check.join(':'));
+      }
+      const presentCount = checks.length - absent.length;
+      const state = absent.length === 0 ? 'ALL_PRESENT' :
+        presentCount === 0 ? 'NONE_PRESENT' : 'PARTIAL';
+      console.log('  PHYSICAL_SCHEMA ' + migration + ': ' + state +
+        ' (' + presentCount + '/' + checks.length + ' markers)');
+      for (const object of absent) console.log('    MISSING_OBJECT: ' + object);
+    }
+    console.log('Object presence is diagnostic only and does not prove migrations were applied.');
+
     const expectedOnly = pending.length === 1 &&
       pending[0] === '20261021185500_add_golf_service_directory' &&
       failed.length === 0 && unexpectedDatabaseMigrations.length === 0 &&
