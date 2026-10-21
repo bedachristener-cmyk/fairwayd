@@ -118,8 +118,10 @@ function isFinalState(
     course.city === optional(definition.city) &&
     course.region === optional(definition.region) &&
     course.holes === definition.holes &&
-    course.website === optional(definition.website) &&
-    course.phone === optional(definition.phone) &&
+    (definition.website === undefined ||
+      course.website === optional(definition.website)) &&
+    (definition.phone === undefined ||
+      course.phone === optional(definition.phone)) &&
     course.osmId === reviewedExternalId(definition) &&
     coordinatesMatch(course.lat, course.lon, definition.lat, definition.lon) &&
     course.active &&
@@ -377,8 +379,12 @@ async function main() {
             city: optional(plan.definition.city),
             region: optional(plan.definition.region),
             holes: plan.definition.holes,
-            website: optional(plan.definition.website),
-            phone: optional(plan.definition.phone),
+            ...(plan.definition.website !== undefined
+              ? { website: optional(plan.definition.website) }
+              : {}),
+            ...(plan.definition.phone !== undefined
+              ? { phone: optional(plan.definition.phone) }
+              : {}),
             osmId: reviewedExternalId(plan.definition),
             lat: plan.definition.lat,
             lon: plan.definition.lon,
@@ -410,8 +416,12 @@ async function main() {
               city: optional(plan.definition.city),
               region: optional(plan.definition.region),
               holes: plan.definition.holes,
-              website: optional(plan.definition.website),
-              phone: optional(plan.definition.phone),
+              ...(plan.definition.website !== undefined
+                ? { website: optional(plan.definition.website) }
+                : {}),
+              ...(plan.definition.phone !== undefined
+                ? { phone: optional(plan.definition.phone) }
+                : {}),
               osmId: reviewedExternalId(plan.definition),
               lat: plan.definition.lat,
               lon: plan.definition.lon,
@@ -431,8 +441,12 @@ async function main() {
               city: optional(plan.definition.city),
               region: optional(plan.definition.region),
               holes: plan.definition.holes,
-              website: optional(plan.definition.website),
-              phone: optional(plan.definition.phone),
+              ...(plan.definition.website !== undefined
+                ? { website: optional(plan.definition.website) }
+                : {}),
+              ...(plan.definition.phone !== undefined
+                ? { phone: optional(plan.definition.phone) }
+                : {}),
               osmId: reviewedExternalId(plan.definition),
               lat: plan.definition.lat,
               lon: plan.definition.lon,
