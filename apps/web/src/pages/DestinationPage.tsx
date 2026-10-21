@@ -618,7 +618,7 @@ export default function DestinationPage() {
     null,
   );
 
-  const featuredPosts = (posts ?? []).slice(0, 2);
+  const featuredPosts = (posts ?? []).slice(0, 6);
   const info = slug ? DESTINATION_INFO[slug] : undefined;
   const featuredCourses = resolveFeaturedCourses(
     data?.items ?? [],
