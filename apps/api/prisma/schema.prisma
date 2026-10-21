@@ -676,6 +676,90 @@ model TripItemParticipant {
   @@index([tripMemberId])
 }
 
+
+/// Golf Near Me: physical location, independent of golf Course records.
+/// Only VERIFIED venues with a verifiedAt value should be published.
+model GolfServiceVenue {
+  id             String                     @id @default(cuid())
+  name           String
+  country        String
+  region         String?
+  city           String?
+  addressLine    String?
+  postalCode     String?
+  lat            Float?
+  lon            Float?
+  website        String?
+  phone          String?
+  /// Google Place ID is an identifier only; do not persist Google Places content here.
+  googlePlaceId  String?                    @unique
+  osmRef         String?                    @unique
+  status         GolfServiceStatus          @default(DRAFT)
+  sourceKind     GolfServiceSourceKind?
+  sourceUrl      String?
+  verifiedAt     DateTime?
+  reviewNotes    String?
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+  offerings      GolfServiceOffering[]
+  venueProviders GolfServiceVenueProvider[]
+
+  @@index([country, status])
+  @@index([country, region])
+  @@index([city])
+  @@index([lat, lon])
+}
+
+/// One venue can expose several independent golf service categories.
+/// unitCount represents physical units (e.g. two simulators), when verified.
+model GolfServiceOffering {
+  id                String               @id @default(cuid())
+  venueId           String
+  category          GolfServiceCategory
+  label             String?
+  description       String?
+  unitCount         Int?
+  availableToPublic Boolean?
+  bookingUrl        String?
+  sourceKind        GolfServiceSourceKind?
+  sourceUrl         String?
+  verifiedAt        DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  venue             GolfServiceVenue     @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@unique([venueId, category])
+  @@index([category])
+}
+
+/// A golf professional or service operator is not automatically another venue.
+model GolfServiceProvider {
+  id           String                     @id @default(cuid())
+  name         String
+  kind         GolfServiceProviderKind     @default(UNKNOWN)
+  website      String?
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+  venueLinks   GolfServiceVenueProvider[]
+}
+
+/// Link multiple instructors/operators to a single venue, or one pro to many venues.
+model GolfServiceVenueProvider {
+  id          String                  @id @default(cuid())
+  venueId     String
+  providerId  String
+  role        GolfServiceProviderRole
+  sourceKind  GolfServiceSourceKind?
+  sourceUrl   String?
+  verifiedAt  DateTime?
+  createdAt   DateTime                @default(now())
+  venue       GolfServiceVenue        @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  provider    GolfServiceProvider     @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([venueId, providerId, role])
+  @@index([providerId])
+}
+
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model spatial_ref_sys {
   srid      Int     @id
@@ -799,4 +883,37 @@ enum TripItemType {
   restaurant
   free_day
   note
+}
+
+enum GolfServiceStatus {
+  DRAFT
+  VERIFIED
+  HIDDEN
+}
+
+enum GolfServiceCategory {
+  SIMULATOR
+  SHOP
+  RANGE
+  ACADEMY
+  FITTING
+}
+
+enum GolfServiceSourceKind {
+  OFFICIAL_WEBSITE
+  USER_REPORT
+  OPENSTREETMAP
+  INDEPENDENT_RESEARCH
+}
+
+enum GolfServiceProviderKind {
+  UNKNOWN
+  PERSON
+  ORGANIZATION
+}
+
+enum GolfServiceProviderRole {
+  GOLF_PRO
+  FITTER
+  OPERATOR
 }
