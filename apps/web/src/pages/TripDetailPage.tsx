@@ -4108,6 +4108,7 @@ export default function TripDetailPage() {
   const [myCostsLoading, setMyCostsLoading] = useState(false);
   const [myCostsErr, setMyCostsErr] = useState<string | null>(null);
   const [expandedMyCostId, setExpandedMyCostId] = useState<string | null>(null);
+  const [myCostsExpanded, setMyCostsExpanded] = useState(false);
   const [organizerCostsData, setOrganizerCostsData] =
     useState<OrganizerTripCostsResponse | null>(null);
   const [organizerCostsLoading, setOrganizerCostsLoading] = useState(false);
@@ -7380,38 +7381,85 @@ export default function TripDetailPage() {
           <div
             style={{
               display: "flex",
-              alignItems: "flex-start",
+              alignItems: "center",
               justifyContent: "space-between",
               gap: 10,
-              flexWrap: "wrap",
             }}
           >
-            <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
-              <div style={sectionTitleTextStyle}>My Costs</div>
-              <div style={sectionSubtitleTextStyle}>
-                Secure view of costs where you are involved
-              </div>
-            </div>
             <button
               type="button"
-              onClick={() => void refreshCostViews()}
-              disabled={myCostsLoading}
+              onClick={() => setMyCostsExpanded((current) => !current)}
+              aria-expanded={myCostsExpanded}
+              aria-controls="my-trip-costs-details"
               style={{
-                minHeight: 32,
-                padding: "0 12px",
-                borderRadius: 999,
-                border: "1px solid var(--border)",
-                background: "var(--bg)",
-                color: "var(--text)",
-                fontSize: 12,
-                fontWeight: 900,
-                cursor: myCostsLoading ? "default" : "pointer",
+                all: "unset",
+                cursor: "pointer",
+                minWidth: 0,
+                flex: "1 1 auto",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                WebkitTapHighlightColor: "transparent",
               }}
             >
-              {myCostsLoading ? "Loading..." : "Refresh"}
+              <div
+                aria-hidden="true"
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 14,
+                  background: "var(--accent-soft)",
+                  border: "1px solid var(--border)",
+                  color: "var(--accent-strong)",
+                  display: "grid",
+                  placeItems: "center",
+                  flex: "0 0 auto",
+                }}
+              >
+                <WalletCards size={18} strokeWidth={2.2} />
+              </div>
+              <div style={{ minWidth: 0, flex: "1 1 auto", display: "grid", gap: 2 }}>
+                <div style={sectionTitleTextStyle}>My Costs</div>
+                <div style={sectionSubtitleTextStyle}>
+                  Secure view of costs where you are involved
+                </div>
+              </div>
+              <ChevronDown
+                size={18}
+                aria-hidden="true"
+                style={{
+                  color: "var(--sub)",
+                  flex: "0 0 auto",
+                  transform: myCostsExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                  transition: "transform 160ms ease",
+                }}
+              />
             </button>
+            {myCostsExpanded ? (
+              <button
+                type="button"
+                onClick={() => void refreshCostViews()}
+                disabled={myCostsLoading}
+                style={{
+                  minHeight: 32,
+                  padding: "0 12px",
+                  borderRadius: 999,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg)",
+                  color: "var(--text)",
+                  fontSize: 12,
+                  fontWeight: 900,
+                  cursor: myCostsLoading ? "default" : "pointer",
+                  flex: "0 0 auto",
+                }}
+              >
+                {myCostsLoading ? "Loading..." : "Refresh"}
+              </button>
+            ) : null}
           </div>
 
+          {myCostsExpanded ? (
+            <div id="my-trip-costs-details" style={{ display: "grid", gap: 10 }}>
           {myCostsErr ? (
             <div
               style={{
@@ -8013,6 +8061,8 @@ export default function TripDetailPage() {
               </div>
             ) : null}
           </div>
+            </div>
+          ) : null}
         </section>
       ) : null}
 
