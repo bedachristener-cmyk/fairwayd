@@ -17,11 +17,19 @@ function requestCount(country: string): number {
 
 describe('course discovery country configuration', () => {
   it('keeps supported countries explicit and deterministic', () => {
-    expect(supportedCourseDiscoveryCountries()).toEqual(['AE', 'AT', 'CH', 'TH', 'TR']);
+    expect(supportedCourseDiscoveryCountries()).toEqual([
+      'AE',
+      'AT',
+      'CH',
+      'TH',
+      'TR',
+      'ZA',
+    ]);
     expect(courseDiscoveryCountryConfig('ae')?.country).toBe('AE');
     expect(courseDiscoveryCountryConfig('at')?.country).toBe('AT');
     expect(courseDiscoveryCountryConfig('th')?.country).toBe('TH');
     expect(courseDiscoveryCountryConfig('tr')?.country).toBe('TR');
+    expect(courseDiscoveryCountryConfig('za')?.country).toBe('ZA');
     expect(courseDiscoveryCountryConfig('DE')).toBeNull();
   });
 
@@ -52,5 +60,13 @@ describe('course discovery country configuration', () => {
     expect(config!.areas).toHaveLength(1);
     expect(config!.searchRadiusMeters).toBe(45_000);
     expect(requestCount('TR')).toBe(390);
+  });
+
+  it('covers South Africa nationwide with a bounded request plan', () => {
+    const config = courseDiscoveryCountryConfig('ZA');
+    expect(config).not.toBeNull();
+    expect(config!.areas).toHaveLength(1);
+    expect(config!.searchRadiusMeters).toBe(50_000);
+    expect(requestCount('ZA')).toBe(528);
   });
 });
