@@ -263,3 +263,32 @@ node --test .\scripts\preview-golf-services-pilot.test.mjs
 The script only reads the JSON file and prints a summary. It rejects accidental `VERIFIED` statuses, duplicate offerings, invalid coordinates, and Google response data mixed into the reviewed pilot fixture. There is intentionally **no --apply mode**. Validation never touches a database or external API.
 
 Later, before any persistence, we must review the migration target database separately, create a backup/migration plan and an explicit reviewed-only import. No `prisma migrate deploy`, deployment, and no public listing at this stage.
+
+## Isolated Neon test branch: safe connection preflight (not a migration)
+
+The user created Neon DB branch `golf-near-me-dev` from `stage` with **Auto-delete = Never**, so delete it manually after finishing tests to avoid idle/compute/storage charges. This is separate from the GitHub feature branch.
+
+Before any SQL migration, verify the **direct endpoint hostname** from Neon > Fairwayd > Branches > golf-near-me-dev > Connect. Disable pooling for the direct connection. **Do not share the full connection URL, password or other secrets in chat or commits.**
+
+Keep the connection string in an **untracked file outside the repository**, e.g. `C:\dev\fairwayd-local-secrets\golf-near-me-dev.env`:
+
+```dotenv
+NEON_DATABASE_URL="postgresql://USERNAME:REDACTED_PASSWORD@ep-test-host.REGION.aws.neon.tech/DB_NAME?sslmode=require"
+```
+
+Replace all placeholders by pasting the actual connection string from the Neon Connect UI (do not use the example as a real URL). The file MUST contain the URL from `golf-near-me-dev`, not `stage` or `production`.
+
+A special check script is provided: `apps/api/scripts/check-golf-services-neon-branch.mjs`. It **reads this exact external file, not the existing apps/api/.env or inherited environment variables**, refuses URLs inside the Git repository, refuses pooler hostnames, requires an explicitly supplied expected direct hostname, then performs only `BEGIN READ ONLY`, a metadata `SELECT`, and `ROLLBACK`.
+
+```powershell
+cd C:\dev\fairwayd
+git pull --ff-only origin feature/golf-near-me-ch-pilot
+cd apps\api
+node .\scripts\check-golf-services-neon-branch.mjs --env="C:\dev\fairwayd-local-secrets\golf-near-me-dev.env" --expected-host="ep-test-host.REGION.aws.neon.tech"
+```
+
+The hostname above is **only a placeholder**. Take the hostname after `@` and before `/` in the Neon Connect URL, without the user/password/port. Do not paste a full connection string into PowerShell command line or chat.
+
+Expected safe result: host match, database name, read-only transaction `on`, and whether the Golf Services table exists. On a fresh test branch, expect the new table is absent.
+
+**Still prohibited until explicit review:** `prisma migrate deploy`, `prisma migrate dev`, manual SQL writes, data import, activation of `GOLF_SERVICES_API_ENABLED`. Even the branch-specific migration is not applied by the preflight.
