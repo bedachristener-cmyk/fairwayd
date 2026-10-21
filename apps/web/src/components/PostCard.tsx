@@ -4,6 +4,7 @@ import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { t } from "../i18n/strings";
+import { usePostCollections } from "../state/PostCollectionsContext";
 import ImageLightbox from "./ImageLightbox";
 
 function avatarSrc(url?: string | null) {
@@ -87,7 +88,7 @@ export default function PostCard({
   onCommentClick,
   onOpenPost,
   onSaveClick,
-  saved = false,
+  saved,
   courseFollowed,
   courseFollowBusy,
   onCourseFollowToggle,
@@ -97,6 +98,12 @@ export default function PostCard({
   onPostDeleted,
 }: PostCardProps) {
   const { token, user } = useAuth();
+  const postCollections = usePostCollections();
+  const effectiveOnSaveClick =
+    onSaveClick ??
+    (postCollections.enabled ? postCollections.openPicker : undefined);
+  const effectiveSaved =
+    saved ?? postCollections.savedPostIds.has(post.id);
 
   const currentUserId = user?.id ?? null;
 
@@ -1476,23 +1483,23 @@ export default function PostCard({
           {isMobile ? `💬 ${commentCount}` : `💬 ${t("comments")} ${commentCount}`}
         </button>
 
-        {onSaveClick ? (
+        {effectiveOnSaveClick ? (
           <button
             type="button"
             className="fw-pill fw-pill--meta fw-pill--info"
             style={{
               ...actionButtonStyle,
-              color: saved ? "var(--accent-strong)" : "var(--sub)",
-              background: saved
+              color: effectiveSaved ? "var(--accent-strong)" : "var(--sub)",
+              background: effectiveSaved
                 ? "color-mix(in srgb, var(--accent) 12%, var(--card))"
                 : "var(--card)",
             }}
-            aria-pressed={saved}
+            aria-pressed={effectiveSaved}
             onClick={(e) => {
               e.stopPropagation();
-              onSaveClick(post.id);
+              effectiveOnSaveClick(post.id);
             }}
-            title={saved ? t("saved_posts") : t("save_post")}
+            title={effectiveSaved ? t("saved_posts") : t("save_post")}
           >
             <svg
               width="17"
@@ -1503,13 +1510,17 @@ export default function PostCard({
             >
               <path
                 d="M6.5 4.75c0-.97.78-1.75 1.75-1.75h7.5c.97 0 1.75.78 1.75 1.75V21l-5.5-3.45L6.5 21V4.75Z"
-                fill={saved ? "currentColor" : "none"}
+                fill={effectiveSaved ? "currentColor" : "none"}
                 stroke="currentColor"
                 strokeWidth="1.8"
                 strokeLinejoin="round"
               />
             </svg>
-            {!isMobile ? (saved ? t("saved_posts") : t("save")) : null}
+            {!isMobile
+              ? effectiveSaved
+                ? t("saved_posts")
+                : t("save")
+              : null}
           </button>
         ) : null}
 
