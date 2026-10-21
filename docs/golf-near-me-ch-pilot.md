@@ -79,3 +79,29 @@ node scripts/probe-ch-golf-services-google.mjs --fetch --confirm-google-places-r
 Use existing server-side `GOOGLE_PLACES_REVIEW_API_KEY` or `GOOGLE_MAPS_API_KEY` from apps/api/.env; never copy credentials to the frontend or into chat. Review API pricing and quotas before live requests.
 
 For a first UI MVP, display independently verified service data in Fairwayd's existing OpenStreetMap/Leaflet map. If separately rendering live Google Places results, start with a list with proper attribution (or a distinct Google Map), and do not merge Google-provided coordinates with a Leaflet map.
+
+## Pilot discovery checkpoint — Basel region (2026-10-21)
+
+The first Overpass run for the Basel region yielded **only 3 candidate features**, all labelled RANGE. Two lacked useful names or websites. This is **insufficient coverage** for the Golf Near Me product. Expanding OSM tag patterns alone is not a reliable solution.
+
+Independently discoverable reference providers exist in the same area (verify actual operation and website before publication):
+- The Golf Lounge / SebbyGolf (Rheinfelden): simulator, coaching, fitting; possible business aliases sharing one venue. Primary source: https://thegolflounge.ch/
+- Golfschmiede (Rheinfelden): TrackMan indoor golf; primary source: https://www.golfschmiede.ch/
+- Golfers Paradise Aquabasilea (Pratteln): golf shop; primary source: https://golfersparadise.ch/pages/unsere-filialen
+- Golf Center Basel (Allschwil): shop and fitting; primary source: https://golfcenter.ch/basel/
+- Golf Corner (Basel): indoor simulator; verify official source https://golf-corner.ch/
+
+One directory, https://www.golfsimulators.ch/de, publishes a broader independently maintained Swiss indoor-golf inventory. **Do not scrape, import, or redistribute its dataset without appropriate rights/permission.** It is a discovery lead and benchmark only.
+
+### Revised strategy
+
+- **Do not equate OSM results with completeness** or publish its unreviewed candidates.
+- Source discovery should combine: voluntary business submissions / official websites, OSM with required ODbL compliance, and optional compliant **live** Google Places discovery and display.
+- If using Google Places, keep its fetched data ephemeral and respect caching, attribution, map restrictions, billing and quota safeguards. Only persistent IDs where policy allows, or independently verified facts from operator sites under a separate lawful basis. Do not construct a persistent business directory by copying Google Places data.
+- Deduplicate venues by identity, address and independent website; one provider may have several brands and several categories.
+- Include clubs that offer public-access driving ranges, lessons, fitting or pro shops, but do not duplicate their whole golf course as a new service venue without a distinct service.
+- Prefer regional source cross-checks and a measurable manual **recall benchmark** (known examples found / known examples). OSM baseline currently misses the referenced indoor facilities and retail shops.
+- For near-me searches near national boundaries, **distance-radius should not silently exclude DE/FR**: offer a country filter separately from geodesic radius.
+- Before introducing API calls, show planned number of requests and projected Google Places cost; require explicit invocation and apply budgets/rate limits.
+
+**Next engineering step:** build a small region-Basel test fixture from independently verified operator sources, compare discovery recall, then design a compliant service search API (live enrichment where permitted) before building the public UI.
