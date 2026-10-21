@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Golf Near Me Basel pilot. Review-only sample; never auto-seed or publish. Independently sourced venue facts.",
+  "venues": [
+    {
+      "reference": "ch-rheinfelden-the-golf-lounge",
+      "status": "DRAFT",
+      "name": "The Golf Lounge",
+      "country": "CH",
+      "region": "Aargau",
+      "city": "Rheinfelden",
+      "addressLine": "Quellenstrasse 37",
+      "postalCode": "4310",
+      "lat": null,
+      "lon": null,
+      "website": "https://thegolflounge.ch/",
+      "sourceKind": "OFFICIAL_WEBSITE",
+      "sourceUrl": "https://thegolflounge.ch/",
+      "verifiedAt": null,
+      "reviewNotes": "User knows the venue: two simulators, and SebbyGolf is the golf professional teaching there. Venue and facilities require a final publication review. Coordinates omitted pending independently verified geocoding.",
+      "offerings": [
+        {
+          "category": "SIMULATOR",
+          "status": "DRAFT",
+          "unitCount": 2,
+          "label": "Indoor golf simulators",
+          "sourceKind": "USER_REPORT",
+          "sourceUrl": null,
+          "verifiedAt": null
+        },
+        {
+          "category": "ACADEMY",
+          "status": "DRAFT",
+          "unitCount": null,
+          "label": "Golf lessons with Sebby",
+          "sourceKind": "OFFICIAL_WEBSITE",
+          "sourceUrl": "https://thegolflounge.ch/",
+          "verifiedAt": null
+        },
+        {
+          "category": "SHOP",
+          "status": "DRAFT",
+          "unitCount": null,
+          "label": "Proshop",
+          "sourceKind": "OFFICIAL_WEBSITE",
+          "sourceUrl": "https://thegolflounge.ch/",
+          "verifiedAt": null
+        },
+        {
+          "category": "FITTING",
+          "status": "DRAFT",
+          "unitCount": null,
+          "label": "Custom club fitting",
+          "sourceKind": "OFFICIAL_WEBSITE",
+          "sourceUrl": "https://thegolflounge.ch/",
+          "verifiedAt": null
+        }
+      ],
+      "providers": [
+        {
+          "name": "SebbyGolf",
+          "kind": "PERSON",
+          "role": "GOLF_PRO",
+          "status": "DRAFT",
+          "sourceKind": "USER_REPORT",
+          "sourceUrl": "https://thegolflounge.ch/",
+          "verifiedAt": null,
+          "reviewNotes": "User-reported: Sebby is a golf professional offering instruction at this venue. The operator advertises golf lessons with Sebby."
+        }
+      ]
+    }
+  ]
+}
