@@ -164,3 +164,20 @@ Still pending independent provider verification:
 3. Match by identity and verified operator source, not exclusively Google place ID.
 4. Maintain independent source provenance, `verifiedAt`, review notes, and discrepancy flags, but do not persist Google Places response fields as a Fairwayd dataset.
 5. Test the optional two remaining calls for FITTING and RANGE only if needed and explicitly authorized; no further calls are necessary to establish the pilot's main hypothesis.
+
+## First-hand user verification — The Golf Lounge / SebbyGolf (2026-10-21)
+
+The user, who knows the venue, confirms:
+
+- **The Golf Lounge** is the physical lounge/location with **2 golf simulators**.
+- **SebbyGolf** refers to the golf professional providing **golf lessons there**.
+- These must not be presented as two independent golf simulator venues at the same address.
+
+Data-model implication:
+- **Venue**: one physical location (The Golf Lounge), coordinates/address and venue-level details.
+- **Services**: SIMULATOR with `simulatorCount=2`, and ACADEMY / LESSONS.
+- **Provider**: SebbyGolf, attached to the venue with role golf professional/instructor; optionally a separate profile later, but not an extra venue marker.
+- **Provenance**: user-reported/firsthand (2026-10-21), distinct from independent official-website verification. Reconfirm before publishing definitive facilities or commercial booking details.
+- **Deduplication**: support multiple branded services and providers at one address; one marker for the venue.
+
+This is a useful fixture for future service-model tests and highlights the difference between businesses, facilities, service categories and people.
