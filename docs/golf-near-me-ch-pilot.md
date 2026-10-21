@@ -181,3 +181,37 @@ Data-model implication:
 - **Deduplication**: support multiple branded services and providers at one address; one marker for the venue.
 
 This is a useful fixture for future service-model tests and highlights the difference between businesses, facilities, service categories and people.
+
+## First Prisma data model (feature branch only, not deployed)
+
+Schema: \`apps/api/prisma/schema.prisma\`. Migration: \`apps/api/prisma/migrations/20261021185500_add_golf_service_directory/migration.sql\`.
+
+- \`GolfServiceVenue\`: one **physical location**. Region/country/address, optional validated coordinate pair, non-Google sourced public details, \`googlePlaceId\` (identifier only) / \`osmRef\` (identifier). No relation to \`Course\`, so course map markers and imports remain unchanged.
+- \`GolfServiceOffering\`: one **category** per venue (\`SIMULATOR\`, \`SHOP\`, \`RANGE\`, \`ACADEMY\`, \`FITTING\`), with optional \`unitCount\` and public-access information. Uniqueness prevents duplicate category rows per physical venue. A venue can have several categories.
+- \`GolfServiceProvider\`: named golf professional or service organization, without duplicating the venue.
+- \`GolfServiceVenueProvider\`: many-to-many association of provider and venue with role \`GOLF_PRO\`, \`FITTER\` or \`OPERATOR\`.
+
+**SebbyGolf/The Golf Lounge test fixture (illustrative; no database seed):**
+- Venue name: The Golf Lounge, country CH, location Rheinfelden; status DRAFT.
+- Offering: SIMULATOR, \`unitCount=2\`, USER_REPORT; status DRAFT until independently reviewed.
+- Offering: ACADEMY (teaching), USER_REPORT; status DRAFT.
+- Provider: SebbyGolf, kind UNKNOWN pending independent identity review.
+- Venue-provider link: SebbyGolf → The Golf Lounge, role GOLF_PRO, USER_REPORT, status DRAFT.
+- One location and therefore one venue marker; two services and one linked provider.
+
+**Publication gates:** all venue records, offering records, and provider-venue links default to \`DRAFT\`. Any record switched to \`VERIFIED\` must have \`verifiedAt\` and \`sourceKind\`; the SQL migration enforces this. Public API queries must explicitly select VERIFIED records at every relevant level. These tables have no active public API endpoint or frontend integration yet.
+
+**Migration checks:** venue coordinates must be either both present or both absent, be within valid Earth ranges, and \`unitCount\` must be positive when supplied. Nullable source information allows manual reviews while preventing premature publication. \`UNIQUE(venueId, category)\` and provider/venue/role uniqueness prevent structural duplicates; duplicate *physical venues* still need manual matching.
+
+**Google licensing:** only Place ID can be carried forward from Google on its allowed terms. Venue names/addresses/site URLs must be sourced independently and provenance tracked; do not bulk-copy or persist Google Places response attributes. Check ODbL requirements separately before persisting OSM-derived facts.
+
+**Safe validation on a local checkout** (no migrations applied and no stage/prod writes):
+
+\`\`\`powershell
+cd C:\dev\fairwayd
+git pull --ff-only origin feature/golf-near-me-ch-pilot
+cd apps\api
+npx prisma validate
+\`\`\`
+
+\`prisma.config.ts\` requires existing \`.env\` connection variables to parse, but validation does not apply migrations. **Do not run \`prisma migrate deploy\`, \`prisma migrate dev\`, or a deployment from this feature branch yet.** Run validation and review before any DB change.
