@@ -105,3 +105,30 @@ One directory, https://www.golfsimulators.ch/de, publishes a broader independent
 - Before introducing API calls, show planned number of requests and projected Google Places cost; require explicit invocation and apply budgets/rate limits.
 
 **Next engineering step:** build a small region-Basel test fixture from independently verified operator sources, compare discovery recall, then design a compliant service search API (live enrichment where permitted) before building the public UI.
+
+## Minimal Google Places comparison (bounded pilot)
+
+Opt-in helper: `apps/api/scripts/discover-ch-golf-services-places.mjs`.
+
+- **No API calls** when launched without flags.
+- Runs only with both `--fetch` and `--confirm-google-places-requests`.
+- First batch: **three** Text Search Pro calls for Basel/Rheinfelden/Pratteln; optional second batch of **two** further calls covering fitting and driving ranges.
+- Local safety stop: maximum five calls per UTC day in this checkout. The call log is request timestamps/numbers only at `apps/api/service-audits/ch-golf-services-places-usage.csv` (untracked). It does **not** impose a project-wide Google Cloud spending limit; configure quotas and budget alerts separately. Billing/free limits are shared with the course-discovery project.
+- No retry loop, no Google data caching, no database writes, no changing golf course records. Responses are shown temporarily in the console for comparison and independent verification against official business websites.
+- Requested fields are limited to `places.id,places.displayName,places.formattedAddress,places.googleMapsUri`; the name/address/map URI require **Text Search Pro**. Per Google's October 2026 pricing page, Text Search Pro has 5,000 free usage per SKU/month then USD 32 per 1,000 for the first paid tier; five would be around USD 0.16 at that tier, **not a statement of the account's current remaining free quota or bill**. Pricing changes and Google Cloud quotas may differ.
+- If using the resulting Google Place data live in the product, adhere to mandatory Google logo/attribution and Google Map usage policies. The `place_id` can be retained for later refresh but **do not persist Google-provided names, descriptions, business status, address or coordinates as a permanent Fairwayd directory**. Verified business information from the provider's own site is a separate provenance stream.
+
+Run from `apps/api`:
+
+```powershell
+node .\scripts\discover-ch-golf-services-places.mjs
+# No API call
+
+node .\scripts\discover-ch-golf-services-places.mjs --fetch --confirm-google-places-requests
+# First 3 calls
+
+node .\scripts\discover-ch-golf-services-places.mjs --fetch --confirm-google-places-requests --start=4 --max-requests=2
+# Optional two more on same UTC date if the limit still permits
+```
+
+Keep the monetization feature flag disabled while piloting services. Cost visibility and supply-side coverage come before partner/referral monetization; revisit once the feature has genuine usage.
