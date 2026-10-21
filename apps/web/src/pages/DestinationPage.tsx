@@ -3279,7 +3279,10 @@ export default function DestinationPage() {
                     width: isMobile ? "100%" : "auto",
                   }}
                 >
-                  {t("see_all_posts")}
+                  {t("see_all_posts_from").replace(
+                    "{destination}",
+                    data.destination?.name || getCountryName(data.country),
+                  )}
                 </button>
               </div>
 
