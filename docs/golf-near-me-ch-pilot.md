@@ -56,3 +56,26 @@ CSV records are **candidates**, not a verified business directory. A separate re
 - Manual city search works without granting precise-location access.
 - Geographic filtering supports the Swiss pilot and does not hard-code CH in the eventual service API.
 - Visible licensing/attribution is present and no paid third-party discovery calls occur without explicit opt-in.
+
+
+## Pilot finding, 2026-10-21: OSM coverage is insufficient
+
+The initial Basel-region OSM query produced just three RANGE candidates (two unnamed / generic and one Lindfeld Mägenwil). This is not evidence that the region lacks shops or simulators; it is evidence that many facilities lack the searched OSM tags. Do **not** equate OSM coverage with actual business coverage.
+
+**Revised source strategy:** combine independent supplier/business websites and editorial review for a persistent Fairwayd-owned services directory with live Google Places lookups as an optional discovery/search provider. OSM continues as a supplementary, properly attributed source. Keep data from Google Places out of a persistent directory except for fields expressly permitted by its terms (e.g. Place IDs). If displaying Google Places content in a non-Google map, stop: Places results mapped as markers must use a Google Map; a standalone list requires Google Maps attribution.
+
+A capped Basel-category live coverage probe was added as `apps/api/scripts/probe-ch-golf-services-google.mjs`:
+
+```powershell
+cd C:\dev\fairwayd\apps\api
+node scripts/probe-ch-golf-services-google.mjs
+# Preview only; no requests
+
+node scripts/probe-ch-golf-services-google.mjs --fetch --confirm-google-places-requests
+# Five potentially billable Google Places Text Search requests; prints candidates
+# to terminal only, does not save or insert any data
+```
+
+Use existing server-side `GOOGLE_PLACES_REVIEW_API_KEY` or `GOOGLE_MAPS_API_KEY` from apps/api/.env; never copy credentials to the frontend or into chat. Review API pricing and quotas before live requests.
+
+For a first UI MVP, display independently verified service data in Fairwayd's existing OpenStreetMap/Leaflet map. If separately rendering live Google Places results, start with a list with proper attribution (or a distinct Google Map), and do not merge Google-provided coordinates with a Leaflet map.
