@@ -20,14 +20,16 @@ const args = process.argv.slice(2);
 const execute = args.includes('--fetch');
 const confirmed = args.includes('--confirm-google-places-requests');
 const countArgument = args.find((arg) => arg.startsWith('--max-requests='));
-const count = countArgument ? Number(countArgument.split('=')[1]) : 3;
+const startArgument = args.find((arg) => arg.startsWith('--start='));
+const start = startArgument ? Number(startArgument.split('=')[1]) : 1;
+const count = countArgument ? Number(countArgument.split('=')[1]) : (start === 1 ? 3 : 2);
 
-if (!Number.isInteger(count) || count < 1 || count > DAILY_MAX) {
-  console.error('Specify --max-requests=1..5; default is 3.');
+if (!Number.isInteger(start) || start < 1 || start > DAILY_MAX || !Number.isInteger(count) || count < 1 || start + count - 1 > DAILY_MAX) {
+  console.error('Specify --start=1..5 and --max-requests=1..5 without exceeding five configured queries.');
   process.exit(1);
 }
 
-const selected = REQUESTS.slice(0, count);
+const selected = REQUESTS.slice(start - 1, start - 1 + count);
 function usedToday() {
   if (!fs.existsSync(usageFile)) return 0;
   const date = new Date().toISOString().slice(0, 10);
@@ -45,11 +47,12 @@ async function run() {
   console.log('Configured daily maximum: ' + DAILY_MAX + ' per local checkout (UTC day).');
   console.log('Billing: Text Search Pro; check Google Cloud billing and SKU free caps.');
   console.log('No DB writes. Google response data is printed, not saved.');
-  selected.forEach((item, i) => console.log((i + 1) + '. ' + item.category + ': ' + item.query));
+  selected.forEach((item, i) => console.log((start + i) + '. ' + item.category + ': ' + item.query));
 
   if (!execute) {
     console.log('Preview only: zero API calls.');
-    console.log('To run: node scripts/discover-ch-golf-services-places.mjs --fetch --confirm-google-places-requests');
+    console.log('To run first three: node scripts/discover-ch-golf-services-places.mjs --fetch --confirm-google-places-requests');
+    console.log('Optional last two later: node scripts/discover-ch-golf-services-places.mjs --fetch --confirm-google-places-requests --start=4 --max-requests=2');
     return;
   }
   if (!confirmed) throw new Error('No requests made: also add --confirm-google-places-requests.');
@@ -62,7 +65,7 @@ async function run() {
 
   for (const [index, item] of selected.entries()) {
     // Record *before* the request to avoid accidental repeat billing after crashes/errors.
-    recordAttempt(index + 1);
+    recordAttempt(start + index);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
     let response;
