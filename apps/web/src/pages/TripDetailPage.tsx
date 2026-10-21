@@ -4113,6 +4113,7 @@ export default function TripDetailPage() {
   const [organizerCostsLoading, setOrganizerCostsLoading] = useState(false);
   const [organizerCostsErr, setOrganizerCostsErr] = useState<string | null>(null);
   const [expandedOrganizerCostId, setExpandedOrganizerCostId] = useState<string | null>(null);
+  const [organizerCostsExpanded, setOrganizerCostsExpanded] = useState(false);
 
   const myMembership = trip?.members?.find((member) => member.userId === user?.id);
   const canEditTrip =
@@ -8023,15 +8024,71 @@ export default function TripDetailPage() {
             gap: 10,
           }}
         >
-          <div style={{ display: "grid", gap: 2 }}>
-            <div style={sectionTitleTextStyle}>Trip Cost Sheet</div>
-            <div style={sectionSubtitleTextStyle}>
-              {organizerCostsLoading
-                ? "Loading trip cost sheet..."
-                : "Full cost overview for OWNER and ADMIN members"}
+          <button
+            type="button"
+            onClick={() => setOrganizerCostsExpanded((current) => !current)}
+            aria-expanded={organizerCostsExpanded}
+            aria-controls="trip-cost-sheet-details"
+            style={{
+              all: "unset",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              width: "100%",
+              boxSizing: "border-box",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            <div style={{ minWidth: 0, display: "grid", gap: 2 }}>
+              <div style={sectionTitleTextStyle}>Trip Cost Sheet</div>
+              <div style={sectionSubtitleTextStyle}>
+                {organizerCostsErr
+                  ? "Trip cost sheet could not be loaded"
+                  : organizerCostsLoading
+                    ? "Loading trip cost sheet..."
+                    : `${organizerCostsData?.costs.length ?? 0} ${
+                        (organizerCostsData?.costs.length ?? 0) === 1 ? "cost" : "costs"
+                      } · Owner and admin overview`}
+              </div>
             </div>
-          </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-end",
+                gap: 8,
+                flexShrink: 0,
+              }}
+            >
+              <span
+                style={{
+                  color: "var(--text)",
+                  fontSize: 13,
+                  fontWeight: 950,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {formatMoney(
+                  organizerCostsData?.summary.totalTripCost ?? 0,
+                  organizerCostsData?.baseCurrency || baseCurrency,
+                )}
+              </span>
+              <ChevronDown
+                size={18}
+                aria-hidden="true"
+                style={{
+                  color: "var(--sub)",
+                  transform: organizerCostsExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                  transition: "transform 160ms ease",
+                }}
+              />
+            </div>
+          </button>
 
+          {organizerCostsExpanded ? (
+            <div id="trip-cost-sheet-details" style={{ display: "grid", gap: 10 }}>
           {organizerCostsErr ? (
             <div
               style={{
@@ -8499,6 +8556,8 @@ export default function TripDetailPage() {
               );
             })}
           </div>
+            </div>
+          ) : null}
         </section>
       ) : null}
 
