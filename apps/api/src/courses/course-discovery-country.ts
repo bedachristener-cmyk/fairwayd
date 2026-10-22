@@ -58,6 +58,21 @@ const COUNTRY_CONFIGS: Record<string, CourseDiscoveryCountryConfig> = {
     lonStep: 0.65,
     searchRadiusMeters: 45_000,
   },
+  KH: {
+    country: 'KH',
+    areas: [
+      // Phnom Penh and the surrounding golf corridor, including Kampong
+      // Speu, Chhun On, Garden City and Vattanac.
+      { minLat: 11.2, maxLat: 12.25, minLon: 104.3, maxLon: 105.5 },
+      // Siem Reap and the Angkor golf region.
+      { minLat: 13.0, maxLat: 13.7, minLon: 103.5, maxLon: 104.3 },
+      // Koh Kong and the Dara Sakor coastal golf region.
+      { minLat: 10.8, maxLat: 11.5, minLon: 102.7, maxLon: 103.5 },
+    ],
+    latStep: 0.35,
+    lonStep: 0.4,
+    searchRadiusMeters: 30_000,
+  },
   PH: {
     country: 'PH',
     areas: [
