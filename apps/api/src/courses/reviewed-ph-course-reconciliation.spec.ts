@@ -8,8 +8,8 @@ import {
 describe('reviewed Philippines course reconciliation', () => {
   it('contains the single consolidated nationwide review', () => {
     expect(REVIEWED_PH_COURSE_UPDATES).toHaveLength(46);
-    expect(REVIEWED_PH_COURSE_ADDITIONS).toHaveLength(78);
-    expect(REVIEWED_PH_COURSE_DEACTIVATIONS).toHaveLength(4);
+    expect(REVIEWED_PH_COURSE_ADDITIONS).toHaveLength(79);
+    expect(REVIEWED_PH_COURSE_DEACTIVATIONS).toHaveLength(3);
     expect(validateReviewedPhCourseReconciliation()).toEqual([]);
   });
 
@@ -62,7 +62,7 @@ describe('reviewed Philippines course reconciliation', () => {
     expect(names.some((name) => name.includes('apuao grande'))).toBe(false);
     expect(names.some((name) => name.includes('catalunan grande'))).toBe(false);
     expect(names.some((name) => name.includes('university of mindanao'))).toBe(false);
-    expect(names.some((name) => name.includes('malipano'))).toBe(false);
     expect(names.some((name) => name.includes('kodi greens'))).toBe(false);
+    expect(names.some((name) => name.includes('malipano island 3-hole'))).toBe(true);
   });
 });
