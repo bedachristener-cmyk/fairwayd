@@ -91,6 +91,66 @@ for (let index = 0; index < steps.length; index++) {
   }
 }
 
+const outputPaths = [
+  path.resolve(
+    `course-audits/course-coordinate-summary-${countryLower}.json`,
+  ),
+  path.resolve(
+    `course-audits/course-coordinate-details-${countryLower}.csv`,
+  ),
+  path.resolve(
+    `course-audits/${countryLower}-google-places-discovery.csv`,
+  ),
+  path.resolve(
+    `course-audits/${countryLower}-google-places-candidates.csv`,
+  ),
+  path.resolve(
+    `course-audits/${countryLower}-course-inventory-google-details.csv`,
+  ),
+];
+
+if (fs.existsSync(path.resolve('scripts', knownCourseScript))) {
+  outputPaths.splice(
+    4,
+    0,
+    path.resolve(
+      `course-audits/${countryLower}-known-course-google-candidates.csv`,
+    ),
+  );
+}
+
+const missingOutputs = outputPaths.filter(
+  (outputPath) => !fs.existsSync(outputPath),
+);
+if (missingOutputs.length > 0) {
+  throw new Error(
+    `Review preparation finished with missing output(s): ${missingOutputs.join(', ')}`,
+  );
+}
+
+const reviewBundlePath = path.resolve(
+  `course-audits/${countryLower}-course-review-bundle.json`,
+);
+const reviewFiles = Object.fromEntries(
+  outputPaths.map((outputPath) => [
+    path.basename(outputPath),
+    fs.readFileSync(outputPath, 'utf8'),
+  ]),
+);
+fs.writeFileSync(
+  reviewBundlePath,
+  JSON.stringify(
+    {
+      country,
+      generatedAt: new Date().toISOString(),
+      files: reviewFiles,
+    },
+    null,
+    2,
+  ),
+  'utf8',
+);
+
 console.log('\nPreparation complete.');
 console.log(
   `Outputs: course-audits/course-coordinate-summary-${countryLower}.json`,
@@ -112,4 +172,5 @@ if (fs.existsSync(path.resolve('scripts', knownCourseScript))) {
 console.log(
   `         course-audits/${countryLower}-course-inventory-google-details.csv`,
 );
+console.log(`Review bundle: ${reviewBundlePath}`);
 console.log('Database changes: 0');
