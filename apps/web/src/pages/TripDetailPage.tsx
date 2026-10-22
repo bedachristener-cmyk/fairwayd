@@ -8120,10 +8120,12 @@ export default function TripDetailPage() {
                   whiteSpace: "nowrap",
                 }}
               >
-                {formatMoney(
-                  organizerCostsData?.summary.totalTripCost ?? 0,
-                  organizerCostsData?.baseCurrency || baseCurrency,
-                )}
+                {organizerCostsLoading || organizerCostsErr || !organizerCostsData
+                  ? "—"
+                  : formatMoney(
+                      organizerCostsData.summary.totalTripCost,
+                      organizerCostsData.baseCurrency || baseCurrency,
+                    )}
               </span>
               <ChevronDown
                 size={18}
@@ -8155,6 +8157,8 @@ export default function TripDetailPage() {
             </div>
           ) : null}
 
+          {!organizerCostsErr && !organizerCostsLoading && organizerCostsData ? (
+            <>
           {(organizerCostsData?.summary.missingConversionCount ?? 0) > 0 ? (
             <div style={{ color: "var(--danger)", fontSize: 12, lineHeight: 1.35 }}>
               {organizerCostsData?.summary.missingConversionCount} foreign-currency cost
@@ -8186,10 +8190,12 @@ export default function TripDetailPage() {
                 whiteSpace: "nowrap",
               }}
             >
-              {formatMoney(
-                organizerCostsData?.summary.totalTripCost ?? 0,
-                organizerCostsData?.baseCurrency || baseCurrency,
-              )}
+              {organizerCostsLoading || organizerCostsErr || !organizerCostsData
+                  ? "—"
+                  : formatMoney(
+                      organizerCostsData.summary.totalTripCost,
+                      organizerCostsData.baseCurrency || baseCurrency,
+                    )}
             </span>
           </div>
 
@@ -8606,6 +8612,8 @@ export default function TripDetailPage() {
               );
             })}
           </div>
+            </>
+          ) : null}
             </div>
           ) : null}
         </section>
