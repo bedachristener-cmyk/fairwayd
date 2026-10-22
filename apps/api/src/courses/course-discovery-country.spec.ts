@@ -22,6 +22,7 @@ describe('course discovery country configuration', () => {
       'AT',
       'CH',
       'PH',
+      'SG',
       'TH',
       'TR',
       'VN',
@@ -30,6 +31,7 @@ describe('course discovery country configuration', () => {
     expect(courseDiscoveryCountryConfig('ae')?.country).toBe('AE');
     expect(courseDiscoveryCountryConfig('at')?.country).toBe('AT');
     expect(courseDiscoveryCountryConfig('ph')?.country).toBe('PH');
+    expect(courseDiscoveryCountryConfig('sg')?.country).toBe('SG');
     expect(courseDiscoveryCountryConfig('th')?.country).toBe('TH');
     expect(courseDiscoveryCountryConfig('tr')?.country).toBe('TR');
     expect(courseDiscoveryCountryConfig('vn')?.country).toBe('VN');
@@ -56,6 +58,14 @@ describe('course discovery country configuration', () => {
     expect(config!.areas).toHaveLength(4);
     expect(config!.searchRadiusMeters).toBe(45_000);
     expect(requestCount('PH')).toBe(255);
+  });
+
+  it('covers Singapore completely with a compact request plan', () => {
+    const config = courseDiscoveryCountryConfig('SG');
+    expect(config).not.toBeNull();
+    expect(config!.areas).toHaveLength(1);
+    expect(config!.searchRadiusMeters).toBe(12_000);
+    expect(requestCount('SG')).toBe(12);
   });
 
   it('uses four bounded Thailand areas instead of a wasteful full rectangle', () => {
