@@ -55,6 +55,16 @@ const steps: Step[] = [
   },
 ];
 
+const countryLower = country.toLowerCase();
+const knownCourseScript = `google-places-${countryLower}-known-course-review.ts`;
+if (fs.existsSync(path.resolve('scripts', knownCourseScript))) {
+  steps.splice(3, 0, {
+    label: 'official known-course review',
+    script: knownCourseScript,
+    args: ['--dry-run', '--confirm-google-places-requests'],
+  });
+}
+
 console.log(
   `Preparing consolidated course review: country=${country} steps=${steps.length}`,
 );
@@ -81,7 +91,6 @@ for (let index = 0; index < steps.length; index++) {
   }
 }
 
-const countryLower = country.toLowerCase();
 console.log('\nPreparation complete.');
 console.log(
   `Outputs: course-audits/course-coordinate-summary-${countryLower}.json`,
@@ -95,6 +104,11 @@ console.log(
 console.log(
   `         course-audits/${countryLower}-google-places-candidates.csv`,
 );
+if (fs.existsSync(path.resolve('scripts', knownCourseScript))) {
+  console.log(
+    `         course-audits/${countryLower}-known-course-google-candidates.csv`,
+  );
+}
 console.log(
   `         course-audits/${countryLower}-course-inventory-google-details.csv`,
 );
