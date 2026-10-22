@@ -13,6 +13,12 @@ export type ReviewedPhCourseDefinition = {
   allowSharedLocation?: boolean;
 };
 
+export type ReviewedPhCourseDeactivation = {
+  name: string;
+  placeId: string;
+  reason: string;
+};
+
 export const REVIEWED_PH_COURSE_UPDATES: ReviewedPhCourseDefinition[] = [
   {"courseId":"cmohfycug01l4fouw25affar3","name":"Alabang Country Club","city":"Muntinlupa","region":"Metro Manila","lat":14.4029036,"lon":121.01664090000001,"placeId":"ChIJcawupajRlzMRvIVE1w04iLk","evidence":"Google Places details plus consolidated Philippines course review"},
   {"courseId":"cmohfydl501m0fouwx07ish8o","name":"Alta Vista Golf & Country Club","city":"Cebu City","region":"Cebu","lat":10.2836489,"lon":123.84924900000001,"placeId":"ChIJHUiCnsydqTMRcaCuSnxOeJg","evidence":"Google Places details plus consolidated Philippines course review","website":"http://altavistagolfcebu.com/","phone":"+63 32 263 5533"},
@@ -72,7 +78,6 @@ export const REVIEWED_PH_COURSE_ADDITIONS: ReviewedPhCourseDefinition[] = [
   {"name":"Camaya Coast Golf Course","city":"Mariveles","region":"Central Luzon","holes":9,"lat":14.452947,"lon":120.42225950000001,"placeId":"ChIJCZvt9bwbljMRb58mmJkJ89o","evidence":"Google Places details plus consolidated Philippines course review","phone":"+63 917 522 6292"},
   {"name":"Camp Aquino Golf & Country Club","city":"Tarlac City","region":"III - Central Luzon","holes":null,"lat":15.439822,"lon":120.59308509999998,"placeId":"ChIJ724VfcTGljMRVXM767dIVWk","evidence":"Google Places details plus consolidated Philippines course review"},
   {"name":"Canyon Woods Golf Course","city":"Laurel","region":"Calabarzon","holes":9,"lat":14.0330362,"lon":120.8638905,"placeId":"ChIJq6qq1mievTMRZsv8AR4yq8c","evidence":"Google Places details plus consolidated Philippines course review"},
-  {"name":"Catalunan Grande Golf Club","city":"Davao City","region":"Davao Region","holes":null,"lat":7.0746695,"lon":125.54582479999999,"placeId":"ChIJd-alF70S-TIRgDzhNjaRTJo","evidence":"Google Places details plus consolidated Philippines course review"},
   {"name":"Cebu Green Island Golf Club","city":"Badian","region":"Central Visayas","holes":null,"lat":9.8505147,"lon":123.36951230000001,"placeId":"ChIJAZPkFOrrqzMRxxh0CpteqoQ","evidence":"Google Places details plus consolidated Philippines course review","phone":"+63 977 426 8000"},
   {"name":"Dagupan Golf & Beach Club","city":"Dagupan City","region":"Ilocos Region","holes":null,"lat":16.0946086,"lon":120.36733040000001,"placeId":"ChIJAQAA0OxokTMRaNMhzuPyaGA","evidence":"Google Places details plus consolidated Philippines course review"},
   {"name":"Don Paco Rocamora Golf & Country Club","city":"City of Mati","region":"Davao Region","holes":null,"lat":6.9525236999999995,"lon":126.27573040000001,"placeId":"ChIJFetMr0G3-zIRYpSrfFv5n6s","evidence":"Google Places details plus consolidated Philippines course review","phone":"+63 917 307 0670"},
@@ -80,11 +85,9 @@ export const REVIEWED_PH_COURSE_ADDITIONS: ReviewedPhCourseDefinition[] = [
   {"name":"Fort Magsaysay Golf Course","city":"Palayan City","region":"Central Luzon","holes":null,"lat":15.4238002,"lon":121.08797489999998,"placeId":"ChIJuzjWhzs7lzMRBSc6VS9r6IY","evidence":"Google Places details plus consolidated Philippines course review"},
   {"name":"Illana Golf Club","city":"Parang","region":"Bangsamoro Autonomous Region in Muslim Mindanao","holes":null,"lat":7.384971200000001,"lon":124.2579281,"placeId":"ChIJryUWFLoWVjIR_OmOPOoS-vo","evidence":"Google Places details plus consolidated Philippines course review"},
   {"name":"Kalikid Golf Course","city":"Cabanatuan City","region":"Central Luzon","holes":null,"lat":15.4764185,"lon":121.04569339999999,"placeId":"ChIJ____j00ulzMRf98ZWp6x7b4","evidence":"Google Places details plus consolidated Philippines course review"},
-  {"name":"Kodi Greens Golf Club","city":"Binmaley","region":"Ilocos Region","holes":null,"lat":16.0264453,"lon":120.25512699999999,"placeId":"ChIJHfHRwWZdkTMRKuVSDMMtNBM","evidence":"Google Places details plus consolidated Philippines course review"},
   {"name":"Lepanto Golf Club","city":"Mankayan","region":"Cordillera Administrative Region","holes":null,"lat":16.8498499,"lon":120.78960839999999,"placeId":"ChIJLRwBmJzRkTMRZy2nSuZvddo","evidence":"Google Places details plus consolidated Philippines course review","phone":"+63 74 452 8040"},
   {"name":"Liloan Golf & Leisure Estates","city":"Liloan","region":"Central Visayas","holes":18,"lat":10.4328319,"lon":123.953949,"placeId":"ChIJ3d8kw0KjqTMRdVbyK_R4uxc","evidence":"Google Places details plus consolidated Philippines course review","website":"http://liloangolfandleisure.com/","phone":"+63 917 116 8920"},
   {"name":"Malacañang Golf Club","city":"Manila","region":"Metro Manila","holes":null,"lat":14.5932839,"lon":120.9968311,"placeId":"ChIJAV9zofPJlzMRE7Fi4pyGmlk","evidence":"Google Places details plus consolidated Philippines course review"},
-  {"name":"Malipano Golf Course","city":"Samal","region":"Philippines","holes":9,"lat":7.0077739,"lon":125.71975529999999,"placeId":"ChIJtXIRuYxw-TIRUaoIhcBK7-M","evidence":"Google Places details plus consolidated Philippines course review","website":"http://www.pearlfarmresort.com/","phone":"+63 82 235 1234"},
   {"name":"Maya Golf Course Siargao","city":"General Luna","region":"Caraga","holes":null,"lat":9.8062264,"lon":126.1588158,"placeId":"ChIJSzb7ZwAJBDMRrzI0SejaBUY","evidence":"Google Places details plus consolidated Philippines course review","website":"https://siargaovilla.com/","phone":"+63 915 698 6208"},
   {"name":"Mercedes Plantation Golf & Country Club","city":"Medellin","region":"Central Visayas","holes":null,"lat":11.087158599999999,"lon":123.98610129999999,"placeId":"ChIJd-TnsKt6qDMRckDJ1G4xfA8","evidence":"Google Places details plus consolidated Philippines course review","phone":"+63 32 255 0228"},
   {"name":"Mt. Bulanjao Golf Club","city":"Bataraza","region":"Mimaropa","holes":null,"lat":8.555104,"lon":117.43461699999999,"placeId":"ChIJR8qiUxZsNDIRMYQTXqqcQ-I","evidence":"Google Places details plus consolidated Philippines course review"},
@@ -104,7 +107,6 @@ export const REVIEWED_PH_COURSE_ADDITIONS: ReviewedPhCourseDefinition[] = [
   {"name":"Tagaytay Highlands Golf Course","city":"Tagaytay City","region":"Calabarzon","holes":18,"lat":14.134269699999999,"lon":121.0366744,"placeId":"ChIJ243Dc1h6vTMR_BfqM6maYlE","evidence":"Google Places details plus consolidated Philippines course review","website":"http://www.tagaytayhighlands.co/"},
   {"name":"Talakag Sports & Country Club","city":"Talakag","region":"Northern Mindanao","holes":null,"lat":8.1571111,"lon":124.5760556,"placeId":"ChIJdQ78VAB__zIR127tPAo-pGQ","evidence":"Google Places details plus consolidated Philippines course review"},
   {"name":"The Cliffs Golf Course & Beach Club","city":"San Fernando City","region":"Ilocos Region","holes":9,"lat":16.6119767,"lon":120.2859127,"placeId":"ChIJ04G6m_GOkTMRsfC2iSvr-p4","evidence":"Google Places details plus consolidated Philippines course review","phone":"+63 72 888 7777"},
-  {"name":"University of Mindanao Golf Club","city":"Davao City","region":"Davao Region","holes":null,"lat":7.068032,"lon":125.59258419999999,"placeId":"ChIJAQBQcmZt-TIRJ_vR5fyffBY","evidence":"Google Places details plus consolidated Philippines course review"},
   {"name":"Verdemar Golf Course","city":"San Remigio","region":"Central Visayas","holes":null,"lat":11.0478636,"lon":123.92551929999999,"placeId":"ChIJVVVVhfRmqDMRvISCXoWhDA8","evidence":"Google Places details plus consolidated Philippines course review"},
   {"name":"Victorias Golf & Country Club","city":"Victorias","region":"Western Visayas","holes":null,"lat":10.871895499999999,"lon":123.07167170000001,"placeId":"ChIJ-XJ-da4srzMR1J-_eUq8_3M","evidence":"Google Places details plus consolidated Philippines course review","phone":"+63 34 399 3612"},
   {"name":"Vineyard Golf Club","city":"Tanauan City","region":"Calabarzon","holes":18,"lat":14.0711727,"lon":121.07148210000001,"placeId":"ChIJs39_JgBxvTMRbBz5BapeBKc","evidence":"Google Places details plus consolidated Philippines course review","website":"https://www.vineyardgolfclubph.com/","phone":"+63 927 706 9988"},
@@ -147,6 +149,13 @@ export const REVIEWED_PH_COURSE_ADDITIONS: ReviewedPhCourseDefinition[] = [
   {"name":"The Orchard Golf & Country Club – Player Course","city":"Dasmariñas","region":"Calabarzon","holes":18,"lat":14.351628300000002,"lon":120.96167170000001,"placeId":"manual:orchard-player","evidence":"Established independently named course at a shared Philippines golf facility","allowSharedLocation":true,"website":"http://www.theorchardgolf.com/","phone":"+63 46 416 5931"},
 ];
 
+export const REVIEWED_PH_COURSE_DEACTIVATIONS: ReviewedPhCourseDeactivation[] = [
+  {"name":"Catalunan Grande Golf Club","placeId":"ChIJd-alF70S-TIRgDzhNjaRTJo","reason":"manual satellite review found no playable golf course at this location"},
+  {"name":"Kodi Greens Golf Club","placeId":"ChIJHfHRwWZdkTMRKuVSDMMtNBM","reason":"manual satellite review found no identifiable golf course"},
+  {"name":"Malipano Golf Course","placeId":"ChIJtXIRuYxw-TIRUaoIhcBK7-M","reason":"three-hole resort amenity rather than a standalone golf course"},
+  {"name":"University of Mindanao Golf Club","placeId":"ChIJAQBQcmZt-TIRJ_vR5fyffBY","reason":"driving-range or former-course listing without a current playable course"},
+];
+
 export function validateReviewedPhCourseReconciliation(): string[] {
   const errors: string[] = [];
   const all = [...REVIEWED_PH_COURSE_UPDATES, ...REVIEWED_PH_COURSE_ADDITIONS];
@@ -158,6 +167,17 @@ export function validateReviewedPhCourseReconciliation(): string[] {
   }
   for (const placeId of duplicateValues(all.map((item) => item.placeId))) {
     errors.push(`duplicate place id: ${placeId}`);
+  }
+  for (const placeId of duplicateValues(REVIEWED_PH_COURSE_DEACTIVATIONS.map((item) => item.placeId))) {
+    errors.push(`duplicate deactivation place id: ${placeId}`);
+  }
+  for (const item of REVIEWED_PH_COURSE_DEACTIVATIONS) {
+    if (!item.name.trim() || !item.placeId.trim() || !item.reason.trim()) {
+      errors.push(`invalid deactivation: ${item.name}`);
+    }
+    if (all.some((course) => course.placeId === item.placeId)) {
+      errors.push(`active and deactivated place id conflict: ${item.placeId}`);
+    }
   }
   for (const name of duplicateValues(all.map((item) => item.name))) {
     errors.push(`duplicate final name: ${name}`);
