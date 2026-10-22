@@ -50,20 +50,26 @@ type Command = {
   requireNoChanges?: boolean;
 };
 
-const npmBin = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const npmCli = process.env.npm_execpath;
+if (!npmCli || !fs.existsSync(npmCli)) {
+  console.error(
+    'npm CLI path is unavailable. Run this workflow through npm/npx from the API workspace.',
+  );
+  process.exit(1);
+}
 const countryConfirmation =
   `--confirm-reviewed-${countryLower}-course-reconciliation`;
 
 const commands: Command[] = [
   {
     label: 'API build',
-    command: npmBin,
-    args: ['run', 'build'],
+    command: process.execPath,
+    args: [npmCli, 'run', 'build'],
   },
   {
     label: 'reviewed reconciliation tests',
-    command: npmBin,
-    args: ['test', '--', '--runInBand', reconciliationSpec],
+    command: process.execPath,
+    args: [npmCli, 'test', '--', '--runInBand', reconciliationSpec],
   },
   {
     label: 'reconciliation dry-run',
