@@ -58,6 +58,22 @@ const COUNTRY_CONFIGS: Record<string, CourseDiscoveryCountryConfig> = {
     lonStep: 0.65,
     searchRadiusMeters: 45_000,
   },
+  PH: {
+    country: 'PH',
+    areas: [
+      // Luzon, including Metro Manila, Clark, Baguio, Tagaytay, Batangas and Bicol.
+      { minLat: 12.3, maxLat: 19.0, minLon: 119.5, maxLon: 123.0 },
+      // Palawan and the western island corridor.
+      { minLat: 8.5, maxLat: 12.5, minLon: 117.0, maxLon: 120.3 },
+      // Visayas, including Panay, Negros, Cebu, Bohol and Leyte.
+      { minLat: 9.0, maxLat: 12.8, minLon: 121.5, maxLon: 126.0 },
+      // Mindanao, including Zamboanga, Cagayan de Oro, Davao and Surigao.
+      { minLat: 5.0, maxLat: 10.2, minLon: 121.8, maxLon: 126.7 },
+    ],
+    latStep: 0.55,
+    lonStep: 0.65,
+    searchRadiusMeters: 45_000,
+  },
   TH: {
     country: 'TH',
     areas: [
