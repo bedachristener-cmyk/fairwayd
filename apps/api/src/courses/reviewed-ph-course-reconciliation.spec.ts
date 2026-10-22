@@ -1,5 +1,6 @@
 import {
   REVIEWED_PH_COURSE_ADDITIONS,
+  REVIEWED_PH_COURSE_DEACTIVATIONS,
   REVIEWED_PH_COURSE_UPDATES,
   validateReviewedPhCourseReconciliation,
 } from './reviewed-ph-course-reconciliation';
@@ -7,7 +8,8 @@ import {
 describe('reviewed Philippines course reconciliation', () => {
   it('contains the single consolidated nationwide review', () => {
     expect(REVIEWED_PH_COURSE_UPDATES).toHaveLength(46);
-    expect(REVIEWED_PH_COURSE_ADDITIONS).toHaveLength(82);
+    expect(REVIEWED_PH_COURSE_ADDITIONS).toHaveLength(78);
+    expect(REVIEWED_PH_COURSE_DEACTIVATIONS).toHaveLength(4);
     expect(validateReviewedPhCourseReconciliation()).toEqual([]);
   });
 
@@ -58,5 +60,9 @@ describe('reviewed Philippines course reconciliation', () => {
     expect(names.some((name) => name.includes('gornz mini mansion'))).toBe(false);
     expect(names.some((name) => name.includes('dona pepita'))).toBe(false);
     expect(names.some((name) => name.includes('apuao grande'))).toBe(false);
+    expect(names.some((name) => name.includes('catalunan grande'))).toBe(false);
+    expect(names.some((name) => name.includes('university of mindanao'))).toBe(false);
+    expect(names.some((name) => name.includes('malipano'))).toBe(false);
+    expect(names.some((name) => name.includes('kodi greens'))).toBe(false);
   });
 });
