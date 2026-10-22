@@ -74,6 +74,17 @@ const COUNTRY_CONFIGS: Record<string, CourseDiscoveryCountryConfig> = {
     lonStep: 0.65,
     searchRadiusMeters: 45_000,
   },
+  SG: {
+    country: 'SG',
+    areas: [
+      // Complete Singapore coverage, including Sentosa, Changi, Kranji,
+      // Seletar, Mandai and the central golf facilities.
+      { minLat: 1.18, maxLat: 1.46, minLon: 103.6, maxLon: 104.08 },
+    ],
+    latStep: 0.14,
+    lonStep: 0.16,
+    searchRadiusMeters: 12_000,
+  },
   TH: {
     country: 'TH',
     areas: [
