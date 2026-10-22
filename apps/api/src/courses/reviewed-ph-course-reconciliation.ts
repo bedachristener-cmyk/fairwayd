@@ -87,6 +87,7 @@ export const REVIEWED_PH_COURSE_ADDITIONS: ReviewedPhCourseDefinition[] = [
   {"name":"Kalikid Golf Course","city":"Cabanatuan City","region":"Central Luzon","holes":null,"lat":15.4764185,"lon":121.04569339999999,"placeId":"ChIJ____j00ulzMRf98ZWp6x7b4","evidence":"Google Places details plus consolidated Philippines course review"},
   {"name":"Lepanto Golf Club","city":"Mankayan","region":"Cordillera Administrative Region","holes":null,"lat":16.8498499,"lon":120.78960839999999,"placeId":"ChIJLRwBmJzRkTMRZy2nSuZvddo","evidence":"Google Places details plus consolidated Philippines course review","phone":"+63 74 452 8040"},
   {"name":"Liloan Golf & Leisure Estates","city":"Liloan","region":"Central Visayas","holes":18,"lat":10.4328319,"lon":123.953949,"placeId":"ChIJ3d8kw0KjqTMRdVbyK_R4uxc","evidence":"Google Places details plus consolidated Philippines course review","website":"http://liloangolfandleisure.com/","phone":"+63 917 116 8920"},
+  {"name":"Malipano Island 3-Hole Golf Course","city":"Samal","region":"Davao Region","holes":3,"lat":7.0077739,"lon":125.71975529999999,"placeId":"ChIJtXIRuYxw-TIRUaoIhcBK7-M","evidence":"Current resort coverage confirms a three-hole golf amenity on Malipano Island","website":"http://www.pearlfarmresort.com/","phone":"+63 82 235 1234"},
   {"name":"Malacañang Golf Club","city":"Manila","region":"Metro Manila","holes":null,"lat":14.5932839,"lon":120.9968311,"placeId":"ChIJAV9zofPJlzMRE7Fi4pyGmlk","evidence":"Google Places details plus consolidated Philippines course review"},
   {"name":"Maya Golf Course Siargao","city":"General Luna","region":"Caraga","holes":null,"lat":9.8062264,"lon":126.1588158,"placeId":"ChIJSzb7ZwAJBDMRrzI0SejaBUY","evidence":"Google Places details plus consolidated Philippines course review","website":"https://siargaovilla.com/","phone":"+63 915 698 6208"},
   {"name":"Mercedes Plantation Golf & Country Club","city":"Medellin","region":"Central Visayas","holes":null,"lat":11.087158599999999,"lon":123.98610129999999,"placeId":"ChIJd-TnsKt6qDMRckDJ1G4xfA8","evidence":"Google Places details plus consolidated Philippines course review","phone":"+63 32 255 0228"},
@@ -152,7 +153,6 @@ export const REVIEWED_PH_COURSE_ADDITIONS: ReviewedPhCourseDefinition[] = [
 export const REVIEWED_PH_COURSE_DEACTIVATIONS: ReviewedPhCourseDeactivation[] = [
   {"name":"Catalunan Grande Golf Club","placeId":"ChIJd-alF70S-TIRgDzhNjaRTJo","reason":"manual satellite review found no playable golf course at this location"},
   {"name":"Kodi Greens Golf Club","placeId":"ChIJHfHRwWZdkTMRKuVSDMMtNBM","reason":"manual satellite review found no identifiable golf course"},
-  {"name":"Malipano Golf Course","placeId":"ChIJtXIRuYxw-TIRUaoIhcBK7-M","reason":"three-hole resort amenity rather than a standalone golf course"},
   {"name":"University of Mindanao Golf Club","placeId":"ChIJAQBQcmZt-TIRJ_vR5fyffBY","reason":"driving-range or former-course listing without a current playable course"},
 ];
 
