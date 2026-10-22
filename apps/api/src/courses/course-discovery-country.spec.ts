@@ -21,6 +21,7 @@ describe('course discovery country configuration', () => {
       'AE',
       'AT',
       'CH',
+      'PH',
       'TH',
       'TR',
       'VN',
@@ -28,6 +29,7 @@ describe('course discovery country configuration', () => {
     ]);
     expect(courseDiscoveryCountryConfig('ae')?.country).toBe('AE');
     expect(courseDiscoveryCountryConfig('at')?.country).toBe('AT');
+    expect(courseDiscoveryCountryConfig('ph')?.country).toBe('PH');
     expect(courseDiscoveryCountryConfig('th')?.country).toBe('TH');
     expect(courseDiscoveryCountryConfig('tr')?.country).toBe('TR');
     expect(courseDiscoveryCountryConfig('vn')?.country).toBe('VN');
@@ -46,6 +48,14 @@ describe('course discovery country configuration', () => {
   it('preserves the bounded Austrian request plan', () => {
     expect(requestCount('AT')).toBeGreaterThan(200);
     expect(requestCount('AT')).toBeLessThan(300);
+  });
+
+  it('covers the Philippines with four bounded island-group request plans', () => {
+    const config = courseDiscoveryCountryConfig('PH');
+    expect(config).not.toBeNull();
+    expect(config!.areas).toHaveLength(4);
+    expect(config!.searchRadiusMeters).toBe(45_000);
+    expect(requestCount('PH')).toBe(255);
   });
 
   it('uses four bounded Thailand areas instead of a wasteful full rectangle', () => {
