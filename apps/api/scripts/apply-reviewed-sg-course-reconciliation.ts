@@ -400,7 +400,7 @@ async function main() {
 
       const count = await tx.course.count({ where: { country: 'SG', active: true } });
       if (count !== expectedActiveAfter) {
-        throw new Error(`Postflight active PH count mismatch: expected ${expectedActiveAfter}, found ${count}`);
+        throw new Error(`Postflight active SG count mismatch: expected ${expectedActiveAfter}, found ${count}`);
       }
       return count;
     },
