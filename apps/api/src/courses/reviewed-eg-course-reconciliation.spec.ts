@@ -8,8 +8,8 @@ import {
 describe('reviewed Egypt course reconciliation', () => {
   it('contains the single consolidated nationwide review', () => {
     expect(REVIEWED_EG_COURSE_UPDATES).toHaveLength(0);
-    expect(REVIEWED_EG_COURSE_ADDITIONS).toHaveLength(27);
-    expect(REVIEWED_EG_COURSE_DEACTIVATIONS).toHaveLength(0);
+    expect(REVIEWED_EG_COURSE_ADDITIONS).toHaveLength(26);
+    expect(REVIEWED_EG_COURSE_DEACTIVATIONS).toHaveLength(1);
   });
 
   it('covers Cairo, Mediterranean, Red Sea and Sinai golf regions', () => {
@@ -41,6 +41,13 @@ describe('reviewed Egypt course reconciliation', () => {
     const names = REVIEWED_EG_COURSE_ADDITIONS.map((course) => course.name);
 
     expect(names).not.toContain('Mena House Golf Course');
+    expect(names).not.toContain('Orange Lakes Golf Club');
+    expect(REVIEWED_EG_COURSE_DEACTIVATIONS).toEqual([
+      expect.objectContaining({
+        name: 'Orange Lakes Golf Club',
+        placeId: 'ChIJwySO6Dn0WBQRJaHyMCZ-Uxc',
+      }),
+    ]);
     expect(names).not.toContain('Royal Valley Golf Club');
     expect(names).not.toContain('Taba Heights Golf Resort');
     expect(names).not.toContain('Golf Bay Porto El Sokhna');
