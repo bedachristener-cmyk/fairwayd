@@ -60,3 +60,18 @@ Read-only checks were executed against **Neon project `billowing-breeze-32238900
 - Local `prisma validate`, Prisma Client generation, API/web builds, and 22 earlier tests already passed as reported by the developer; these tests are not an execution of the SQL migration.
 
 **Status:** Read-only preflight passed. Applying SQL to the isolated test database still changes that branch, so it requires explicit go-ahead and a controlled migration attempt. Stage and Production must remain untouched. After that attempt, check constraints, relationships, migration history and API behavior against the test database; only separately consider Stage after runtime DB URL/database name is verified.
+
+## Isolated DDL rehearsal (2026-10-23)
+
+With user authorization restricted to non-existing environments, a **new child branch** `golf-near-me-ddl-rehearsal-20261023` (`br-falling-pond-ag4n6se5`) was created from the existing isolated test branch `br-rough-darkness-ag13g4d3`. No writes were made to its parent, Stage or Production.
+
+- Verified target: Neon project `billowing-breeze-32238900`, database `fairwayd_stage`, 59 previously applied migrations, and no existing Golf Service tables.
+- All **26 statements** from the repository's pending migration SQL executed successfully in one transaction on **only the rehearsal child**.
+- Catalog checks showed 4 tables, 5 enum types, 16 indexes, 2 XOR owner constraints and 2 foreign keys to `Course`. No new Golf Service rows were left.
+- A transaction-based functional check accepted valid venue-owned and Course-owned service/provider links, rejected zero-owner and both-owner links, and rejected duplicate offerings and provider associations. Its temporary rows were deleted.
+- Final direct comparison: `GolfServiceVenue` present only on rehearsal child; **absent** on original test branch and on Neon Stage. All three still recorded 59 completed migrations.
+- **Prisma migration history deliberately not updated** during direct SQL rehearsal: no row exists for `20261021185500_add_golf_service_directory` even on the rehearsal child. This is not a successful `prisma migrate deploy` test.
+- Do **not** point Prisma Migrate at the rehearsal child and run the same migration without first accounting for the already-created structures; that would collide with existing objects.
+- Keep this child branch isolated and disposable. To complete a **true Prisma migration rehearsal**, use a separate fresh child copied from the original isolated test branch, with an explicitly verified direct connection URL for `fairwayd_stage`; run Prisma migration there, audit `_prisma_migrations` and inspect resulting schema. Never reuse Stage/Production credentials.
+
+**Result:** SQL DDL + database constraint smoke tests PASS; Prisma migration runner / recorded history NOT YET TESTED. Stage/Production unchanged.
