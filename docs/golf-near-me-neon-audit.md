@@ -216,3 +216,11 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-GolfServic
 Enter the Neon *Direct* connection URL for `golf-near-me-prisma-rehearsal-20261023` / `fairwayd_stage` in the password-masked terminal prompt; do not paste in chat. Open **`http://127.0.0.1:5195/golf-near-me`**; choose Basel, 25 km, "Simulatoren" and click the green "Golfangebote finden" button (do not choose the draft preview). Verify the real 14.9 km distance, a single The Golf Lounge result, 2 simulators, and a map marker; 10 km should not return this venue. Keep the test terminal open while browsing. Stop with Ctrl+C.
 
 **Status:** Browser visual test launcher implemented but user has **not yet executed** it; Stage/Production untouched. If the normal dev API on port 3000 is not running, the independent service venue should still show and a partial warning for existing courses may appear.
+
+## Venue entrance coordinate correction using isolated map click (2026-10-23)
+
+The user confirmed by annotated screenshot that the provisional building coordinate `47.5495127, 7.786086` renders slightly southwest of The Golf Lounge entrance; the correct point is near the user's red circle further east/north. **Do not invent a GPS value from screenshot pixel offsets**, because the Leaflet screenshot does not reliably encode its zoom.
+
+Added a **dev-only, opt-in, read-only** Leaflet coordinate picker in `apps/web/src/pages/GolfNearMePage.tsx`, enabled **only** by `VITE_GOLF_SERVICES_COORDINATE_PICKER=true` in the isolated `apps/api/scripts/preview-golf-services-web.mjs` launcher. A map click adds a separate red temporary marker and displays copyable coordinates to 7 decimals; it never changes a database or overwrites the original marker. It does not appear on Stage/Production or other ordinary dev sessions.
+
+User flow: stop the isolated browser launcher with Ctrl+C, `cd C:\dev\fairwayd; git pull --ff-only`, restart `Run-GolfServicesBrowserTest.ps1` using the same masked **test-branch** direct connection URL, open `http://127.0.0.1:5195/golf-near-me`, choose Basel → 25 km → Simulatoren → Golfangebote finden → Karte, zoom in, click precise spot at the red annotation, and copy the displayed latitude/longitude. **No DB values are changed until coordinates are checked and subsequently applied to the disposable test branch by an explicitly targeted operation.**
