@@ -46,3 +46,17 @@ The new `GolfServiceVenue` table is not present in the four inspected databases.
 7. No production or Stage data was modified by this audit.
 
 **Result:** Stage/test branch identities are known, and the 47-pending discrepancy is resolved as a *database selection error*. Database deployment remains blocked pending final checks and explicit authorization.
+
+## Final isolated migration preflight (2026-10-23)
+
+Read-only checks were executed against **Neon project `billowing-breeze-32238900`, branch `br-rough-darkness-ag13g4d3`, database `fairwayd_stage`**, not against Stage or Production.
+
+- Neon confirms the branch was created from the Stage branch, is non-default and not protected.
+- The test database has 59 completed migration rows, 0 unresolved rows and no record for `20261021185500_add_golf_service_directory`.
+- `Course` exists and its `id` is `text` and primary-key constrained, matching the SQL foreign keys.
+- The four new Golf Service tables are absent.
+- No current PostgreSQL public objects conflict with the planned new enum, table or index names; no existing `GolfService%` constraints.
+- The feature-branch SQL only **creates** new enum types and tables, indexes/constraints, and foreign keys from the new tables to `Course`/new service tables. It does not ALTER existing `Course` columns.
+- Local `prisma validate`, Prisma Client generation, API/web builds, and 22 earlier tests already passed as reported by the developer; these tests are not an execution of the SQL migration.
+
+**Status:** Read-only preflight passed. Applying SQL to the isolated test database still changes that branch, so it requires explicit go-ahead and a controlled migration attempt. Stage and Production must remain untouched. After that attempt, check constraints, relationships, migration history and API behavior against the test database; only separately consider Stage after runtime DB URL/database name is verified.
