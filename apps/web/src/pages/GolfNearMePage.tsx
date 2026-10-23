@@ -13,6 +13,7 @@ import {
   type GolfServiceVenue,
 } from "../api/golfServices";
 
+type GolfServiceDisplayVenue = GolfServiceVenue & { previewImageUrl?: string };
 type Position = { lat: number; lon: number; label: string };
 type Radius = 10 | 25 | 50 | 100;
 type SearchStatus = "idle" | "loading" | "ready" | "preview" | "not-deployed" | "unavailable" | "error";
@@ -69,10 +70,49 @@ function RecenterMap({ lat, lon }: { lat: number; lon: number }) {
   return null;
 }
 
+function WebsitePreviewPhoto({ src, venueName, website }: {
+  src: string;
+  venueName: string;
+  website: string | null;
+}) {
+  const [failed, setFailed] = useState(false);
+  const websiteLink = safeUrl(website);
+  return (
+    <div style={{ display: "grid", gap: 6 }}>
+      {failed ? (
+        <div style={{
+          ...subtle, padding: 16, borderRadius: 14, border: "1px dashed var(--border)",
+          background: "var(--bg)",
+        }}>
+          {t("golf_near_me_website_photo_unavailable")}
+        </div>
+      ) : (
+        <a href={websiteLink ?? src} target="_blank" rel="noopener noreferrer"
+          aria-label={venueName} style={{ display: "block", borderRadius: 14, overflow: "hidden" }}>
+          <img src={src} alt={venueName} loading="lazy"
+            onError={() => setFailed(true)}
+            style={{
+              display: "block", width: "100%", height: "clamp(170px, 24vw, 260px)",
+              objectFit: "cover", objectPosition: "center",
+              background: "var(--bg)",
+            }} />
+        </a>
+      )}
+      <span style={{ ...subtle, fontSize: 11 }}>
+        {t("golf_near_me_website_photo_source")}
+        {websiteLink ? (
+          <> · <a href={websiteLink} target="_blank" rel="noopener noreferrer"
+            style={{ color: "var(--green)" }}>thegolflounge.ch <ExternalLink size={11} style={{ verticalAlign: "middle" }} /></a></>
+        ) : null}
+      </span>
+    </div>
+  );
+}
+
 function VenueCard({
   venue, selected, onSelect, isDraft = false,
 }: {
-  venue: GolfServiceVenue;
+  venue: GolfServiceDisplayVenue;
   selected: boolean;
   onSelect: () => void;
   isDraft?: boolean;
@@ -86,6 +126,10 @@ function VenueCard({
 
   return (
     <article style={{ ...panel, padding: 16, display: "grid", gap: 10 }}>
+      {isDraft && venue.previewImageUrl ? (
+        <WebsitePreviewPhoto src={venue.previewImageUrl}
+          venueName={venue.name} website={venue.website} />
+      ) : null}
       <button
         type="button"
         onClick={onSelect}
@@ -164,7 +208,7 @@ export default function GolfNearMePage() {
   const [status, setStatus] = useState<SearchStatus>("idle");
   const [error, setError] = useState("");
   const [locationError, setLocationError] = useState("");
-  const [items, setItems] = useState<GolfServiceVenue[]>([]);
+  const [items, setItems] = useState<GolfServiceDisplayVenue[]>([]);
   const [truncated, setTruncated] = useState(false);
   const [view, setView] = useState<"list" | "map">("list");
   const [selectedId, setSelectedId] = useState<string | null>(null);
