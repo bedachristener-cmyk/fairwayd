@@ -335,21 +335,22 @@ export default function GolfNearMePage() {
     setStatus("loading");
     setItems([]);
     setCourseItems([]);
+    setCourseServices([]);
     setPartialWarning(null);
     setSelectedId(null);
     setTruncated(false);
     setError("");
 
-    const wantsCourses = category === "" || category === "COURSE";
+    // Course lookup supplies real location cards for all categories, but
+    // service-only categories must be restricted to verified course service links.
     const wantsServices = category !== "COURSE";
-
-    // Courses and services remain independent: unavailable services do not hide courses.
     const [coursesResult, servicesResult] = await Promise.all([
-      wantsCourses
-        ? getNearbyCourses({ lat: origin.lat, lon: origin.lon, radiusKm: radius }, controller.signal)
-            .then((data) => ({ data, error: null as unknown }))
-            .catch((error: unknown) => ({ data: null, error }))
-        : Promise.resolve(null),
+      getNearbyCourses(
+        { lat: origin.lat, lon: origin.lon, radiusKm: radius },
+        controller.signal,
+      )
+        .then((data) => ({ data, error: null as unknown }))
+        .catch((error: unknown) => ({ data: null, error })),
       wantsServices
         ? getNearbyGolfServices({
             lat: origin.lat, lon: origin.lon, radiusKm: radius,
@@ -359,28 +360,46 @@ export default function GolfNearMePage() {
             .catch((error: unknown) => ({ data: null, error }))
         : Promise.resolve(null),
     ]);
-
     if (controller.signal.aborted) return;
 
-    if (coursesResult?.data) setCourseItems(coursesResult.data.items);
+    const courseSuccess = !!coursesResult.data;
+    const serviceSuccess = !!servicesResult?.data;
+    const linkedServices = servicesResult?.data?.courseServices ?? [];
+    setCourseServices(linkedServices);
     if (servicesResult?.data) {
       setItems(servicesResult.data.items);
       setTruncated(servicesResult.data.truncated);
     }
+    if (courseSuccess && coursesResult.data) {
+      const courseIdsWithMatchingServices = new Set(linkedServices.map((entry) => entry.courseId));
+      const displayedCourses = category === "" || category === "COURSE"
+        ? coursesResult.data.items
+        : (serviceSuccess
+            ? coursesResult.data.items.filter((course) =>
+                courseIdsWithMatchingServices.has(course.id))
+            : []);
+      setCourseItems(displayedCourses);
+    }
 
-    const courseSuccess = !!coursesResult?.data;
-    const serviceSuccess = !!servicesResult?.data;
-    if (courseSuccess || serviceSuccess) {
-      if (wantsCourses && !courseSuccess) setPartialWarning("courses");
+    // A filtered service query cannot succeed on the strength of an unfiltered
+    // course lookup. Otherwise "Simulators" would wrongly show every course.
+    const success = category === "COURSE"
+      ? courseSuccess
+      : category === ""
+        ? courseSuccess || serviceSuccess
+        : serviceSuccess;
+
+    if (success) {
+      if (!courseSuccess) setPartialWarning("courses");
       else if (wantsServices && !serviceSuccess) setPartialWarning("services");
       setStatus("ready");
     } else if (wantsServices && servicesResult?.error instanceof GolfServicesUnavailableError) {
       setStatus(servicesResult.error.reason);
     } else {
-      setError(wantsCourses && !wantsServices
+      setStatus("error");
+      setError(category === "COURSE"
         ? t("golf_near_me_courses_error")
         : t("golf_near_me_error_body"));
-      setStatus("error");
     }
   }
 
