@@ -218,6 +218,9 @@ model Course {
   posts       Post[]
   reviews     Review[]
   tripItems   TripItem[]
+  // Linked services extend this existing course; never duplicate its location.
+  serviceOfferings     GolfServiceOffering[]
+  serviceProviderLinks GolfServiceVenueProvider[]
 
   @@unique([country, name, lat, lon], name: "course_unique_import_key")
   @@index([country])
@@ -714,7 +717,9 @@ model GolfServiceVenue {
 /// unitCount represents physical units (e.g. two simulators), when verified.
 model GolfServiceOffering {
   id                String               @id @default(cuid())
-  venueId           String
+  // Exactly one physical owner; enforced by the migration's XOR CHECK constraint.
+  venueId           String?
+  courseId          String?
   category          GolfServiceCategory
   status            GolfServiceStatus     @default(DRAFT)
   label             String?
@@ -727,9 +732,11 @@ model GolfServiceOffering {
   verifiedAt        DateTime?
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
-  venue             GolfServiceVenue     @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  venue             GolfServiceVenue?    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  course            Course?              @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([venueId, category])
+  @@unique([courseId, category])
   @@index([category, status])
 }
 
@@ -747,7 +754,9 @@ model GolfServiceProvider {
 /// Link multiple instructors/operators to a single venue, or one pro to many venues.
 model GolfServiceVenueProvider {
   id          String                  @id @default(cuid())
-  venueId     String
+  // Applies both to independent venues and providers working at a golf course.
+  venueId     String?
+  courseId    String?
   providerId  String
   role        GolfServiceProviderRole
   status      GolfServiceStatus       @default(DRAFT)
@@ -755,10 +764,12 @@ model GolfServiceVenueProvider {
   sourceUrl   String?
   verifiedAt  DateTime?
   createdAt   DateTime                @default(now())
-  venue       GolfServiceVenue        @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  venue       GolfServiceVenue?       @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  course      Course?                 @relation(fields: [courseId], references: [id], onDelete: Cascade)
   provider    GolfServiceProvider     @relation(fields: [providerId], references: [id], onDelete: Cascade)
 
   @@unique([venueId, providerId, role])
+  @@unique([courseId, providerId, role])
   @@index([providerId])
 }
 
