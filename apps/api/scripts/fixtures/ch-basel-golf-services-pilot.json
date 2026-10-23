@@ -11,13 +11,13 @@
       "city": "Rheinfelden",
       "addressLine": "Quellenstrasse 37",
       "postalCode": "4310",
-      "lat": 47.5495127,
-      "lon": 7.786086,
+      "lat": 47.5495547,
+      "lon": 7.7863799,
       "website": "https://thegolflounge.ch/",
       "sourceKind": "OFFICIAL_WEBSITE",
       "sourceUrl": "https://thegolflounge.ch/",
       "verifiedAt": null,
-      "reviewNotes": "Review-only. Address, coaching, shop and fitting confirmed on the operator site https://thegolflounge.ch/ (reviewed 2026-10-23). Two simulator bays independently reported at https://www.golfsimulators.ch/en/venues/sebbygolf-rheinfelden and confirmed by user. Coordinates 47.5495127, 7.786086 are an approximate address/building location published for Gewerbehaus Q-37 by yellowpages.swiss; NOT a surveyed venue entrance. The Swiss Golf list links Heijdenberg Golf Schools and The Golf Lounge at this address. Do not publish automatically, do not copy any third-party venue photos.",
+      "reviewNotes": "Review-only. Address, coaching, shop and fitting confirmed on the operator site https://thegolflounge.ch/ (reviewed 2026-10-23). Two simulator bays independently reported at https://www.golfsimulators.ch/en/venues/sebbygolf-rheinfelden and confirmed by user. Coordinates corrected to 47.5495547, 7.7863799 following the user's manual click on the apparent venue position in the Fairwayd map on 2026-10-23. Previous approximate building coordinate was 47.5495127, 7.786086 (yellowpages.swiss). This is a user-specified map point, NOT an independently surveyed or operator-confirmed entrance. The Swiss Golf list links Heijdenberg Golf Schools and The Golf Lounge at this address. Do not publish automatically, do not copy any third-party venue photos.",
       "offerings": [
         {
           "category": "SIMULATOR",
