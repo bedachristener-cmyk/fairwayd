@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
-import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
+import { CircleMarker, MapContainer, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import {
   ArrowLeft, ExternalLink, GraduationCap, List, LocateFixed, MapPinned, Monitor, Search, ShoppingBag, SlidersHorizontal, Target,
 } from "lucide-react";
@@ -56,6 +56,9 @@ const chip: CSSProperties = {
   fontWeight: 700,
 };
 const basemap = getMapBasemap();
+// Shown only in the specially configured disposable browser rehearsal.
+const showTestCoordinatePicker = import.meta.env.DEV &&
+  import.meta.env.VITE_GOLF_SERVICES_COORDINATE_PICKER === "true";
 
 function safeUrl(value: string | null | undefined) {
   if (!value) return null;
@@ -70,6 +73,22 @@ function safeUrl(value: string | null | undefined) {
 function RecenterMap({ lat, lon }: { lat: number; lon: number }) {
   const map = useMap();
   useEffect(() => { map.setView([lat, lon]); }, [lat, lon, map]);
+  return null;
+}
+
+// Captures the exact Leaflet GPS coordinate of a manual map click.
+// This never sends an update to any API or database.
+function TestCoordinatePicker({ onPick }: {
+  onPick: (location: { lat: number; lon: number }) => void;
+}) {
+  useMapEvents({
+    click(event) {
+      onPick({
+        lat: Number(event.latlng.lat.toFixed(7)),
+        lon: Number(event.latlng.lng.toFixed(7)),
+      });
+    },
+  });
   return null;
 }
 
@@ -266,6 +285,7 @@ export default function GolfNearMePage() {
   const [partialWarning, setPartialWarning] = useState<"services" | "courses" | null>(null);
   const [truncated, setTruncated] = useState(false);
   const [view, setView] = useState<"list" | "map">("list");
+  const [testCoordinate, setTestCoordinate] = useState<{ lat: number; lon: number } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
   const currentRequest = useRef<AbortController | null>(null);
@@ -275,6 +295,7 @@ export default function GolfNearMePage() {
   function invalidateResults() {
     currentRequest.current?.abort();
     setStatus("idle");
+    setTestCoordinate(null);
     setItems([]);
     setCourseItems([]);
     setCourseServices([]);
@@ -611,6 +632,17 @@ export default function GolfNearMePage() {
                 scrollWheelZoom={false} style={{ width: "100%", height: 390, borderRadius: 18 }}>
                 <TileLayer attribution={basemap.attribution} url={basemap.url} />
                 <RecenterMap lat={origin.lat} lon={origin.lon} />
+                {showTestCoordinatePicker && status === "ready" ? (
+                  <TestCoordinatePicker onPick={setTestCoordinate} />
+                ) : null}
+                {showTestCoordinatePicker && testCoordinate ? (
+                  <CircleMarker center={[testCoordinate.lat, testCoordinate.lon]}
+                    radius={7} pathOptions={{
+                      color: "#b31b1b", fillColor: "#f04a4a", fillOpacity: 0.95,
+                    }}>
+                    <Popup>Vorgeschlagener genauer Standort (nur Vorschau)</Popup>
+                  </CircleMarker>
+                ) : null}
                 <CircleMarker center={[origin.lat, origin.lon]} radius={8} pathOptions={{
                   color: "#2058a8", fillColor: "#4a8bf0", fillOpacity: 0.85,
                 }}>
@@ -647,6 +679,27 @@ export default function GolfNearMePage() {
                   </CircleMarker>
                 ))}
               </MapContainer>
+              {showTestCoordinatePicker && status === "ready" ? (
+                <div role="status" style={{ ...subtle, padding: "12px", display: "grid", gap: 8 }}>
+                  <strong>Nur im isolierten Test: Markerposition korrigieren</strong>
+                  <span>Klicke auf die genaue Position (z. B. Eingang) in der Karte.
+                    Ein roter Testmarker zeigt die Auswahl. Keine Datenbankänderung.</span>
+                  {testCoordinate ? (
+                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
+                      <code style={{ fontSize: 14, color: "var(--text)" }}>
+                        {testCoordinate.lat.toFixed(7)}, {testCoordinate.lon.toFixed(7)}
+                      </code>
+                      <button type="button" style={chip}
+                        onClick={() => {
+                          const value = testCoordinate.lat.toFixed(7) + ", " + testCoordinate.lon.toFixed(7);
+                          if (navigator.clipboard) void navigator.clipboard.writeText(value);
+                        }}>
+                        Koordinaten kopieren
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
               {status === "preview" ? (
                 <p style={{ ...subtle, padding: "0 12px" }}>{t("golf_near_me_preview_no_coords")}</p>
               ) : status === "ready" && validMarkers.length !== items.length ? (
