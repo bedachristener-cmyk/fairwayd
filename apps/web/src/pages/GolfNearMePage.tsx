@@ -174,6 +174,10 @@ function VenueCategoryVisual({ venue }: { venue: GolfServiceVenue }) {
   );
 }
 
+function venueCardId(id: string) {
+  return `golf-near-me-venue-${encodeURIComponent(id)}`;
+}
+
 function VenueCard({
   venue, selected, onSelect, isDraft = false,
 }: {
@@ -190,7 +194,8 @@ function VenueCard({
   ].filter(Boolean).join(" · ");
 
   return (
-    <article style={{ ...panel, padding: 16, display: "grid", gap: 10 }}>
+    <article id={venueCardId(venue.id)}
+      style={{ ...panel, padding: 16, display: "grid", gap: 10 }}>
       <VenueCategoryVisual venue={venue} />
       <button
         type="button"
@@ -334,8 +339,26 @@ export default function GolfNearMePage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
   const currentRequest = useRef<AbortController | null>(null);
+  // Only map-to-list navigation scrolls/focuses; ordinary list toggles stay in place.
+  const pendingMapVenueId = useRef<string | null>(null);
 
   useEffect(() => () => { currentRequest.current?.abort(); }, []);
+
+  useEffect(() => {
+    const venueId = pendingMapVenueId.current;
+    if (!venueId || view !== "list" || selectedId !== venueId) return;
+    pendingMapVenueId.current = null;
+    const card = document.getElementById(venueCardId(venueId));
+    if (!card) return;
+    card.scrollIntoView({ behavior: "smooth", block: "start" });
+    card.querySelector<HTMLButtonElement>("button[aria-expanded]")?.focus({ preventScroll: true });
+  }, [view, selectedId, items]);
+
+  function openVenueFromMap(venueId: string) {
+    pendingMapVenueId.current = venueId;
+    setSelectedId(venueId);
+    setView("list");
+  }
 
   function invalidateResults() {
     currentRequest.current?.abort();
@@ -345,6 +368,7 @@ export default function GolfNearMePage() {
     setCourseItems([]);
     setCourseServices([]);
     setPartialWarning(null);
+    pendingMapVenueId.current = null;
     setSelectedId(null);
     setTruncated(false);
     setError("");
@@ -716,10 +740,30 @@ export default function GolfNearMePage() {
                   <CircleMarker key={venue.id} center={[venue.lat!, venue.lon!]} radius={10}
                     pathOptions={{ color: "#165d36", fillColor: "#2e9d5f", fillOpacity: 0.9 }}>
                     <Popup>
-                      <strong>{venue.name}</strong>
-                      {venue.distanceKm !== null ? (
-                        <div>{venue.distanceKm.toFixed(1)} km {t("golf_near_me_away")}</div>
-                      ) : null}
+                      <div style={{ display: "grid", gap: 7, minWidth: 190 }}>
+                        <strong>{venue.name}</strong>
+                        {venue.distanceKm !== null ? (
+                          <span>{venue.distanceKm.toFixed(1)} km {t("golf_near_me_away")}</span>
+                        ) : null}
+                        <span>{[...new Set(venue.offerings.map((offering) =>
+                          CATEGORY_LABEL[offering.category]))].join(" · ")}</span>
+                        <button type="button" onClick={(event) => {
+                          event.stopPropagation();
+                          openVenueFromMap(venue.id);
+                        }} style={{
+                          appearance: "none", background: "none", padding: 0,
+                          border: "none", color: "#067942", cursor: "pointer",
+                          textAlign: "left", fontWeight: 800, textDecoration: "underline",
+                        }}>
+                          {t("golf_near_me_view_details")} →
+                        </button>
+                        {safeUrl(venue.website) ? (
+                          <a href={safeUrl(venue.website)!} target="_blank"
+                            rel="noopener noreferrer" style={{ color: "#067942", fontWeight: 750 }}>
+                            {t("golf_near_me_venue_website")} ↗
+                          </a>
+                        ) : null}
+                      </div>
                     </Popup>
                   </CircleMarker>
                 ))}
