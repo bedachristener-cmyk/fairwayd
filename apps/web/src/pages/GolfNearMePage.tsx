@@ -471,7 +471,10 @@ export default function GolfNearMePage() {
               <h2 style={{ fontSize: 20, margin: "0 0 3px" }}>{t("golf_near_me_nearby")}</h2>
               <div style={subtle}>
                 {status === "ready"
-                  ? `${items.length} ${t(items.length === 1 ? "golf_near_me_verified_venue" : "golf_near_me_verified_venues")}`
+                  ? [
+                      courseItems.length ? `${courseItems.length} ${t("golf_near_me_courses")}` : "",
+                      items.length ? `${items.length} ${t(items.length === 1 ? "golf_near_me_verified_venue" : "golf_near_me_verified_venues")}` : "",
+                    ].filter(Boolean).join(" · ") || t("golf_near_me_results_empty")
                   : status === "preview"
                     ? `${items.length} ${t("golf_near_me_preview_count")}`
                     : t("golf_near_me_verified_only")}
@@ -487,6 +490,17 @@ export default function GolfNearMePage() {
               }}><MapPinned size={15} style={{ verticalAlign: "middle" }} /> {t("map")}</button>
             </div>
           </div>
+
+          {status === "ready" && partialWarning ? (
+            <div role="status" style={{
+              ...panel, fontSize: 13, lineHeight: 1.5,
+              borderColor: "color-mix(in srgb, var(--green) 25%, var(--border))",
+            }}>
+              {t(partialWarning === "services"
+                ? "golf_near_me_partial_services"
+                : "golf_near_me_partial_courses")}
+            </div>
+          ) : null}
 
           {status === "preview" ? (
             <div role="note" style={{
@@ -520,20 +534,23 @@ export default function GolfNearMePage() {
                       : t("golf_near_me_initial_body")}
               </span>
             </div>
-          ) : items.length === 0 ? (
+          ) : allResults.length === 0 ? (
             <div style={panel}>
               <strong>{status === "preview"
                 ? t("golf_near_me_preview_empty")
-                : t("golf_near_me_empty_title")}</strong>
+                : t("golf_near_me_results_empty")}</strong>
               {status === "preview" ? null : <p style={subtle}>{t("golf_near_me_empty_body")}</p>}
             </div>
           ) : view === "list" ? (
             <div style={{ display: "grid", gap: 10 }}>
-              {items.map((venue) => (
-                <VenueCard key={venue.id} venue={venue} selected={selectedId === venue.id}
-                  isDraft={status === "preview"}
-                  onSelect={() => setSelectedId((id) => id === venue.id ? null : venue.id)} />
-              ))}
+              {allResults.map((result) => result.kind === "course"
+                ? <CourseCard key={result.id} course={result.course} />
+                : <VenueCard key={result.id} venue={result.venue}
+                    selected={selectedId === result.venue.id}
+                    isDraft={status === "preview"}
+                    onSelect={() => setSelectedId((id) =>
+                      id === result.venue.id ? null : result.venue.id)} />
+              )}
             </div>
           ) : null}
 
@@ -548,6 +565,20 @@ export default function GolfNearMePage() {
                 }}>
                   <Popup>{origin.label}</Popup>
                 </CircleMarker>
+                {courseItems.map((course) => (
+                  <CircleMarker key={`course-${course.id}`} center={[course.lat, course.lon]}
+                    radius={9} pathOptions={{
+                      color: "#1b5b9b", fillColor: "#4b97d4", fillOpacity: 0.9,
+                    }}>
+                    <Popup>
+                      <strong>{course.name}</strong>
+                      <div>{(course.distanceM / 1000).toFixed(1)} km</div>
+                      <Link to={`/courses/${encodeURIComponent(course.id)}`}>
+                        {t("golf_near_me_open_course")}
+                      </Link>
+                    </Popup>
+                  </CircleMarker>
+                ))}
                 {validMarkers.map((venue) => (
                   <CircleMarker key={venue.id} center={[venue.lat!, venue.lon!]} radius={10}
                     pathOptions={{ color: "#165d36", fillColor: "#2e9d5f", fillOpacity: 0.9 }}>
