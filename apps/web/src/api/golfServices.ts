@@ -29,7 +29,8 @@ export type GolfServiceVenue = {
   lon: number | null;
   website: string | null;
   phone: string | null;
-  distanceKm: number;
+  // Null is only used by explicitly labelled, unverified local pilot previews.
+  distanceKm: number | null;
   offerings: GolfServiceOffering[];
   venueProviders: {
     role: string;
