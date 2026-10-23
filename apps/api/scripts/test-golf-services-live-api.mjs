@@ -92,8 +92,8 @@ function checkItems(response, category) {
   assert.equal(venue.name, 'The Golf Lounge');
   assert.equal(venue.city, 'Rheinfelden');
   assert.equal(venue.country, 'CH');
-  assert.equal(venue.lat, 47.5495127);
-  assert.equal(venue.lon, 7.786086);
+  assert.equal(venue.lat, 47.5495547);
+  assert.equal(venue.lon, 7.7863799);
   assert.equal(venue.offerings.length, category ? 1 : 4);
   if (category) assert.equal(venue.offerings[0].category, category);
   assert.ok(Array.isArray(venue.venueProviders));
