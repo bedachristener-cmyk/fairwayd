@@ -233,3 +233,18 @@ User clicked the desired The Golf Lounge position inside the opt-in isolated Lea
 - Updated one existing `GolfServiceVenue` with an exact ID/name/country/original-coordinate guard in **Neon disposable Prisma-test child `br-dawn-breeze-agjlgyyt`, database `fairwayd_stage` only**. Database returned the new latitude and longitude, and its `VERIFIED` status remains solely for local testability.
 - Updated `apps/api/scripts/test-golf-services-live-api.mjs` to expect the new GPS coordinate.
 - No Stage/Production writes or deployments. When reviewing the browser UI, re-run the test search to load the updated marker; the old result may remain in React state until searched again.
+
+## UI venue-title refinement and Stage release gate (2026-10-23)
+
+UI improvement committed on the feature branch only: in `apps/web/src/pages/GolfNearMePage.tsx`, `VenueCategoryVisual` now always uses `venue.name` as the prominent visual headline. The filtered service categories are retained as secondary labels, with up to two category labels and an overflow `+N` indicator. This avoids showing only `Simulatoren` as if it were the venue name when The Golf Lounge offers multiple services. The venue's regular details and markers remain unchanged. Source inspection confirmed the JSX title/subtitle and existing coordinate picker are retained; **a new web build and visual verification after this change are still pending**.
+
+PR #11 remains **Draft** against `stage`. Before allowing a Stage deployment:
+
+1. From `feature/golf-near-me-ch-pilot`, run `cd apps/web; npm run build`, then refresh the disposable browser rehearsal and visually verify the main venue title on both `Alle Angebote` and `Simulatoren`.
+2. Verify that Railway service `fairwayd-stage` has the expected *database pathname*, not just the known Stage hostname. Treat the secret as confidential; never paste the connection URL into chat.
+3. Review release sequencing: `apps/api/package.json` `start:prod` automatically runs `prisma migrate deploy`. Merging/deploying the API branch before consciously approving Stage DB migration is **not** safe, even if the feature flag remains disabled.
+4. Decide on a separate, approved Stage migration and feature-flag plan, and keep production excluded.
+5. The source fixture is still `DRAFT`; the sandbox-only verified The Golf Lounge data must not be automatically seeded/published. Confirm geographic accuracy and permission for public listing before any real directory publication.
+6. The current "Golfplätze konnten nicht geladen werden" in the isolated browser rehearsal refers to the ordinary local API on port 3000, not the tested Golf Services API; test joint operation once that local API is online.
+
+The migration, service API, and isolated browser map/list tests have succeeded, and the manually selected venue position was confirmed by the user. **No Stage/Production release is approved.**
