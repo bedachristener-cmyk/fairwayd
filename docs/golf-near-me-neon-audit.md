@@ -192,3 +192,27 @@ Temporary URL and feature flag restored. No .env file changed.
 - A PostgreSQL `libpq` SSL-compatibility warning was printed during the test. It did **not** fail the test; consider tightening SSL verification policy separately.
 - No Stage or Production deployment or database changes were requested or performed by the test harness. Test data are isolated and are **not authorized for production publication**.
 - **Still pending before Stage:** verify Railway Stage's runtime database path, decide rollout strategy and feature flag, and perform explicit Stage-specific change approval. Keep the original Git pilot fixture in DRAFT until a publication review.
+
+## Isolated visual browser test prepared (2026-10-23)
+
+The UI screenshot of Golf Near Me displayed the *local draft preview* (`Basel-Pilotvorschau (lokal)`), not real records from the live isolated API. Thus the "draft/unverified" and "distance not checked" captions on that screenshot were expected. The real live-API HTTP integration test had passed separately.
+
+To validate genuine results in the **browser**, a dedicated, non-deployed test-only path was added:
+
+- `apps/web/src/api/golfServices.ts`: `VITE_GOLF_SERVICES_LOCAL_TEST_API_BASE` can override **only** Golf Services calls, in Vite dev mode, and only to an explicit `http://127.0.0.1:<port>/api` target. All existing nearby Courses requests continue using the original `API_BASE`.
+- `apps/api/scripts/preview-golf-services-web.mjs`: requires the exact disposable Neon direct host `ep-late-band-ag2ya7lq.c-2.eu-central-1.aws.neon.tech` with database `fairwayd_stage`; checks the expected completed migration + The Golf Lounge and 4 verified sandbox offerings; injects `default_transaction_read_only=on`; starts only a small Golf Services NestJS module bound to loopback. Starts **another** loopback-only Vite dev instance with strict port `5195`, cleans database credentials from its child-process environment, and routes ordinary golf-course lookups to `http://127.0.0.1:3000`. No regular API is stopped or reconfigured.
+- `apps/api/scripts/Run-GolfServicesBrowserTest.ps1`: PowerShell 5.1 safe local password-masked DB URL prompt, process-only connection, environment restore, no .env modifications, no imports, no migrations.
+
+To start:
+
+```powershell
+cd C:\dev\fairwayd
+git pull --ff-only
+cd .\apps\api
+npm run build
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-GolfServicesBrowserTest.ps1
+```
+
+Enter the Neon *Direct* connection URL for `golf-near-me-prisma-rehearsal-20261023` / `fairwayd_stage` in the password-masked terminal prompt; do not paste in chat. Open **`http://127.0.0.1:5195/golf-near-me`**; choose Basel, 25 km, "Simulatoren" and click the green "Golfangebote finden" button (do not choose the draft preview). Verify the real 14.9 km distance, a single The Golf Lounge result, 2 simulators, and a map marker; 10 km should not return this venue. Keep the test terminal open while browsing. Stop with Ctrl+C.
+
+**Status:** Browser visual test launcher implemented but user has **not yet executed** it; Stage/Production untouched. If the normal dev API on port 3000 is not running, the independent service venue should still show and a partial warning for existing courses may appear.
