@@ -231,17 +231,6 @@ export const REVIEWED_EG_COURSE_ADDITIONS: ReviewedEgCourseDefinition[] = [
     evidence: GOOGLE_EVIDENCE,
   },
   {
-    name: 'Orange Lakes Golf Club',
-    city: 'Solimaneyah',
-    region: 'Giza',
-    holes: 18,
-    lat: 30.1539719,
-    lon: 30.8376316,
-    placeId: 'ChIJwySO6Dn0WBQRJaHyMCZ-Uxc',
-    evidence:
-      'Operational outdoor golf-course result cross-checked against current map imagery',
-  },
-  {
     name: 'Palm Hills Golf Club',
     city: '6th of October City',
     region: 'Giza',
@@ -354,7 +343,14 @@ export const REVIEWED_EG_COURSE_ADDITIONS: ReviewedEgCourseDefinition[] = [
   },
 ];
 
-export const REVIEWED_EG_COURSE_DEACTIVATIONS: ReviewedEgCourseDeactivation[] = [];
+export const REVIEWED_EG_COURSE_DEACTIVATIONS: ReviewedEgCourseDeactivation[] = [
+  {
+    name: 'Orange Lakes Golf Club',
+    placeId: 'ChIJwySO6Dn0WBQRJaHyMCZ-Uxc',
+    reason:
+      'Permanently closed and liquidated; the Google marker is on the Cairo–Alexandria highway and the nearby active facility is already represented as Pyramids Golf & Country Club',
+  },
+];
 
 export function validateReviewedEgCourseReconciliation(): string[] {
   const errors: string[] = [];
