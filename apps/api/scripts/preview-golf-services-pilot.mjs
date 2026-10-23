@@ -15,6 +15,29 @@ function requireCondition(ok, message) {
   if (!ok) throw new Error('Pilot validation failed: ' + message);
 }
 
+// Conservative, read-only duplicate check inside the review fixture.
+// Name + complete postal address must match; location proximity by itself is
+// NOT sufficient (e.g. separate golf businesses sharing a building).
+function normalizedIdentityPart(value) {
+  return String(value ?? '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ß/g, 'ss')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function venueIdentityKey(venue) {
+  const name = normalizedIdentityPart(venue.name);
+  const address = normalizedIdentityPart(venue.addressLine);
+  const postalCode = normalizedIdentityPart(venue.postalCode);
+  const country = normalizedIdentityPart(venue.country);
+  if (!name || !address || !postalCode || !country) return null;
+  return [country, postalCode, address, name].join('|');
+}
+
 function validSource(entry, context) {
   requireCondition(sourceKinds.has(entry.sourceKind), context + ': invalid source kind');
   requireCondition(entry.sourceUrl === null || (typeof entry.sourceUrl === 'string' && /^https:\/\//.test(entry.sourceUrl)), context + ': invalid source URL');
@@ -28,6 +51,7 @@ export function validateGolfServicesPilot(data) {
   requireCondition(data?.schemaVersion === 1, 'schemaVersion must be 1');
   requireCondition(Array.isArray(data.venues) && data.venues.length > 0, 'expected nonempty venues');
   const references = new Set();
+  const physicalIdentities = new Map();
   let offerings = 0;
   let providers = 0;
 
@@ -37,6 +61,15 @@ export function validateGolfServicesPilot(data) {
     references.add(venue.reference);
     requireCondition(venue.status === 'DRAFT' && venue.verifiedAt === null, venue.reference + ': draft-only pilot');
     requireCondition(typeof venue.name === 'string' && venue.name.trim(), venue.reference + ': name required');
+    const identityKey = venueIdentityKey(venue);
+    if (identityKey) {
+      const previousRef = physicalIdentities.get(identityKey);
+      requireCondition(
+        !previousRef,
+        'possible duplicate physical venue: ' + venue.reference + ' matches ' + previousRef,
+      );
+      physicalIdentities.set(identityKey, venue.reference);
+    }
     requireCondition(/^[A-Z]{2}$/.test(venue.country ?? ''), venue.reference + ': two-letter country required');
     requireCondition((venue.lat === null) === (venue.lon === null), venue.reference + ': incomplete coordinate pair');
     if (venue.lat !== null) {
