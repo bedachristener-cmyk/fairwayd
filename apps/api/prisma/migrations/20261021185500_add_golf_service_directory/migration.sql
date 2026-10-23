@@ -1,4 +1,4 @@
--- Golf Near Me: entirely separate from the existing Course table.
+-- Golf Near Me: independent venue directory plus services linked to existing Course IDs.
 -- No data import or Google Places response snapshots.
 -- This migration is committed to the feature branch only, not applied to any DB.
 
@@ -48,7 +48,8 @@ CREATE TABLE "GolfServiceVenue" (
 -- CreateTable
 CREATE TABLE "GolfServiceOffering" (
     "id" TEXT NOT NULL,
-    "venueId" TEXT NOT NULL,
+    "venueId" TEXT,
+    "courseId" TEXT,
     "category" "GolfServiceCategory" NOT NULL,
     "status" "GolfServiceStatus" NOT NULL DEFAULT 'DRAFT',
     "label" TEXT,
@@ -63,6 +64,10 @@ CREATE TABLE "GolfServiceOffering" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "GolfServiceOffering_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "GolfServiceOffering_exclusive_owner_check" CHECK (
+      ("venueId" IS NOT NULL AND "courseId" IS NULL)
+      OR ("venueId" IS NULL AND "courseId" IS NOT NULL)
+    ),
     CONSTRAINT "GolfServiceOffering_unit_count_check" CHECK (
       "unitCount" IS NULL OR "unitCount" > 0
     ),
@@ -86,7 +91,8 @@ CREATE TABLE "GolfServiceProvider" (
 -- CreateTable
 CREATE TABLE "GolfServiceVenueProvider" (
     "id" TEXT NOT NULL,
-    "venueId" TEXT NOT NULL,
+    "venueId" TEXT,
+    "courseId" TEXT,
     "providerId" TEXT NOT NULL,
     "role" "GolfServiceProviderRole" NOT NULL,
     "status" "GolfServiceStatus" NOT NULL DEFAULT 'DRAFT',
@@ -96,6 +102,10 @@ CREATE TABLE "GolfServiceVenueProvider" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "GolfServiceVenueProvider_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "GolfServiceVenueProvider_exclusive_owner_check" CHECK (
+      ("venueId" IS NOT NULL AND "courseId" IS NULL)
+      OR ("venueId" IS NULL AND "courseId" IS NOT NULL)
+    ),
     CONSTRAINT "GolfServiceVenueProvider_verified_source_check" CHECK (
       "status" <> 'VERIFIED' OR ("verifiedAt" IS NOT NULL AND "sourceKind" IS NOT NULL)
     )
@@ -110,10 +120,13 @@ CREATE INDEX "GolfServiceVenue_city_idx" ON "GolfServiceVenue"("city");
 CREATE INDEX "GolfServiceVenue_lat_lon_idx" ON "GolfServiceVenue"("lat", "lon");
 
 CREATE UNIQUE INDEX "GolfServiceOffering_venueId_category_key" ON "GolfServiceOffering"("venueId", "category");
+CREATE UNIQUE INDEX "GolfServiceOffering_courseId_category_key" ON "GolfServiceOffering"("courseId", "category");
 CREATE INDEX "GolfServiceOffering_category_status_idx" ON "GolfServiceOffering"("category", "status");
 
 CREATE UNIQUE INDEX "GolfServiceVenueProvider_venueId_providerId_role_key"
   ON "GolfServiceVenueProvider"("venueId", "providerId", "role");
+CREATE UNIQUE INDEX "GolfServiceVenueProvider_courseId_providerId_role_key"
+  ON "GolfServiceVenueProvider"("courseId", "providerId", "role");
 CREATE INDEX "GolfServiceVenueProvider_providerId_idx" ON "GolfServiceVenueProvider"("providerId");
 
 -- AddForeignKey
@@ -122,9 +135,19 @@ ALTER TABLE "GolfServiceOffering"
   FOREIGN KEY ("venueId") REFERENCES "GolfServiceVenue"("id")
   ON DELETE CASCADE ON UPDATE CASCADE;
 
+ALTER TABLE "GolfServiceOffering"
+  ADD CONSTRAINT "GolfServiceOffering_courseId_fkey"
+  FOREIGN KEY ("courseId") REFERENCES "Course"("id")
+  ON DELETE CASCADE ON UPDATE CASCADE;
+
 ALTER TABLE "GolfServiceVenueProvider"
   ADD CONSTRAINT "GolfServiceVenueProvider_venueId_fkey"
   FOREIGN KEY ("venueId") REFERENCES "GolfServiceVenue"("id")
+  ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "GolfServiceVenueProvider"
+  ADD CONSTRAINT "GolfServiceVenueProvider_courseId_fkey"
+  FOREIGN KEY ("courseId") REFERENCES "Course"("id")
   ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE "GolfServiceVenueProvider"
