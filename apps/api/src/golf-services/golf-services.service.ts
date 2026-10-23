@@ -37,6 +37,28 @@ const publicVenueSelect = {
   },
 } satisfies Prisma.GolfServiceVenueSelect;
 
+// Course-linked services are returned as enrichments of existing Course IDs.
+// The API never invents a second service venue for a golf course.
+const publicCourseServicesSelect = {
+  id: true,
+  lat: true,
+  lon: true,
+  serviceOfferings: {
+    where: { status: VERIFIED, verifiedAt: { not: null } },
+    select: {
+      id: true, category: true, label: true, description: true,
+      unitCount: true, availableToPublic: true, bookingUrl: true,
+    },
+  },
+  serviceProviderLinks: {
+    where: { status: VERIFIED, verifiedAt: { not: null } },
+    select: {
+      role: true,
+      provider: { select: { id: true, name: true, kind: true, website: true } },
+    },
+  },
+} satisfies Prisma.CourseSelect;
+
 function verifiedOffering(category?: GolfServiceCategory): Prisma.GolfServiceOfferingWhereInput {
   return {
     status: VERIFIED,
@@ -91,6 +113,51 @@ export class GolfServicesService {
       select: publicVenueSelect,
     });
 
+    // Query only existing active Courses carrying verified offerings. Their
+    // identity, coordinates and map markers remain owned by the Course model.
+    const courseWhere: Prisma.CourseWhereInput = {
+      active: true,
+      lat: { gte: bounds.minLat, lte: bounds.maxLat },
+      ...(country ? { country } : {}),
+      serviceOfferings: { some: verifiedOffering(category) },
+    };
+
+    // Mirror longitude/date-line filtering for both venue and course queries.
+    if (!bounds.allLongitudes) {
+      if (bounds.west < -180) {
+        courseWhere.OR = [
+          { lon: { gte: bounds.west + 360 } },
+          { lon: { lte: bounds.east } },
+        ];
+      } else if (bounds.east > 180) {
+        courseWhere.OR = [
+          { lon: { gte: bounds.west } },
+          { lon: { lte: bounds.east - 360 } },
+        ];
+      } else {
+        courseWhere.lon = { gte: bounds.west, lte: bounds.east };
+      }
+    }
+
+    const courseRows = await this.prisma.course.findMany({
+      where: courseWhere,
+      select: publicCourseServicesSelect,
+    });
+
+    const courseServices = courseRows.flatMap((course) => {
+      const km = golfServiceDistanceKm(lat, lon, course.lat, course.lon);
+      if (km > radiusKm) return [];
+      const offerings = category
+        ? course.serviceOfferings.filter((offering) => offering.category === category)
+        : course.serviceOfferings;
+      if (offerings.length === 0) return [];
+      return [{
+        courseId: course.id,
+        offerings,
+        venueProviders: course.serviceProviderLinks,
+      }];
+    });
+
     const sorted = rows.flatMap((venue) => {
       if (venue.lat === null || venue.lon === null) return [];
       const km = golfServiceDistanceKm(lat, lon, venue.lat, venue.lon);
@@ -112,6 +179,8 @@ export class GolfServicesService {
       radiusKm,
       truncated: sorted.length > 100,
       items: sorted.slice(0, 100),
+      // Metadata only, keyed by the original Course.id. Not new locations.
+      courseServices,
     };
   }
 
