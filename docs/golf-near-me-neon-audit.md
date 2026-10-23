@@ -166,3 +166,29 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-GolfServic
 ```
 
 Paste the **direct, unpooled** URL for `golf-near-me-prisma-rehearsal-20261023` / `fairwayd_stage` only in the masked terminal prompt. The harness does not start the real app, change `.env`, call Google, migrate, seed, or write to any database. Share **only the sanitized PASS/FAIL test output** in chat. Stage and Production are not test targets.
+
+## Isolated live HTTP API smoke test – PASS (2026-10-23)
+
+The developer ran `apps/api/scripts/Run-GolfServicesLiveApiTest.ps1` locally on Windows against **only** the disposable Prisma-test Neon branch `br-dawn-breeze-agjlgyyt`, database `fairwayd_stage`, using a direct connection string in the masked terminal prompt.
+
+Reported successful output:
+
+```text
+Preflight PASS: isolated database, read-only, 1 venue, 4 offers, 1 pro link.
+PASS: Disabled feature returns HTTP 503.
+PASS: Simulators -> one real venue, 2 simulators, SebbyGolf instructor.
+PASS: Shop filter returns the same venue once.
+PASS: No driving range is fabricated.
+PASS: Basel 25km search finds the venue with actual calculated distance: 14.9 km.
+PASS: Country filter prevents a false French listing.
+PASS: Regional golf-services API returns the expected venue.
+PASS: All isolated HTTP API smoke tests succeeded; no data changed.
+Temporary URL and feature flag restored. No .env file changed.
+```
+
+- This is a **genuine local NestJS HTTP controller/service integration test**, not a unit-test mock and **not a Railway deployment**.
+- The script enforces the direct host `ep-late-band-ag2ya7lq.c-2.eu-central-1.aws.neon.tech`, database `fairwayd_stage`, branch-specific pilot fixture, and read-only transactions. A temporary loopback HTTP server is used.
+- One tested venue is returned for the simulator category with two simulator units, one linked instructor, and correct region/country/category filtering. No duplicate or invented golf-course link is created.
+- A PostgreSQL `libpq` SSL-compatibility warning was printed during the test. It did **not** fail the test; consider tightening SSL verification policy separately.
+- No Stage or Production deployment or database changes were requested or performed by the test harness. Test data are isolated and are **not authorized for production publication**.
+- **Still pending before Stage:** verify Railway Stage's runtime database path, decide rollout strategy and feature flag, and perform explicit Stage-specific change approval. Keep the original Git pilot fixture in DRAFT until a publication review.
