@@ -76,11 +76,12 @@ function RecenterMap({ lat, lon }: { lat: number; lon: number }) {
 // It deliberately does not imply that this is a photograph of the actual business.
 function VenueCategoryVisual({ venue }: { venue: GolfServiceVenue }) {
   const categories = venue.offerings.map((offering) => offering.category);
-  const category: GolfServiceCategory =
+  const category: GolfServiceCategory | null =
     categories.includes("SIMULATOR") ? "SIMULATOR" :
     categories.includes("ACADEMY") ? "ACADEMY" :
     categories.includes("RANGE") ? "RANGE" :
-    categories.includes("SHOP") ? "SHOP" : "FITTING";
+    categories.includes("SHOP") ? "SHOP" :
+    categories.includes("FITTING") ? "FITTING" : null;
   const Icon =
     category === "SIMULATOR" ? Monitor :
     category === "ACADEMY" ? GraduationCap :
@@ -102,7 +103,7 @@ function VenueCategoryVisual({ venue }: { venue: GolfServiceVenue }) {
           fontSize: "clamp(18px, 3vw, 24px)", lineHeight: 1.15, fontWeight: 850,
           overflowWrap: "anywhere",
         }}>
-          {CATEGORY_LABEL[category]}
+          {category ? CATEGORY_LABEL[category] : venue.name}
         </strong>
       </div>
       <div style={{
