@@ -15,7 +15,7 @@ import {
 
 type Position = { lat: number; lon: number; label: string };
 type Radius = 10 | 25 | 50 | 100;
-type SearchStatus = "idle" | "loading" | "ready" | "not-deployed" | "unavailable" | "error";
+type SearchStatus = "idle" | "loading" | "ready" | "preview" | "not-deployed" | "unavailable" | "error";
 
 const BASEL: Position = { lat: 47.5596, lon: 7.5886, label: t("golf_near_me_basel_pilot") };
 const RADII: Radius[] = [10, 25, 50, 100];
@@ -70,11 +70,12 @@ function RecenterMap({ lat, lon }: { lat: number; lon: number }) {
 }
 
 function VenueCard({
-  venue, selected, onSelect,
+  venue, selected, onSelect, isDraft = false,
 }: {
   venue: GolfServiceVenue;
   selected: boolean;
   onSelect: () => void;
+  isDraft?: boolean;
 }) {
   const website = safeUrl(venue.website);
   const location = [
@@ -94,10 +95,17 @@ function VenueCard({
         <span style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
           <strong style={{ color: "var(--text)", fontSize: 17 }}>{venue.name}</strong>
           <strong style={{ color: "var(--green)", whiteSpace: "nowrap", fontSize: 13 }}>
-            {venue.distanceKm.toFixed(1)} km
+{venue.distanceKm === null
+              ? t("golf_near_me_preview_distance")
+              : `${venue.distanceKm.toFixed(1)} km`}
           </strong>
         </span>
         <span style={subtle}>{location}</span>
+        {isDraft ? (
+          <span style={{ ...subtle, fontWeight: 800, color: "var(--danger)" }}>
+            {t("golf_near_me_preview_draft")}
+          </span>
+        ) : null}
         <span style={{ ...subtle, fontWeight: 750, color: "var(--green)" }}>
           {selected ? t("golf_near_me_hide_details") : t("golf_near_me_view_details")}
         </span>
@@ -128,7 +136,8 @@ function VenueCard({
           {venue.venueProviders.map(({ role, provider }) => (
             <div key={provider.id} style={{ display: "grid", gap: 3 }}>
               <strong style={{ color: "var(--text)", fontSize: 13 }}>{provider.name}</strong>
-              <span style={subtle}>{t("golf_near_me_professional")} · {role.replaceAll("_", " ").toLowerCase()}</span>
+              <span style={subtle}>{t("golf_near_me_professional")}
+                {role === "GOLF_PRO" ? "" : ` · ${role.replaceAll("_", " ").toLowerCase()}`}</span>
               {safeUrl(provider.website) ? (
                 <a href={safeUrl(provider.website)!} target="_blank" rel="noopener noreferrer" style={{ color: "var(--green)", fontSize: 13 }}>
                   {t("golf_near_me_provider_website")} <ExternalLink size={12} style={{ verticalAlign: "middle" }} />
@@ -193,6 +202,25 @@ export default function GolfNearMePage() {
       },
       { enableHighAccuracy: false, timeout: 12000, maximumAge: 120000 },
     );
+  }
+
+  async function previewBaselDraft() {
+    // Display-only fixture for the local Vite dev server.
+    // This code path must never be available in preview/production builds.
+    if (!import.meta.env.DEV) return;
+    currentRequest.current?.abort();
+    const controller = new AbortController();
+    currentRequest.current = controller;
+    const { baselPilotPreview } = await import("../data/golfNearMeBaselPreview");
+    if (controller.signal.aborted) return;
+    setOrigin(BASEL);
+    setItems(baselPilotPreview(category));
+    setTruncated(false);
+    setSelectedId(null);
+    setStatus("preview");
+    setView("list");
+    setError("");
+    setLocationError("");
   }
 
   async function searchNearby() {
@@ -309,6 +337,15 @@ export default function GolfNearMePage() {
             }}>
             <Search size={17} /> {status === "loading" ? t("golf_near_me_searching") : t("golf_near_me_search_button")}
           </button>
+          {import.meta.env.DEV ? (
+            <button
+              type="button"
+              onClick={() => void previewBaselDraft()}
+              style={{ ...chip, width: "100%", padding: "13px", borderStyle: "dashed" }}
+            >
+              {t("golf_near_me_preview_button")}
+            </button>
+          ) : null}
           <span style={{ ...subtle, fontSize: 11 }}>
             {t("golf_near_me_privacy")}
           </span>
@@ -319,7 +356,11 @@ export default function GolfNearMePage() {
             <div>
               <h2 style={{ fontSize: 20, margin: "0 0 3px" }}>{t("golf_near_me_nearby")}</h2>
               <div style={subtle}>
-                {status === "ready" ? `${items.length} ${t(items.length === 1 ? "golf_near_me_verified_venue" : "golf_near_me_verified_venues")}` : t("golf_near_me_verified_only")}
+                {status === "ready"
+                  ? `${items.length} ${t(items.length === 1 ? "golf_near_me_verified_venue" : "golf_near_me_verified_venues")}`
+                  : status === "preview"
+                    ? `${items.length} ${t("golf_near_me_preview_count")}`
+                    : t("golf_near_me_verified_only")}
                 {truncated ? ` · ${t("golf_near_me_showing_first")}` : ""}
               </div>
             </div>
@@ -333,7 +374,18 @@ export default function GolfNearMePage() {
             </div>
           </div>
 
-          {status !== "ready" ? (
+          {status === "preview" ? (
+            <div role="note" style={{
+              ...panel, display: "grid", gap: 5,
+              background: "color-mix(in srgb, var(--danger) 6%, var(--card))",
+              borderColor: "color-mix(in srgb, var(--danger) 35%, var(--border))",
+            }}>
+              <strong>{t("golf_near_me_preview_title")}</strong>
+              <span style={subtle}>{t("golf_near_me_preview_body")}</span>
+            </div>
+          ) : null}
+
+          {status !== "ready" && status !== "preview" ? (
             <div style={{ ...panel, display: "grid", gap: 6 }}>
               <strong>
                 {status === "loading" ? t("golf_near_me_loading_title") :
@@ -356,13 +408,16 @@ export default function GolfNearMePage() {
             </div>
           ) : items.length === 0 ? (
             <div style={panel}>
-              <strong>{t("golf_near_me_empty_title")}</strong>
-              <p style={subtle}>{t("golf_near_me_empty_body")}</p>
+              <strong>{status === "preview"
+                ? t("golf_near_me_preview_empty")
+                : t("golf_near_me_empty_title")}</strong>
+              {status === "preview" ? null : <p style={subtle}>{t("golf_near_me_empty_body")}</p>}
             </div>
           ) : view === "list" ? (
             <div style={{ display: "grid", gap: 10 }}>
               {items.map((venue) => (
                 <VenueCard key={venue.id} venue={venue} selected={selectedId === venue.id}
+                  isDraft={status === "preview"}
                   onSelect={() => setSelectedId((id) => id === venue.id ? null : venue.id)} />
               ))}
             </div>
@@ -384,12 +439,16 @@ export default function GolfNearMePage() {
                     pathOptions={{ color: "#165d36", fillColor: "#2e9d5f", fillOpacity: 0.9 }}>
                     <Popup>
                       <strong>{venue.name}</strong>
-                      <div>{venue.distanceKm.toFixed(1)} km {t("golf_near_me_away")}</div>
+                      {venue.distanceKm !== null ? (
+                        <div>{venue.distanceKm.toFixed(1)} km {t("golf_near_me_away")}</div>
+                      ) : null}
                     </Popup>
                   </CircleMarker>
                 ))}
               </MapContainer>
-              {status === "ready" && validMarkers.length !== items.length ? (
+              {status === "preview" ? (
+                <p style={{ ...subtle, padding: "0 12px" }}>{t("golf_near_me_preview_no_coords")}</p>
+              ) : status === "ready" && validMarkers.length !== items.length ? (
                 <p style={{ ...subtle, padding: "0 12px" }}>{t("golf_near_me_no_map_coordinates")}</p>
               ) : null}
             </div>
