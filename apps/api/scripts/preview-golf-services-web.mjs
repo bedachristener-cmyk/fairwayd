@@ -151,6 +151,8 @@ async function main() {
     webEnv.VITE_API_BASE_URL = 'http://127.0.0.1:3000';
     webEnv.VITE_GOLF_SERVICES_LOCAL_TEST_API_BASE =
       'http://127.0.0.1:' + httpPort + '/api';
+    // Only the isolated browser rehearsal enables the read-only map-click picker.
+    webEnv.VITE_GOLF_SERVICES_COORDINATE_PICKER = 'true';
     const viteCli = path.join(WEB_ROOT, 'node_modules', 'vite', 'bin', 'vite.js');
     vite = spawn(process.execPath, [viteCli, '--host', '127.0.0.1',
       '--port', String(WEB_PORT), '--strictPort'], {
