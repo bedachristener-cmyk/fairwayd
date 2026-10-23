@@ -17,6 +17,23 @@ export type GolfServiceOffering = {
   bookingUrl: string | null;
 };
 
+export type GolfServiceProviderLink = {
+  role: string;
+  provider: {
+    id: string;
+    name: string;
+    kind: string;
+    website: string | null;
+  };
+};
+
+// Linked services never add a second public location or a new Course record.
+export type GolfCourseServices = {
+  courseId: string;
+  offerings: GolfServiceOffering[];
+  venueProviders: GolfServiceProviderLink[];
+};
+
 export type GolfServiceVenue = {
   id: string;
   name: string;
@@ -32,15 +49,7 @@ export type GolfServiceVenue = {
   // Null is only used by explicitly labelled, unverified local pilot previews.
   distanceKm: number | null;
   offerings: GolfServiceOffering[];
-  venueProviders: {
-    role: string;
-    provider: {
-      id: string;
-      name: string;
-      kind: string;
-      website: string | null;
-    };
-  }[];
+  venueProviders: GolfServiceProviderLink[];
 };
 
 export type NearbyGolfServicesResponse = {
@@ -48,6 +57,8 @@ export type NearbyGolfServicesResponse = {
   radiusKm: number;
   truncated: boolean;
   items: GolfServiceVenue[];
+  // Optional for graceful compatibility with API deployments predating Course links.
+  courseServices?: GolfCourseServices[];
 };
 
 export type NearbyGolfServicesSearch = {
