@@ -594,7 +594,9 @@ export default function TopRail() {
       subtitle: t("golf_by_country"),
       icon: <Globe size={18} strokeWidth={2.2} />,
       action: () => navigateFromMenu("/destinations"),
-      isActive: location.pathname.startsWith("/destinations"),
+      isActive:
+        location.pathname.startsWith("/destinations") ||
+        location.pathname.startsWith("/golf-near-me"),
     },
     {
       key: "trips",
