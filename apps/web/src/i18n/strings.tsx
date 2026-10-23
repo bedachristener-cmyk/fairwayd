@@ -2093,6 +2093,15 @@ export const STRINGS = {
 
 const EXTRA_STRINGS = {
   en: {
+    // Golf Near Me development-only pilot preview
+    golf_near_me_preview_button: "Preview Basel sample (local)",
+    golf_near_me_preview_title: "LOCAL PREVIEW · UNVERIFIED DRAFT",
+    golf_near_me_preview_body: "Sample data only: no API request, database write, verified location, or real distance calculation. The radius and position do not filter this preview.",
+    golf_near_me_preview_count: "Pilot drafts (unverified)",
+    golf_near_me_preview_draft: "Draft · not verified",
+    golf_near_me_preview_distance: "Distance not verified",
+    golf_near_me_preview_empty: "No offering in this category in the Basel sample.",
+    golf_near_me_preview_no_coords: "No venue marker: coordinates are not yet verified.",
     // Golf Near Me translations
     golf_near_me_title: "Golf Near Me",
     golf_near_me_subtitle: "Local golf services",
@@ -2465,6 +2474,15 @@ const EXTRA_STRINGS = {
     theme_contrast: "Contrast",
   },
   de: {
+    // Golf Near Me development-only pilot preview
+    golf_near_me_preview_button: "Basel-Pilotvorschau (lokal)",
+    golf_near_me_preview_title: "LOKALE VORSCHAU · UNGEPRÜFTER ENTWURF",
+    golf_near_me_preview_body: "Nur Beispieldaten: kein API-Aufruf, keine Datenbankänderung, keine geprüften Koordinaten oder echte Distanzberechnung. Standort und Umkreis filtern diese Vorschau nicht.",
+    golf_near_me_preview_count: "Pilotentwürfe (ungeprüft)",
+    golf_near_me_preview_draft: "Entwurf · nicht geprüft",
+    golf_near_me_preview_distance: "Distanz nicht geprüft",
+    golf_near_me_preview_empty: "Keine Angebote dieser Kategorie im Basel-Pilotdatensatz.",
+    golf_near_me_preview_no_coords: "Kein Standortmarker: Koordinaten sind noch nicht geprüft.",
     // Golf Near Me translations
     golf_near_me_title: "Golf Near Me",
     golf_near_me_subtitle: "Golfangebote in deiner Nähe",
@@ -2837,6 +2855,15 @@ const EXTRA_STRINGS = {
     theme_contrast: "Kontrast",
   },
   fr: {
+    // Golf Near Me development-only pilot preview
+    golf_near_me_preview_button: "Aperçu de Bâle (local)",
+    golf_near_me_preview_title: "APERÇU LOCAL · BROUILLON NON VÉRIFIÉ",
+    golf_near_me_preview_body: "Données fictives uniquement : aucun appel API, écriture en base, emplacement vérifié ni distance réelle. Position et rayon ne filtrent pas cet aperçu.",
+    golf_near_me_preview_count: "Brouillons pilotes (non vérifiés)",
+    golf_near_me_preview_draft: "Brouillon · non vérifié",
+    golf_near_me_preview_distance: "Distance non vérifiée",
+    golf_near_me_preview_empty: "Aucun service de cette catégorie dans l'échantillon de Bâle.",
+    golf_near_me_preview_no_coords: "Aucun marqueur : les coordonnées ne sont pas encore vérifiées.",
     // Golf Near Me translations
     golf_near_me_title: "Golf Near Me",
     golf_near_me_subtitle: "Services de golf à proximité",
@@ -3209,6 +3236,15 @@ const EXTRA_STRINGS = {
     theme_contrast: "Contraste",
   },
   it: {
+    // Golf Near Me development-only pilot preview
+    golf_near_me_preview_button: "Anteprima Basilea (locale)",
+    golf_near_me_preview_title: "ANTEPRIMA LOCALE · BOZZA NON VERIFICATA",
+    golf_near_me_preview_body: "Solo dati dimostrativi: nessuna chiamata API, scrittura al database, posizione verificata o distanza reale. Posizione e raggio non filtrano l'anteprima.",
+    golf_near_me_preview_count: "Bozze pilota (non verificate)",
+    golf_near_me_preview_draft: "Bozza · non verificata",
+    golf_near_me_preview_distance: "Distanza non verificata",
+    golf_near_me_preview_empty: "Nessun servizio di questa categoria nel campione di Basilea.",
+    golf_near_me_preview_no_coords: "Nessun indicatore: le coordinate non sono ancora verificate.",
     // Golf Near Me translations
     golf_near_me_title: "Golf Near Me",
     golf_near_me_subtitle: "Servizi golf nelle vicinanze",
@@ -3581,6 +3617,15 @@ const EXTRA_STRINGS = {
     theme_contrast: "Contrasto",
   },
   es: {
+    // Golf Near Me development-only pilot preview
+    golf_near_me_preview_button: "Vista previa de Basilea (local)",
+    golf_near_me_preview_title: "VISTA PREVIA LOCAL · BORRADOR SIN VERIFICAR",
+    golf_near_me_preview_body: "Solo datos de ejemplo: sin llamadas API, cambios en la base de datos, ubicación verificada ni distancia real. La posición y el radio no filtran la vista previa.",
+    golf_near_me_preview_count: "Borradores piloto (sin verificar)",
+    golf_near_me_preview_draft: "Borrador · sin verificar",
+    golf_near_me_preview_distance: "Distancia sin verificar",
+    golf_near_me_preview_empty: "No hay servicios de esta categoría en el ejemplo de Basilea.",
+    golf_near_me_preview_no_coords: "Sin marcador: las coordenadas aún no están verificadas.",
     // Golf Near Me translations
     golf_near_me_title: "Golf Near Me",
     golf_near_me_subtitle: "Servicios de golf cercanos",
@@ -3953,6 +3998,15 @@ const EXTRA_STRINGS = {
     theme_contrast: "Contraste",
   },
   ko: {
+    // Golf Near Me development-only pilot preview
+    golf_near_me_preview_button: "바젤 샘플 미리보기 (로컬)",
+    golf_near_me_preview_title: "로컬 미리보기 · 미검증 초안",
+    golf_near_me_preview_body: "예시 데이터만 표시됩니다. API 호출, DB 변경, 검증된 위치 또는 실제 거리 계산이 없습니다. 위치와 반경은 미리보기에 적용되지 않습니다.",
+    golf_near_me_preview_count: "시범 초안 (미검증)",
+    golf_near_me_preview_draft: "초안 · 미검증",
+    golf_near_me_preview_distance: "미검증 거리",
+    golf_near_me_preview_empty: "바젤 샘플에 해당 카테고리의 서비스가 없습니다.",
+    golf_near_me_preview_no_coords: "장소 표시 없음: 좌표가 아직 검증되지 않았습니다.",
     // Golf Near Me translations
     golf_near_me_title: "Golf Near Me",
     golf_near_me_subtitle: "내 주변 골프 서비스",
@@ -4325,6 +4379,15 @@ const EXTRA_STRINGS = {
     theme_contrast: "고대비",
   },
   th: {
+    // Golf Near Me development-only pilot preview
+    golf_near_me_preview_button: "ดูตัวอย่างบาเซิล (ในเครื่อง)",
+    golf_near_me_preview_title: "ตัวอย่างในเครื่อง · ฉบับร่างที่ยังไม่ตรวจสอบ",
+    golf_near_me_preview_body: "แสดงเฉพาะข้อมูลตัวอย่าง ไม่มีการเรียก API การแก้ไขฐานข้อมูล ตำแหน่งที่ยืนยันแล้ว หรือระยะทางจริง ตำแหน่งและรัศมีไม่มีผลกับตัวอย่าง",
+    golf_near_me_preview_count: "ฉบับร่างทดลอง (ยังไม่ตรวจสอบ)",
+    golf_near_me_preview_draft: "ฉบับร่าง · ยังไม่ตรวจสอบ",
+    golf_near_me_preview_distance: "ระยะทางยังไม่ตรวจสอบ",
+    golf_near_me_preview_empty: "ไม่มีบริการประเภทนี้ในตัวอย่างบาเซิล",
+    golf_near_me_preview_no_coords: "ไม่มีหมุดสถานที่: ยังไม่ได้ตรวจสอบพิกัด",
     // Golf Near Me translations
     golf_near_me_title: "Golf Near Me",
     golf_near_me_subtitle: "บริการกอล์ฟใกล้คุณ",
