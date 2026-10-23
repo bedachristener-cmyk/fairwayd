@@ -134,3 +134,35 @@ Independent follow-up through Neon (read-only SQL) verified:
 All five databases had **zero unresolved migration records**. The successful Prisma child additionally has two exclusive-owner CHECK constraints, two Course foreign keys and 16 Golf Service indexes. Each new Golf Service table has **zero rows** (no pilot data inserted).
 
 **Status:** Full `prisma migrate deploy` rehearsal **PASS** on a disposable child branch; both Stage and Production **unchanged**. This does **not** authorize a Stage/Production deployment: Railway Stage's fully resolved runtime database pathname has not been independently verified, and activating the Golf Services API requires a separately approved rollout. Continue development and test data integration in isolation first.
+
+## Basel pilot real-data smoke test on isolated Prisma branch (2026-10-23)
+
+On the **Prisma-rehearsal child only** (`br-dawn-breeze-agjlgyyt`, `fairwayd_stage`), a review-sourced first venue was loaded for HTTP testing:
+
+- `The Golf Lounge`, Quellenstrasse 37, 4310 Rheinfelden, Switzerland.
+- Approximate Q-37 **building** coordinates `47.5495127, 7.786086`; the actual entrance has not been surveyed.
+- Four `VERIFIED` **sandbox-only** offering rows: `SIMULATOR` (2 units), `ACADEMY`, `SHOP`, `FITTING`.
+- One professional `Sebastian Heijdenberg` linked as `GOLF_PRO` (brand: SebbyGolf).
+- Verified flags and timestamps permit the sandbox API test **only**, not publishing/Stage/Production migration.
+- The source fixture in `apps/api/scripts/fixtures/ch-basel-golf-services-pilot.json` remains `DRAFT` with null `verifiedAt`; provenance and approximate-coordinate caveat remain visible. Existing Fairwayd `Course` rows have not been modified. Golf Club Rheinfelden is a separate existing course approximately 0.9 km away.
+- The initial sandbox transaction inserted 1 venue, 4 offerings, 1 provider, and 1 provider link; a readback confirmed these counts.
+- A subsequent repeated cross-environment comparison was blocked by the connector safety checker; do not claim it completed after inserting test data. The insert target was explicitly the disposable child branch.
+
+### Local HTTP integration test (prepared; execution still pending)
+
+Two feature-branch files implement the next safe regression test:
+
+- `apps/api/scripts/test-golf-services-live-api.mjs` is a **read-only** HTTP integration harness. It rejects any host other than `ep-late-band-ag2ya7lq.c-2.eu-central-1.aws.neon.tech`, any database other than `fairwayd_stage`, a wrong Git branch, missing migration, missing sandbox venue data, or a non-read-only PostgreSQL session. It runs **only** the Golf Services NestJS controller + service, binds to `127.0.0.1` on an OS-assigned port, and checks 503 disabled/200 enabled, simulator + shop filters, no fabricated ranges, Basel 25 km distance, country/region, linked professional and absence of private metadata.
+- `apps/api/scripts/Run-GolfServicesLiveApiTest.ps1` provides a masked connection-string prompt compatible with Windows PowerShell 5.1. The URL is **never written to a file**; existing process environment values are restored.
+
+Run locally, after pulling the feature branch:
+
+```powershell
+cd C:\dev\fairwayd
+git pull --ff-only
+cd .\apps\api
+npm run build
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-GolfServicesLiveApiTest.ps1
+```
+
+Paste the **direct, unpooled** URL for `golf-near-me-prisma-rehearsal-20261023` / `fairwayd_stage` only in the masked terminal prompt. The harness does not start the real app, change `.env`, call Google, migrate, seed, or write to any database. Share **only the sanitized PASS/FAIL test output** in chat. Stage and Production are not test targets.
