@@ -61,7 +61,7 @@ describe('course discovery country configuration', () => {
     expect(config).not.toBeNull();
     expect(config!.areas).toHaveLength(1);
     expect(config!.searchRadiusMeters).toBe(28_000);
-    expect(requestCount('CY')).toBe(45);
+    expect(requestCount('CY')).toBe(40);
   });
 
   it('covers Cambodia with three compact golf-region request plans', () => {
