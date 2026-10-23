@@ -40,6 +40,6 @@ Therefore the present uniqueness constraints CANNOT prevent a service at a golf 
 ## Safe next steps
 
 - Continue local read-only fixture validation and independent course-list checks.
-- Resolve the Railway Stage vs Neon branch host mismatch and 47 pending migrations before any test migration.
+- The former 47-pending discrepancy has been resolved as an audit of the wrong database (`neondb`). Stage and isolated test branch each have `fairwayd_stage` with 59 applied migrations and no unresolved migration records. Confirm the app's runtime database pathname and reconcile local migration names before any test migration. See `docs/golf-near-me-neon-audit.md`.
 - Design/test the Course ↔ service-offering association on the feature branch.
 - No `prisma migrate deploy`, `db push`, inserts, publishes, or Stage/Production deploys at this checkpoint.
