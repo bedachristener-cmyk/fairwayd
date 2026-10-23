@@ -56,7 +56,15 @@ export type NearbyGolfServicesSearch = {
   category?: GolfServiceCategory;
 };
 
-export class GolfServicesUnavailableError extends Error {}
+export class GolfServicesUnavailableError extends Error {
+  readonly reason: "not-deployed" | "unavailable";
+
+  constructor(reason: "not-deployed" | "unavailable") {
+    super("The Golf Near Me directory is not available yet.");
+    this.name = "GolfServicesUnavailableError";
+    this.reason = reason;
+  }
+}
 
 export async function getNearbyGolfServices(
   params: NearbyGolfServicesSearch,
@@ -69,8 +77,11 @@ export async function getNearbyGolfServices(
   if (params.category) url.searchParams.set("category", params.category);
 
   const response = await fetch(url, { signal });
-  if (response.status === 503 || response.status === 404) {
-    throw new GolfServicesUnavailableError("The Golf Near Me directory is not available yet.");
+  if (response.status === 404) {
+    throw new GolfServicesUnavailableError("not-deployed");
+  }
+  if (response.status === 503) {
+    throw new GolfServicesUnavailableError("unavailable");
   }
   if (!response.ok) {
     throw new Error("Golf services could not be loaded. Please try again.");
