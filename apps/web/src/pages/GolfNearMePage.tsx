@@ -324,7 +324,7 @@ export default function GolfNearMePage() {
       wantsServices
         ? getNearbyGolfServices({
             lat: origin.lat, lon: origin.lon, radiusKm: radius,
-            category: category !== "" && category !== "COURSE" ? category : undefined,
+            category: category === "" ? undefined : category,
           }, controller.signal)
             .then((data) => ({ data, error: null as unknown }))
             .catch((error: unknown) => ({ data: null, error }))
