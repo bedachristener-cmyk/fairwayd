@@ -56,6 +56,25 @@ const chip: CSSProperties = {
   fontWeight: 700,
 };
 const basemap = getMapBasemap();
+
+// Original AI-generated, locally bundled category imagery (no external image hosts).
+// Keep image names in sync with apps/web/public/golf-near-me/categories/.
+const SERVICE_HERO_IMAGE: Record<GolfServiceCategory, string> = {
+  SIMULATOR: "/golf-near-me/categories/simulator.webp",
+  ACADEMY: "/golf-near-me/categories/academy.webp",
+  RANGE: "/golf-near-me/categories/range.webp",
+  SHOP: "/golf-near-me/categories/shop.webp",
+  FITTING: "/golf-near-me/categories/fitting.webp",
+};
+const COURSE_HERO_IMAGE = "/golf-near-me/categories/course.webp";
+const GOLF_HERO_OVERLAY =
+  "linear-gradient(90deg, rgba(5, 19, 14, .93) 0%, rgba(5, 19, 14, .78) 35%, rgba(5, 19, 14, .3) 100%)";
+
+function golfHeroBackground(image: string) {
+  // If assets are absent the gradient/solid fallback remains readable.
+  return `${GOLF_HERO_OVERLAY}, url("${image}")`;
+}
+
 // Shown only in the specially configured disposable browser rehearsal.
 const showTestCoordinatePicker = import.meta.env.DEV &&
   import.meta.env.VITE_GOLF_SERVICES_COORDINATE_PICKER === "true";
@@ -120,19 +139,24 @@ function VenueCategoryVisual({ venue }: { venue: GolfServiceVenue }) {
       gap: 14, minHeight: 135, padding: "20px 24px",
       borderRadius: 14, overflow: "hidden",
       border: "1px solid color-mix(in srgb, var(--green) 24%, var(--border))",
-      background: "linear-gradient(120deg, color-mix(in srgb, var(--green) 21%, var(--card)), color-mix(in srgb, var(--muted) 77%, var(--card)))",
-      color: "var(--text)",
+      backgroundColor: "#0b1e17",
+      backgroundImage: golfHeroBackground(category ? SERVICE_HERO_IMAGE[category] : COURSE_HERO_IMAGE),
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      color: "#fff",
     }}>
       <div style={{ display: "grid", gap: 9, minWidth: 0 }}>
         <div style={{ height: 4, width: 45, borderRadius: 999, background: "var(--green)" }} />
         <strong style={{
           fontSize: "clamp(18px, 3vw, 24px)", lineHeight: 1.15, fontWeight: 850,
           overflowWrap: "anywhere",
+          textShadow: "0 1px 10px rgba(0, 0, 0, .5)",
         }}>
           {venue.name}
         </strong>
         {categorySummary ? (
-          <span style={{ ...subtle, fontSize: 12, fontWeight: 750 }}>
+          <span style={{ ...subtle, fontSize: 12, fontWeight: 750, color: "rgba(255,255,255,.9)",
+            textShadow: "0 1px 9px rgba(0,0,0,.55)" }}>
             {categorySummary}
           </span>
         ) : null}
@@ -140,9 +164,9 @@ function VenueCategoryVisual({ venue }: { venue: GolfServiceVenue }) {
       <div style={{
         flex: "0 0 auto", display: "grid", placeItems: "center",
         width: 85, height: 85, borderRadius: 22,
-        border: "1px solid color-mix(in srgb, var(--green) 40%, var(--border))",
-        background: "color-mix(in srgb, var(--green) 12%, var(--card))",
-        color: "var(--green)",
+        border: "1px solid rgba(255,255,255,.24)",
+        background: "rgba(2, 27, 16, .28)",
+        color: "#73f5b1",
       }}>
         <Icon size={44} strokeWidth={1.5} />
       </div>
@@ -247,9 +271,19 @@ function CourseCard({ course, details }: {
     .filter(Boolean).join(" · ");
   return (
     <article style={{ ...panel, padding: 16, display: "grid", gap: 8 }}>
-      <span style={{ ...subtle, fontWeight: 800, color: "var(--green)" }}>
-        {t("golf_near_me_course")}
-      </span>
+      <div aria-hidden="true" style={{
+        minHeight: 124, padding: "18px 20px", borderRadius: 14,
+        display: "flex", alignItems: "end",
+        border: "1px solid rgba(255,255,255,.12)",
+        backgroundColor: "#0b1e17",
+        backgroundImage: golfHeroBackground(COURSE_HERO_IMAGE),
+        backgroundSize: "cover", backgroundPosition: "center",
+      }}>
+        <span style={{ color: "#fff", fontWeight: 850, fontSize: 17,
+          textShadow: "0 1px 10px rgba(0,0,0,.6)" }}>
+          {t("golf_near_me_course")}
+        </span>
+      </div>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
         <strong style={{ fontSize: 17 }}>{course.name}</strong>
         <strong style={{ color: "var(--green)", whiteSpace: "nowrap", fontSize: 13 }}>
