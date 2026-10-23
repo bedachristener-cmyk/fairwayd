@@ -305,26 +305,53 @@ export default function GolfNearMePage() {
     currentRequest.current = controller;
     setStatus("loading");
     setItems([]);
+    setCourseItems([]);
+    setPartialWarning(null);
     setSelectedId(null);
     setTruncated(false);
     setError("");
-    try {
-      const data = await getNearbyGolfServices({
-        lat: origin.lat, lon: origin.lon, radiusKm: radius,
-        category: category || undefined,
-      }, controller.signal);
-      if (controller.signal.aborted) return;
-      setItems(data.items);
-      setTruncated(data.truncated);
+
+    const wantsCourses = category === "" || category === "COURSE";
+    const wantsServices = category !== "COURSE";
+
+    // Courses and services remain independent: unavailable services do not hide courses.
+    const [coursesResult, servicesResult] = await Promise.all([
+      wantsCourses
+        ? getNearbyCourses({ lat: origin.lat, lon: origin.lon, radiusKm: radius }, controller.signal)
+            .then((data) => ({ data, error: null as unknown }))
+            .catch((error: unknown) => ({ data: null, error }))
+        : Promise.resolve(null),
+      wantsServices
+        ? getNearbyGolfServices({
+            lat: origin.lat, lon: origin.lon, radiusKm: radius,
+            category: category === "" ? undefined : category,
+          }, controller.signal)
+            .then((data) => ({ data, error: null as unknown }))
+            .catch((error: unknown) => ({ data: null, error }))
+        : Promise.resolve(null),
+    ]);
+
+    if (controller.signal.aborted) return;
+
+    if (coursesResult?.data) setCourseItems(coursesResult.data.items);
+    if (servicesResult?.data) {
+      setItems(servicesResult.data.items);
+      setTruncated(servicesResult.data.truncated);
+    }
+
+    const courseSuccess = !!coursesResult?.data;
+    const serviceSuccess = !!servicesResult?.data;
+    if (courseSuccess || serviceSuccess) {
+      if (wantsCourses && !courseSuccess) setPartialWarning("courses");
+      else if (wantsServices && !serviceSuccess) setPartialWarning("services");
       setStatus("ready");
-    } catch (cause) {
-      if (controller.signal.aborted) return;
-      if (cause instanceof GolfServicesUnavailableError) {
-        setStatus(cause.reason);
-      } else {
-        setStatus("error");
-        setError(t("golf_near_me_error_body"));
-      }
+    } else if (wantsServices && servicesResult?.error instanceof GolfServicesUnavailableError) {
+      setStatus(servicesResult.error.reason);
+    } else {
+      setError(wantsCourses && !wantsServices
+        ? t("golf_near_me_courses_error")
+        : t("golf_near_me_error_body"));
+      setStatus("error");
     }
   }
 
@@ -332,6 +359,17 @@ export default function GolfNearMePage() {
     item.lat !== null && item.lon !== null &&
     Number.isFinite(item.lat) && Number.isFinite(item.lon),
   );
+
+  const allResults = [
+    ...courseItems.map((course) => ({
+      kind: "course" as const, id: `course-${course.id}`,
+      km: course.distanceM / 1000, course,
+    })),
+    ...items.map((venue) => ({
+      kind: "venue" as const, id: `venue-${venue.id}`,
+      km: venue.distanceKm ?? Number.POSITIVE_INFINITY, venue,
+    })),
+  ].sort((a, b) => a.km - b.km);
 
   return (
     <div className="fw-page" style={{ color: "var(--text)" }}>
