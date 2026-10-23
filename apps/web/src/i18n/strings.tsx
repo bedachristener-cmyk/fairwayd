@@ -2093,6 +2093,15 @@ export const STRINGS = {
 
 const EXTRA_STRINGS = {
   en: {
+    // Golf courses in Golf Near Me
+    golf_near_me_courses: "Golf courses",
+    golf_near_me_course: "Golf course",
+    golf_near_me_open_course: "View golf course",
+    golf_near_me_active_courses: "Active golf courses",
+    golf_near_me_partial_services: "Golf courses are shown. The additional golf services directory is not available yet.",
+    golf_near_me_partial_courses: "Other services are shown. Golf courses could not be loaded.",
+    golf_near_me_courses_error: "Golf courses could not be loaded. Please try again.",
+    golf_near_me_results_empty: "No golf courses or services found in this area.",
     // Basel pilot website photo attribution
     golf_near_me_website_photo_source: "Photo from the venue website",
     golf_near_me_website_photo_unavailable: "The website photo could not be loaded.",
@@ -2141,7 +2150,7 @@ const EXTRA_STRINGS = {
     golf_near_me_error_body: "Unable to load nearby services. Please try again.",
     golf_near_me_empty_title: "No verified venues found for this search.",
     golf_near_me_empty_body: "Try a larger radius or another category. Draft venues are not shown.",
-    golf_near_me_all_services: "All services",
+    golf_near_me_all_services: "All golf",
     golf_near_me_simulators: "Simulators",
     golf_near_me_lessons_pros: "Lessons & pros",
     golf_near_me_driving_ranges: "Driving ranges",
@@ -2477,6 +2486,15 @@ const EXTRA_STRINGS = {
     theme_contrast: "Contrast",
   },
   de: {
+    // Golf courses in Golf Near Me
+    golf_near_me_courses: "Golfplätze",
+    golf_near_me_course: "Golfplatz",
+    golf_near_me_open_course: "Golfplatz öffnen",
+    golf_near_me_active_courses: "Aktive Golfplätze",
+    golf_near_me_partial_services: "Golfplätze werden angezeigt. Das zusätzliche Golf-Services-Verzeichnis ist noch nicht verfügbar.",
+    golf_near_me_partial_courses: "Andere Angebote werden angezeigt. Golfplätze konnten nicht geladen werden.",
+    golf_near_me_courses_error: "Golfplätze konnten nicht geladen werden. Bitte erneut versuchen.",
+    golf_near_me_results_empty: "In diesem Umkreis wurden keine Golfplätze oder Angebote gefunden.",
     // Basel pilot website photo attribution
     golf_near_me_website_photo_source: "Foto von der Website des Anbieters",
     golf_near_me_website_photo_unavailable: "Das Foto der Website konnte nicht geladen werden.",
@@ -2525,7 +2543,7 @@ const EXTRA_STRINGS = {
     golf_near_me_error_body: "Golfangebote konnten nicht geladen werden. Bitte erneut versuchen.",
     golf_near_me_empty_title: "Keine geprüften Standorte für diese Suche gefunden.",
     golf_near_me_empty_body: "Versuche einen grösseren Umkreis oder eine andere Kategorie. Entwürfe werden nicht angezeigt.",
-    golf_near_me_all_services: "Alle Angebote",
+    golf_near_me_all_services: "Alles rund um Golf",
     golf_near_me_simulators: "Simulatoren",
     golf_near_me_lessons_pros: "Golfunterricht & Pros",
     golf_near_me_driving_ranges: "Driving Ranges",
@@ -2861,6 +2879,15 @@ const EXTRA_STRINGS = {
     theme_contrast: "Kontrast",
   },
   fr: {
+    // Golf courses in Golf Near Me
+    golf_near_me_courses: "Parcours de golf",
+    golf_near_me_course: "Parcours de golf",
+    golf_near_me_open_course: "Voir le parcours",
+    golf_near_me_active_courses: "Parcours de golf actifs",
+    golf_near_me_partial_services: "Les parcours sont affichés, mais l'annuaire des autres services de golf est encore indisponible.",
+    golf_near_me_partial_courses: "Les autres services sont affichés. Les parcours n'ont pas pu être chargés.",
+    golf_near_me_courses_error: "Impossible de charger les parcours. Veuillez réessayer.",
+    golf_near_me_results_empty: "Aucun parcours ni service trouvé dans cette zone.",
     // Basel pilot website photo attribution
     golf_near_me_website_photo_source: "Photo du site du lieu",
     golf_near_me_website_photo_unavailable: "La photo du site n'a pas pu être chargée.",
@@ -2909,7 +2936,7 @@ const EXTRA_STRINGS = {
     golf_near_me_error_body: "Impossible de charger les services à proximité. Veuillez réessayer.",
     golf_near_me_empty_title: "Aucun lieu vérifié trouvé pour cette recherche.",
     golf_near_me_empty_body: "Essayez un rayon plus large ou une autre catégorie. Les brouillons ne sont pas affichés.",
-    golf_near_me_all_services: "Tous les services",
+    golf_near_me_all_services: "Tout le golf",
     golf_near_me_simulators: "Simulateurs",
     golf_near_me_lessons_pros: "Cours et pros",
     golf_near_me_driving_ranges: "Practices",
@@ -3245,6 +3272,15 @@ const EXTRA_STRINGS = {
     theme_contrast: "Contraste",
   },
   it: {
+    // Golf courses in Golf Near Me
+    golf_near_me_courses: "Campi da golf",
+    golf_near_me_course: "Campo da golf",
+    golf_near_me_open_course: "Apri il campo",
+    golf_near_me_active_courses: "Campi da golf attivi",
+    golf_near_me_partial_services: "I campi da golf sono visibili, ma l'elenco degli altri servizi non è ancora disponibile.",
+    golf_near_me_partial_courses: "Gli altri servizi sono visibili. Impossibile caricare i campi da golf.",
+    golf_near_me_courses_error: "Impossibile caricare i campi da golf. Riprova.",
+    golf_near_me_results_empty: "Nessun campo da golf o servizio trovato in questa zona.",
     // Basel pilot website photo attribution
     golf_near_me_website_photo_source: "Foto dal sito della struttura",
     golf_near_me_website_photo_unavailable: "Impossibile caricare la foto dal sito.",
@@ -3293,7 +3329,7 @@ const EXTRA_STRINGS = {
     golf_near_me_error_body: "Impossibile caricare i servizi nelle vicinanze. Riprova.",
     golf_near_me_empty_title: "Nessuna sede verificata trovata per questa ricerca.",
     golf_near_me_empty_body: "Prova un raggio più ampio o un'altra categoria. Le bozze non vengono mostrate.",
-    golf_near_me_all_services: "Tutti i servizi",
+    golf_near_me_all_services: "Tutto il golf",
     golf_near_me_simulators: "Simulatori",
     golf_near_me_lessons_pros: "Lezioni e professionisti",
     golf_near_me_driving_ranges: "Campi pratica",
@@ -3629,6 +3665,15 @@ const EXTRA_STRINGS = {
     theme_contrast: "Contrasto",
   },
   es: {
+    // Golf courses in Golf Near Me
+    golf_near_me_courses: "Campos de golf",
+    golf_near_me_course: "Campo de golf",
+    golf_near_me_open_course: "Ver campo de golf",
+    golf_near_me_active_courses: "Campos de golf activos",
+    golf_near_me_partial_services: "Se muestran los campos de golf, pero el directorio de otros servicios aún no está disponible.",
+    golf_near_me_partial_courses: "Se muestran otros servicios. No se pudieron cargar los campos de golf.",
+    golf_near_me_courses_error: "No se pudieron cargar los campos de golf. Vuelve a intentarlo.",
+    golf_near_me_results_empty: "No se encontraron campos ni servicios en esta zona.",
     // Basel pilot website photo attribution
     golf_near_me_website_photo_source: "Foto del sitio web del establecimiento",
     golf_near_me_website_photo_unavailable: "No se pudo cargar la foto del sitio web.",
@@ -3677,7 +3722,7 @@ const EXTRA_STRINGS = {
     golf_near_me_error_body: "No se pudieron cargar los servicios cercanos. Vuelve a intentarlo.",
     golf_near_me_empty_title: "No se encontraron lugares verificados para esta búsqueda.",
     golf_near_me_empty_body: "Prueba un radio mayor u otra categoría. Los borradores no se muestran.",
-    golf_near_me_all_services: "Todos los servicios",
+    golf_near_me_all_services: "Todo el golf",
     golf_near_me_simulators: "Simuladores",
     golf_near_me_lessons_pros: "Clases y profesionales",
     golf_near_me_driving_ranges: "Campos de prácticas",
@@ -4013,6 +4058,15 @@ const EXTRA_STRINGS = {
     theme_contrast: "Contraste",
   },
   ko: {
+    // Golf courses in Golf Near Me
+    golf_near_me_courses: "골프 코스",
+    golf_near_me_course: "골프 코스",
+    golf_near_me_open_course: "골프 코스 보기",
+    golf_near_me_active_courses: "활성 골프 코스",
+    golf_near_me_partial_services: "골프 코스는 표시되지만 다른 골프 서비스 목록은 아직 이용할 수 없습니다.",
+    golf_near_me_partial_courses: "다른 서비스는 표시되지만 골프 코스를 불러오지 못했습니다.",
+    golf_near_me_courses_error: "골프 코스를 불러오지 못했습니다. 다시 시도해 주세요.",
+    golf_near_me_results_empty: "이 지역에서 골프 코스나 서비스를 찾지 못했습니다.",
     // Basel pilot website photo attribution
     golf_near_me_website_photo_source: "업체 웹사이트 사진",
     golf_near_me_website_photo_unavailable: "웹사이트 사진을 불러올 수 없습니다.",
@@ -4061,7 +4115,7 @@ const EXTRA_STRINGS = {
     golf_near_me_error_body: "주변 골프 서비스를 불러올 수 없습니다. 다시 시도해 주세요.",
     golf_near_me_empty_title: "검색 조건에 맞는 검증된 장소가 없습니다.",
     golf_near_me_empty_body: "반경을 넓히거나 다른 카테고리를 선택하세요. 임시 등록 장소는 표시되지 않습니다.",
-    golf_near_me_all_services: "모든 서비스",
+    golf_near_me_all_services: "모든 골프",
     golf_near_me_simulators: "시뮬레이터",
     golf_near_me_lessons_pros: "레슨 및 프로",
     golf_near_me_driving_ranges: "드라이빙 레인지",
@@ -4397,6 +4451,15 @@ const EXTRA_STRINGS = {
     theme_contrast: "고대비",
   },
   th: {
+    // Golf courses in Golf Near Me
+    golf_near_me_courses: "สนามกอล์ฟ",
+    golf_near_me_course: "สนามกอล์ฟ",
+    golf_near_me_open_course: "ดูสนามกอล์ฟ",
+    golf_near_me_active_courses: "สนามกอล์ฟที่เปิดใช้งาน",
+    golf_near_me_partial_services: "แสดงสนามกอล์ฟแล้ว แต่ไดเรกทอรีบริการกอล์ฟอื่นยังไม่พร้อมใช้งาน",
+    golf_near_me_partial_courses: "แสดงบริการอื่นแล้ว แต่ไม่สามารถโหลดสนามกอล์ฟได้",
+    golf_near_me_courses_error: "ไม่สามารถโหลดสนามกอล์ฟได้ โปรดลองอีกครั้ง",
+    golf_near_me_results_empty: "ไม่พบสนามกอล์ฟหรือบริการในบริเวณนี้",
     // Basel pilot website photo attribution
     golf_near_me_website_photo_source: "ภาพจากเว็บไซต์สถานที่",
     golf_near_me_website_photo_unavailable: "ไม่สามารถโหลดภาพจากเว็บไซต์ได้",
@@ -4445,7 +4508,7 @@ const EXTRA_STRINGS = {
     golf_near_me_error_body: "ไม่สามารถโหลดบริการใกล้เคียงได้ โปรดลองอีกครั้ง",
     golf_near_me_empty_title: "ไม่พบสถานที่ที่ตรวจสอบแล้ว",
     golf_near_me_empty_body: "ลองเพิ่มรัศมีหรือเลือกประเภทอื่น โดยไม่แสดงสถานที่ฉบับร่าง",
-    golf_near_me_all_services: "บริการทั้งหมด",
+    golf_near_me_all_services: "กอล์ฟทั้งหมด",
     golf_near_me_simulators: "ซิมูเลเตอร์",
     golf_near_me_lessons_pros: "บทเรียนและโปรกอล์ฟ",
     golf_near_me_driving_ranges: "สนามไดรฟ์",
