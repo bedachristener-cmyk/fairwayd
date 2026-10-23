@@ -5,6 +5,7 @@ import TopRail from "./TopRail";
 import { t } from "../i18n/strings";
 
 function titleForPath(pathname: string) {
+  if (pathname.startsWith("/golf-near-me")) return t("golf_near_me_title");
   if (pathname.startsWith("/map")) return t("map");
   if (pathname.startsWith("/destinations")) return t("explore");
   if (pathname.startsWith("/trips")) return t("trips");
@@ -18,6 +19,7 @@ function titleForPath(pathname: string) {
 }
 
 function subtitleForPath(pathname: string) {
+  if (pathname.startsWith("/golf-near-me")) return t("golf_near_me_subtitle");
   if (pathname.startsWith("/map")) return t("desktop_map_subtitle");
   if (pathname.startsWith("/destinations")) return t("desktop_destinations_subtitle");
   if (pathname.startsWith("/trips")) return t("desktop_trips_subtitle");

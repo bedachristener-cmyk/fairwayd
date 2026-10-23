@@ -1,0 +1,803 @@
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { Link } from "react-router-dom";
+import { CircleMarker, MapContainer, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import {
+  ArrowLeft, ExternalLink, GraduationCap, List, LocateFixed, MapPinned, Monitor, Search, ShoppingBag, SlidersHorizontal, Target,
+} from "lucide-react";
+import { getMapBasemap } from "../maps/basemap";
+import { t } from "../i18n/strings";
+import { getNearbyCourses, type NearbyCourse } from "../api/nearbyCourses";
+import {
+  getNearbyGolfServices,
+  GolfServicesUnavailableError,
+  type GolfServiceCategory,
+  type GolfServiceVenue,
+  type GolfCourseServices,
+} from "../api/golfServices";
+
+type NearMeCategory = GolfServiceCategory | "COURSE" | "";
+type Position = { lat: number; lon: number; label: string };
+type Radius = 10 | 25 | 50 | 100;
+type SearchStatus = "idle" | "loading" | "ready" | "preview" | "not-deployed" | "unavailable" | "error";
+
+const BASEL: Position = { lat: 47.5596, lon: 7.5886, label: t("golf_near_me_basel_pilot") };
+const RADII: Radius[] = [10, 25, 50, 100];
+const CATEGORIES: { value: NearMeCategory; label: string }[] = [
+  { value: "", label: t("golf_near_me_all_services") },
+  { value: "COURSE", label: t("golf_near_me_courses") },
+  { value: "SIMULATOR", label: t("golf_near_me_simulators") },
+  { value: "ACADEMY", label: t("golf_near_me_lessons_pros") },
+  { value: "RANGE", label: t("golf_near_me_driving_ranges") },
+  { value: "SHOP", label: t("golf_near_me_golf_shops") },
+  { value: "FITTING", label: t("golf_near_me_club_fitting") },
+];
+const CATEGORY_LABEL: Record<GolfServiceCategory, string> = {
+  SIMULATOR: t("golf_near_me_simulators"),
+  ACADEMY: t("golf_near_me_lessons_pros"),
+  RANGE: t("golf_near_me_driving_ranges"),
+  SHOP: t("golf_near_me_golf_shops"),
+  FITTING: t("golf_near_me_club_fitting"),
+};
+const panel: CSSProperties = {
+  padding: 18,
+  borderRadius: 22,
+  border: "1px solid var(--border)",
+  background: "var(--card)",
+};
+const subtle: CSSProperties = { color: "var(--sub)", fontSize: 13, lineHeight: 1.5 };
+const chip: CSSProperties = {
+  border: "1px solid var(--border)",
+  borderRadius: 999,
+  background: "var(--card)",
+  color: "var(--text)",
+  padding: "9px 12px",
+  cursor: "pointer",
+  fontSize: 13,
+  fontWeight: 700,
+};
+const basemap = getMapBasemap();
+
+// Original AI-generated, locally bundled category imagery (no external image hosts).
+// Keep image names in sync with apps/web/public/golf-near-me/categories/.
+const SERVICE_HERO_IMAGE: Record<GolfServiceCategory, string> = {
+  SIMULATOR: "/golf-near-me/categories/simulator.webp",
+  ACADEMY: "/golf-near-me/categories/academy.webp",
+  RANGE: "/golf-near-me/categories/range.webp",
+  SHOP: "/golf-near-me/categories/shop.webp",
+  FITTING: "/golf-near-me/categories/fitting.webp",
+};
+const COURSE_HERO_IMAGE = "/golf-near-me/categories/course.webp";
+const GOLF_HERO_OVERLAY =
+  "linear-gradient(90deg, rgba(5, 19, 14, .93) 0%, rgba(5, 19, 14, .78) 35%, rgba(5, 19, 14, .3) 100%)";
+
+function golfHeroBackground(image: string) {
+  // If assets are absent the gradient/solid fallback remains readable.
+  return `${GOLF_HERO_OVERLAY}, url("${image}")`;
+}
+
+// Shown only in the specially configured disposable browser rehearsal.
+const showTestCoordinatePicker = import.meta.env.DEV &&
+  import.meta.env.VITE_GOLF_SERVICES_COORDINATE_PICKER === "true";
+
+function safeUrl(value: string | null | undefined) {
+  if (!value) return null;
+  try {
+    const url = new URL(value.startsWith("http") ? value : `https://${value}`);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+function RecenterMap({ lat, lon }: { lat: number; lon: number }) {
+  const map = useMap();
+  useEffect(() => { map.setView([lat, lon]); }, [lat, lon, map]);
+  return null;
+}
+
+// Captures the exact Leaflet GPS coordinate of a manual map click.
+// This never sends an update to any API or database.
+function TestCoordinatePicker({ onPick }: {
+  onPick: (location: { lat: number; lon: number }) => void;
+}) {
+  useMapEvents({
+    click(event) {
+      onPick({
+        lat: Number(event.latlng.lat.toFixed(7)),
+        lon: Number(event.latlng.lng.toFixed(7)),
+      });
+    },
+  });
+  return null;
+}
+
+// Neutral visual for service venues until a suitably licensed venue image is available.
+// It deliberately does not imply that this is a photograph of the actual business.
+function VenueCategoryVisual({ venue }: { venue: GolfServiceVenue }) {
+  // The venue is the place; service categories are attributes of that place.
+  // Keep its main title stable even when category filters narrow the offerings.
+  const categories = [...new Set(venue.offerings.map((offering) => offering.category))];
+  const categorySummary = categories
+    .slice(0, 2)
+    .map((item) => CATEGORY_LABEL[item])
+    .join(" · ") + (categories.length > 2 ? ` · +${categories.length - 2}` : "");
+  const category: GolfServiceCategory | null =
+    categories.includes("SIMULATOR") ? "SIMULATOR" :
+    categories.includes("ACADEMY") ? "ACADEMY" :
+    categories.includes("RANGE") ? "RANGE" :
+    categories.includes("SHOP") ? "SHOP" :
+    categories.includes("FITTING") ? "FITTING" : null;
+  const Icon =
+    category === "SIMULATOR" ? Monitor :
+    category === "ACADEMY" ? GraduationCap :
+    category === "RANGE" ? Target :
+    category === "SHOP" ? ShoppingBag : SlidersHorizontal;
+
+  return (
+    <div aria-hidden="true" style={{
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      gap: 14, minHeight: 135, padding: "20px 24px",
+      borderRadius: 14, overflow: "hidden",
+      border: "1px solid rgba(255, 255, 255, 0.08)",
+      backgroundColor: "#0b1e17",
+      backgroundImage: golfHeroBackground(category ? SERVICE_HERO_IMAGE[category] : COURSE_HERO_IMAGE),
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      color: "#fff",
+    }}>
+      <div style={{ display: "grid", gap: 9, minWidth: 0 }}>
+        <div style={{ height: 4, width: 45, borderRadius: 999, background: "var(--green)" }} />
+        <strong style={{
+          fontSize: "clamp(18px, 3vw, 24px)", lineHeight: 1.15, fontWeight: 850,
+          overflowWrap: "anywhere",
+          textShadow: "0 1px 10px rgba(0, 0, 0, .5)",
+        }}>
+          {venue.name}
+        </strong>
+        {categorySummary ? (
+          <span style={{ ...subtle, fontSize: 12, fontWeight: 750, color: "rgba(255,255,255,.9)",
+            textShadow: "0 1px 9px rgba(0,0,0,.55)" }}>
+            {categorySummary}
+          </span>
+        ) : null}
+      </div>
+      <div style={{
+        flex: "0 0 auto", display: "grid", placeItems: "center",
+        width: 85, height: 85, borderRadius: 22,
+        border: "1px solid rgba(255,255,255,.24)",
+        background: "rgba(2, 27, 16, .28)",
+        color: "#73f5b1",
+      }}>
+        <Icon size={44} strokeWidth={1.5} />
+      </div>
+    </div>
+  );
+}
+
+function venueCardId(id: string) {
+  return `golf-near-me-venue-${encodeURIComponent(id)}`;
+}
+
+function VenueCard({
+  venue, selected, onSelect, isDraft = false,
+}: {
+  venue: GolfServiceVenue;
+  selected: boolean;
+  onSelect: () => void;
+  isDraft?: boolean;
+}) {
+  const website = safeUrl(venue.website);
+  const location = [
+    [venue.addressLine, venue.postalCode].filter(Boolean).join(", "),
+    venue.city,
+    venue.country,
+  ].filter(Boolean).join(" · ");
+
+  return (
+    <article id={venueCardId(venue.id)}
+      style={{ ...panel, padding: 16, display: "grid", gap: 10 }}>
+      <VenueCategoryVisual venue={venue} />
+      <button
+        type="button"
+        onClick={onSelect}
+        aria-expanded={selected}
+        style={{ all: "unset", cursor: "pointer", display: "grid", gap: 5 }}
+      >
+        <span style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
+          <strong style={{ color: "var(--text)", fontSize: 17 }}>{venue.name}</strong>
+          <strong style={{ color: "var(--green)", whiteSpace: "nowrap", fontSize: 13 }}>
+{venue.distanceKm === null
+              ? t("golf_near_me_preview_distance")
+              : `${venue.distanceKm.toFixed(1)} km`}
+          </strong>
+        </span>
+        <span style={subtle}>{location}</span>
+        {isDraft ? (
+          <span style={{ ...subtle, fontWeight: 800, color: "var(--danger)" }}>
+            {t("golf_near_me_preview_draft")}
+          </span>
+        ) : null}
+        <span style={{ ...subtle, fontWeight: 750, color: "var(--green)" }}>
+          {selected ? t("golf_near_me_hide_details") : t("golf_near_me_view_details")}
+        </span>
+      </button>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        {venue.offerings.map((offering) => (
+          <span key={offering.id} style={{ ...chip, cursor: "default", padding: "5px 9px", fontSize: 11 }}>
+            {CATEGORY_LABEL[offering.category] ?? offering.category}
+            {offering.unitCount && offering.unitCount > 1 ? ` · ${offering.unitCount}` : ""}
+          </span>
+        ))}
+      </div>
+      {selected ? (
+        <div style={{ display: "grid", gap: 12, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+          {venue.offerings.map((offering) => (
+            <div key={offering.id} style={{ display: "grid", gap: 3 }}>
+              <strong style={{ color: "var(--text)", fontSize: 13 }}>
+                {offering.label || CATEGORY_LABEL[offering.category]}
+              </strong>
+              {offering.description ? <span style={subtle}>{offering.description}</span> : null}
+              {safeUrl(offering.bookingUrl) ? (
+                <a href={safeUrl(offering.bookingUrl)!} target="_blank" rel="noopener noreferrer" style={{ color: "var(--green)", fontSize: 13 }}>
+                  {t("golf_near_me_booking_details")} <ExternalLink size={12} style={{ verticalAlign: "middle" }} />
+                </a>
+              ) : null}
+            </div>
+          ))}
+          {venue.venueProviders.map(({ role, provider }) => (
+            <div key={provider.id} style={{ display: "grid", gap: 3 }}>
+              <strong style={{ color: "var(--text)", fontSize: 13 }}>{provider.name}</strong>
+              <span style={subtle}>{t("golf_near_me_professional")}
+                {role === "GOLF_PRO" ? "" : ` · ${role.replaceAll("_", " ").toLowerCase()}`}</span>
+              {safeUrl(provider.website) ? (
+                <a href={safeUrl(provider.website)!} target="_blank" rel="noopener noreferrer" style={{ color: "var(--green)", fontSize: 13 }}>
+                  {t("golf_near_me_provider_website")} <ExternalLink size={12} style={{ verticalAlign: "middle" }} />
+                </a>
+              ) : null}
+            </div>
+          ))}
+          {website ? (
+            <a href={website} target="_blank" rel="noopener noreferrer" style={{ color: "var(--green)", fontWeight: 750, fontSize: 13 }}>
+              {t("golf_near_me_venue_website")} <ExternalLink size={12} style={{ verticalAlign: "middle" }} />
+            </a>
+          ) : null}
+          {venue.phone ? <span style={subtle}>{t("phone")}: {venue.phone}</span> : null}
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+function CourseCard({ course, details }: {
+  course: NearbyCourse;
+  details?: GolfCourseServices;
+}) {
+  const location = [course.postalCode, course.city, course.region, course.country]
+    .filter(Boolean).join(" · ");
+  return (
+    <article style={{ ...panel, padding: 16, display: "grid", gap: 8 }}>
+      <div aria-hidden="true" style={{
+        minHeight: 124, padding: "18px 20px", borderRadius: 14,
+        display: "flex", alignItems: "end",
+        border: "1px solid rgba(255,255,255,.12)",
+        backgroundColor: "#0b1e17",
+        backgroundImage: golfHeroBackground(COURSE_HERO_IMAGE),
+        backgroundSize: "cover", backgroundPosition: "center",
+      }}>
+        <span style={{ color: "#fff", fontWeight: 850, fontSize: 17,
+          textShadow: "0 1px 10px rgba(0,0,0,.6)" }}>
+          {t("golf_near_me_course")}
+        </span>
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+        <strong style={{ fontSize: 17 }}>{course.name}</strong>
+        <strong style={{ color: "var(--green)", whiteSpace: "nowrap", fontSize: 13 }}>
+          {(course.distanceM / 1000).toFixed(1)} km
+        </strong>
+      </div>
+      {location ? <span style={subtle}>{location}</span> : null}
+      {details?.offerings.length ? (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {details.offerings.map((offering) => (
+            <span key={offering.id} style={{
+              ...chip, cursor: "default", padding: "5px 9px", fontSize: 11,
+            }}>
+              {CATEGORY_LABEL[offering.category] ?? offering.category}
+              {offering.unitCount && offering.unitCount > 1 ? ` · ${offering.unitCount}` : ""}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {details?.venueProviders.map(({ provider }) => (
+        <div key={provider.id} style={{ ...subtle, display: "grid", gap: 3 }}>
+          <strong style={{ color: "var(--text)", fontSize: 13 }}>{provider.name}</strong>
+          <span>{t("golf_near_me_professional")}</span>
+        </div>
+      ))}
+      <Link to={`/courses/${encodeURIComponent(course.id)}`}
+        style={{ color: "var(--green)", fontWeight: 800, fontSize: 13 }}>
+        {t("golf_near_me_open_course")} →
+      </Link>
+    </article>
+  );
+}
+
+export default function GolfNearMePage() {
+  const [origin, setOrigin] = useState<Position>(BASEL);
+  const [radius, setRadius] = useState<Radius>(25);
+  const [category, setCategory] = useState<NearMeCategory>("");
+  const [status, setStatus] = useState<SearchStatus>("idle");
+  const [error, setError] = useState("");
+  const [locationError, setLocationError] = useState("");
+  const [items, setItems] = useState<GolfServiceVenue[]>([]);
+  const [courseItems, setCourseItems] = useState<NearbyCourse[]>([]);
+  const [courseServices, setCourseServices] = useState<GolfCourseServices[]>([]);
+  const [partialWarning, setPartialWarning] = useState<"services" | "courses" | null>(null);
+  const [truncated, setTruncated] = useState(false);
+  const [view, setView] = useState<"list" | "map">("list");
+  const [testCoordinate, setTestCoordinate] = useState<{ lat: number; lon: number } | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
+  const currentRequest = useRef<AbortController | null>(null);
+  // Only map-to-list navigation scrolls/focuses; ordinary list toggles stay in place.
+  const pendingMapVenueId = useRef<string | null>(null);
+
+  useEffect(() => () => { currentRequest.current?.abort(); }, []);
+
+  useEffect(() => {
+    const venueId = pendingMapVenueId.current;
+    if (!venueId || view !== "list" || selectedId !== venueId) return;
+    pendingMapVenueId.current = null;
+    const card = document.getElementById(venueCardId(venueId));
+    if (!card) return;
+    card.scrollIntoView({ behavior: "smooth", block: "start" });
+    card.querySelector<HTMLButtonElement>("button[aria-expanded]")?.focus({ preventScroll: true });
+  }, [view, selectedId, items]);
+
+  function openVenueFromMap(venueId: string) {
+    pendingMapVenueId.current = venueId;
+    setSelectedId(venueId);
+    setView("list");
+  }
+
+  function invalidateResults() {
+    currentRequest.current?.abort();
+    setStatus("idle");
+    setTestCoordinate(null);
+    setItems([]);
+    setCourseItems([]);
+    setCourseServices([]);
+    setPartialWarning(null);
+    pendingMapVenueId.current = null;
+    setSelectedId(null);
+    setTruncated(false);
+    setError("");
+  }
+
+  function useMyLocation() {
+    if (!navigator.geolocation) {
+      setLocationError(t("golf_near_me_geo_unsupported"));
+      return;
+    }
+    setLocating(true);
+    setLocationError("");
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        invalidateResults();
+        setLocationError("");
+        setOrigin({ lat: coords.latitude, lon: coords.longitude, label: t("your_location") });
+        setLocating(false);
+      },
+      () => {
+        setLocationError(t("golf_near_me_geo_denied"));
+        setLocating(false);
+      },
+      { enableHighAccuracy: false, timeout: 12000, maximumAge: 120000 },
+    );
+  }
+
+  async function previewBaselDraft() {
+    // Display-only fixture for the local Vite dev server.
+    // This code path must never be available in preview/production builds.
+    if (!import.meta.env.DEV) return;
+    currentRequest.current?.abort();
+    const controller = new AbortController();
+    currentRequest.current = controller;
+    const { baselPilotPreview } = await import("../data/golfNearMeBaselPreview");
+    if (controller.signal.aborted) return;
+    setOrigin(BASEL);
+    setItems(category === "COURSE" ? [] : baselPilotPreview(category));
+    setTruncated(false);
+    setCourseItems([]);
+    setCourseServices([]);
+    setPartialWarning(null);
+    setSelectedId(null);
+    setStatus("preview");
+    setView("list");
+    setError("");
+    setLocationError("");
+  }
+
+  async function searchNearby() {
+    currentRequest.current?.abort();
+    const controller = new AbortController();
+    currentRequest.current = controller;
+    setStatus("loading");
+    setItems([]);
+    setCourseItems([]);
+    setCourseServices([]);
+    setPartialWarning(null);
+    setSelectedId(null);
+    setTruncated(false);
+    setError("");
+
+    // Course lookup supplies real location cards for all categories, but
+    // service-only categories must be restricted to verified course service links.
+    const wantsServices = category !== "COURSE";
+    const [coursesResult, servicesResult] = await Promise.all([
+      getNearbyCourses(
+        { lat: origin.lat, lon: origin.lon, radiusKm: radius },
+        controller.signal,
+      )
+        .then((data) => ({ data, error: null as unknown }))
+        .catch((error: unknown) => ({ data: null, error })),
+      wantsServices
+        ? getNearbyGolfServices({
+            lat: origin.lat, lon: origin.lon, radiusKm: radius,
+            category: category === "" ? undefined : category,
+          }, controller.signal)
+            .then((data) => ({ data, error: null as unknown }))
+            .catch((error: unknown) => ({ data: null, error }))
+        : Promise.resolve(null),
+    ]);
+    if (controller.signal.aborted) return;
+
+    const courseSuccess = !!coursesResult.data;
+    const serviceSuccess = !!servicesResult?.data;
+    const linkedServices = servicesResult?.data?.courseServices ?? [];
+    setCourseServices(linkedServices);
+    if (servicesResult?.data) {
+      setItems(servicesResult.data.items);
+      setTruncated(servicesResult.data.truncated);
+    }
+    if (courseSuccess && coursesResult.data) {
+      const courseIdsWithMatchingServices = new Set(linkedServices.map((entry) => entry.courseId));
+      const displayedCourses = category === "" || category === "COURSE"
+        ? coursesResult.data.items
+        : (serviceSuccess
+            ? coursesResult.data.items.filter((course) =>
+                courseIdsWithMatchingServices.has(course.id))
+            : []);
+      setCourseItems(displayedCourses);
+    }
+
+    // A filtered service query cannot succeed on the strength of an unfiltered
+    // course lookup. Otherwise "Simulators" would wrongly show every course.
+    const success = category === "COURSE"
+      ? courseSuccess
+      : category === ""
+        ? courseSuccess || serviceSuccess
+        : serviceSuccess;
+
+    if (success) {
+      if (!courseSuccess) setPartialWarning("courses");
+      else if (wantsServices && !serviceSuccess) setPartialWarning("services");
+      setStatus("ready");
+    } else if (wantsServices && servicesResult?.error instanceof GolfServicesUnavailableError) {
+      setStatus(servicesResult.error.reason);
+    } else {
+      setStatus("error");
+      setError(category === "COURSE"
+        ? t("golf_near_me_courses_error")
+        : t("golf_near_me_error_body"));
+    }
+  }
+
+  const validMarkers = items.filter((item) =>
+    item.lat !== null && item.lon !== null &&
+    Number.isFinite(item.lat) && Number.isFinite(item.lon),
+  );
+
+  const courseServicesById = new Map(courseServices.map((details) => [details.courseId, details]));
+
+  const allResults = [
+    ...courseItems.map((course) => ({
+      kind: "course" as const, id: `course-${course.id}`,
+      km: course.distanceM / 1000, course,
+    })),
+    ...items.map((venue) => ({
+      kind: "venue" as const, id: `venue-${venue.id}`,
+      km: venue.distanceKm ?? Number.POSITIVE_INFINITY, venue,
+    })),
+  ].sort((a, b) => a.km - b.km);
+
+  return (
+    <div className="fw-page" style={{ color: "var(--text)" }}>
+      <div className="fw-page-shell" style={{
+        width: "100%", maxWidth: 1100, margin: "0 auto",
+        padding: "16px 14px 110px", display: "grid", gap: 18,
+        boxSizing: "border-box", minWidth: 0,
+      }}>
+        <Link to="/destinations" style={{ ...subtle, display: "inline-flex", gap: 7, alignItems: "center", textDecoration: "none" }}>
+          <ArrowLeft size={16} /> {t("explore")}
+        </Link>
+
+        <header style={{ ...panel, padding: "24px 20px", background:
+          "linear-gradient(120deg, color-mix(in srgb, var(--green) 14%, var(--card)), var(--card) 74%)" }}>
+          <div style={{ fontSize: 11, fontWeight: 850, letterSpacing: "0.12em", color: "var(--green)", textTransform: "uppercase" }}>
+            {t("golf_near_me_eyebrow")}
+          </div>
+          <h1 style={{ fontSize: "clamp(27px, 5vw, 42px)", letterSpacing: "-0.045em", lineHeight: 1.1, margin: "10px 0" }}>
+            {t("golf_near_me_title")}
+          </h1>
+          <p style={{ ...subtle, maxWidth: 620, margin: 0 }}>
+            {t("golf_near_me_intro")}
+          </p>
+        </header>
+
+        <section style={{ ...panel, display: "grid", gap: 15 }} aria-label={t("golf_near_me_search_area")}>
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+            <div style={{ display: "grid", gap: 3 }}>
+              <strong style={{ fontSize: 15 }}>{t("golf_near_me_search_area")}</strong>
+              <span style={subtle}><MapPinned size={14} style={{ verticalAlign: "middle" }} /> {origin.label}</span>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button type="button" style={chip} disabled={locating} onClick={useMyLocation}>
+                <LocateFixed size={15} style={{ verticalAlign: "middle" }} />
+                {" "}{locating ? t("golf_near_me_locating") : t("golf_near_me_my_location")}
+              </button>
+              <button type="button" style={chip} onClick={() => { invalidateResults(); setLocationError(""); setOrigin(BASEL); }}>
+                {t("golf_near_me_basel_pilot")}
+              </button>
+            </div>
+          </div>
+
+          {locationError ? <p role="alert" style={{ ...subtle, color: "var(--danger)", margin: 0 }}>{locationError}</p> : null}
+
+          <div style={{ display: "grid", gap: 8 }}>
+            <strong style={{ fontSize: 13 }}>{t("golf_near_me_distance")}</strong>
+            <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+              {RADII.map((value) => (
+                <button type="button" key={value} onClick={() => { invalidateResults(); setRadius(value); }}
+                  aria-pressed={radius === value}
+                  style={{ ...chip, borderColor: radius === value ? "var(--green)" : "var(--border)",
+                    background: radius === value ? "color-mix(in srgb, var(--green) 12%, var(--card))" : "var(--card)" }}>
+                  {value} km
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gap: 8 }}>
+            <strong style={{ fontSize: 13 }}>{t("golf_near_me_looking_for")}</strong>
+            <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+              {CATEGORIES.map((item) => (
+                <button type="button" key={item.value || "ALL"} aria-pressed={category === item.value}
+                  onClick={() => { invalidateResults(); setCategory(item.value); }}
+                  style={{ ...chip, borderColor: category === item.value ? "var(--green)" : "var(--border)",
+                    background: category === item.value ? "color-mix(in srgb, var(--green) 12%, var(--card))" : "var(--card)" }}>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button type="button" onClick={() => void searchNearby()} disabled={status === "loading" || locating}
+            style={{
+              background: "var(--fw-pill-cta-bg)", color: "var(--fw-pill-cta-text)", border: 0, borderRadius: 14,
+              padding: "14px 18px", fontWeight: 850, fontSize: 14,
+              cursor: status === "loading" ? "wait" : "pointer",
+              display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+            }}>
+            <Search size={17} /> {status === "loading" ? t("golf_near_me_searching") : t("golf_near_me_search_button")}
+          </button>
+          {import.meta.env.DEV ? (
+            <button
+              type="button"
+              onClick={() => void previewBaselDraft()}
+              style={{ ...chip, width: "100%", padding: "13px", borderStyle: "dashed" }}
+            >
+              {t("golf_near_me_preview_button")}
+            </button>
+          ) : null}
+          <span style={{ ...subtle, fontSize: 11 }}>
+            {t("golf_near_me_privacy")}
+          </span>
+        </section>
+
+        <section style={{ display: "grid", gap: 12 }} aria-live="polite">
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+            <div>
+              <h2 style={{ fontSize: 20, margin: "0 0 3px" }}>{t("golf_near_me_nearby")}</h2>
+              <div style={subtle}>
+                {status === "ready"
+                  ? [
+                      courseItems.length ? `${courseItems.length} ${t("golf_near_me_courses")}` : "",
+                      items.length ? `${items.length} ${t(items.length === 1 ? "golf_near_me_verified_venue" : "golf_near_me_verified_venues")}` : "",
+                    ].filter(Boolean).join(" · ") || t("golf_near_me_results_empty")
+                  : status === "preview"
+                    ? `${items.length} ${t("golf_near_me_preview_count")}`
+                    : t("golf_near_me_verified_only")}
+                {truncated ? ` · ${t("golf_near_me_showing_first")}` : ""}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button type="button" aria-pressed={view === "list"} onClick={() => setView("list")} style={{
+                ...chip, borderColor: view === "list" ? "var(--green)" : "var(--border)",
+              }}><List size={15} style={{ verticalAlign: "middle" }} /> {t("golf_near_me_list")}</button>
+              <button type="button" aria-pressed={view === "map"} onClick={() => setView("map")} style={{
+                ...chip, borderColor: view === "map" ? "var(--green)" : "var(--border)",
+              }}><MapPinned size={15} style={{ verticalAlign: "middle" }} /> {t("map")}</button>
+            </div>
+          </div>
+
+          {status === "ready" && partialWarning ? (
+            <div role="status" style={{
+              ...panel, fontSize: 13, lineHeight: 1.5,
+              borderColor: "color-mix(in srgb, var(--green) 25%, var(--border))",
+            }}>
+              {t(partialWarning === "services"
+                ? "golf_near_me_partial_services"
+                : "golf_near_me_partial_courses")}
+            </div>
+          ) : null}
+
+          {status === "preview" ? (
+            <div role="note" style={{
+              ...panel, display: "grid", gap: 5,
+              background: "color-mix(in srgb, var(--danger) 6%, var(--card))",
+              borderColor: "color-mix(in srgb, var(--danger) 35%, var(--border))",
+            }}>
+              <strong>{t("golf_near_me_preview_title")}</strong>
+              <span style={subtle}>{t("golf_near_me_preview_body")}</span>
+            </div>
+          ) : null}
+
+          {status !== "ready" && status !== "preview" ? (
+            <div style={{ ...panel, display: "grid", gap: 6 }}>
+              <strong>
+                {status === "loading" ? t("golf_near_me_loading_title") :
+                  status === "not-deployed" ? t("golf_near_me_missing_title") :
+                  status === "unavailable" ? t("golf_near_me_unavailable_title") :
+                  status === "error" ? t("golf_near_me_error_title") :
+                  t("golf_near_me_initial_title")}
+              </strong>
+              <span style={subtle}>
+                {status === "not-deployed"
+                  ? t("golf_near_me_missing_body")
+                  : status === "unavailable"
+                    ? t("golf_near_me_unavailable_body")
+                    : status === "error"
+                    ? error
+                    : status === "loading"
+                      ? t("golf_near_me_loading_body")
+                      : t("golf_near_me_initial_body")}
+              </span>
+            </div>
+          ) : allResults.length === 0 ? (
+            <div style={panel}>
+              <strong>{status === "preview"
+                ? t("golf_near_me_preview_empty")
+                : t("golf_near_me_results_empty")}</strong>
+              {status === "preview" ? null : <p style={subtle}>{t("golf_near_me_empty_body")}</p>}
+            </div>
+          ) : view === "list" ? (
+            <div style={{ display: "grid", gap: 10 }}>
+              {allResults.map((result) => result.kind === "course"
+                ? <CourseCard key={result.id} course={result.course}
+                    details={courseServicesById.get(result.course.id)} />
+                : <VenueCard key={result.id} venue={result.venue}
+                    selected={selectedId === result.venue.id}
+                    isDraft={status === "preview"}
+                    onSelect={() => setSelectedId((id) =>
+                      id === result.venue.id ? null : result.venue.id)} />
+              )}
+            </div>
+          ) : null}
+
+          {view === "map" ? (
+            <div style={{ ...panel, padding: 6, overflow: "hidden" }}>
+              <MapContainer center={[origin.lat, origin.lon]} zoom={11}
+                scrollWheelZoom={false} style={{ width: "100%", height: 390, borderRadius: 18 }}>
+                <TileLayer attribution={basemap.attribution} url={basemap.url} />
+                <RecenterMap lat={origin.lat} lon={origin.lon} />
+                {showTestCoordinatePicker && status === "ready" ? (
+                  <TestCoordinatePicker onPick={setTestCoordinate} />
+                ) : null}
+                {showTestCoordinatePicker && testCoordinate ? (
+                  <CircleMarker center={[testCoordinate.lat, testCoordinate.lon]}
+                    radius={7} pathOptions={{
+                      color: "#b31b1b", fillColor: "#f04a4a", fillOpacity: 0.95,
+                    }}>
+                    <Popup>Vorgeschlagener genauer Standort (nur Vorschau)</Popup>
+                  </CircleMarker>
+                ) : null}
+                <CircleMarker center={[origin.lat, origin.lon]} radius={8} pathOptions={{
+                  color: "#2058a8", fillColor: "#4a8bf0", fillOpacity: 0.85,
+                }}>
+                  <Popup>{origin.label}</Popup>
+                </CircleMarker>
+                {courseItems.map((course) => (
+                  <CircleMarker key={`course-${course.id}`} center={[course.lat, course.lon]}
+                    radius={9} pathOptions={{
+                      color: "#1b5b9b", fillColor: "#4b97d4", fillOpacity: 0.9,
+                    }}>
+                    <Popup>
+                      <strong>{course.name}</strong>
+                      <div>{(course.distanceM / 1000).toFixed(1)} km</div>
+                      {courseServicesById.get(course.id)?.offerings.map((offering) => (
+                        <div key={offering.id}>
+                          {CATEGORY_LABEL[offering.category] ?? offering.category}
+                        </div>
+                      ))}
+                      <Link to={`/courses/${encodeURIComponent(course.id)}`}>
+                        {t("golf_near_me_open_course")}
+                      </Link>
+                    </Popup>
+                  </CircleMarker>
+                ))}
+                {validMarkers.map((venue) => (
+                  <CircleMarker key={venue.id} center={[venue.lat!, venue.lon!]} radius={10}
+                    pathOptions={{ color: "#165d36", fillColor: "#2e9d5f", fillOpacity: 0.9 }}>
+                    <Popup>
+                      <div style={{ display: "grid", gap: 7, minWidth: 190 }}>
+                        <strong>{venue.name}</strong>
+                        {venue.distanceKm !== null ? (
+                          <span>{venue.distanceKm.toFixed(1)} km {t("golf_near_me_away")}</span>
+                        ) : null}
+                        <span>{[...new Set(venue.offerings.map((offering) =>
+                          CATEGORY_LABEL[offering.category]))].join(" · ")}</span>
+                        <button type="button" onClick={(event) => {
+                          event.stopPropagation();
+                          openVenueFromMap(venue.id);
+                        }} style={{
+                          appearance: "none", background: "none", padding: 0,
+                          border: "none", color: "#067942", cursor: "pointer",
+                          textAlign: "left", fontWeight: 800, textDecoration: "underline",
+                        }}>
+                          {t("golf_near_me_view_details")} →
+                        </button>
+                        {safeUrl(venue.website) ? (
+                          <a href={safeUrl(venue.website)!} target="_blank"
+                            rel="noopener noreferrer" style={{ color: "#067942", fontWeight: 750 }}>
+                            {t("golf_near_me_venue_website")} ↗
+                          </a>
+                        ) : null}
+                      </div>
+                    </Popup>
+                  </CircleMarker>
+                ))}
+              </MapContainer>
+              {showTestCoordinatePicker && status === "ready" ? (
+                <div role="status" style={{ ...subtle, padding: "12px", display: "grid", gap: 8 }}>
+                  <strong>Nur im isolierten Test: Markerposition korrigieren</strong>
+                  <span>Klicke auf die genaue Position (z. B. Eingang) in der Karte.
+                    Ein roter Testmarker zeigt die Auswahl. Keine Datenbankänderung.</span>
+                  {testCoordinate ? (
+                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
+                      <code style={{ fontSize: 14, color: "var(--text)" }}>
+                        {testCoordinate.lat.toFixed(7)}, {testCoordinate.lon.toFixed(7)}
+                      </code>
+                      <button type="button" style={chip}
+                        onClick={() => {
+                          const value = testCoordinate.lat.toFixed(7) + ", " + testCoordinate.lon.toFixed(7);
+                          if (navigator.clipboard) void navigator.clipboard.writeText(value);
+                        }}>
+                        Koordinaten kopieren
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+              {status === "preview" ? (
+                <p style={{ ...subtle, padding: "0 12px" }}>{t("golf_near_me_preview_no_coords")}</p>
+              ) : status === "ready" && validMarkers.length !== items.length ? (
+                <p style={{ ...subtle, padding: "0 12px" }}>{t("golf_near_me_no_map_coordinates")}</p>
+              ) : null}
+            </div>
+          ) : null}
+        </section>
+      </div>
+    </div>
+  );
+}

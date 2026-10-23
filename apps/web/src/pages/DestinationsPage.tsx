@@ -916,6 +916,30 @@ export default function DestinationsPage() {
             </div>
           </section>
 
+          <section className="fw-explore-desktop-section" aria-label="Golf Near Me">
+            <button
+              type="button"
+              onClick={() => nav("/golf-near-me")}
+              style={{
+                width: "100%", display: "flex", justifyContent: "space-between",
+                alignItems: "center", gap: 16, padding: "20px 24px",
+                borderRadius: 22, border: "1px solid var(--border)",
+                background: "linear-gradient(110deg, color-mix(in srgb, var(--green) 12%, var(--card)), var(--card))",
+                color: "var(--text)", textAlign: "left", cursor: "pointer",
+              }}
+            >
+              <span style={{ display: "grid", gap: 5 }}>
+                <strong style={{ fontSize: 20 }}>{t("golf_near_me_title")}</strong>
+                <span style={{ color: "var(--sub)", fontSize: 13 }}>
+                  {t("golf_near_me_explore_desktop")}
+                </span>
+              </span>
+              <span style={{ color: "var(--green)", fontWeight: 900, whiteSpace: "nowrap" }}>
+                {t("explore")} →
+              </span>
+            </button>
+          </section>
+
           {err ? (
             <div className="fw-explore-desktop-alert">
               <strong>{t("error")}:</strong> {err}
@@ -1193,6 +1217,26 @@ export default function DestinationsPage() {
             </div>
           ) : null}
         </section>
+
+        <button
+          type="button"
+          onClick={() => nav("/golf-near-me")}
+          style={{
+            width: "100%", display: "flex", justifyContent: "space-between",
+            alignItems: "center", gap: 12, padding: "17px 16px",
+            borderRadius: 22, border: "1px solid var(--border)",
+            background: "linear-gradient(110deg, color-mix(in srgb, var(--green) 12%, var(--card)), var(--card))",
+            color: "var(--text)", textAlign: "left", cursor: "pointer",
+          }}
+        >
+          <span style={{ display: "grid", gap: 4 }}>
+            <strong style={{ fontSize: 17 }}>{t("golf_near_me_title")}</strong>
+            <span style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.4 }}>
+              {t("golf_near_me_explore_mobile")}
+            </span>
+          </span>
+          <span style={{ color: "var(--green)", fontSize: 21, fontWeight: 900 }}>→</span>
+        </button>
 
         {err ? (
           <div

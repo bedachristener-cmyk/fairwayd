@@ -11,7 +11,9 @@ export default function BottomTabs() {
     label: string;
     icon: React.ReactNode;
   }) => {
-    const active = loc.pathname.startsWith(props.to);
+    const active =
+      loc.pathname.startsWith(props.to) ||
+      (props.to === "/destinations" && loc.pathname.startsWith("/golf-near-me"));
 
     return (
       <button

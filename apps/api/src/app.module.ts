@@ -17,6 +17,7 @@ import { TripsModule } from './trips/trips.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { FxModule } from './fx/fx.module';
 import { PostCollectionsModule } from './post-collections/post-collections.module';
+import { GolfServicesModule } from './golf-services/golf-services.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { PostCollectionsModule } from './post-collections/post-collections.modul
     NotificationsModule,
     FxModule,
     PostCollectionsModule,
+    GolfServicesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
