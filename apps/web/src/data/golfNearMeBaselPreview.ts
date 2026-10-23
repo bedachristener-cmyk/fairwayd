@@ -1,15 +1,10 @@
 import type { GolfServiceCategory, GolfServiceVenue } from "../api/golfServices";
 
-export type BaselPilotPreviewVenue = GolfServiceVenue & { previewImageUrl: string };
-
-
 // Developer-only UI preview, transcribed from the review-only Basel pilot fixture:
 // apps/api/scripts/fixtures/ch-basel-golf-services-pilot.json
 // DRAFT, NOT verified, NOT geocoded. Never use as a public API result or seed.
-// A photo linked from the venue operator's homepage, for local dev preview only.
-// Not a screenshot; do not copy or publish until image-use rights are cleared.
-export const BASEL_PILOT_VENUE: BaselPilotPreviewVenue = {
-  previewImageUrl: "https://thegolflounge.ch/wp-content/uploads/2023/11/tgl3-scaled.jpg",
+// The UI uses a category illustration instead of displaying an unlicensed venue photo.
+export const BASEL_PILOT_VENUE: GolfServiceVenue = {
   id: "preview-ch-rheinfelden-the-golf-lounge",
   name: "The Golf Lounge",
   country: "CH",
@@ -73,7 +68,7 @@ export const BASEL_PILOT_VENUE: BaselPilotPreviewVenue = {
   ],
 };
 
-export function baselPilotPreview(category: GolfServiceCategory | ""): BaselPilotPreviewVenue[] {
+export function baselPilotPreview(category: GolfServiceCategory | ""): GolfServiceVenue[] {
   const offerings = category
     ? BASEL_PILOT_VENUE.offerings.filter((offering) => offering.category === category)
     : BASEL_PILOT_VENUE.offerings;
