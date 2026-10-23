@@ -264,3 +264,7 @@ Created six original category artwork images (Simulatoren, Golfplätze, Driving 
 **Release blocker:** the six binary `.webp` assets were provided to the developer as a ZIP (paths under `apps/web/public/golf-near-me/categories/`) but are **not yet committed** to GitHub because the connected GitHub writer is UTF-8-text-only. The developer must extract the ZIP locally, run `node apps/web/scripts/check-golf-near-me-artwork.mjs`, build the web app and commit/push the image files to the feature branch. See `docs/golf-near-me-category-imagery.md`.
 
 Source-level mapping and fallback checks passed; **npm build and on-screen artwork review remain pending**. No Stage/Production changes.
+
+## AI category image assets confirmed in GitHub (2026-10-23)
+
+Following local visual confirmation of the simulator hero and the refined light neutral border, the developer committed and pushed six WebP images to `feature/golf-near-me-ch-pilot`, commit `c1c417f9eeaaae58224f750ccf3a96fa75c0a0a7`. Independent GitHub lookup confirmed exact files `academy.webp`, `course.webp`, `fitting.webp`, `range.webp`, `shop.webp`, `simulator.webp` under `apps/web/public/golf-near-me/categories/` (file sizes 49,520; 83,538; 50,876; 45,404; 69,302; 36,524 bytes respectively). This resolves the *earlier* binary image release blocker documented above. PR #11 remains Draft into `stage`. No deployment or database change. Next test: existing local course API on port 3000 alongside the isolated service API.
