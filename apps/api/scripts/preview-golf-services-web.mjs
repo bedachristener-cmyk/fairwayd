@@ -146,6 +146,9 @@ async function main() {
     delete webEnv.NEON_DATABASE_URL;
     delete webEnv.DATABASE_URL;
     delete webEnv.GOLF_SERVICES_API_ENABLED;
+    // Normal course lookups remain on the existing LOCAL dev API only,
+    // never an inherited/deployed Stage/Production endpoint.
+    webEnv.VITE_API_BASE_URL = 'http://127.0.0.1:3000';
     webEnv.VITE_GOLF_SERVICES_LOCAL_TEST_API_BASE =
       'http://127.0.0.1:' + httpPort + '/api';
     const viteCli = path.join(WEB_ROOT, 'node_modules', 'vite', 'bin', 'vite.js');
