@@ -248,3 +248,11 @@ PR #11 remains **Draft** against `stage`. Before allowing a Stage deployment:
 6. The current "Golfplätze konnten nicht geladen werden" in the isolated browser rehearsal refers to the ordinary local API on port 3000, not the tested Golf Services API; test joint operation once that local API is online.
 
 The migration, service API, and isolated browser map/list tests have succeeded, and the manually selected venue position was confirmed by the user. **No Stage/Production release is approved.**
+
+## Venue headline visual confirmation (2026-10-23)
+
+The user supplied an actual browser screenshot of the isolated `http://127.0.0.1:5195/golf-near-me` UI with 25 km and the `SIMULATOR` filter enabled, after the venue-title refactor. Confirmed visible: **The Golf Lounge** is the large visual headline, with **Simulatoren** as the smaller subtitle; a single verified venue result is shown with two simulator units and **14.9 km** distance from Basel. The local regular-courses API warning remains present and is independent of the isolated Golf Services API.
+
+Minor polish candidate: the venue name currently appears once in the large artwork and again in the venue-card metadata immediately beneath it. Avoid unnecessary duplication while preserving clear venue details, accessibility and link behavior.
+
+**Status:** Venue title UI visual check PASS in isolated test. Still pending: end-to-end combined golf-course API availability, local UI build after code change, Stage runtime DB pathname verification and separate rollout approval. No Stage/Production deployment occurred.
