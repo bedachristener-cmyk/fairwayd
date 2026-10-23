@@ -42,13 +42,12 @@ export async function verifyEncryptedStageConnection(raw) {
   const client = new Client({ connectionString: raw, connectionTimeoutMillis: 10000 });
   try {
     await client.connect();
-    const result = await client.query(
-      `SELECT current_database() AS db, ssl
-       FROM pg_catalog.pg_stat_ssl WHERE pid = pg_backend_pid()`
-    );
-    return result.rows.length === 1 &&
-      result.rows[0].db === STAGE_DATABASE &&
-      result.rows[0].ssl === true;
+    // Neon terminates client TLS at its proxy. pg_stat_ssl inside the
+    // compute can show false even for a secure client connection. Inspect
+    // the actual pg client-side socket instead.
+    if (client.connection?.stream?.encrypted !== true) return false;
+    const result = await client.query('SELECT current_database() AS db');
+    return result.rows.length === 1 && result.rows[0].db === STAGE_DATABASE;
   } finally {
     await client.end().catch(() => {});
   }
