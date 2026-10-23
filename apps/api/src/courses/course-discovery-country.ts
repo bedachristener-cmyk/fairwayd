@@ -58,6 +58,17 @@ const COUNTRY_CONFIGS: Record<string, CourseDiscoveryCountryConfig> = {
     lonStep: 0.65,
     searchRadiusMeters: 45_000,
   },
+  CY: {
+    country: 'CY',
+    areas: [
+      // Complete island coverage, including the Republic of Cyprus,
+      // the Sovereign Base Areas and the established courses in Northern Cyprus.
+      { minLat: 34.55, maxLat: 35.75, minLon: 32.2, maxLon: 34.7 },
+    ],
+    latStep: 0.3,
+    lonStep: 0.35,
+    searchRadiusMeters: 28_000,
+  },
   KH: {
     country: 'KH',
     areas: [
