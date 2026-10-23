@@ -21,10 +21,13 @@ function fail(message) {
 async function run() {
   const envPathInput = option('env');
   const expectedHost = option('expected-host').toLowerCase();
-  if (!envPathInput || !expectedHost ||
-      process.argv.length !== 4 ||
-      !process.argv[2].startsWith('--env=') && !process.argv[3].startsWith('--env=')) {
-    fail('Usage: node scripts/check-golf-services-neon-branch.mjs --env=PATH --expected-host=ep-xxxxx.REGION.aws.neon.tech');
+  const expectedDatabase = option('expected-database');
+  if (!envPathInput || !expectedHost || expectedDatabase !== 'fairwayd_stage' ||
+      process.argv.length !== 5 ||
+      !process.argv.slice(2).some((arg) => arg.startsWith('--env=')) ||
+      !process.argv.slice(2).some((arg) => arg.startsWith('--expected-host=')) ||
+      !process.argv.slice(2).some((arg) => arg.startsWith('--expected-database='))) {
+    fail('Usage: node scripts/check-golf-services-neon-branch.mjs --env=PATH --expected-host=ep-xxxxx.REGION.aws.neon.tech --expected-database=fairwayd_stage');
   }
 
   const envPath = path.resolve(envPathInput);
@@ -48,6 +51,12 @@ async function run() {
   if (!actualHost.endsWith('.neon.tech')) fail('Database host is not a Neon host.');
   if (actualHost.includes('-pooler.')) fail('Use the direct Neon connection (disable Connection pooling in Neon).');
   if (actualHost !== expectedHost) fail('Hostname does not match the expected test-branch endpoint from Neon console.');
+  // A Neon branch contains multiple databases; the implicit neondb is stale.
+  // For Fairwayd Stage, pin the actual application database explicitly.
+  const urlDatabase = decodeURIComponent(url.pathname.replace(/^\//, ''));
+  if (urlDatabase !== expectedDatabase) {
+    fail('Connection URL must explicitly select database fairwayd_stage; refusing fallback to neondb.');
+  }
   if (!['require', 'verify-full'].includes(url.searchParams.get('sslmode'))) {
     fail('Connection string must specify sslmode=require or sslmode=verify-full.');
   }
@@ -68,6 +77,9 @@ async function run() {
     const info = result.rows[0];
     if (info.read_only !== 'on') fail('Database did not honor READ ONLY transaction.');
     console.log('Database: ' + info.database_name);
+    if (info.database_name !== expectedDatabase) {
+      fail('Connected database is not fairwayd_stage; refusing migration audit.');
+    }
     console.log('Read-only transaction: ' + info.read_only);
     console.log('Golf Services tables already present: ' + info.migration_already_present);
 
@@ -253,7 +265,8 @@ run().catch((err) => {
     && (err.message.startsWith('Usage:') || err.message.startsWith('Secrets file')
       || err.message.startsWith('Connection URL') || err.message.startsWith('Database host')
       || err.message.startsWith('Hostname does not')
-      || err.message.startsWith('Invalid PostgreSQL') || err.message.startsWith('Use the direct')
+      || err.message.startsWith('Invalid PostgreSQL')
+      || err.message.startsWith('Connected database is not') || err.message.startsWith('Use the direct')
       || err.message.startsWith('Database did not')
       || err.message.startsWith('Prisma migrations history')
       || err.message.startsWith('Migration status needs'))
