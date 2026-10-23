@@ -408,6 +408,8 @@ export default function GolfNearMePage() {
     Number.isFinite(item.lat) && Number.isFinite(item.lon),
   );
 
+  const courseServicesById = new Map(courseServices.map((details) => [details.courseId, details]));
+
   const allResults = [
     ...courseItems.map((course) => ({
       kind: "course" as const, id: `course-${course.id}`,
@@ -592,7 +594,8 @@ export default function GolfNearMePage() {
           ) : view === "list" ? (
             <div style={{ display: "grid", gap: 10 }}>
               {allResults.map((result) => result.kind === "course"
-                ? <CourseCard key={result.id} course={result.course} />
+                ? <CourseCard key={result.id} course={result.course}
+                    details={courseServicesById.get(result.course.id)} />
                 : <VenueCard key={result.id} venue={result.venue}
                     selected={selectedId === result.venue.id}
                     isDraft={status === "preview"}
@@ -621,6 +624,11 @@ export default function GolfNearMePage() {
                     <Popup>
                       <strong>{course.name}</strong>
                       <div>{(course.distanceM / 1000).toFixed(1)} km</div>
+                      {courseServicesById.get(course.id)?.offerings.map((offering) => (
+                        <div key={offering.id}>
+                          {CATEGORY_LABEL[offering.category] ?? offering.category}
+                        </div>
+                      ))}
                       <Link to={`/courses/${encodeURIComponent(course.id)}`}>
                         {t("golf_near_me_open_course")}
                       </Link>
