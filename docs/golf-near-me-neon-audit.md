@@ -75,3 +75,36 @@ With user authorization restricted to non-existing environments, a **new child b
 - Keep this child branch isolated and disposable. To complete a **true Prisma migration rehearsal**, use a separate fresh child copied from the original isolated test branch, with an explicitly verified direct connection URL for `fairwayd_stage`; run Prisma migration there, audit `_prisma_migrations` and inspect resulting schema. Never reuse Stage/Production credentials.
 
 **Result:** SQL DDL + database constraint smoke tests PASS; Prisma migration runner / recorded history NOT YET TESTED. Stage/Production unchanged.
+
+## Prisma migration runner rehearsal – separate fresh child (2026-10-23)
+
+A **new, pristine, disposable** child branch was created from `br-rough-darkness-ag13g4d3`:
+
+- Name: `golf-near-me-prisma-rehearsal-20261023`
+- Branch ID: `br-dawn-breeze-agjlgyyt`
+- Direct endpoint: `ep-late-band-ag2ya7lq.c-2.eu-central-1.aws.neon.tech`
+- Target PostgreSQL database: `fairwayd_stage`
+- Initial state: 59 applied migrations, 0 unresolved, `Course` exists, no Golf Service tables
+- It is **not** Stage or Production, and it is **not** the prior SQL-tested `br-falling-pond-ag4n6se5` child.
+
+The connected Neon interface can execute SQL but **cannot invoke the Prisma CLI against a chosen branch**. In particular, do not use `prepare_database_migration`: its input does not allow pinning this child branch. Running SQL manually and inventing a Prisma history record is not equivalent to `prisma migrate deploy`.
+
+To run the CLI safely on the developer's Windows workstation, two scripts were added on the feature branch:
+
+- `apps/api/scripts/Run-GolfServicesPrismaRehearsal.ps1` (PowerShell 5.1, masked local URL prompt; no .env changes).
+- `apps/api/scripts/rehearse-golf-services-prisma.mjs` (pins exact direct hostname, database and Git branch; read-only checks for exactly 59 completed + one pending migration; launches only the local Prisma CLI; read-only postcheck requires 60 completed and new tables).
+
+**Before running**: pull the feature branch, open Neon Console → Fairwayd project → `golf-near-me-prisma-rehearsal-20261023` branch → Connection Details → choose database `fairwayd_stage` → **Direct connection (pooling OFF)**; copy connection URL. Enter it **only** in the protected terminal prompt, never in Git, chat, a committed .env file or CLI arguments.
+
+Run from Windows PowerShell:
+
+```powershell
+cd C:\dev\fairwayd
+git pull --ff-only
+cd .\apps\api
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-GolfServicesPrismaRehearsal.ps1
+```
+
+The script stops if the direct host or database is wrong. This step will be marked **tested only after the developer returns its output**, and afterwards Neon is checked independently for migrated child and unchanged parent/Stage. No Prisma migrate deploy has yet been executed.
+
+**Never run a raw `prisma migrate deploy` using the existing Railway/Stage database URL** and never deploy the feature branch until separately approved.
