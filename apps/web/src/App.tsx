@@ -39,6 +39,7 @@ import FeedbackAdminPage from "./pages/FeedbackAdminPage";
 import FeedbackPage from "./pages/FeedbackPage";
 import UserSearchPage from "./pages/UserSearchPage";
 import DestinationsPage from "./pages/DestinationsPage";
+import GolfNearMePage from "./pages/GolfNearMePage";
 import DestinationPage from "./pages/DestinationPage";
 import NewCourseSubmissionPage from "./pages/NewCourseSubmissionPage";
 import CourseSubmissionsAdminPage from "./pages/CourseSubmissionsAdminPage";
@@ -253,6 +254,9 @@ export default function App() {
               />
 
               <Route path="/destinations/:slug" element={<DestinationPage />} />
+
+              {/* Local services directory, intentionally separate from golf courses */}
+              <Route path="/golf-near-me" element={<GolfNearMePage />} />
 
               {/* Following courses */}
               <Route
