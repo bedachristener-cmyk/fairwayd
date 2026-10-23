@@ -201,7 +201,8 @@ export default function DesktopSidebar() {
           label: t("explore"),
           icon: <Globe size={18} strokeWidth={2.2} />,
           protected: true,
-          isActive: activeStartsWith("/destinations"),
+          isActive: (pathname: string) =>
+            pathname.startsWith("/destinations") || pathname.startsWith("/golf-near-me"),
         },
         {
           key: "feed",
