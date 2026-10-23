@@ -95,7 +95,13 @@ function TestCoordinatePicker({ onPick }: {
 // Neutral visual for service venues until a suitably licensed venue image is available.
 // It deliberately does not imply that this is a photograph of the actual business.
 function VenueCategoryVisual({ venue }: { venue: GolfServiceVenue }) {
-  const categories = venue.offerings.map((offering) => offering.category);
+  // The venue is the place; service categories are attributes of that place.
+  // Keep its main title stable even when category filters narrow the offerings.
+  const categories = [...new Set(venue.offerings.map((offering) => offering.category))];
+  const categorySummary = categories
+    .slice(0, 2)
+    .map((item) => CATEGORY_LABEL[item])
+    .join(" · ") + (categories.length > 2 ? ` · +${categories.length - 2}` : "");
   const category: GolfServiceCategory | null =
     categories.includes("SIMULATOR") ? "SIMULATOR" :
     categories.includes("ACADEMY") ? "ACADEMY" :
@@ -123,8 +129,13 @@ function VenueCategoryVisual({ venue }: { venue: GolfServiceVenue }) {
           fontSize: "clamp(18px, 3vw, 24px)", lineHeight: 1.15, fontWeight: 850,
           overflowWrap: "anywhere",
         }}>
-          {category ? CATEGORY_LABEL[category] : venue.name}
+          {venue.name}
         </strong>
+        {categorySummary ? (
+          <span style={{ ...subtle, fontSize: 12, fontWeight: 750 }}>
+            {categorySummary}
+          </span>
+        ) : null}
       </div>
       <div style={{
         flex: "0 0 auto", display: "grid", placeItems: "center",
