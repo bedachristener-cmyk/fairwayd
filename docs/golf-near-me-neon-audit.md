@@ -108,3 +108,29 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-GolfServic
 The script stops if the direct host or database is wrong. This step will be marked **tested only after the developer returns its output**, and afterwards Neon is checked independently for migrated child and unchanged parent/Stage. No Prisma migrate deploy has yet been executed.
 
 **Never run a raw `prisma migrate deploy` using the existing Railway/Stage database URL** and never deploy the feature branch until separately approved.
+
+## Completed Prisma CLI rehearsal (2026-10-23)
+
+The developer ran `apps/api/scripts/Run-GolfServicesPrismaRehearsal.ps1` with the **direct connection to the disposable Neon child** `br-dawn-breeze-agjlgyyt`, database `fairwayd_stage`.
+
+Reported local CLI output:
+
+```text
+Postcheck OK: 60 migrations applied; new service tables exist.
+PASS: Prisma migration rehearsal completed; Stage and Production not targeted.
+Transient connection variable restored. No .env file modified.
+```
+
+Independent follow-up through Neon (read-only SQL) verified:
+
+| Branch | Database | Completed migrations | Golf Service tables | New Prisma migration history entry |
+|---|---|---:|---|---|
+| Prisma rehearsal `br-dawn-breeze-agjlgyyt` | `fairwayd_stage` | **60** | 4/4 present | **present, finished** |
+| Earlier SQL-only child `br-falling-pond-ag4n6se5` | `fairwayd_stage` | 59 | 4/4 present | absent, as expected |
+| Original isolated branch `br-rough-darkness-ag13g4d3` | `fairwayd_stage` | 59 | absent | absent |
+| Neon Stage `br-broad-salad-ag6pnor0` | `fairwayd_stage` | 59 | absent | absent |
+| Neon Production `br-soft-cell-aga965p7` | `fairwayd_prod` | 13 | absent | absent |
+
+All five databases had **zero unresolved migration records**. The successful Prisma child additionally has two exclusive-owner CHECK constraints, two Course foreign keys and 16 Golf Service indexes. Each new Golf Service table has **zero rows** (no pilot data inserted).
+
+**Status:** Full `prisma migrate deploy` rehearsal **PASS** on a disposable child branch; both Stage and Production **unchanged**. This does **not** authorize a Stage/Production deployment: Railway Stage's fully resolved runtime database pathname has not been independently verified, and activating the Golf Services API requires a separately approved rollout. Continue development and test data integration in isolation first.
