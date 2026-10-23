@@ -2093,6 +2093,9 @@ export const STRINGS = {
 
 const EXTRA_STRINGS = {
   en: {
+    // Basel pilot website photo attribution
+    golf_near_me_website_photo_source: "Photo from the venue website",
+    golf_near_me_website_photo_unavailable: "The website photo could not be loaded.",
     // Golf Near Me development-only pilot preview
     golf_near_me_preview_button: "Preview Basel sample (local)",
     golf_near_me_preview_title: "LOCAL PREVIEW · UNVERIFIED DRAFT",
@@ -2474,6 +2477,9 @@ const EXTRA_STRINGS = {
     theme_contrast: "Contrast",
   },
   de: {
+    // Basel pilot website photo attribution
+    golf_near_me_website_photo_source: "Foto von der Website des Anbieters",
+    golf_near_me_website_photo_unavailable: "Das Foto der Website konnte nicht geladen werden.",
     // Golf Near Me development-only pilot preview
     golf_near_me_preview_button: "Basel-Pilotvorschau (lokal)",
     golf_near_me_preview_title: "LOKALE VORSCHAU · UNGEPRÜFTER ENTWURF",
@@ -2855,6 +2861,9 @@ const EXTRA_STRINGS = {
     theme_contrast: "Kontrast",
   },
   fr: {
+    // Basel pilot website photo attribution
+    golf_near_me_website_photo_source: "Photo du site du lieu",
+    golf_near_me_website_photo_unavailable: "La photo du site n'a pas pu être chargée.",
     // Golf Near Me development-only pilot preview
     golf_near_me_preview_button: "Aperçu de Bâle (local)",
     golf_near_me_preview_title: "APERÇU LOCAL · BROUILLON NON VÉRIFIÉ",
@@ -3236,6 +3245,9 @@ const EXTRA_STRINGS = {
     theme_contrast: "Contraste",
   },
   it: {
+    // Basel pilot website photo attribution
+    golf_near_me_website_photo_source: "Foto dal sito della struttura",
+    golf_near_me_website_photo_unavailable: "Impossibile caricare la foto dal sito.",
     // Golf Near Me development-only pilot preview
     golf_near_me_preview_button: "Anteprima Basilea (locale)",
     golf_near_me_preview_title: "ANTEPRIMA LOCALE · BOZZA NON VERIFICATA",
@@ -3617,6 +3629,9 @@ const EXTRA_STRINGS = {
     theme_contrast: "Contrasto",
   },
   es: {
+    // Basel pilot website photo attribution
+    golf_near_me_website_photo_source: "Foto del sitio web del establecimiento",
+    golf_near_me_website_photo_unavailable: "No se pudo cargar la foto del sitio web.",
     // Golf Near Me development-only pilot preview
     golf_near_me_preview_button: "Vista previa de Basilea (local)",
     golf_near_me_preview_title: "VISTA PREVIA LOCAL · BORRADOR SIN VERIFICAR",
@@ -3998,6 +4013,9 @@ const EXTRA_STRINGS = {
     theme_contrast: "Contraste",
   },
   ko: {
+    // Basel pilot website photo attribution
+    golf_near_me_website_photo_source: "업체 웹사이트 사진",
+    golf_near_me_website_photo_unavailable: "웹사이트 사진을 불러올 수 없습니다.",
     // Golf Near Me development-only pilot preview
     golf_near_me_preview_button: "바젤 샘플 미리보기 (로컬)",
     golf_near_me_preview_title: "로컬 미리보기 · 미검증 초안",
@@ -4379,6 +4397,9 @@ const EXTRA_STRINGS = {
     theme_contrast: "고대비",
   },
   th: {
+    // Basel pilot website photo attribution
+    golf_near_me_website_photo_source: "ภาพจากเว็บไซต์สถานที่",
+    golf_near_me_website_photo_unavailable: "ไม่สามารถโหลดภาพจากเว็บไซต์ได้",
     // Golf Near Me development-only pilot preview
     golf_near_me_preview_button: "ดูตัวอย่างบาเซิล (ในเครื่อง)",
     golf_near_me_preview_title: "ตัวอย่างในเครื่อง · ฉบับร่างที่ยังไม่ตรวจสอบ",
