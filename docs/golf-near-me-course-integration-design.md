@@ -67,7 +67,7 @@ These uniqueness rules intentionally encode at most one offering *category* per 
 
 Do not run `prisma migrate deploy`, `prisma db push`, inserts, or activate `GOLF_SERVICES_API_ENABLED`.
 
-The isolated `golf-near-me-dev` Neon branch was cloned from a Neon `stage` branch whose endpoint does not match the Railway Stage DB endpoint. The read-only preflight saw **47 pending migrations**. Resolve the true Stage DB mapping and migration baseline first.
+Read-only checks on 2026-10-23 resolved the apparent migration discrepancy. The Railway Stage hostname `ep-restless-wildflower-agf67w6m` maps to Neon branch `stage` in project `Fairwayd`; the test branch has its *own* expected endpoint `ep-summer-sound-aggo2eqy`. Both branches contain **two databases**: an older `neondb` (13 applied migrations) and the application database `fairwayd_stage` (**59 applied, 0 unresolved**). The earlier preflight inspected the wrong database `neondb`, which explained the 47 pending migrations. `GolfServiceVenue` is absent in all checked databases. Railway OAuth masks the full runtime connection string, so confirm its database pathname separately before deployment. No migrations were run during diagnosis. See `docs/golf-near-me-neon-audit.md`.
 
 The current pilot preview validator has **8 passing tests** for fixture-only deduplication and draft rules. It does **not** establish global or cross-table deduplication.
 
