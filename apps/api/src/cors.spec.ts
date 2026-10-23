@@ -33,6 +33,16 @@ describe('CORS origin policy', () => {
     ).toBe(true);
   });
 
+  it('permits isolated Golf Near Me browser rehearsal only outside production', () => {
+    process.env.NODE_ENV = 'development';
+    expect(isCorsOriginAllowed('http://127.0.0.1:5195')).toBe(true);
+    expect(isCorsOriginAllowed('http://localhost:5195')).toBe(false);
+    expect(isCorsOriginAllowed('http://127.0.0.1:5196')).toBe(false);
+
+    process.env.NODE_ENV = 'production';
+    expect(isCorsOriginAllowed('http://127.0.0.1:5195')).toBe(false);
+  });
+
   it('allows Vercel previews by default and can disable them', () => {
     expect(isCorsOriginAllowed('https://preview-fairwayd.vercel.app')).toBe(
       true,
