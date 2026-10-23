@@ -224,3 +224,12 @@ The user confirmed by annotated screenshot that the provisional building coordin
 Added a **dev-only, opt-in, read-only** Leaflet coordinate picker in `apps/web/src/pages/GolfNearMePage.tsx`, enabled **only** by `VITE_GOLF_SERVICES_COORDINATE_PICKER=true` in the isolated `apps/api/scripts/preview-golf-services-web.mjs` launcher. A map click adds a separate red temporary marker and displays copyable coordinates to 7 decimals; it never changes a database or overwrites the original marker. It does not appear on Stage/Production or other ordinary dev sessions.
 
 User flow: stop the isolated browser launcher with Ctrl+C, `cd C:\dev\fairwayd; git pull --ff-only`, restart `Run-GolfServicesBrowserTest.ps1` using the same masked **test-branch** direct connection URL, open `http://127.0.0.1:5195/golf-near-me`, choose Basel → 25 km → Simulatoren → Golfangebote finden → Karte, zoom in, click precise spot at the red annotation, and copy the displayed latitude/longitude. **No DB values are changed until coordinates are checked and subsequently applied to the disposable test branch by an explicitly targeted operation.**
+
+## User-picked venue map point applied to disposable branch (2026-10-23)
+
+User clicked the desired The Golf Lounge position inside the opt-in isolated Leaflet map coordinate picker: **latitude `47.5495547`, longitude `7.7863799`**. This supersedes the approximate Q-37 building point `47.5495127, 7.786086` used for the initial sandbox rehearsal. The new point is **user-specified**, not independently surveyed or operator-confirmed.
+
+- Updated the review fixture `apps/api/scripts/fixtures/ch-basel-golf-services-pilot.json` on feature branch; venue remains **`DRAFT`** and has `verifiedAt: null`.
+- Updated one existing `GolfServiceVenue` with an exact ID/name/country/original-coordinate guard in **Neon disposable Prisma-test child `br-dawn-breeze-agjlgyyt`, database `fairwayd_stage` only**. Database returned the new latitude and longitude, and its `VERIFIED` status remains solely for local testability.
+- Updated `apps/api/scripts/test-golf-services-live-api.mjs` to expect the new GPS coordinate.
+- No Stage/Production writes or deployments. When reviewing the browser UI, re-run the test search to load the updated marker; the old result may remain in React state until searched again.
