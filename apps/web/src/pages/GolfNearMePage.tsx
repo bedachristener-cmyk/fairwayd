@@ -14,7 +14,7 @@ import {
 
 type Position = { lat: number; lon: number; label: string };
 type Radius = 10 | 25 | 50 | 100;
-type SearchStatus = "idle" | "loading" | "ready" | "unavailable" | "error";
+type SearchStatus = "idle" | "loading" | "ready" | "not-deployed" | "unavailable" | "error";
 
 const BASEL: Position = { lat: 47.5596, lon: 7.5886, label: "Basel (pilot)" };
 const RADII: Radius[] = [10, 25, 50, 100];
@@ -213,7 +213,7 @@ export default function GolfNearMePage() {
     } catch (cause) {
       if (controller.signal.aborted) return;
       if (cause instanceof GolfServicesUnavailableError) {
-        setStatus("unavailable");
+        setStatus(cause.reason);
       } else {
         setStatus("error");
         setError(cause instanceof Error ? cause.message : "Unable to load nearby services.");
@@ -332,14 +332,17 @@ export default function GolfNearMePage() {
             <div style={{ ...panel, display: "grid", gap: 6 }}>
               <strong>
                 {status === "loading" ? "Finding services…" :
-                  status === "unavailable" ? "Directory not yet available" :
+                  status === "not-deployed" ? "Directory API not deployed yet" :
+                  status === "unavailable" ? "Directory currently unavailable" :
                   status === "error" ? "Search could not be completed" :
                   "Explore nearby golf services"}
               </strong>
               <span style={subtle}>
-                {status === "unavailable"
-                  ? "The directory API is still disabled while the Basel pilot is being prepared. No venues have been published yet."
-                  : status === "error"
+                {status === "not-deployed"
+                  ? "The connected API does not provide the Golf Near Me endpoint yet. The frontend pilot can still be explored."
+                  : status === "unavailable"
+                    ? "The Golf Near Me directory is disabled or temporarily unavailable. No live results can be shown right now."
+                    : status === "error"
                     ? error
                     : status === "loading"
                       ? "Checking verified nearby locations."
