@@ -69,6 +69,24 @@ const COUNTRY_CONFIGS: Record<string, CourseDiscoveryCountryConfig> = {
     lonStep: 0.35,
     searchRadiusMeters: 28_000,
   },
+  EG: {
+    country: 'EG',
+    areas: [
+      // Greater Cairo, Giza, New Cairo and the New Administrative Capital.
+      { minLat: 29.4, maxLat: 30.5, minLon: 30.5, maxLon: 32.2 },
+      // Alexandria and the Mediterranean North Coast, including Marassi and Hacienda Bay.
+      { minLat: 30.7, maxLat: 31.7, minLon: 27.0, maxLon: 30.8 },
+      // Hurghada, El Gouna, Makadi Bay and Soma Bay.
+      { minLat: 26.3, maxLat: 27.7, minLon: 33.3, maxLon: 34.1 },
+      // Sharm El Sheikh and Taba on the Sinai Peninsula.
+      { minLat: 27.7, maxLat: 30.0, minLon: 33.8, maxLon: 35.0 },
+      // Suez and Ain Sokhna.
+      { minLat: 29.3, maxLat: 30.2, minLon: 32.2, maxLon: 33.0 },
+    ],
+    latStep: 0.35,
+    lonStep: 0.4,
+    searchRadiusMeters: 30_000,
+  },
   KH: {
     country: 'KH',
     areas: [
