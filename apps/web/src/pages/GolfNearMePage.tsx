@@ -12,6 +12,7 @@ import {
   GolfServicesUnavailableError,
   type GolfServiceCategory,
   type GolfServiceVenue,
+  type GolfCourseServices,
 } from "../api/golfServices";
 
 type NearMeCategory = GolfServiceCategory | "COURSE" | "";
@@ -208,7 +209,10 @@ function VenueCard({
   );
 }
 
-function CourseCard({ course }: { course: NearbyCourse }) {
+function CourseCard({ course, details }: {
+  course: NearbyCourse;
+  details?: GolfCourseServices;
+}) {
   const location = [course.postalCode, course.city, course.region, course.country]
     .filter(Boolean).join(" · ");
   return (
@@ -223,6 +227,24 @@ function CourseCard({ course }: { course: NearbyCourse }) {
         </strong>
       </div>
       {location ? <span style={subtle}>{location}</span> : null}
+      {details?.offerings.length ? (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {details.offerings.map((offering) => (
+            <span key={offering.id} style={{
+              ...chip, cursor: "default", padding: "5px 9px", fontSize: 11,
+            }}>
+              {CATEGORY_LABEL[offering.category] ?? offering.category}
+              {offering.unitCount && offering.unitCount > 1 ? ` · ${offering.unitCount}` : ""}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {details?.venueProviders.map(({ provider }) => (
+        <div key={provider.id} style={{ ...subtle, display: "grid", gap: 3 }}>
+          <strong style={{ color: "var(--text)", fontSize: 13 }}>{provider.name}</strong>
+          <span>{t("golf_near_me_professional")}</span>
+        </div>
+      ))}
       <Link to={`/courses/${encodeURIComponent(course.id)}`}
         style={{ color: "var(--green)", fontWeight: 800, fontSize: 13 }}>
         {t("golf_near_me_open_course")} →
@@ -240,6 +262,7 @@ export default function GolfNearMePage() {
   const [locationError, setLocationError] = useState("");
   const [items, setItems] = useState<GolfServiceVenue[]>([]);
   const [courseItems, setCourseItems] = useState<NearbyCourse[]>([]);
+  const [courseServices, setCourseServices] = useState<GolfCourseServices[]>([]);
   const [partialWarning, setPartialWarning] = useState<"services" | "courses" | null>(null);
   const [truncated, setTruncated] = useState(false);
   const [view, setView] = useState<"list" | "map">("list");
@@ -254,6 +277,7 @@ export default function GolfNearMePage() {
     setStatus("idle");
     setItems([]);
     setCourseItems([]);
+    setCourseServices([]);
     setPartialWarning(null);
     setSelectedId(null);
     setTruncated(false);
@@ -295,6 +319,7 @@ export default function GolfNearMePage() {
     setItems(category === "COURSE" ? [] : baselPilotPreview(category));
     setTruncated(false);
     setCourseItems([]);
+    setCourseServices([]);
     setPartialWarning(null);
     setSelectedId(null);
     setStatus("preview");
