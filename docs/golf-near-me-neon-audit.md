@@ -256,3 +256,11 @@ The user supplied an actual browser screenshot of the isolated `http://127.0.0.1
 Minor polish candidate: the venue name currently appears once in the large artwork and again in the venue-card metadata immediately beneath it. Avoid unnecessary duplication while preserving clear venue details, accessibility and link behavior.
 
 **Status:** Venue title UI visual check PASS in isolated test. Still pending: end-to-end combined golf-course API availability, local UI build after code change, Stage runtime DB pathname verification and separate rollout approval. No Stage/Production deployment occurred.
+
+## AI category hero imagery integration (2026-10-23)
+
+Created six original category artwork images (Simulatoren, Golfplätze, Driving Ranges, Academy, Shop, Fitting), exported as 1440×480 WebP; combined transfer size ~330 KB. User particularly favored generated images #1 (Simulatoren) and #3 (Driving Ranges). The image references and dark readable overlay are committed in `apps/web/src/pages/GolfNearMePage.tsx` on the **feature branch only**; a Course card hero is included. All existing record IDs, coordinates, API calls and selection filters are unchanged.
+
+**Release blocker:** the six binary `.webp` assets were provided to the developer as a ZIP (paths under `apps/web/public/golf-near-me/categories/`) but are **not yet committed** to GitHub because the connected GitHub writer is UTF-8-text-only. The developer must extract the ZIP locally, run `node apps/web/scripts/check-golf-near-me-artwork.mjs`, build the web app and commit/push the image files to the feature branch. See `docs/golf-near-me-category-imagery.md`.
+
+Source-level mapping and fallback checks passed; **npm build and on-screen artwork review remain pending**. No Stage/Production changes.
