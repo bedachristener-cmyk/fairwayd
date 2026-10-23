@@ -25,6 +25,13 @@ export function isCorsOriginAllowed(origin: string | undefined) {
   const normalizedOrigin = normalizeOrigin(origin);
   if (allowedExactOrigins.has(normalizedOrigin)) return true;
 
+  // The isolated Golf Near Me UI rehearsal runs on a separate loopback port.
+  // Only allow it for local development; never add a new CORS origin in production.
+  if (process.env.NODE_ENV !== 'production' &&
+      normalizedOrigin === 'http://127.0.0.1:5195') {
+    return true;
+  }
+
   try {
     const host = new URL(normalizedOrigin).hostname;
     return (
