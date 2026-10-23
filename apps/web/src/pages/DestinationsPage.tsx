@@ -929,13 +929,13 @@ export default function DestinationsPage() {
               }}
             >
               <span style={{ display: "grid", gap: 5 }}>
-                <strong style={{ fontSize: 20 }}>Golf Near Me</strong>
+                <strong style={{ fontSize: 20 }}>{t("golf_near_me_title")}</strong>
                 <span style={{ color: "var(--sub)", fontSize: 13 }}>
-                  Find simulators, lessons, driving ranges, shops and fitting near you · Basel pilot
+                  {t("golf_near_me_explore_desktop")}
                 </span>
               </span>
               <span style={{ color: "var(--green)", fontWeight: 900, whiteSpace: "nowrap" }}>
-                Explore →
+                {t("explore")} →
               </span>
             </button>
           </section>
@@ -1230,9 +1230,9 @@ export default function DestinationsPage() {
           }}
         >
           <span style={{ display: "grid", gap: 4 }}>
-            <strong style={{ fontSize: 17 }}>Golf Near Me</strong>
+            <strong style={{ fontSize: 17 }}>{t("golf_near_me_title")}</strong>
             <span style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.4 }}>
-              Simulators, lessons, shops and more · Basel pilot
+              {t("golf_near_me_explore_mobile")}
             </span>
           </span>
           <span style={{ color: "var(--green)", fontSize: 21, fontWeight: 900 }}>→</span>
