@@ -444,7 +444,7 @@ export default function GolfNearMePage() {
 
           <button type="button" onClick={() => void searchNearby()} disabled={status === "loading" || locating}
             style={{
-              background: "var(--green)", color: "white", border: 0, borderRadius: 14,
+              background: "var(--fw-pill-cta-bg)", color: "var(--fw-pill-cta-text)", border: 0, borderRadius: 14,
               padding: "14px 18px", fontWeight: 850, fontSize: 14,
               cursor: status === "loading" ? "wait" : "pointer",
               display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
