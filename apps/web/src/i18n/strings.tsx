@@ -2102,9 +2102,6 @@ const EXTRA_STRINGS = {
     golf_near_me_partial_courses: "Other services are shown. Golf courses could not be loaded.",
     golf_near_me_courses_error: "Golf courses could not be loaded. Please try again.",
     golf_near_me_results_empty: "No golf courses or services found in this area.",
-    // Basel pilot website photo attribution
-    golf_near_me_website_photo_source: "Photo from the venue website",
-    golf_near_me_website_photo_unavailable: "The website photo could not be loaded.",
     // Golf Near Me development-only pilot preview
     golf_near_me_preview_button: "Preview Basel sample (local)",
     golf_near_me_preview_title: "LOCAL PREVIEW · UNVERIFIED DRAFT",
@@ -2495,9 +2492,6 @@ const EXTRA_STRINGS = {
     golf_near_me_partial_courses: "Andere Angebote werden angezeigt. Golfplätze konnten nicht geladen werden.",
     golf_near_me_courses_error: "Golfplätze konnten nicht geladen werden. Bitte erneut versuchen.",
     golf_near_me_results_empty: "In diesem Umkreis wurden keine Golfplätze oder Angebote gefunden.",
-    // Basel pilot website photo attribution
-    golf_near_me_website_photo_source: "Foto von der Website des Anbieters",
-    golf_near_me_website_photo_unavailable: "Das Foto der Website konnte nicht geladen werden.",
     // Golf Near Me development-only pilot preview
     golf_near_me_preview_button: "Basel-Pilotvorschau (lokal)",
     golf_near_me_preview_title: "LOKALE VORSCHAU · UNGEPRÜFTER ENTWURF",
@@ -2888,9 +2882,6 @@ const EXTRA_STRINGS = {
     golf_near_me_partial_courses: "Les autres services sont affichés. Les parcours n'ont pas pu être chargés.",
     golf_near_me_courses_error: "Impossible de charger les parcours. Veuillez réessayer.",
     golf_near_me_results_empty: "Aucun parcours ni service trouvé dans cette zone.",
-    // Basel pilot website photo attribution
-    golf_near_me_website_photo_source: "Photo du site du lieu",
-    golf_near_me_website_photo_unavailable: "La photo du site n'a pas pu être chargée.",
     // Golf Near Me development-only pilot preview
     golf_near_me_preview_button: "Aperçu de Bâle (local)",
     golf_near_me_preview_title: "APERÇU LOCAL · BROUILLON NON VÉRIFIÉ",
@@ -3281,9 +3272,6 @@ const EXTRA_STRINGS = {
     golf_near_me_partial_courses: "Gli altri servizi sono visibili. Impossibile caricare i campi da golf.",
     golf_near_me_courses_error: "Impossibile caricare i campi da golf. Riprova.",
     golf_near_me_results_empty: "Nessun campo da golf o servizio trovato in questa zona.",
-    // Basel pilot website photo attribution
-    golf_near_me_website_photo_source: "Foto dal sito della struttura",
-    golf_near_me_website_photo_unavailable: "Impossibile caricare la foto dal sito.",
     // Golf Near Me development-only pilot preview
     golf_near_me_preview_button: "Anteprima Basilea (locale)",
     golf_near_me_preview_title: "ANTEPRIMA LOCALE · BOZZA NON VERIFICATA",
@@ -3674,9 +3662,6 @@ const EXTRA_STRINGS = {
     golf_near_me_partial_courses: "Se muestran otros servicios. No se pudieron cargar los campos de golf.",
     golf_near_me_courses_error: "No se pudieron cargar los campos de golf. Vuelve a intentarlo.",
     golf_near_me_results_empty: "No se encontraron campos ni servicios en esta zona.",
-    // Basel pilot website photo attribution
-    golf_near_me_website_photo_source: "Foto del sitio web del establecimiento",
-    golf_near_me_website_photo_unavailable: "No se pudo cargar la foto del sitio web.",
     // Golf Near Me development-only pilot preview
     golf_near_me_preview_button: "Vista previa de Basilea (local)",
     golf_near_me_preview_title: "VISTA PREVIA LOCAL · BORRADOR SIN VERIFICAR",
@@ -4067,9 +4052,6 @@ const EXTRA_STRINGS = {
     golf_near_me_partial_courses: "다른 서비스는 표시되지만 골프 코스를 불러오지 못했습니다.",
     golf_near_me_courses_error: "골프 코스를 불러오지 못했습니다. 다시 시도해 주세요.",
     golf_near_me_results_empty: "이 지역에서 골프 코스나 서비스를 찾지 못했습니다.",
-    // Basel pilot website photo attribution
-    golf_near_me_website_photo_source: "업체 웹사이트 사진",
-    golf_near_me_website_photo_unavailable: "웹사이트 사진을 불러올 수 없습니다.",
     // Golf Near Me development-only pilot preview
     golf_near_me_preview_button: "바젤 샘플 미리보기 (로컬)",
     golf_near_me_preview_title: "로컬 미리보기 · 미검증 초안",
@@ -4460,9 +4442,6 @@ const EXTRA_STRINGS = {
     golf_near_me_partial_courses: "แสดงบริการอื่นแล้ว แต่ไม่สามารถโหลดสนามกอล์ฟได้",
     golf_near_me_courses_error: "ไม่สามารถโหลดสนามกอล์ฟได้ โปรดลองอีกครั้ง",
     golf_near_me_results_empty: "ไม่พบสนามกอล์ฟหรือบริการในบริเวณนี้",
-    // Basel pilot website photo attribution
-    golf_near_me_website_photo_source: "ภาพจากเว็บไซต์สถานที่",
-    golf_near_me_website_photo_unavailable: "ไม่สามารถโหลดภาพจากเว็บไซต์ได้",
     // Golf Near Me development-only pilot preview
     golf_near_me_preview_button: "ดูตัวอย่างบาเซิล (ในเครื่อง)",
     golf_near_me_preview_title: "ตัวอย่างในเครื่อง · ฉบับร่างที่ยังไม่ตรวจสอบ",
