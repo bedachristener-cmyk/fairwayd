@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { getMapBasemap } from "../maps/basemap";
 import { t } from "../i18n/strings";
+import { getNearbyCourses, type NearbyCourse } from "../api/nearbyCourses";
 import {
   getNearbyGolfServices,
   GolfServicesUnavailableError,
@@ -14,14 +15,16 @@ import {
 } from "../api/golfServices";
 
 type GolfServiceDisplayVenue = GolfServiceVenue & { previewImageUrl?: string };
+type NearMeCategory = GolfServiceCategory | "COURSE" | "";
 type Position = { lat: number; lon: number; label: string };
 type Radius = 10 | 25 | 50 | 100;
 type SearchStatus = "idle" | "loading" | "ready" | "preview" | "not-deployed" | "unavailable" | "error";
 
 const BASEL: Position = { lat: 47.5596, lon: 7.5886, label: t("golf_near_me_basel_pilot") };
 const RADII: Radius[] = [10, 25, 50, 100];
-const CATEGORIES: { value: GolfServiceCategory | ""; label: string }[] = [
+const CATEGORIES: { value: NearMeCategory; label: string }[] = [
   { value: "", label: t("golf_near_me_all_services") },
+  { value: "COURSE", label: t("golf_near_me_courses") },
   { value: "SIMULATOR", label: t("golf_near_me_simulators") },
   { value: "ACADEMY", label: t("golf_near_me_lessons_pros") },
   { value: "RANGE", label: t("golf_near_me_driving_ranges") },
@@ -201,14 +204,39 @@ function VenueCard({
   );
 }
 
+function CourseCard({ course }: { course: NearbyCourse }) {
+  const location = [course.postalCode, course.city, course.region, course.country]
+    .filter(Boolean).join(" · ");
+  return (
+    <article style={{ ...panel, padding: 16, display: "grid", gap: 8 }}>
+      <span style={{ ...subtle, fontWeight: 800, color: "var(--green)" }}>
+        {t("golf_near_me_course")}
+      </span>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+        <strong style={{ fontSize: 17 }}>{course.name}</strong>
+        <strong style={{ color: "var(--green)", whiteSpace: "nowrap", fontSize: 13 }}>
+          {(course.distanceM / 1000).toFixed(1)} km
+        </strong>
+      </div>
+      {location ? <span style={subtle}>{location}</span> : null}
+      <Link to={`/courses/${encodeURIComponent(course.id)}`}
+        style={{ color: "var(--green)", fontWeight: 800, fontSize: 13 }}>
+        {t("golf_near_me_open_course")} →
+      </Link>
+    </article>
+  );
+}
+
 export default function GolfNearMePage() {
   const [origin, setOrigin] = useState<Position>(BASEL);
   const [radius, setRadius] = useState<Radius>(25);
-  const [category, setCategory] = useState<GolfServiceCategory | "">("");
+  const [category, setCategory] = useState<NearMeCategory>("");
   const [status, setStatus] = useState<SearchStatus>("idle");
   const [error, setError] = useState("");
   const [locationError, setLocationError] = useState("");
   const [items, setItems] = useState<GolfServiceDisplayVenue[]>([]);
+  const [courseItems, setCourseItems] = useState<NearbyCourse[]>([]);
+  const [partialWarning, setPartialWarning] = useState<"services" | "courses" | null>(null);
   const [truncated, setTruncated] = useState(false);
   const [view, setView] = useState<"list" | "map">("list");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -221,6 +249,8 @@ export default function GolfNearMePage() {
     currentRequest.current?.abort();
     setStatus("idle");
     setItems([]);
+    setCourseItems([]);
+    setPartialWarning(null);
     setSelectedId(null);
     setTruncated(false);
     setError("");
@@ -258,8 +288,10 @@ export default function GolfNearMePage() {
     const { baselPilotPreview } = await import("../data/golfNearMeBaselPreview");
     if (controller.signal.aborted) return;
     setOrigin(BASEL);
-    setItems(baselPilotPreview(category));
+    setItems(category === "COURSE" ? [] : baselPilotPreview(category));
     setTruncated(false);
+    setCourseItems([]);
+    setPartialWarning(null);
     setSelectedId(null);
     setStatus("preview");
     setView("list");
