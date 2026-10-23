@@ -268,3 +268,13 @@ Source-level mapping and fallback checks passed; **npm build and on-screen artwo
 ## AI category image assets confirmed in GitHub (2026-10-23)
 
 Following local visual confirmation of the simulator hero and the refined light neutral border, the developer committed and pushed six WebP images to `feature/golf-near-me-ch-pilot`, commit `c1c417f9eeaaae58224f750ccf3a96fa75c0a0a7`. Independent GitHub lookup confirmed exact files `academy.webp`, `course.webp`, `fitting.webp`, `range.webp`, `shop.webp`, `simulator.webp` under `apps/web/public/golf-near-me/categories/` (file sizes 49,520; 83,538; 50,876; 45,404; 69,302; 36,524 bytes respectively). This resolves the *earlier* binary image release blocker documented above. PR #11 remains Draft into `stage`. No deployment or database change. Next test: existing local course API on port 3000 alongside the isolated service API.
+
+## Local course API and isolated UI CORS (2026-10-23)
+
+User verified with PowerShell an ordinary course lookup on `http://127.0.0.1:3000/api/courses/nearby?lat=47.5596&lon=7.5886&radiusM=25000`: **12 Course records returned**. Browser-only `http://127.0.0.1:5195/golf-near-me` still previously showed the courses load warning.
+
+Root cause identified in `apps/api/src/cors.ts`: the local API accepted Vite 5173, but not the dedicated rehearsal origin `http://127.0.0.1:5195`. The browser enforces CORS whereas the PowerShell HTTP call does not.
+
+Committed a feature-branch-only CORS exception for **exactly** `http://127.0.0.1:5195` when `NODE_ENV !== 'production'`. The production origin policy is unchanged. Added regression test in `apps/api/src/cors.spec.ts` verifying allowed dev origin and rejected production/other-host/other-port cases. Tests and the combined browser UI verification **remain to be run locally**; no API deployment or remote database changes.
+
+Next local steps: pull the feature branch; restart the local API on port 3000 (or let its watch build restart); run `cd apps/api; npx jest cors --runInBand`; reload the existing isolated UI on port 5195 and search Basel 25 km / "Alles rund um Golf". Expected 12 course cards plus one independent The Golf Lounge venue card; the course error warning should disappear.
