@@ -11,21 +11,21 @@
       "city": "Rheinfelden",
       "addressLine": "Quellenstrasse 37",
       "postalCode": "4310",
-      "lat": null,
-      "lon": null,
+      "lat": 47.5495127,
+      "lon": 7.786086,
       "website": "https://thegolflounge.ch/",
       "sourceKind": "OFFICIAL_WEBSITE",
       "sourceUrl": "https://thegolflounge.ch/",
       "verifiedAt": null,
-      "reviewNotes": "User knows the venue: two simulators, and SebbyGolf is the golf professional teaching there. Venue and facilities require a final publication review. Coordinates omitted pending independently verified geocoding.",
+      "reviewNotes": "Review-only. Address, coaching, shop and fitting confirmed on the operator site https://thegolflounge.ch/ (reviewed 2026-10-23). Two simulator bays independently reported at https://www.golfsimulators.ch/en/venues/sebbygolf-rheinfelden and confirmed by user. Coordinates 47.5495127, 7.786086 are an approximate address/building location published for Gewerbehaus Q-37 by yellowpages.swiss; NOT a surveyed venue entrance. The Swiss Golf list links Heijdenberg Golf Schools and The Golf Lounge at this address. Do not publish automatically, do not copy any third-party venue photos.",
       "offerings": [
         {
           "category": "SIMULATOR",
           "status": "DRAFT",
           "unitCount": 2,
           "label": "Indoor golf simulators",
-          "sourceKind": "USER_REPORT",
-          "sourceUrl": null,
+          "sourceKind": "INDEPENDENT_RESEARCH",
+          "sourceUrl": "https://www.golfsimulators.ch/en/venues/sebbygolf-rheinfelden",
           "verifiedAt": null
         },
         {
@@ -58,16 +58,17 @@
       ],
       "providers": [
         {
-          "name": "SebbyGolf",
+          "name": "Sebastian Heijdenberg",
           "kind": "PERSON",
           "role": "GOLF_PRO",
           "status": "DRAFT",
-          "sourceKind": "USER_REPORT",
-          "sourceUrl": "https://thegolflounge.ch/",
+          "sourceKind": "INDEPENDENT_RESEARCH",
+          "sourceUrl": "https://www.golfsimulators.ch/en/venues/sebbygolf-rheinfelden",
           "verifiedAt": null,
-          "reviewNotes": "User-reported: Sebby is a golf professional offering instruction at this venue. The operator advertises golf lessons with Sebby."
+          "reviewNotes": "SebbyGolf is the coaching brand; instructor Sebastian Heijdenberg is named by independent public sources. The operator's website advertises golf lessons with Sebby. Operator confirmation for publication can be requested."
         }
-      ]
+      ],
+      "phone": "+41 76 442 81 89"
     }
   ]
 }
