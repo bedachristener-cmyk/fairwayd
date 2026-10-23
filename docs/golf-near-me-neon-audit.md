@@ -321,3 +321,13 @@ Stage migration guard committed only on the feature branch:
 **STOP before merging:** Ask developer to check in Railway, **without copying credentials**, that the existing `fairwayd-stage` service variable `NEON_DATABASE_URL` uses `ep-restless-wildflower-agf67w6m[optional -pooler].c-2.eu-central-1.aws.neon.tech/fairwayd_stage` with `sslmode=require` or `verify-full`. The connector cannot reveal the value. Wrong configuration could prevent Stage from starting even though the guard avoids database writes. The user only needs to confirm host/DB/SSL, **never paste the whole URL**.
 
 Once confirmed: re-check PR tests/status; merge to **Stage only**; monitor automatic Railway API Prisma migration and Vercel Stage web deployment; confirm migration in Neon **Stage**; arrange a guarded Stage-only verified Golf Lounge pilot record (the isolated Neon test fixture does not magically appear in Stage); enable `GOLF_SERVICES_API_ENABLED=true` on the **Stage service only**; verify browser/mobile URL, API health and CORS; do not touch Production. Mobile end-to-end QA must include simulator venue, offering details, category image, location/map, and Course opening.
+
+## Railway runtime confirms exact Stage database (2026-10-23)
+
+A fresh, **read-only** lookup of the deployed Railway `fairwayd-stage` runtime logs (`8e726e39-aac9-4ba1-986f-c23ab3a6f83d`) supplied the exact Prisma datasource banner:
+
+`Datasource "db": PostgreSQL database "fairwayd_stage", schema "public" at "ep-restless-wildflower-agf67w6m-pooler.c-2.eu-central-1.aws.neon.tech"`
+
+The same deployment logs confirm `59 migrations found in prisma/migrations` and `No pending migrations to apply.` This independently verifies **the actual Stage service host and database pathname**, resolving those two previously unverified settings without revealing database credentials. The service's current `sslmode` URL parameter remains hidden by OAuth and is **not printed in the logs**. The new Stage-specific pre-migration guard, already committed to the feature branch, requires either `sslmode=require` or `sslmode=verify-full`. If the existing URL omits either parameter, a Stage merge would result in a fail-closed *service startup failure*. For safe rollout, inspect SSL mode in Railway dashboard (not here in full URL) or adapt the guard to validate the actual TLS session instead, **before any Stage merge**.
+
+This read-only verification did not modify any service or database. Vercel was subsequently connected by the user, but an action-capable Vercel connector surface is not yet available in this tool session, so no Vercel deployment has been invoked.
