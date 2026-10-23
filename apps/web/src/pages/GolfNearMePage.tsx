@@ -5,6 +5,7 @@ import {
   ArrowLeft, ExternalLink, List, LocateFixed, MapPinned, Search,
 } from "lucide-react";
 import { getMapBasemap } from "../maps/basemap";
+import { t } from "../i18n/strings";
 import {
   getNearbyGolfServices,
   GolfServicesUnavailableError,
@@ -16,22 +17,22 @@ type Position = { lat: number; lon: number; label: string };
 type Radius = 10 | 25 | 50 | 100;
 type SearchStatus = "idle" | "loading" | "ready" | "not-deployed" | "unavailable" | "error";
 
-const BASEL: Position = { lat: 47.5596, lon: 7.5886, label: "Basel (pilot)" };
+const BASEL: Position = { lat: 47.5596, lon: 7.5886, label: t("golf_near_me_basel_pilot") };
 const RADII: Radius[] = [10, 25, 50, 100];
 const CATEGORIES: { value: GolfServiceCategory | ""; label: string }[] = [
-  { value: "", label: "All services" },
-  { value: "SIMULATOR", label: "Simulators" },
-  { value: "ACADEMY", label: "Lessons & pros" },
-  { value: "RANGE", label: "Driving ranges" },
-  { value: "SHOP", label: "Golf shops" },
-  { value: "FITTING", label: "Club fitting" },
+  { value: "", label: t("golf_near_me_all_services") },
+  { value: "SIMULATOR", label: t("golf_near_me_simulators") },
+  { value: "ACADEMY", label: t("golf_near_me_lessons_pros") },
+  { value: "RANGE", label: t("golf_near_me_driving_ranges") },
+  { value: "SHOP", label: t("golf_near_me_golf_shops") },
+  { value: "FITTING", label: t("golf_near_me_club_fitting") },
 ];
 const CATEGORY_LABEL: Record<GolfServiceCategory, string> = {
-  SIMULATOR: "Simulator",
-  ACADEMY: "Lessons & coaching",
-  RANGE: "Driving range",
-  SHOP: "Golf shop",
-  FITTING: "Club fitting",
+  SIMULATOR: t("golf_near_me_simulators"),
+  ACADEMY: t("golf_near_me_lessons_pros"),
+  RANGE: t("golf_near_me_driving_ranges"),
+  SHOP: t("golf_near_me_golf_shops"),
+  FITTING: t("golf_near_me_club_fitting"),
 };
 const panel: CSSProperties = {
   padding: 18,
@@ -98,7 +99,7 @@ function VenueCard({
         </span>
         <span style={subtle}>{location}</span>
         <span style={{ ...subtle, fontWeight: 750, color: "var(--green)" }}>
-          {selected ? "Hide details −" : "View details +"}
+          {selected ? t("golf_near_me_hide_details") : t("golf_near_me_view_details")}
         </span>
       </button>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -119,7 +120,7 @@ function VenueCard({
               {offering.description ? <span style={subtle}>{offering.description}</span> : null}
               {safeUrl(offering.bookingUrl) ? (
                 <a href={safeUrl(offering.bookingUrl)!} target="_blank" rel="noopener noreferrer" style={{ color: "var(--green)", fontSize: 13 }}>
-                  Booking details <ExternalLink size={12} style={{ verticalAlign: "middle" }} />
+                  {t("golf_near_me_booking_details")} <ExternalLink size={12} style={{ verticalAlign: "middle" }} />
                 </a>
               ) : null}
             </div>
@@ -127,20 +128,20 @@ function VenueCard({
           {venue.venueProviders.map(({ role, provider }) => (
             <div key={provider.id} style={{ display: "grid", gap: 3 }}>
               <strong style={{ color: "var(--text)", fontSize: 13 }}>{provider.name}</strong>
-              <span style={subtle}>Golf professional · {role.replaceAll("_", " ").toLowerCase()}</span>
+              <span style={subtle}>{t("golf_near_me_professional")} · {role.replaceAll("_", " ").toLowerCase()}</span>
               {safeUrl(provider.website) ? (
                 <a href={safeUrl(provider.website)!} target="_blank" rel="noopener noreferrer" style={{ color: "var(--green)", fontSize: 13 }}>
-                  Provider website <ExternalLink size={12} style={{ verticalAlign: "middle" }} />
+                  {t("golf_near_me_provider_website")} <ExternalLink size={12} style={{ verticalAlign: "middle" }} />
                 </a>
               ) : null}
             </div>
           ))}
           {website ? (
             <a href={website} target="_blank" rel="noopener noreferrer" style={{ color: "var(--green)", fontWeight: 750, fontSize: 13 }}>
-              Visit venue website <ExternalLink size={12} style={{ verticalAlign: "middle" }} />
+              {t("golf_near_me_venue_website")} <ExternalLink size={12} style={{ verticalAlign: "middle" }} />
             </a>
           ) : null}
-          {venue.phone ? <span style={subtle}>Phone: {venue.phone}</span> : null}
+          {venue.phone ? <span style={subtle}>{t("phone")}: {venue.phone}</span> : null}
         </div>
       ) : null}
     </article>
@@ -153,6 +154,7 @@ export default function GolfNearMePage() {
   const [category, setCategory] = useState<GolfServiceCategory | "">("");
   const [status, setStatus] = useState<SearchStatus>("idle");
   const [error, setError] = useState("");
+  const [locationError, setLocationError] = useState("");
   const [items, setItems] = useState<GolfServiceVenue[]>([]);
   const [truncated, setTruncated] = useState(false);
   const [view, setView] = useState<"list" | "map">("list");
@@ -173,19 +175,20 @@ export default function GolfNearMePage() {
 
   function useMyLocation() {
     if (!navigator.geolocation) {
-      setError("Your browser does not support location services.");
+      setLocationError(t("golf_near_me_geo_unsupported"));
       return;
     }
     setLocating(true);
-    setError("");
+    setLocationError("");
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
         invalidateResults();
-        setOrigin({ lat: coords.latitude, lon: coords.longitude, label: "Your location" });
+        setLocationError("");
+        setOrigin({ lat: coords.latitude, lon: coords.longitude, label: t("your_location") });
         setLocating(false);
       },
       () => {
-        setError("Location was unavailable or permission was denied. You can still try the Basel pilot.");
+        setLocationError(t("golf_near_me_geo_denied"));
         setLocating(false);
       },
       { enableHighAccuracy: false, timeout: 12000, maximumAge: 120000 },
@@ -216,7 +219,7 @@ export default function GolfNearMePage() {
         setStatus(cause.reason);
       } else {
         setStatus("error");
-        setError(cause instanceof Error ? cause.message : "Unable to load nearby services.");
+        setError(t("golf_near_me_error_body"));
       }
     }
   }
@@ -234,41 +237,43 @@ export default function GolfNearMePage() {
         boxSizing: "border-box", minWidth: 0,
       }}>
         <Link to="/destinations" style={{ ...subtle, display: "inline-flex", gap: 7, alignItems: "center", textDecoration: "none" }}>
-          <ArrowLeft size={16} /> Explore
+          <ArrowLeft size={16} /> {t("explore")}
         </Link>
 
         <header style={{ ...panel, padding: "24px 20px", background:
           "linear-gradient(120deg, color-mix(in srgb, var(--green) 14%, var(--card)), var(--card) 74%)" }}>
           <div style={{ fontSize: 11, fontWeight: 850, letterSpacing: "0.12em", color: "var(--green)", textTransform: "uppercase" }}>
-            Local golf directory · Pilot
+            {t("golf_near_me_eyebrow")}
           </div>
           <h1 style={{ fontSize: "clamp(27px, 5vw, 42px)", letterSpacing: "-0.045em", lineHeight: 1.1, margin: "10px 0" }}>
-            Golf Near Me
+            {t("golf_near_me_title")}
           </h1>
           <p style={{ ...subtle, maxWidth: 620, margin: 0 }}>
-            Discover places to practice, learn and shop. One venue may offer multiple services and host independent golf professionals.
+            {t("golf_near_me_intro")}
           </p>
         </header>
 
-        <section style={{ ...panel, display: "grid", gap: 15 }} aria-label="Nearby search">
+        <section style={{ ...panel, display: "grid", gap: 15 }} aria-label={t("golf_near_me_search_area")}>
           <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
             <div style={{ display: "grid", gap: 3 }}>
-              <strong style={{ fontSize: 15 }}>Search area</strong>
+              <strong style={{ fontSize: 15 }}>{t("golf_near_me_search_area")}</strong>
               <span style={subtle}><MapPinned size={14} style={{ verticalAlign: "middle" }} /> {origin.label}</span>
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button type="button" style={chip} disabled={locating} onClick={useMyLocation}>
                 <LocateFixed size={15} style={{ verticalAlign: "middle" }} />
-                {" "}{locating ? "Finding location…" : "Use my location"}
+                {" "}{locating ? t("golf_near_me_locating") : t("golf_near_me_my_location")}
               </button>
-              <button type="button" style={chip} onClick={() => { invalidateResults(); setOrigin(BASEL); }}>
-                Basel pilot
+              <button type="button" style={chip} onClick={() => { invalidateResults(); setLocationError(""); setOrigin(BASEL); }}>
+                {t("golf_near_me_basel_pilot")}
               </button>
             </div>
           </div>
 
+          {locationError ? <p role="alert" style={{ ...subtle, color: "var(--danger)", margin: 0 }}>{locationError}</p> : null}
+
           <div style={{ display: "grid", gap: 8 }}>
-            <strong style={{ fontSize: 13 }}>Distance</strong>
+            <strong style={{ fontSize: 13 }}>{t("golf_near_me_distance")}</strong>
             <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
               {RADII.map((value) => (
                 <button type="button" key={value} onClick={() => { invalidateResults(); setRadius(value); }}
@@ -282,7 +287,7 @@ export default function GolfNearMePage() {
           </div>
 
           <div style={{ display: "grid", gap: 8 }}>
-            <strong style={{ fontSize: 13 }}>What are you looking for?</strong>
+            <strong style={{ fontSize: 13 }}>{t("golf_near_me_looking_for")}</strong>
             <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
               {CATEGORIES.map((item) => (
                 <button type="button" key={item.value || "ALL"} aria-pressed={category === item.value}
@@ -302,57 +307,57 @@ export default function GolfNearMePage() {
               cursor: status === "loading" ? "wait" : "pointer",
               display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
             }}>
-            <Search size={17} /> {status === "loading" ? "Searching…" : "Find golf services"}
+            <Search size={17} /> {status === "loading" ? t("golf_near_me_searching") : t("golf_near_me_search_button")}
           </button>
           <span style={{ ...subtle, fontSize: 11 }}>
-            Location is used only for this search and is not saved. Searches can include nearby countries.
+            {t("golf_near_me_privacy")}
           </span>
         </section>
 
         <section style={{ display: "grid", gap: 12 }} aria-live="polite">
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
             <div>
-              <h2 style={{ fontSize: 20, margin: "0 0 3px" }}>Nearby services</h2>
+              <h2 style={{ fontSize: 20, margin: "0 0 3px" }}>{t("golf_near_me_nearby")}</h2>
               <div style={subtle}>
-                {status === "ready" ? `${items.length} verified ${items.length === 1 ? "venue" : "venues"}` : "Verified businesses only"}
-                {truncated ? " · Showing first 100" : ""}
+                {status === "ready" ? `${items.length} ${t(items.length === 1 ? "golf_near_me_verified_venue" : "golf_near_me_verified_venues")}` : t("golf_near_me_verified_only")}
+                {truncated ? ` · ${t("golf_near_me_showing_first")}` : ""}
               </div>
             </div>
             <div style={{ display: "flex", gap: 6 }}>
               <button type="button" aria-pressed={view === "list"} onClick={() => setView("list")} style={{
                 ...chip, borderColor: view === "list" ? "var(--green)" : "var(--border)",
-              }}><List size={15} style={{ verticalAlign: "middle" }} /> List</button>
+              }}><List size={15} style={{ verticalAlign: "middle" }} /> {t("golf_near_me_list")}</button>
               <button type="button" aria-pressed={view === "map"} onClick={() => setView("map")} style={{
                 ...chip, borderColor: view === "map" ? "var(--green)" : "var(--border)",
-              }}><MapPinned size={15} style={{ verticalAlign: "middle" }} /> Map</button>
+              }}><MapPinned size={15} style={{ verticalAlign: "middle" }} /> {t("map")}</button>
             </div>
           </div>
 
           {status !== "ready" ? (
             <div style={{ ...panel, display: "grid", gap: 6 }}>
               <strong>
-                {status === "loading" ? "Finding services…" :
-                  status === "not-deployed" ? "Directory API not deployed yet" :
-                  status === "unavailable" ? "Directory currently unavailable" :
-                  status === "error" ? "Search could not be completed" :
-                  "Explore nearby golf services"}
+                {status === "loading" ? t("golf_near_me_loading_title") :
+                  status === "not-deployed" ? t("golf_near_me_missing_title") :
+                  status === "unavailable" ? t("golf_near_me_unavailable_title") :
+                  status === "error" ? t("golf_near_me_error_title") :
+                  t("golf_near_me_initial_title")}
               </strong>
               <span style={subtle}>
                 {status === "not-deployed"
-                  ? "The connected API does not provide the Golf Near Me endpoint yet. The frontend pilot can still be explored."
+                  ? t("golf_near_me_missing_body")
                   : status === "unavailable"
-                    ? "The Golf Near Me directory is disabled or temporarily unavailable. No live results can be shown right now."
+                    ? t("golf_near_me_unavailable_body")
                     : status === "error"
                     ? error
                     : status === "loading"
-                      ? "Checking verified nearby locations."
-                      : "Choose a radius and a category, then search. The Basel pilot is selected by default."}
+                      ? t("golf_near_me_loading_body")
+                      : t("golf_near_me_initial_body")}
               </span>
             </div>
           ) : items.length === 0 ? (
             <div style={panel}>
-              <strong>No verified venues found in this search.</strong>
-              <p style={subtle}>Try a larger radius or a different category. Draft venues are intentionally not shown.</p>
+              <strong>{t("golf_near_me_empty_title")}</strong>
+              <p style={subtle}>{t("golf_near_me_empty_body")}</p>
             </div>
           ) : view === "list" ? (
             <div style={{ display: "grid", gap: 10 }}>
@@ -379,13 +384,13 @@ export default function GolfNearMePage() {
                     pathOptions={{ color: "#165d36", fillColor: "#2e9d5f", fillOpacity: 0.9 }}>
                     <Popup>
                       <strong>{venue.name}</strong>
-                      <div>{venue.distanceKm.toFixed(1)} km away</div>
+                      <div>{venue.distanceKm.toFixed(1)} km {t("golf_near_me_away")}</div>
                     </Popup>
                   </CircleMarker>
                 ))}
               </MapContainer>
               {status === "ready" && validMarkers.length !== items.length ? (
-                <p style={{ ...subtle, padding: "0 12px" }}>Some venues have no map coordinates.</p>
+                <p style={{ ...subtle, padding: "0 12px" }}>{t("golf_near_me_no_map_coordinates")}</p>
               ) : null}
             </div>
           ) : null}
