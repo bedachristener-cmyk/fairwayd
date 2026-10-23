@@ -138,7 +138,7 @@ function VenueCategoryVisual({ venue }: { venue: GolfServiceVenue }) {
       display: "flex", alignItems: "center", justifyContent: "space-between",
       gap: 14, minHeight: 135, padding: "20px 24px",
       borderRadius: 14, overflow: "hidden",
-      border: "1px solid color-mix(in srgb, var(--green) 24%, var(--border))",
+      border: "1px solid rgba(255, 255, 255, 0.08)",
       backgroundColor: "#0b1e17",
       backgroundImage: golfHeroBackground(category ? SERVICE_HERO_IMAGE[category] : COURSE_HERO_IMAGE),
       backgroundSize: "cover",
