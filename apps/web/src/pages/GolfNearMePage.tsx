@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
 import {
-  ArrowLeft, ExternalLink, List, LocateFixed, MapPinned, Search,
+  ArrowLeft, ExternalLink, GraduationCap, List, LocateFixed, MapPinned, Monitor, Search, ShoppingBag, SlidersHorizontal, Target,
 } from "lucide-react";
 import { getMapBasemap } from "../maps/basemap";
 import { t } from "../i18n/strings";
@@ -14,7 +14,6 @@ import {
   type GolfServiceVenue,
 } from "../api/golfServices";
 
-type GolfServiceDisplayVenue = GolfServiceVenue & { previewImageUrl?: string };
 type NearMeCategory = GolfServiceCategory | "COURSE" | "";
 type Position = { lat: number; lon: number; label: string };
 type Radius = 10 | 25 | 50 | 100;
@@ -73,41 +72,48 @@ function RecenterMap({ lat, lon }: { lat: number; lon: number }) {
   return null;
 }
 
-function WebsitePreviewPhoto({ src, venueName, website }: {
-  src: string;
-  venueName: string;
-  website: string | null;
-}) {
-  const [failed, setFailed] = useState(false);
-  const websiteLink = safeUrl(website);
+// Neutral visual for service venues until a suitably licensed venue image is available.
+// It deliberately does not imply that this is a photograph of the actual business.
+function VenueCategoryVisual({ venue }: { venue: GolfServiceVenue }) {
+  const categories = venue.offerings.map((offering) => offering.category);
+  const category: GolfServiceCategory =
+    categories.includes("SIMULATOR") ? "SIMULATOR" :
+    categories.includes("ACADEMY") ? "ACADEMY" :
+    categories.includes("RANGE") ? "RANGE" :
+    categories.includes("SHOP") ? "SHOP" : "FITTING";
+  const Icon =
+    category === "SIMULATOR" ? Monitor :
+    category === "ACADEMY" ? GraduationCap :
+    category === "RANGE" ? Target :
+    category === "SHOP" ? ShoppingBag : SlidersHorizontal;
+
   return (
-    <div style={{ display: "grid", gap: 6 }}>
-      {failed ? (
-        <div style={{
-          ...subtle, padding: 16, borderRadius: 14, border: "1px dashed var(--border)",
-          background: "var(--bg)",
+    <div aria-hidden="true" style={{
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      gap: 14, minHeight: 135, padding: "20px 24px",
+      borderRadius: 14, overflow: "hidden",
+      border: "1px solid color-mix(in srgb, var(--green) 24%, var(--border))",
+      background: "linear-gradient(120deg, color-mix(in srgb, var(--green) 21%, var(--card)), color-mix(in srgb, var(--muted) 77%, var(--card)))",
+      color: "var(--text)",
+    }}>
+      <div style={{ display: "grid", gap: 9, minWidth: 0 }}>
+        <div style={{ height: 4, width: 45, borderRadius: 999, background: "var(--green)" }} />
+        <strong style={{
+          fontSize: "clamp(18px, 3vw, 24px)", lineHeight: 1.15, fontWeight: 850,
+          overflowWrap: "anywhere",
         }}>
-          {t("golf_near_me_website_photo_unavailable")}
-        </div>
-      ) : (
-        <a href={websiteLink ?? src} target="_blank" rel="noopener noreferrer"
-          aria-label={venueName} style={{ display: "block", borderRadius: 14, overflow: "hidden" }}>
-          <img src={src} alt={venueName} loading="lazy"
-            onError={() => setFailed(true)}
-            style={{
-              display: "block", width: "100%", height: "clamp(170px, 24vw, 260px)",
-              objectFit: "cover", objectPosition: "center",
-              background: "var(--bg)",
-            }} />
-        </a>
-      )}
-      <span style={{ ...subtle, fontSize: 11 }}>
-        {t("golf_near_me_website_photo_source")}
-        {websiteLink ? (
-          <> · <a href={websiteLink} target="_blank" rel="noopener noreferrer"
-            style={{ color: "var(--green)" }}>thegolflounge.ch <ExternalLink size={11} style={{ verticalAlign: "middle" }} /></a></>
-        ) : null}
-      </span>
+          {CATEGORY_LABEL[category]}
+        </strong>
+      </div>
+      <div style={{
+        flex: "0 0 auto", display: "grid", placeItems: "center",
+        width: 85, height: 85, borderRadius: 22,
+        border: "1px solid color-mix(in srgb, var(--green) 40%, var(--border))",
+        background: "color-mix(in srgb, var(--green) 12%, var(--card))",
+        color: "var(--green)",
+      }}>
+        <Icon size={44} strokeWidth={1.5} />
+      </div>
     </div>
   );
 }
@@ -115,7 +121,7 @@ function WebsitePreviewPhoto({ src, venueName, website }: {
 function VenueCard({
   venue, selected, onSelect, isDraft = false,
 }: {
-  venue: GolfServiceDisplayVenue;
+  venue: GolfServiceVenue;
   selected: boolean;
   onSelect: () => void;
   isDraft?: boolean;
@@ -129,10 +135,7 @@ function VenueCard({
 
   return (
     <article style={{ ...panel, padding: 16, display: "grid", gap: 10 }}>
-      {isDraft && venue.previewImageUrl ? (
-        <WebsitePreviewPhoto src={venue.previewImageUrl}
-          venueName={venue.name} website={venue.website} />
-      ) : null}
+      <VenueCategoryVisual venue={venue} />
       <button
         type="button"
         onClick={onSelect}
@@ -234,7 +237,7 @@ export default function GolfNearMePage() {
   const [status, setStatus] = useState<SearchStatus>("idle");
   const [error, setError] = useState("");
   const [locationError, setLocationError] = useState("");
-  const [items, setItems] = useState<GolfServiceDisplayVenue[]>([]);
+  const [items, setItems] = useState<GolfServiceVenue[]>([]);
   const [courseItems, setCourseItems] = useState<NearbyCourse[]>([]);
   const [partialWarning, setPartialWarning] = useState<"services" | "courses" | null>(null);
   const [truncated, setTruncated] = useState(false);
