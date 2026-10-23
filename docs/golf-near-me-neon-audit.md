@@ -1,0 +1,48 @@
+# Fairwayd Golf Near Me – Neon / Railway migration baseline audit
+
+**Audit date:** 2026-10-23. **Mode:** metadata reads and explicit SQL `SELECT` only; zero migrations, writes or deployments.
+
+## Environment map
+
+| Role | Provider | Name / ID | Host prefix |
+|---|---|---|---|
+| Railway API Stage service | Railway project `intuitive-eagerness` | `fairwayd-stage`, deployment source Git branch `stage` | Its `NEON_DATABASE_URL` variable exists, but Railway OAuth does not disclose its value |
+| Neon Stage branch | Neon project `Fairwayd` (`billowing-breeze-32238900`) | `stage` / `br-broad-salad-ag6pnor0` | `ep-restless-wildflower-agf67w6m` |
+| Isolated test branch | same Neon project | `br-rough-darkness-ag13g4d3` (created 2026-10-21, cloned from Stage) | `ep-summer-sound-aggo2eqy` |
+| Neon production | same Neon project | `production` / `br-soft-cell-aga965p7` | `ep-lingering-pine-ag2rjgsv` |
+
+The Railway Stage host prefix was obtained from an earlier verified Railway environment check; it **matches the Neon Stage branch endpoint**. Distinct host prefixes on the isolated test branch are **expected**. The connected Railway OAuth plugin returns names of variables only, so it has **not independently confirmed the database name inside the Railway connection URL**.
+
+Note: Railway's environment is named `production`, but contains separate services `fairwayd-stage` and `fairwayd`. Do not mistake the Railway environment label for the application's Stage/Production service name.
+
+## Read-only Postgres inspection
+
+Both Neon Stage and the isolated test branch have two Postgres databases:
+
+| Branch | Database | Completed migrations | Unresolved migration rows | Newer application schema |
+|---|---|---:|---:|---|
+| Stage | `neondb` | 13 | 0 | Missing `TripDocument` and `PostCollection` |
+| Stage | `fairwayd_stage` | **59** | **0** | Has `Course`, `TripDocument`, `PostCollection` |
+| Isolated test | `neondb` | 13 | 0 | Missing `TripDocument` and `PostCollection` |
+| Isolated test | `fairwayd_stage` | **59** | **0** | Has `Course`, `TripDocument`, `PostCollection` |
+
+The latest completed migration recorded in both `fairwayd_stage` histories is:
+`20261020193000_add_post_collections`.
+
+The new `GolfServiceVenue` table is not present in the four inspected databases.
+
+**Root cause of the apparent 47 pending migrations:** The previous isolated-branch preflight targeted `neondb`, where only 13 migrations were applied, instead of `fairwayd_stage`. Comparing this to 60 repository migration folders yielded 47 "pending". It did not represent the application database's migration backlog.
+
+The likely next pending application migration is `20261021185500_add_golf_service_directory`, but **do not infer exact pending status from counts alone**: compare all local migration names, checksums, failed rows and expected schema against `fairwayd_stage` before scheduling any isolated migration rehearsal. A read-only database audit does not establish migration safety.
+
+## Safeguards and next actions
+
+1. The feature branch diagnostic `apps/api/scripts/check-golf-services-neon-branch.mjs` now requires `--expected-database=fairwayd_stage`, checks the connection URL's database pathname explicitly and confirms `current_database()` before auditing.
+2. The script also validates the expected direct, **non-pooler** test-branch host and uses `BEGIN READ ONLY`; it does not read application environment files inside the git repository.
+3. Any future preflight must target **only** the isolated test branch, never the Stage or Production application database.
+4. Review the isolated branch's complete migration history against the local 60 migration folders; verify the latest SQL migration has not already been applied under a different name.
+5. Before a test migration, confirm independently that the test connection uses the isolated branch endpoint and `fairwayd_stage` database. Do not use a Railway Stage environment secret as a write target.
+6. `apps/api/package.json` currently has `start:prod = npx prisma migrate deploy && node dist/src/main.js`. Keep the feature branch away from the Stage/Production deployment pipeline until migration safety has been independently established.
+7. No production or Stage data was modified by this audit.
+
+**Result:** Stage/test branch identities are known, and the 47-pending discrepancy is resolved as a *database selection error*. Database deployment remains blocked pending final checks and explicit authorization.
