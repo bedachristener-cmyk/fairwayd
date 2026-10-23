@@ -21,8 +21,7 @@ The category image map and dark readability overlay are defined in
 `apps/web/src/pages/GolfNearMePage.tsx`. The image references resolve from
 `apps/web/public/golf-near-me/categories/`.
 
-The repository's GitHub text-only integration cannot transfer local binary image files. **The six actual WebP files must be placed under the above public directory and committed to the feature branch separately**. The image archive was delivered in the development conversation, with internal archive paths beginning
-`apps/web/public/golf-near-me/categories/`. Never merge/deploy the image references without those assets.
+The six WebP image files **are committed to `feature/golf-near-me-ch-pilot`** in commit `c1c417f9eeaaae58224f750ccf3a96fa75c0a0a7` (2026-10-23). GitHub was checked independently: all six files are present under `apps/web/public/golf-near-me/categories/`. They were transferred and committed from the developer's local workstation because the GitHub connector only writes UTF-8 files. Stage and Production have not been deployed.
 
 Example PowerShell (Windows, from the correct feature branch, assuming the asset archive is in Downloads):
 
@@ -37,7 +36,7 @@ node .\scripts\check-golf-near-me-artwork.mjs
 npm run build
 ```
 
-After visual QA, commit the **six WebP files** to `feature/golf-near-me-ch-pilot`:
+**Already completed on 2026-10-23:** The six WebP files were committed and pushed to `feature/golf-near-me-ch-pilot`. The following commands record the completed procedure:
 
 ```powershell
 cd C:\dev\fairwayd
