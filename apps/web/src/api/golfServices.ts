@@ -1,5 +1,28 @@
 import { API_BASE } from "./base";
 
+// A separate browser-only, loopback API for isolated Golf Near Me UI testing.
+// Requires an explicit Vite DEV-only environment variable. Never changes the
+// standard Fairwayd API_BASE or targets a remote Stage/Production service.
+function golfServicesApiBase(): string {
+  const override = String(import.meta.env.VITE_GOLF_SERVICES_LOCAL_TEST_API_BASE ?? "").trim();
+  if (!override || !import.meta.env.DEV) return API_BASE;
+
+  let value: URL;
+  try {
+    value = new URL(override);
+  } catch {
+    throw new Error("Invalid local Golf Services test API URL");
+  }
+
+  if (value.protocol !== "http:" || value.hostname !== "127.0.0.1" ||
+      !value.port || value.pathname.replace(/\/$/, "") !== "/api" ||
+      value.search || value.hash || value.username || value.password) {
+    throw new Error("Golf Services test API must be an explicit 127.0.0.1 loopback URL");
+  }
+
+  return value.href.replace(/\/$/, "");
+}
+
 export type GolfServiceCategory =
   | "SIMULATOR"
   | "SHOP"
@@ -82,7 +105,7 @@ export async function getNearbyGolfServices(
   params: NearbyGolfServicesSearch,
   signal?: AbortSignal,
 ): Promise<NearbyGolfServicesResponse> {
-  const url = new URL(`${API_BASE}/golf-services/nearby`);
+  const url = new URL(`${golfServicesApiBase()}/golf-services/nearby`);
   url.searchParams.set("lat", String(params.lat));
   url.searchParams.set("lon", String(params.lon));
   url.searchParams.set("radiusKm", String(params.radiusKm));
