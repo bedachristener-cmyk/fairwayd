@@ -33,14 +33,14 @@ The new `GolfServiceVenue` table is not present in the four inspected databases.
 
 **Root cause of the apparent 47 pending migrations:** The previous isolated-branch preflight targeted `neondb`, where only 13 migrations were applied, instead of `fairwayd_stage`. Comparing this to 60 repository migration folders yielded 47 "pending". It did not represent the application database's migration backlog.
 
-The likely next pending application migration is `20261021185500_add_golf_service_directory`, but **do not infer exact pending status from counts alone**: compare all local migration names, checksums, failed rows and expected schema against `fairwayd_stage` before scheduling any isolated migration rehearsal. A read-only database audit does not establish migration safety.
+**Complete read-only migration name comparison:** GitHub's feature branch has **60 migration folders**. Both the Stage and isolated test `fairwayd_stage` databases contain the **same 59 completed migration names**, with zero unresolved rows and zero migration names absent from the repository. The **sole pending migration** by name is `20261021185500_add_golf_service_directory`. No other migration is pending by name. Existing migration checksums and the new SQL have **not yet undergone an isolated dry-run/rehearsal**, so a read-only audit does not establish deployment safety.
 
 ## Safeguards and next actions
 
 1. The feature branch diagnostic `apps/api/scripts/check-golf-services-neon-branch.mjs` now requires `--expected-database=fairwayd_stage`, checks the connection URL's database pathname explicitly and confirms `current_database()` before auditing.
 2. The script also validates the expected direct, **non-pooler** test-branch host and uses `BEGIN READ ONLY`; it does not read application environment files inside the git repository.
 3. Any future preflight must target **only** the isolated test branch, never the Stage or Production application database.
-4. Review the isolated branch's complete migration history against the local 60 migration folders; verify the latest SQL migration has not already been applied under a different name.
+4. The isolated branch's complete migration **names** are now reconciled against all 60 local migration folders (59 matched, 1 pending). Before any migration rehearsal, independently verify the pending SQL and review checksums/schema assumptions, not just names.
 5. Before a test migration, confirm independently that the test connection uses the isolated branch endpoint and `fairwayd_stage` database. Do not use a Railway Stage environment secret as a write target.
 6. `apps/api/package.json` currently has `start:prod = npx prisma migrate deploy && node dist/src/main.js`. Keep the feature branch away from the Stage/Production deployment pipeline until migration safety has been independently established.
 7. No production or Stage data was modified by this audit.
