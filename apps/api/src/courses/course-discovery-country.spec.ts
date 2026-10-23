@@ -21,6 +21,7 @@ describe('course discovery country configuration', () => {
       'AE',
       'AT',
       'CH',
+      'CY',
       'KH',
       'PH',
       'SG',
@@ -31,6 +32,7 @@ describe('course discovery country configuration', () => {
     ]);
     expect(courseDiscoveryCountryConfig('ae')?.country).toBe('AE');
     expect(courseDiscoveryCountryConfig('at')?.country).toBe('AT');
+    expect(courseDiscoveryCountryConfig('cy')?.country).toBe('CY');
     expect(courseDiscoveryCountryConfig('kh')?.country).toBe('KH');
     expect(courseDiscoveryCountryConfig('ph')?.country).toBe('PH');
     expect(courseDiscoveryCountryConfig('sg')?.country).toBe('SG');
@@ -52,6 +54,14 @@ describe('course discovery country configuration', () => {
   it('preserves the bounded Austrian request plan', () => {
     expect(requestCount('AT')).toBeGreaterThan(200);
     expect(requestCount('AT')).toBeLessThan(300);
+  });
+
+  it('covers Cyprus completely with a compact island-wide request plan', () => {
+    const config = courseDiscoveryCountryConfig('CY');
+    expect(config).not.toBeNull();
+    expect(config!.areas).toHaveLength(1);
+    expect(config!.searchRadiusMeters).toBe(28_000);
+    expect(requestCount('CY')).toBe(45);
   });
 
   it('covers Cambodia with three compact golf-region request plans', () => {
