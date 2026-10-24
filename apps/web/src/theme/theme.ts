@@ -7,6 +7,8 @@ export const THEMES = [
   "forest",
   "ocean",
   "lagoon",
+  "lagoon-light",
+  "lagoon-edge",
   "warm",
 ] as const;
 export type ThemeName = (typeof THEMES)[number];
