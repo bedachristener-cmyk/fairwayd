@@ -116,6 +116,26 @@ export class UsersController {
   }
 
   @UseGuards(AuthGuard('jwt'))
+  @Patch('me/privacy')
+  async updatePrivacy(
+    @Req() req: any,
+    @Body() body: { privacy?: string },
+  ) {
+    const userId = req?.user?.userId ?? req?.user?.id;
+    return this.users.updatePrivacy(userId, body?.privacy);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Delete('me')
+  async deleteMe(
+    @Req() req: any,
+    @Body() body: { confirmation?: string },
+  ) {
+    const userId = req?.user?.userId ?? req?.user?.id;
+    return this.users.deleteAccount(userId, body?.confirmation);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
   @Patch('me/preferences')
   async updatePreferences(
     @Req() req: any,
@@ -309,8 +329,9 @@ export class UsersController {
 
   @UseGuards(AuthGuard('jwt'))
   @Get('search')
-  searchUsers(@Query('q') q?: string) {
-    return this.users.searchUsers(q ?? '');
+  searchUsers(@Req() req: any, @Query('q') q?: string) {
+    const userId = req?.user?.userId ?? req?.user?.id;
+    return this.users.searchUsers(q ?? '', userId);
   }
 
   @UseGuards(AuthGuard('jwt'))
