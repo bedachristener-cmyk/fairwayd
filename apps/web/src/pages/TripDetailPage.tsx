@@ -2516,7 +2516,7 @@ function budgetDraftCostModeWarning(draft: BudgetCostDraft, baseCurrency: string
     },
     baseCurrency,
   );
-  if (converted.missingConversion || converted.amount < 300) return "";
+  if (converted.missingConversion || converted.amount < 1000) return "";
   return "High per-person amount (CHF equivalent). Did you mean total amount?";
 }
 
@@ -2661,10 +2661,11 @@ function timelineCostBreakdownText(item: TripItem, members: TripMember[], baseCu
   return budgetCostsForItem(item, members).flatMap((cost, index) => {
     const amount = finiteAmount(cost.amount);
     if (amount <= 0) return [];
-    const label = cost.label?.trim() || `Cost ${index + 1}`;
+    const label = cost.label?.trim();
     const currency = (cost.currency || baseCurrency || "CHF").trim().toUpperCase();
-    const suffix = cost.costMode === "PER_PERSON" ? "per person" : "total";
-    return [`${label} · ${formatMoney(amount, currency)} ${suffix}`];
+    const participantCount = costParticipantMembers(cost, members).length || members.length || 1;
+    const perPerson = cost.costMode === "PER_PERSON" ? amount : amount / participantCount;
+    return [`Costs per person${label ? ` (${label})` : ""}: ${formatMoney(perPerson, currency)}`];
   });
 }
 
@@ -9549,9 +9550,9 @@ export default function TripDetailPage() {
                   trip?.members ?? [],
                   baseCurrency,
                 );
-                const compactGolfCostBreakdown = isGolf
-                  ? timelineCostBreakdownText(item, trip?.members ?? [], baseCurrency)
-                  : [];
+                const compactGolfCostBreakdown = timelineCostBreakdownText(
+                  item, trip?.members ?? [], baseCurrency,
+                );
 
                 return (
                   <article
