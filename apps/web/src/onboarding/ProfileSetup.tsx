@@ -202,8 +202,9 @@ function PrivacyPicker({
 function themeDisplayName(theme: ThemeName) {
   if (theme === "dark") return t("theme_dark");
   if (theme === "light") return t("theme_light");
-  if (theme === "forest") return t("theme_forest");
   if (theme === "ocean") return t("theme_ocean");
+  if (theme === "lagoon-light") return t("theme_lagoon_light");
+  if (theme === "lagoon") return t("theme_lagoon_dark");
   return t("theme_warm");
 }
 
