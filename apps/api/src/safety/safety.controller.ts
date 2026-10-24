@@ -4,12 +4,15 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { AdminGuard } from '../auth/admin.guard';
 import { SafetyService } from './safety.service';
 
 @ApiTags('safety')
@@ -46,5 +49,26 @@ export class SafetyController {
       req.user?.userId ?? req.user?.id,
       body ?? {},
     );
+  }
+
+  @UseGuards(AuthGuard('jwt'), AdminGuard)
+  @Get('admin/reports')
+  listReports(@Query('status') status?: string) {
+    return this.safety.listReports(status);
+  }
+
+  @UseGuards(AuthGuard('jwt'), AdminGuard)
+  @Patch('admin/reports/:id')
+  updateReport(
+    @Param('id') id: string,
+    @Body() body: { status?: unknown },
+  ) {
+    return this.safety.updateReportStatus(id, body?.status);
+  }
+
+  @UseGuards(AuthGuard('jwt'), AdminGuard)
+  @Delete('admin/reports/:id/target')
+  removeReportedTarget(@Param('id') id: string) {
+    return this.safety.removeReportedTarget(id);
   }
 }
