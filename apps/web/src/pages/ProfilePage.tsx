@@ -7,9 +7,13 @@ import { useAuth } from "../auth/AuthContext";
 import { useMe } from "../auth/useMe";
 import UserListCard from "../components/UserListCard";
 import {
+  getInitialShape,
   getInitialTheme,
+  setShape,
   setTheme,
+  SHAPES,
   THEMES,
+  type ShapeName,
   type ThemeName,
 } from "../theme/theme";
 import PostCard from "../components/PostCard";
@@ -118,6 +122,7 @@ function Card({
 
   return (
     <div
+      className="fw-settings-card"
       style={{
         background: isMobile ? "transparent" : "var(--card)",
         border: isMobile ? "none" : "1px solid var(--border)",
@@ -249,12 +254,16 @@ function prettyDate(d?: string) {
 function themeDisplayName(theme: ThemeName) {
   if (theme === "dark") return t("theme_dark");
   if (theme === "light") return t("theme_light");
-  if (theme === "forest") return t("theme_forest");
   if (theme === "ocean") return t("theme_ocean");
-  if (theme === "lagoon") return t("theme_lagoon");
+  if (theme === "lagoon") return t("theme_lagoon_dark");
   if (theme === "lagoon-light") return t("theme_lagoon_light");
-  if (theme === "lagoon-edge") return t("theme_lagoon_edge");
   return t("theme_warm");
+}
+
+function shapeDisplayName(shape: ShapeName) {
+  return shape === "rounded"
+    ? t("theme_shape_rounded")
+    : t("theme_shape_edge");
 }
 
 function ProfileSettingsCard({
@@ -267,17 +276,24 @@ function ProfileSettingsCard({
   onPreferenceSaved: () => Promise<void>;
 }) {
   const [theme, setThemeState] = useState<ThemeName>(() => getInitialTheme());
+  const [shape, setShapeState] = useState<ShapeName>(() => getInitialShape());
   const [language, setLanguage] = useState<Lang>(() => getLang());
   const [currency, setCurrency] = useState(preferredCurrency || DEFAULT_CURRENCY);
   const [currencySaving, setCurrencySaving] = useState(false);
   const [currencyError, setCurrencyError] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState<"theme" | "language" | "currency" | null>(null);
+  const [expanded, setExpanded] = useState<
+    "theme" | "shape" | "language" | "currency" | null
+  >(null);
 
   const isMobile = window.innerWidth <= 980;
 
   useEffect(() => {
     setTheme(theme);
   }, [theme]);
+
+  useEffect(() => {
+    setShape(shape);
+  }, [shape]);
 
   useEffect(() => {
     setCurrency(preferredCurrency || DEFAULT_CURRENCY);
@@ -371,6 +387,31 @@ function ProfileSettingsCard({
                   style={settingsOptionStyle(active)}
                 >
                   {themeDisplayName(tName)}
+                </button>
+              );
+            })}
+          </SettingsOptions>
+        </SettingsControlRow>
+
+        <SettingsControlRow
+          icon="▢"
+          label={t("theme_shape")}
+          value={shapeDisplayName(shape)}
+          expanded={expanded === "shape"}
+          onClick={() => setExpanded((v) => (v === "shape" ? null : "shape"))}
+        >
+          <SettingsOptions>
+            {SHAPES.map((shapeName) => {
+              const active = shape === shapeName;
+
+              return (
+                <button
+                  key={shapeName}
+                  type="button"
+                  onClick={() => setShapeState(shapeName)}
+                  style={settingsOptionStyle(active)}
+                >
+                  {shapeDisplayName(shapeName)}
                 </button>
               );
             })}
