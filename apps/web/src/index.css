@@ -218,6 +218,89 @@ html[data-theme="ocean"] {
   --control-disabled-text: #b9c5d6;
 }
 
+html[data-theme="lagoon"] {
+  --bg: #061a1d;
+  --card: #0b292d;
+  --muted: #10363a;
+  --text: #fffaf0;
+  --sub: #b8d8d5;
+  --border: #24535a;
+  --green: #2dd4bf;
+  --accent: #2dd4bf;
+  --accent-strong: #5eead4;
+  --accent-soft: rgba(45, 212, 191, 0.16);
+  --sand: #f4c477;
+  --sand-soft: rgba(244, 196, 119, 0.14);
+  --sky: #38bdf8;
+  --sky-soft: rgba(56, 189, 248, 0.14);
+  --coral: #fb8b72;
+  --coral-soft: rgba(251, 139, 114, 0.15);
+  --danger: #ff9b9b;
+  --danger-soft: rgba(255, 155, 155, 0.14);
+  --atmosphere-golf: #75d6a4;
+  --atmosphere-travel: #f4c477;
+  --atmosphere-finance: #f0b95f;
+  --atmosphere-document: #8fc5ce;
+  --atmosphere-social: #79cbd0;
+  --atmosphere-golf-soft: rgba(117, 214, 164, 0.13);
+  --atmosphere-travel-soft: rgba(244, 196, 119, 0.13);
+  --atmosphere-finance-soft: rgba(240, 185, 95, 0.13);
+  --atmosphere-document-soft: rgba(143, 197, 206, 0.12);
+  --atmosphere-social-soft: rgba(121, 203, 208, 0.12);
+  --fw-atmosphere-bg:
+    radial-gradient(circle at 14% 8%, rgba(45, 212, 191, 0.22), transparent 34%),
+    radial-gradient(circle at 88% 0%, rgba(251, 139, 114, 0.18), transparent 30%),
+    radial-gradient(circle at 50% 100%, rgba(244, 196, 119, 0.12), transparent 38%),
+    linear-gradient(180deg, #08262a 0%, #061a1d 58%, #041214 100%);
+  --fw-page-shell-bg: rgba(7, 29, 32, 0.78);
+  --fw-page-shell-border: rgba(94, 234, 212, 0.14);
+  --fw-destination-hero-bg: linear-gradient(
+    145deg,
+    rgba(11, 41, 45, 0.96),
+    rgba(7, 28, 32, 0.92)
+  );
+  --fw-destination-hero-border: rgba(94, 234, 212, 0.2);
+  --fw-destination-hero-overlay:
+    linear-gradient(
+      to top,
+      rgba(4, 18, 20, 0.94),
+      rgba(6, 26, 29, 0.64),
+      rgba(6, 26, 29, 0.18)
+    ),
+    linear-gradient(135deg, rgba(45, 212, 191, 0.17), rgba(251, 139, 114, 0.12));
+  --fw-destination-hero-title: #fffaf0;
+  --fw-destination-hero-copy: rgba(255, 250, 240, 0.84);
+  --fw-destination-hero-subtle: rgba(255, 250, 240, 0.66);
+  --fw-destination-hero-pill-bg: rgba(6, 26, 29, 0.76);
+  --fw-destination-hero-pill-bg-hover: rgba(11, 41, 45, 0.94);
+  --fw-destination-hero-pill-border: rgba(94, 234, 212, 0.28);
+  --fw-destination-hero-pill-text: #fffaf0;
+  --bottom-tabs-bg: rgba(4, 18, 20, 0.94);
+  --bottom-tab-active: #fffaf0;
+  --bottom-tab-inactive: rgba(184, 216, 213, 0.72);
+  --bottom-tab-indicator: #2dd4bf;
+  --fw-pill-active-bg: #0f766e;
+  --fw-pill-active-text: #fffaf0;
+  --fw-pill-inactive-bg: #0b292d;
+  --fw-pill-inactive-border: #397078;
+  --fw-pill-info-bg: #10363a;
+  --fw-pill-info-border: #397078;
+  --fw-pill-action-border: #5eead4;
+  --fw-pill-action-text: #fffaf0;
+  --fw-pill-cta-bg: #2dd4bf;
+  --fw-pill-cta-bg-hover: #5eead4;
+  --fw-pill-cta-text: #042326;
+  --control-selected-bg: #fffaf0;
+  --control-selected-text: #063238;
+  --control-selected-subtext: rgba(6, 50, 56, 0.72);
+  --control-disabled-bg: #173b3f;
+  --control-disabled-border: #4a7075;
+  --control-disabled-text: #abc8c6;
+  --fw-pill-radius: 999px;
+  --fw-pill-shadow: 0 10px 26px rgba(0, 0, 0, 0.22);
+  --fw-atmosphere-card-glow: rgba(45, 212, 191, 0.12);
+}
+
 html[data-theme="warm"] {
   --bg: #fdf6ec;
   --card: #ffffff;
