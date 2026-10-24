@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../api/base";
+import { fetchSentFollowRequests } from "../api/followRequests";
 import { useAuth } from "../auth/AuthContext";
 import { fileUrl } from "../api/fileUrl";
 import MobilePageHeader from "../components/MobilePageHeader";
@@ -120,6 +121,8 @@ export default function FriendsPage() {
   const [tab, setTab] = useState<FriendsTab>("following");
   const [following, setFollowing] = useState<UserItem[]>([]);
   const [followers, setFollowers] = useState<UserItem[]>([]);
+  const [sentRequestIds, setSentRequestIds] = useState<Set<string>>(new Set());
+  const [sentRequestsLoaded, setSentRequestsLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [followBackBusyId, setFollowBackBusyId] = useState<string | null>(null);
 
@@ -135,14 +138,20 @@ export default function FriendsPage() {
 
     setLoading(true);
     try {
-      const [followingRes, followersRes] = await Promise.all([
+      setSentRequestsLoaded(false);
+      const [followingRes, followersRes, sentRequests] = await Promise.all([
         fetch(`${API_BASE}/users/me/following`, {
           headers: { Authorization: `Bearer ${auth.token}` },
         }),
         fetch(`${API_BASE}/users/me/followers`, {
           headers: { Authorization: `Bearer ${auth.token}` },
         }),
+        fetchSentFollowRequests(auth.token).catch(() => null),
       ]);
+      if (sentRequests !== null) {
+        setSentRequestIds(new Set(sentRequests.map((request) => request.followingId)));
+        setSentRequestsLoaded(true);
+      }
 
       if (followingRes.ok) {
         const data = await followingRes.json();
@@ -169,6 +178,7 @@ export default function FriendsPage() {
       console.error("loadFriends failed", err);
       setFollowing([]);
       setFollowers([]);
+      setSentRequestsLoaded(false);
     } finally {
       setLoading(false);
     }
@@ -179,7 +189,7 @@ export default function FriendsPage() {
   }, [loadFriends]);
 
   async function handleFollowBack(user: UserItem) {
-    if (!auth?.token || followBackBusyId) return;
+    if (!auth?.token || followBackBusyId || !sentRequestsLoaded || sentRequestIds.has(user.id)) return;
 
     setFollowBackBusyId(user.id);
     try {
@@ -192,9 +202,14 @@ export default function FriendsPage() {
         throw new Error(`Follow back failed: ${res.status}`);
       }
 
-      setFollowing((prev) =>
-        prev.some((item) => item.id === user.id) ? prev : [user, ...prev],
-      );
+      const result = (await res.json()) as { status?: string };
+      if (result.status === "PENDING") {
+        setSentRequestIds((prev) => new Set([...prev, user.id]));
+      } else if (result.status === "ACCEPTED") {
+        setFollowing((prev) => prev.some((item) => item.id === user.id) ? prev : [user, ...prev]);
+      } else {
+        await loadFriends();
+      }
     } catch (err) {
       console.error("followBack failed", err);
     } finally {
@@ -316,6 +331,7 @@ export default function FriendsPage() {
         ) : (
           items.map((user, index) => {
             const followsBack = followingIds.has(user.id);
+            const requested = sentRequestIds.has(user.id);
             const detail =
               user.location || user.homeGolfClub || user.bio?.slice(0, 80) || "";
 
@@ -445,6 +461,8 @@ export default function FriendsPage() {
                   >
                     Following
                   </div>
+                ) : requested || !sentRequestsLoaded ? (
+                  <span className="fw-pill fw-pill--meta">{requested ? "Requested" : "Checking..."}</span>
                 ) : (
                   <button
                     type="button"
