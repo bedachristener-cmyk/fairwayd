@@ -110,6 +110,11 @@ type TripItem = {
     website?: string | null;
     lat?: number | string | null;
     lon?: number | string | null;
+    posts?: {
+      images?: {
+        url: string;
+      }[];
+    }[];
   } | null;
 };
 
@@ -952,6 +957,7 @@ function TripGolfTransferTimeline({
   onOpen: (item: TripItem) => void;
   onViewAll: () => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const entries = items
     .map((item, index) => ({ item, index, key: dateKey(item) }))
     .filter(({ item }) => isGolfOrTransferTimelineItem(item))
@@ -980,6 +986,11 @@ function TripGolfTransferTimeline({
   const dayNumbers = new Map(
     scheduledDays.map((key, index) => [key, index + 1] as const),
   );
+  const golfCount = entries.filter(({ item }) => {
+    const type = String(item.type ?? "").toLowerCase();
+    return type === "golf_round" || type === "course";
+  }).length;
+  const transferCount = entries.length - golfCount;
 
   return (
     <section
@@ -987,7 +998,7 @@ function TripGolfTransferTimeline({
       style={{
         ...safeSectionStyle,
         display: "grid",
-        gap: 12,
+        gap: expanded ? 12 : 0,
         padding: 14,
         borderRadius: 22,
         border:
@@ -997,236 +1008,313 @@ function TripGolfTransferTimeline({
         boxShadow: "0 14px 34px rgba(0,0,0,0.14)",
       }}
     >
-      <div
+      <button
+        type="button"
+        onClick={() => setExpanded((current) => !current)}
+        aria-expanded={expanded}
+        aria-controls="golf-transfer-timeline-content"
         style={{
+          all: "unset",
+          cursor: "pointer",
           display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
+          alignItems: "center",
           gap: 12,
+          minWidth: 0,
+          WebkitTapHighlightColor: "transparent",
         }}
       >
-        <div style={{ display: "grid", gap: 3, minWidth: 0 }}>
-          <div
+        <span
+          aria-hidden="true"
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 14,
+            display: "grid",
+            placeItems: "center",
+            flex: "0 0 auto",
+            color: "#fff",
+            background:
+              "linear-gradient(145deg, var(--accent), var(--accent-strong))",
+            boxShadow:
+              "0 8px 18px color-mix(in srgb, var(--accent) 24%, transparent)",
+          }}
+        >
+          <Route size={20} strokeWidth={2.35} />
+        </span>
+        <span
+          style={{
+            minWidth: 0,
+            flex: "1 1 auto",
+            display: "grid",
+            gap: 3,
+          }}
+        >
+          <span
             id="golf-transfer-timeline-title"
             style={sectionTitleTextStyle}
           >
             Golf & transfers
-          </div>
-          <div style={sectionSubtitleTextStyle}>
-            Your trip at a glance
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onViewAll}
-          className="fw-pill fw-pill--meta"
+          </span>
+          <span style={sectionSubtitleTextStyle}>
+            {golfCount} {golfCount === 1 ? "round" : "rounds"} ·{" "}
+            {transferCount} {transferCount === 1 ? "transfer" : "transfers"}
+          </span>
+        </span>
+        <ChevronDown
+          aria-hidden="true"
+          size={19}
+          strokeWidth={2.5}
           style={{
+            color: "var(--sub)",
             flex: "0 0 auto",
-            cursor: "pointer",
-            color: "var(--accent-strong)",
-            background: "var(--accent-soft)",
-            borderColor:
-              "color-mix(in srgb, var(--accent) 34%, var(--border))",
+            transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 160ms ease",
           }}
+        />
+      </button>
+
+      {expanded ? (
+        <div
+          id="golf-transfer-timeline-content"
+          style={{ display: "grid", gap: 10 }}
         >
-          Full timeline
-        </button>
-      </div>
+          <div style={{ display: "grid" }}>
+            {entries.map(({ item, key }, index) => {
+              const type = String(item.type ?? "").toLowerCase();
+              const isGolf = type === "golf_round" || type === "course";
+              const Icon = isGolf ? Flag : itemIcon(item.type);
+              const accent = isGolf ? "var(--accent)" : "#2f91d8";
+              const dayNumber = dayNumbers.get(key);
+              const imageUrl = isGolf
+                ? item.course?.posts?.[0]?.images?.[0]?.url
+                : undefined;
+              const meta = [
+                formatTimeRange(item),
+                compactItemWhereLine(item),
+              ].filter(Boolean);
 
-      <div style={{ display: "grid" }}>
-        {entries.map(({ item, key }, index) => {
-          const type = String(item.type ?? "").toLowerCase();
-          const isGolf = type === "golf_round" || type === "course";
-          const Icon = isGolf ? Flag : itemIcon(item.type);
-          const accent = isGolf ? "var(--accent)" : "#2f91d8";
-          const dayNumber = dayNumbers.get(key);
-          const meta = [
-            formatTimeRange(item),
-            compactItemWhereLine(item),
-          ].filter(Boolean);
-
-          return (
-            <div
-              key={item.id}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "62px 20px minmax(0, 1fr)",
-                gap: 8,
-                minWidth: 0,
-              }}
-            >
-              <div
-                style={{
-                  paddingTop: 10,
-                  textAlign: "right",
-                  minWidth: 0,
-                }}
-              >
+              return (
                 <div
+                  key={item.id}
                   style={{
-                    color: "var(--text)",
-                    fontSize: 12,
-                    lineHeight: 1.2,
-                    fontWeight: 950,
-                  }}
-                >
-                  {dayNumber ? `Day ${dayNumber}` : "Planned"}
-                </div>
-                <div
-                  style={{
-                    marginTop: 2,
-                    color: "var(--sub)",
-                    fontSize: 10,
-                    lineHeight: 1.25,
-                    fontWeight: 800,
-                  }}
-                >
-                  {key === "unscheduled" ? "No date" : compactDateLabel(key)}
-                </div>
-              </div>
-
-              <div
-                aria-hidden="true"
-                style={{ position: "relative", minHeight: 76 }}
-              >
-                {index > 0 ? (
-                  <span
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      bottom: "50%",
-                      left: "50%",
-                      width: 2,
-                      transform: "translateX(-50%)",
-                      background:
-                        "color-mix(in srgb, var(--accent) 58%, var(--border))",
-                    }}
-                  />
-                ) : null}
-                {index < entries.length - 1 ? (
-                  <span
-                    style={{
-                      position: "absolute",
-                      top: "50%",
-                      bottom: 0,
-                      left: "50%",
-                      width: 2,
-                      transform: "translateX(-50%)",
-                      background:
-                        "color-mix(in srgb, var(--accent) 58%, var(--border))",
-                    }}
-                  />
-                ) : null}
-                <span
-                  style={{
-                    position: "absolute",
-                    top: 25,
-                    left: "50%",
-                    width: 12,
-                    height: 12,
-                    transform: "translate(-50%, -50%)",
-                    borderRadius: 999,
-                    border: "3px solid var(--card)",
-                    background: accent,
-                    boxShadow: `0 0 0 1px ${accent}`,
-                  }}
-                />
-              </div>
-
-              <button
-                type="button"
-                onClick={() => onOpen(item)}
-                style={{
-                  width: "100%",
-                  minWidth: 0,
-                  marginBottom: index < entries.length - 1 ? 9 : 0,
-                  padding: 10,
-                  borderRadius: 15,
-                  border:
-                    "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
-                  background:
-                    "color-mix(in srgb, var(--card) 90%, var(--bg))",
-                  color: "var(--text)",
-                  display: "grid",
-                  gridTemplateColumns: "38px minmax(0, 1fr) 16px",
-                  alignItems: "center",
-                  gap: 10,
-                  textAlign: "left",
-                  cursor: "pointer",
-                  boxShadow: "0 7px 18px rgba(0,0,0,0.09)",
-                }}
-              >
-                <span
-                  aria-hidden="true"
-                  style={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: 12,
                     display: "grid",
-                    placeItems: "center",
-                    color: "#fff",
-                    background: accent,
-                  }}
-                >
-                  <Icon size={19} strokeWidth={2.35} />
-                </span>
-                <span
-                  style={{
+                    gridTemplateColumns: "62px 20px minmax(0, 1fr)",
+                    gap: 8,
                     minWidth: 0,
-                    display: "grid",
-                    gap: 3,
                   }}
                 >
-                  <span
+                  <div
                     style={{
-                      color: isGolf ? "var(--accent-strong)" : accent,
-                      fontSize: 10,
-                      lineHeight: 1.1,
-                      fontWeight: 950,
-                      letterSpacing: "0.08em",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {isGolf ? "Golf" : itemTypeLabel(item.type)}
-                  </span>
-                  <span
-                    style={{
+                      paddingTop: 10,
+                      textAlign: "right",
                       minWidth: 0,
-                      color: "var(--text)",
-                      fontSize: 13,
-                      lineHeight: 1.25,
-                      fontWeight: 950,
-                      overflowWrap: "anywhere",
                     }}
                   >
-                    {tripItemTitle(item)}
-                  </span>
-                  {meta.length > 0 ? (
+                    <div
+                      style={{
+                        color: "var(--text)",
+                        fontSize: 12,
+                        lineHeight: 1.2,
+                        fontWeight: 950,
+                      }}
+                    >
+                      {dayNumber ? `Day ${dayNumber}` : "Planned"}
+                    </div>
+                    <div
+                      style={{
+                        marginTop: 2,
+                        color: "var(--sub)",
+                        fontSize: 10,
+                        lineHeight: 1.25,
+                        fontWeight: 800,
+                      }}
+                    >
+                      {key === "unscheduled"
+                        ? "No date"
+                        : compactDateLabel(key)}
+                    </div>
+                  </div>
+
+                  <div
+                    aria-hidden="true"
+                    style={{ position: "relative", minHeight: 80 }}
+                  >
+                    {index > 0 ? (
+                      <span
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          bottom: "50%",
+                          left: "50%",
+                          width: 2,
+                          transform: "translateX(-50%)",
+                          background:
+                            "color-mix(in srgb, var(--accent) 58%, var(--border))",
+                        }}
+                      />
+                    ) : null}
+                    {index < entries.length - 1 ? (
+                      <span
+                        style={{
+                          position: "absolute",
+                          top: "50%",
+                          bottom: 0,
+                          left: "50%",
+                          width: 2,
+                          transform: "translateX(-50%)",
+                          background:
+                            "color-mix(in srgb, var(--accent) 58%, var(--border))",
+                        }}
+                      />
+                    ) : null}
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: 27,
+                        left: "50%",
+                        width: 12,
+                        height: 12,
+                        transform: "translate(-50%, -50%)",
+                        borderRadius: 999,
+                        border: "3px solid var(--card)",
+                        background: accent,
+                        boxShadow: `0 0 0 1px ${accent}`,
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => onOpen(item)}
+                    style={{
+                      width: "100%",
+                      minWidth: 0,
+                      marginBottom: index < entries.length - 1 ? 9 : 0,
+                      padding: 10,
+                      borderRadius: 15,
+                      border:
+                        "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
+                      background:
+                        "color-mix(in srgb, var(--card) 90%, var(--bg))",
+                      color: "var(--text)",
+                      display: "grid",
+                      gridTemplateColumns: imageUrl
+                        ? "72px minmax(0, 1fr) 16px"
+                        : "38px minmax(0, 1fr) 16px",
+                      alignItems: "center",
+                      gap: 10,
+                      textAlign: "left",
+                      cursor: "pointer",
+                      boxShadow: "0 7px 18px rgba(0,0,0,0.09)",
+                    }}
+                  >
+                    {imageUrl ? (
+                      <img
+                        src={fileUrl(imageUrl)}
+                        alt=""
+                        loading="lazy"
+                        style={{
+                          width: 72,
+                          height: 52,
+                          display: "block",
+                          objectFit: "cover",
+                          borderRadius: 11,
+                          border:
+                            "1px solid color-mix(in srgb, var(--accent) 30%, var(--border))",
+                        }}
+                      />
+                    ) : (
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: 12,
+                          display: "grid",
+                          placeItems: "center",
+                          color: "#fff",
+                          background: accent,
+                        }}
+                      >
+                        <Icon size={19} strokeWidth={2.35} />
+                      </span>
+                    )}
                     <span
                       style={{
                         minWidth: 0,
-                        color: "var(--sub)",
-                        fontSize: 11,
-                        lineHeight: 1.3,
-                        fontWeight: 750,
-                        overflowWrap: "anywhere",
+                        display: "grid",
+                        gap: 3,
                       }}
                     >
-                      {meta.join(" · ")}
+                      <span
+                        style={{
+                          color: isGolf ? "var(--accent-strong)" : accent,
+                          fontSize: 10,
+                          lineHeight: 1.1,
+                          fontWeight: 950,
+                          letterSpacing: "0.08em",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {isGolf ? "Golf" : itemTypeLabel(item.type)}
+                      </span>
+                      <span
+                        style={{
+                          minWidth: 0,
+                          color: "var(--text)",
+                          fontSize: 13,
+                          lineHeight: 1.25,
+                          fontWeight: 950,
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {tripItemTitle(item)}
+                      </span>
+                      {meta.length > 0 ? (
+                        <span
+                          style={{
+                            minWidth: 0,
+                            color: "var(--sub)",
+                            fontSize: 11,
+                            lineHeight: 1.3,
+                            fontWeight: 750,
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {meta.join(" · ")}
+                        </span>
+                      ) : null}
                     </span>
-                  ) : null}
-                </span>
-                <ChevronRight
-                  aria-hidden="true"
-                  size={16}
-                  strokeWidth={2.5}
-                  style={{ color: "var(--sub)" }}
-                />
-              </button>
-            </div>
-          );
-        })}
-      </div>
+                    <ChevronRight
+                      aria-hidden="true"
+                      size={16}
+                      strokeWidth={2.5}
+                      style={{ color: "var(--sub)" }}
+                    />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            onClick={onViewAll}
+            className="fw-pill fw-pill--meta"
+            style={{
+              width: "fit-content",
+              justifySelf: "end",
+              cursor: "pointer",
+              color: "var(--accent-strong)",
+              background: "var(--accent-soft)",
+              borderColor:
+                "color-mix(in srgb, var(--accent) 34%, var(--border))",
+            }}
+          >
+            Full timeline
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }
