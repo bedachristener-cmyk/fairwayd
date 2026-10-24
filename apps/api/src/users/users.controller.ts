@@ -20,6 +20,7 @@ import { memoryStorage } from 'multer';
 import { extname } from 'path';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
+import { AdminGuard } from '../auth/admin.guard';
 import { uploadToR2 } from '../storage/r2.service';
 import { UpdateUserPreferencesDto } from './dto/update-user-preferences.dto';
 
@@ -285,6 +286,12 @@ export class UsersController {
     if (!ok) throw new NotFoundException('Request not found');
 
     return { ok: true };
+  }
+
+  @UseGuards(AuthGuard('jwt'), AdminGuard)
+  @Get('admin/list')
+  adminListUsers(@Query('q') q?: string, @Query('page') page?: string) {
+    return this.users.listAdminUsers(q ?? '', page);
   }
 
   // ---------------------------------------------------------
