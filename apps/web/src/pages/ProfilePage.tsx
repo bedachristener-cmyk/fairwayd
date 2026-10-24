@@ -251,6 +251,7 @@ function themeDisplayName(theme: ThemeName) {
   if (theme === "light") return t("theme_light");
   if (theme === "forest") return t("theme_forest");
   if (theme === "ocean") return t("theme_ocean");
+  if (theme === "lagoon") return t("theme_lagoon");
   return t("theme_warm");
 }
 
