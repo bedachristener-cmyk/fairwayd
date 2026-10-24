@@ -131,50 +131,6 @@ html[data-theme="light"] {
   --fw-atmosphere-card-glow: rgba(180, 210, 205, 0.14);
 }
 
-/* FORREST */
-html[data-theme="forest"] {
-  --bg: #0f1a14;
-  --card: #16241c;
-  --muted: #1d2c23;
-  --text: #e6f4ea;
-  --sub: #9fb5a5;
-  --border: #254033;
-  --green: #34d300;
-  --danger: #fda4af;
-  --danger-soft: rgba(253, 164, 175, 0.12);
-  --atmosphere-golf: #8fa989;
-  --atmosphere-travel: #b79a75;
-  --atmosphere-finance: #ad965f;
-  --atmosphere-document: #8b98a6;
-  --atmosphere-social: #8398a4;
-  --atmosphere-golf-soft: rgba(143, 169, 137, 0.1);
-  --atmosphere-travel-soft: rgba(183, 154, 117, 0.1);
-  --atmosphere-finance-soft: rgba(173, 150, 95, 0.1);
-  --atmosphere-document-soft: rgba(139, 152, 166, 0.1);
-  --atmosphere-social-soft: rgba(131, 152, 164, 0.1);
-  --bottom-tabs-bg: rgba(15, 26, 20, 0.94);
-  --bottom-tab-active: #ffffff;
-  --bottom-tab-inactive: rgba(230, 244, 234, 0.68);
-  --bottom-tab-indicator: var(--green);
-  --fw-pill-active-bg: #285536;
-  --fw-pill-active-text: #f2fbf4;
-  --fw-pill-inactive-bg: #16241c;
-  --fw-pill-inactive-border: #3f5c49;
-  --fw-pill-info-bg: #1d2c23;
-  --fw-pill-info-border: #3f5c49;
-  --fw-pill-action-border: #34d300;
-  --fw-pill-action-text: #e6f4ea;
-  --fw-pill-cta-bg: #34d300;
-  --fw-pill-cta-bg-hover: #54e12a;
-  --fw-pill-cta-text: #0f1a14;
-  --control-selected-bg: #e6f4ea;
-  --control-selected-text: #0f1a14;
-  --control-selected-subtext: rgba(15, 26, 20, 0.72);
-  --control-disabled-bg: #26362c;
-  --control-disabled-border: #526859;
-  --control-disabled-text: #bdccc1;
-}
-
 html[data-theme="ocean"] {
   --bg: #0b1220;
   --card: #121a2b;
@@ -218,8 +174,7 @@ html[data-theme="ocean"] {
   --control-disabled-text: #b9c5d6;
 }
 
-html[data-theme="lagoon"],
-html[data-theme="lagoon-edge"] {
+html[data-theme="lagoon"] {
   --bg: #061a1d;
   --card: #0b292d;
   --muted: #10363a;
@@ -385,42 +340,6 @@ html[data-theme="lagoon-light"] {
   --fw-atmosphere-card-glow: rgba(45, 200, 187, 0.13);
 }
 
-html[data-theme="lagoon-edge"] {
-  --fw-pill-radius: 7px;
-}
-
-html[data-theme="lagoon-edge"] :where(
-  button,
-  input:not([type="checkbox"]):not([type="radio"]),
-  textarea,
-  select,
-  .fw-surface-card,
-  .fw-surface-card-muted,
-  .fw-feed-composer,
-  .fw-post-card,
-  .fw-trip-detail-hero,
-  .fw-trip-info-panel,
-  .fw-context-card,
-  .fw-context-map,
-  .fw-explore-desktop-hero,
-  .fw-explore-destination-card,
-  .fw-explore-note-card,
-  .fw-trip-card,
-  .fw-trip-item-card,
-  .fw-course-desktop-hero,
-  .fw-course-desktop-identity,
-  .fw-course-desktop-section,
-  .fw-course-desktop-about,
-  .fw-course-desktop-empty,
-  .fw-auth-input,
-  .card,
-  .fw-card,
-  .profile-card,
-  .feed-card
-) {
-  border-radius: 7px !important;
-}
-
 html[data-theme="warm"] {
   --bg: #fdf6ec;
   --card: #ffffff;
@@ -462,6 +381,48 @@ html[data-theme="warm"] {
   --control-disabled-bg: #eee1d2;
   --control-disabled-border: #c8b39d;
   --control-disabled-text: #705a5a;
+}
+
+/* Shape is independent from the selected colour theme. */
+html[data-shape="edge"] {
+  --fw-pill-radius: 7px;
+}
+
+html[data-shape="edge"] :where(
+  button,
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select,
+  dialog,
+  [role="dialog"],
+  .fw-surface-card,
+  .fw-surface-card-muted,
+  .fw-settings-card,
+  .fw-feed-composer,
+  .fw-post-card,
+  .fw-trip-detail-hero,
+  .fw-trip-info-panel,
+  .fw-context-card,
+  .fw-context-map,
+  .fw-explore-desktop-hero,
+  .fw-explore-destination-card,
+  .fw-explore-note-card,
+  .fw-trip-card,
+  .fw-trip-item-card,
+  .fw-course-desktop-hero,
+  .fw-course-desktop-identity,
+  .fw-course-desktop-section,
+  .fw-course-desktop-about,
+  .fw-course-desktop-empty,
+  .fw-auth-input,
+  .fw-auth-legal,
+  .fw-auth-message,
+  .card,
+  .fw-card,
+  .profile-card,
+  .feed-card
+) {
+  border-radius: 7px !important;
 }
 
 /* fallback if attribute missing */
