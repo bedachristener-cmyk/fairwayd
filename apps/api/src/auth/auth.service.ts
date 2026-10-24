@@ -430,7 +430,7 @@ export class AuthService {
       where: { email },
     });
 
-    if (!user?.password) {
+    if (!user) {
       return FORGOT_PASSWORD_RESPONSE;
     }
 
@@ -462,7 +462,7 @@ export class AuthService {
       where: { email },
     });
 
-    if (!user?.password) {
+    if (!user) {
       throw new BadRequestException('Invalid or expired reset code');
     }
 
