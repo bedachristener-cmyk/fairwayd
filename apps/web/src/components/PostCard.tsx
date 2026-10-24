@@ -939,7 +939,7 @@ export default function PostCard({
                     : `+ ${t("follow")}`}
               </button>
             ) : null}
-            {isOwnPost ? (
+            {token ? (
               <div
                 ref={menuRef}
                 style={{
@@ -1000,60 +1000,91 @@ export default function PostCard({
                       zIndex: 30,
                     }}
                   >
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditContent(localContent);
-                        setEditVisibility(localVisibility);
-                        setEditError("");
-                        setIsEditing(true);
-                        setIsMenuOpen(false);
-                      }}
-                      style={{
-                        border: "none",
-                        background: "var(--card)",
-                        color: "var(--text)",
-                        textAlign: "left",
-                        padding: isMobile ? "11px 12px" : "10px 12px",
-                        borderRadius: 10,
-                        cursor: "pointer",
-                        fontSize: 14,
-                        display: "flex",
-                        alignItems: "center",
-                        width: "100%",
-                        minHeight: isMobile ? 40 : 36,
-                      }}
-                    >
-                      {t("edit_post")}
-                    </button>
+                    {isOwnPost ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditContent(localContent);
+                            setEditVisibility(localVisibility);
+                            setEditError("");
+                            setIsEditing(true);
+                            setIsMenuOpen(false);
+                          }}
+                          style={{
+                            border: "none",
+                            background: "var(--card)",
+                            color: "var(--text)",
+                            textAlign: "left",
+                            padding: isMobile ? "11px 12px" : "10px 12px",
+                            borderRadius: 10,
+                            cursor: "pointer",
+                            fontSize: 14,
+                            display: "flex",
+                            alignItems: "center",
+                            width: "100%",
+                            minHeight: isMobile ? 40 : 36,
+                          }}
+                        >
+                          {t("edit_post")}
+                        </button>
 
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsMenuOpen(false);
-                        handleDeletePost();
-                      }}
-                      disabled={deleteBusy}
-                      style={{
-                        border: "none",
-                        background: "var(--danger-soft)",
-                        color: deleteBusy ? "var(--sub)" : "var(--danger)",
-                        textAlign: "left",
-                        padding: isMobile ? "11px 12px" : "10px 12px",
-                        borderRadius: 14,
-                        cursor: deleteBusy ? "default" : "pointer",
-                        fontSize: 14,
-                        opacity: deleteBusy ? 0.6 : 1,
-                        display: "flex",
-                        alignItems: "center",
-                        width: "100%",
-                        minHeight: isMobile ? 40 : 36,
-                      }}
-                    >
-                      {t("delete_post")}
-                    </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsMenuOpen(false);
+                            handleDeletePost();
+                          }}
+                          disabled={deleteBusy}
+                          style={{
+                            border: "none",
+                            background: "var(--danger-soft)",
+                            color: deleteBusy ? "var(--sub)" : "var(--danger)",
+                            textAlign: "left",
+                            padding: isMobile ? "11px 12px" : "10px 12px",
+                            borderRadius: 14,
+                            cursor: deleteBusy ? "default" : "pointer",
+                            fontSize: 14,
+                            opacity: deleteBusy ? 0.6 : 1,
+                            display: "flex",
+                            alignItems: "center",
+                            width: "100%",
+                            minHeight: isMobile ? 40 : 36,
+                          }}
+                        >
+                          {t("delete_post")}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsMenuOpen(false);
+                          nav(
+                            `/privacy-security?reportType=POST&reportId=${encodeURIComponent(post.id)}`,
+                          );
+                        }}
+                        style={{
+                          border: "none",
+                          background: "var(--card)",
+                          color: "var(--text)",
+                          textAlign: "left",
+                          padding: isMobile ? "11px 12px" : "10px 12px",
+                          borderRadius: 10,
+                          cursor: "pointer",
+                          fontSize: 14,
+                          display: "flex",
+                          alignItems: "center",
+                          width: "100%",
+                          minHeight: isMobile ? 40 : 36,
+                        }}
+                      >
+                        Report post
+                      </button>
+                    )}
                   </div>
                 ) : null}
               </div>

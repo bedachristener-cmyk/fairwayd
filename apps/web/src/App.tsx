@@ -37,6 +37,7 @@ import FollowingCoursesPage from "./pages/FollowingCoursesPage";
 import CoursePage from "./pages/CoursePage";
 import FeedbackAdminPage from "./pages/FeedbackAdminPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
+import ContentReportsAdminPage from "./pages/ContentReportsAdminPage";
 import FeedbackPage from "./pages/FeedbackPage";
 import UserSearchPage from "./pages/UserSearchPage";
 import DestinationsPage from "./pages/DestinationsPage";
@@ -323,6 +324,16 @@ export default function App() {
                   <ProtectedRoute>
                     <OnboardingGuard>
                       <AdminUsersPage />
+                    </OnboardingGuard>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/reports"
+                element={
+                  <ProtectedRoute>
+                    <OnboardingGuard>
+                      <ContentReportsAdminPage />
                     </OnboardingGuard>
                   </ProtectedRoute>
                 }

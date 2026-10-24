@@ -3,6 +3,7 @@ import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
 import { useMe } from "../auth/useMe";
 import MobilePageHeader from "../components/MobilePageHeader";
+import { useSearchParams } from "react-router-dom";
 
 type AccountPrivacy = "PUBLIC" | "PRIVATE";
 type ReportTarget = "POST" | "COMMENT" | "PROFILE" | "OTHER";
@@ -99,6 +100,7 @@ function responseMessage(data: unknown, fallback: string) {
 
 export default function PrivacySecurityPage() {
   const { logout, token, refreshMe } = useAuth();
+  const [searchParams] = useSearchParams();
   const { me, setMe } = useMe(true);
   const [privacy, setPrivacy] = useState<AccountPrivacy>("PRIVATE");
   const [privacyBusy, setPrivacyBusy] = useState(false);
@@ -110,8 +112,17 @@ export default function PrivacySecurityPage() {
   const [safetyBusy, setSafetyBusy] = useState(false);
   const [safetyMsg, setSafetyMsg] = useState<string | null>(null);
 
-  const [reportTarget, setReportTarget] = useState<ReportTarget>("POST");
-  const [reportReference, setReportReference] = useState("");
+  const [reportTarget, setReportTarget] = useState<ReportTarget>(() => {
+    const value = searchParams.get("reportType");
+    return value === "COMMENT" ||
+      value === "PROFILE" ||
+      value === "OTHER"
+      ? value
+      : "POST";
+  });
+  const [reportReference, setReportReference] = useState(
+    () => searchParams.get("reportId") ?? "",
+  );
   const [reportReason, setReportReason] = useState<ReportReason>("SPAM");
   const [reportDetails, setReportDetails] = useState("");
   const [reportBusy, setReportBusy] = useState(false);
