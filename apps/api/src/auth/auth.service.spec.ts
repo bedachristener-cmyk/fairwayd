@@ -22,6 +22,9 @@ function createService() {
       findUnique: jest.fn(),
       create: jest.fn(),
     },
+    passwordResetCode: {
+      updateMany: jest.fn(),
+    },
   };
   const jwt = {
     signAsync: jest.fn().mockResolvedValue('signed-token'),
@@ -104,5 +107,39 @@ describe('AuthService dev login guard', () => {
     process.env.FAIRWAYD_REQUIRE_DURABLE_UPLOADS = 'true';
 
     expect(isDevLoginEnabled()).toBe(false);
+  });
+});
+
+
+describe('AuthService password setup', () => {
+  beforeEach(() => {
+    resetEnv();
+    jest.clearAllMocks();
+  });
+
+  it('sends a reset code even when an OAuth account has no password yet', async () => {
+    const { prisma, service } = createService();
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'google-user-1',
+      email: 'golfer@example.com',
+      name: 'Golfer',
+      password: null,
+    });
+    const sendCode = jest
+      .spyOn(service as any, 'createAndSendPasswordResetCode')
+      .mockResolvedValue(undefined);
+
+    await expect(
+      service.forgotPassword('golfer@example.com'),
+    ).resolves.toEqual({
+      message: 'If an account exists for this email, we sent a reset code.',
+    });
+
+    expect(prisma.passwordResetCode.updateMany).toHaveBeenCalled();
+    expect(sendCode).toHaveBeenCalledWith(
+      'google-user-1',
+      'golfer@example.com',
+      'Golfer',
+    );
   });
 });
