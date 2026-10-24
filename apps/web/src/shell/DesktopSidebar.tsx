@@ -2,6 +2,7 @@ import {
   Bell,
   CalendarDays,
   ClipboardList,
+  Flag,
   Globe,
   HelpCircle,
   Home,
@@ -334,6 +335,14 @@ export default function DesktopSidebar() {
               icon: <Users size={18} strokeWidth={2.2} />,
               protected: true,
               isActive: activeExact("/admin/users"),
+            },
+            {
+              key: "admin-content-reports",
+              path: "/admin/reports",
+              label: "Content Reports",
+              icon: <Flag size={18} strokeWidth={2.2} />,
+              protected: true,
+              isActive: activeExact("/admin/reports"),
             },
             {
               key: "feedback-admin",
