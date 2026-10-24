@@ -4,9 +4,15 @@ import "leaflet/dist/leaflet.css";
 import "./index.css";
 import "./leafletIconFix";
 import App from "./App";
-import { applyTheme, getInitialTheme } from "./theme/theme";
+import {
+  applyShape,
+  applyTheme,
+  getInitialShape,
+  getInitialTheme,
+} from "./theme/theme";
 
 applyTheme(getInitialTheme());
+applyShape(getInitialShape());
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
