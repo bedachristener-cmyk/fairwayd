@@ -25,6 +25,31 @@ export class PostsService {
     private readonly notifications: NotificationsService,
   ) {}
 
+  private async blockedUserIds(userId?: string) {
+    if (!userId) return [];
+    const rows = await this.prisma.userBlock.findMany({
+      where: { OR: [{ blockerId: userId }, { blockedId: userId }] },
+      select: { blockerId: true, blockedId: true },
+    });
+    return rows.map((row) =>
+      row.blockerId === userId ? row.blockedId : row.blockerId,
+    );
+  }
+
+  private async assertInteractionAllowed(userId: string, targetUserId: string) {
+    if (userId === targetUserId) return;
+    const blocked = await this.prisma.userBlock.findFirst({
+      where: {
+        OR: [
+          { blockerId: userId, blockedId: targetUserId },
+          { blockerId: targetUserId, blockedId: userId },
+        ],
+      },
+      select: { id: true },
+    });
+    if (blocked) throw new BadRequestException('This interaction is unavailable');
+  }
+
   /**
    * Public feed (only PUBLIC posts)
    * - newest first
@@ -61,6 +86,7 @@ export class PostsService {
         .filter((code): code is string => !!code);
     }
 
+    const blockedUserIds = await this.blockedUserIds(userId);
     let followingUserIds = new Set<string>();
     let followingCourseIds = new Set<string>();
     let followingDestinationCodesSet = new Set<string>();
@@ -92,9 +118,12 @@ export class PostsService {
     }
 
     const query: Prisma.PostFindManyArgs = {
-      where: userId
-        ? {
-            OR: [
+      where: {
+        AND: [
+          userId ? { NOT: { userId: { in: blockedUserIds } } } : {},
+          userId
+            ? {
+                OR: [
               // Eigene Posts -> alle Sichtbarkeiten
               {
                 userId,
@@ -147,9 +176,11 @@ export class PostsService {
                   },
                 },
               },
-            ],
-          }
-        : { visibility: Visibility.PUBLIC },
+                ],
+              }
+            : { visibility: Visibility.PUBLIC },
+        ],
+      },
       orderBy: { createdAt: 'desc' },
       take,
       include: {
@@ -263,11 +294,15 @@ export class PostsService {
       throw new BadRequestException('Missing courseId');
     }
 
+    const blockedUserIds = await this.blockedUserIds(userId);
     const query: Prisma.PostFindManyArgs = {
-      where: userId
-        ? {
-            courseId,
-            OR: [
+      where: {
+        AND: [
+          { courseId },
+          userId ? { NOT: { userId: { in: blockedUserIds } } } : {},
+          userId
+            ? {
+                OR: [
               { visibility: Visibility.PUBLIC },
               {
                 userId,
@@ -288,12 +323,11 @@ export class PostsService {
                   },
                 },
               },
-            ],
-          }
-        : {
-            courseId,
-            visibility: Visibility.PUBLIC,
-          },
+                ],
+              }
+            : { visibility: Visibility.PUBLIC },
+        ],
+      },
       orderBy: { createdAt: 'desc' },
       take,
       include: {
@@ -535,6 +569,8 @@ export class PostsService {
       throw new BadRequestException(`Unknown postId ${pid}`);
     }
 
+    await this.assertInteractionAllowed(uid, post.userId);
+
     const existingLike = await this.prisma.like.findUnique({
       where: {
         postId_userId: {
@@ -607,12 +643,14 @@ export class PostsService {
 
     const comment = await this.prisma.comment.findUnique({
       where: { id: cid },
-      select: { id: true },
+      select: { id: true, userId: true },
     });
 
     if (!comment) {
       throw new BadRequestException(`Unknown commentId ${cid}`);
     }
+
+    await this.assertInteractionAllowed(uid, comment.userId);
 
     const existing = await this.prisma.commentLike.findUnique({
       where: {
@@ -663,8 +701,14 @@ export class PostsService {
       throw new BadRequestException(`Unknown postId ${pid}`);
     }
 
+    const blockedUserIds = await this.blockedUserIds(userId);
     const comments = await this.prisma.comment.findMany({
-      where: { postId: pid },
+      where: {
+        postId: pid,
+        ...(blockedUserIds.length
+          ? { userId: { notIn: blockedUserIds } }
+          : {}),
+      },
       orderBy: { createdAt: 'asc' },
       include: {
         user: {
@@ -754,6 +798,8 @@ export class PostsService {
       throw new BadRequestException(`Unknown postId ${pid}`);
     }
 
+    await this.assertInteractionAllowed(uid, post.userId);
+
     let parentComment: { id: string; postId: string; userId: string } | null =
       null;
 
@@ -770,6 +816,7 @@ export class PostsService {
       if (parentComment.postId !== pid) {
         throw new BadRequestException('Parent comment belongs to another post');
       }
+      await this.assertInteractionAllowed(uid, parentComment.userId);
     }
 
     const comment = await this.prisma.comment.create({
