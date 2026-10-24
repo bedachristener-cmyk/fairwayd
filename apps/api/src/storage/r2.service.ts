@@ -4,7 +4,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
-import { mkdir, readFile, writeFile } from 'fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'fs/promises';
 import { dirname, join, normalize, sep } from 'path';
 import { createHash } from 'crypto';
 
@@ -214,6 +214,53 @@ export async function deletePrivateUpload(fileUrl: string) {
   await r2Client().send(
     new DeleteObjectCommand({
       Bucket: privateDocumentBucket(),
+      Key: key,
+    }),
+  );
+  return true;
+}
+
+export async function deleteStoredUpload(fileUrl: string) {
+  if (!fileUrl?.trim()) return false;
+  if (await deletePrivateUpload(fileUrl)) return true;
+
+  if (fileUrl.startsWith('/uploads/')) {
+    const { filePath } = localUploadsPath(fileUrl.slice('/uploads/'.length));
+    await rm(filePath, { force: true });
+    return true;
+  }
+
+  const bucket = process.env.R2_BUCKET || '';
+  if (!bucket) return false;
+
+  let key = fileUrl.trim();
+  const configuredBase = (
+    process.env.R2_PUBLIC_BASE_URL ||
+    process.env.R2_PUBLIC_URL ||
+    ''
+  )
+    .trim()
+    .replace(/\/+$/, '');
+
+  if (/^https?:\/\//i.test(key)) {
+    if (!configuredBase) return false;
+    const base = new URL(
+      configuredBase.startsWith('//')
+        ? `https:${configuredBase}`
+        : configuredBase,
+    );
+    const url = new URL(key);
+    const basePath = base.pathname.replace(/\/+$/, '');
+    if (url.origin !== base.origin || !url.pathname.startsWith(`${basePath}/`)) {
+      return false;
+    }
+    key = decodeURIComponent(url.pathname.slice(basePath.length + 1));
+  }
+
+  if (!key || key.includes('..') || key.startsWith('/')) return false;
+  await r2Client().send(
+    new DeleteObjectCommand({
+      Bucket: bucket,
       Key: key,
     }),
   );
