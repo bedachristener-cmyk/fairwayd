@@ -20,7 +20,7 @@ import { memoryStorage } from 'multer';
 import { extname } from 'path';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { AdminGuard } from '../auth/admin.guard';
+import { AdminGuard, isFairwaydAdmin } from '../auth/admin.guard';
 import { uploadToR2 } from '../storage/r2.service';
 import { UpdateUserPreferencesDto } from './dto/update-user-preferences.dto';
 
@@ -41,6 +41,12 @@ export class UsersController {
   // ---------------------------------------------------------
   // Current user (used by onboarding)
   // ---------------------------------------------------------
+  @UseGuards(AuthGuard('jwt'))
+  @Get('me/admin-status')
+  adminStatus(@Req() req: any) {
+    return { isAdmin: isFairwaydAdmin(req.user) };
+  }
+
   @UseGuards(AuthGuard('jwt'))
   @Get('me')
   async me(@Req() req: any) {
