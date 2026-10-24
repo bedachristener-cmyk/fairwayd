@@ -198,9 +198,13 @@ export class SafetyService {
         : [],
     ]);
 
-    const postById = new Map(posts.map((item) => [item.id, item]));
-    const commentById = new Map(comments.map((item) => [item.id, item]));
-    const profileById = new Map(profiles.map((item) => [item.id, item]));
+    const postById = new Map(posts.map((item) => [item.id, item] as const));
+    const commentById = new Map(
+      comments.map((item) => [item.id, item] as const),
+    );
+    const profileById = new Map(
+      profiles.map((item) => [item.id, item] as const),
+    );
 
     return {
       items: reports.map((report) => {
