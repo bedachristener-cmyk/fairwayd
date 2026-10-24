@@ -570,12 +570,26 @@ export default function PrivacySecurityPage() {
             {passwordMsg ? <p role="status" style={textStyle}>{passwordMsg}</p> : null}
           </>
         ) : (
-          <p style={textStyle}>
-            No Fairwayd password is stored for this account. Accounts that use
-            email and password can change it here, or reset it with “Forgot
-            password” on the login page. If you signed in with Google, password
-            management remains with Google.
-          </p>
+          <>
+            <p style={textStyle}>
+              No Fairwayd password is stored for this account. You can create or
+              reset a Fairwayd password using the email address linked to your
+              account. Your Google password is not affected.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                logout();
+                window.location.assign("/?auth=forgot-password");
+              }}
+              style={buttonStyle}
+            >
+              Reset your Fairwayd password
+            </button>
+            <p style={textStyle}>
+              You will be signed out and taken directly to password reset.
+            </p>
+          </>
         )}
       </section>
 
