@@ -2494,19 +2494,30 @@ function budgetDraftPreviewText(draft: BudgetCostDraft) {
   };
 }
 
-function budgetDraftCostModeWarning(draft: BudgetCostDraft) {
+function budgetDraftCostModeWarning(draft: BudgetCostDraft, baseCurrency: string) {
   const { amount, participantCount } = budgetDraftSplitAmounts(draft);
   if (
-    draft.paymentMode === "EACH_PAYS_OWN" &&
-    draft.costMode === "PER_PERSON" &&
-    participantCount > 1
-  ) {
-    if (amount !== undefined && amount >= 300) {
-      return "High per-person amount for a shared cost. Did you mean total amount?";
-    }
-    return "You selected Amount per person. Each selected person will be charged the full entered amount.";
-  }
-  return "";
+    draft.paymentMode !== "EACH_PAYS_OWN" ||
+    draft.costMode !== "PER_PERSON" ||
+    participantCount <= 1 ||
+    amount === undefined ||
+    amount <= 0
+  ) return "";
+
+  // This heuristic is calibrated in CHF, never on the raw foreign-currency
+  // amount. A missing FX conversion must not produce a false alarm.
+  if (baseCurrency.trim().toUpperCase() !== "CHF") return "";
+  const converted = resolveTripCostConversion(
+    {
+      amount,
+      currency: draft.currency,
+      exchangeRate: optionalNumber(draft.exchangeRate),
+      baseAmount: optionalNumber(draft.baseAmount),
+    },
+    baseCurrency,
+  );
+  if (converted.missingConversion || converted.amount < 300) return "";
+  return "High per-person amount (CHF equivalent). Did you mean total amount?";
 }
 
 function tripCostShareSourceText(row: MyTripCostRow, baseCurrency: string) {
@@ -2644,6 +2655,17 @@ function timelineCostSummaryText(item: TripItem, members: TripMember[], baseCurr
   }
 
   return `Costs: ${costs.length} entries · mixed currencies`;
+}
+
+function timelineCostBreakdownText(item: TripItem, members: TripMember[], baseCurrency: string) {
+  return budgetCostsForItem(item, members).flatMap((cost, index) => {
+    const amount = finiteAmount(cost.amount);
+    if (amount <= 0) return [];
+    const label = cost.label?.trim() || `Cost ${index + 1}`;
+    const currency = (cost.currency || baseCurrency || "CHF").trim().toUpperCase();
+    const suffix = cost.costMode === "PER_PERSON" ? "per person" : "total";
+    return [`${label} · ${formatMoney(amount, currency)} ${suffix}`];
+  });
 }
 
 function costLabelExamplesForItemType(type?: string | null) {
@@ -2851,7 +2873,7 @@ function TripItemBudgetSection({
             const needsExchangeRate = draftNeedsExchangeRate(draft, baseCurrency);
             const shareHelperText = budgetDraftShareHelperText(draft);
             const splitPreview = budgetDraftPreviewText(draft);
-            const costModeWarning = budgetDraftCostModeWarning(draft);
+            const costModeWarning = budgetDraftCostModeWarning(draft, baseCurrency);
 
             return (
               <div
@@ -9527,6 +9549,9 @@ export default function TripDetailPage() {
                   trip?.members ?? [],
                   baseCurrency,
                 );
+                const compactGolfCostBreakdown = isGolf
+                  ? timelineCostBreakdownText(item, trip?.members ?? [], baseCurrency)
+                  : [];
 
                 return (
                   <article
@@ -10815,6 +10840,22 @@ export default function TripDetailPage() {
                                 }}
                               >
                                 {compactCostSummary}
+                              </div>
+                            ) : null}
+                            {compactGolfCostBreakdown.length > 0 ? (
+                              <div
+                                style={{
+                                  display: "grid",
+                                  gap: 3,
+                                  color: "var(--sub)",
+                                  fontSize: 11,
+                                  lineHeight: 1.35,
+                                  overflowWrap: "anywhere",
+                                }}
+                              >
+                                {compactGolfCostBreakdown.map((entry, index) => (
+                                  <div key={index}>{entry}</div>
+                                ))}
                               </div>
                             ) : null}
 
@@ -12692,7 +12733,7 @@ export default function TripDetailPage() {
                 );
                 const shareHelperText = budgetDraftShareHelperText(draft);
                 const splitPreview = budgetDraftPreviewText(draft);
-                const costModeWarning = budgetDraftCostModeWarning(draft);
+                const costModeWarning = budgetDraftCostModeWarning(draft, baseCurrency);
                 return (
                   <section
                     key={draft.localId}
