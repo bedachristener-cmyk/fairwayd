@@ -229,7 +229,11 @@ export class SafetyService {
     const id = reportId?.trim();
     const next = typeof status === 'string' ? status.trim().toUpperCase() : '';
     if (!id) throw new BadRequestException('Missing report id');
-    if (![ReportStatus.REVIEWED, ReportStatus.DISMISSED].includes(next as ReportStatus)) {
+    const moderationStatuses = new Set<ReportStatus>([
+      ReportStatus.REVIEWED,
+      ReportStatus.DISMISSED,
+    ]);
+    if (!moderationStatuses.has(next as ReportStatus)) {
       throw new BadRequestException('Invalid moderation status');
     }
 
