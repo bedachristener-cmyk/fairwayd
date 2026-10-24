@@ -149,7 +149,7 @@ export default function FriendsPage() {
         fetchSentFollowRequests(auth.token).catch(() => null),
       ]);
       if (sentRequests !== null) {
-        setSentRequestIds(new Set(sentRequests.map((request) => request.followingId)));
+        setSentRequestIds(new Set(readItems(sentRequests).map((request: any) => request.followingId).filter((id): id is string => typeof id === "string")));
         setSentRequestsLoaded(true);
       }
 
