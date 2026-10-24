@@ -18,6 +18,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { FxModule } from './fx/fx.module';
 import { PostCollectionsModule } from './post-collections/post-collections.module';
 import { GolfServicesModule } from './golf-services/golf-services.module';
+import { SafetyModule } from './safety/safety.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { GolfServicesModule } from './golf-services/golf-services.module';
     FxModule,
     PostCollectionsModule,
     GolfServicesModule,
+    SafetyModule,
   ],
   controllers: [AppController],
   providers: [AppService],
