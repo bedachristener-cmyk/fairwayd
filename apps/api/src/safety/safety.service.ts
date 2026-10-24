@@ -295,4 +295,5 @@ export class SafetyService {
     }
 
     return { ok: true, removedType: report.targetType, removedId: report.targetId };
-  }}
+  }
+}
