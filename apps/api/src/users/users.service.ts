@@ -261,6 +261,34 @@ export class UsersService {
   // User search
   // =========================================================
 
+  async listAdminUsers(q: string, page?: string) {
+    const query = (q || '').trim().slice(0, 100);
+    const pageNumber = Math.max(1, Math.min(10000, Number.parseInt(page || '1', 10) || 1));
+    const where: Prisma.UserWhereInput = query
+      ? {
+          OR: [
+            { name: { contains: query, mode: 'insensitive' } },
+            { handle: { contains: query, mode: 'insensitive' } },
+            { email: { contains: query, mode: 'insensitive' } },
+          ],
+        }
+      : {};
+    const [total, items] = await this.prisma.$transaction([
+      this.prisma.user.count({ where }),
+      this.prisma.user.findMany({
+        where,
+        select: {
+          id: true, name: true, handle: true, email: true,
+          createdAt: true, emailVerifiedAt: true,
+        },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        skip: (pageNumber - 1) * 25,
+        take: 25,
+      }),
+    ]);
+    return { total, page: pageNumber, pageSize: 25, items };
+  }
+
   async searchUsers(q: string) {
     const query = q.trim();
 
