@@ -23,7 +23,7 @@ describe('post collection policy', () => {
 
   it('allows own, public, and accepted-follower posts only', () => {
     const where = visiblePostWhere('viewer-1');
-    expect(where.OR).toEqual([
+    expect(where.AND?.[1]).toEqual({ OR: [
       { userId: 'viewer-1' },
       { visibility: Visibility.PUBLIC },
       {
@@ -37,6 +37,14 @@ describe('post collection policy', () => {
           },
         },
       },
-    ]);
+    ] });
+    expect(where.AND?.[0]).toEqual({
+      NOT: {
+        OR: [
+          { user: { blockedBy: { some: { blockerId: 'viewer-1' } } } },
+          { user: { blockedUsers: { some: { blockedId: 'viewer-1' } } } },
+        ],
+      },
+    });
   });
 });
