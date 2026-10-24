@@ -952,10 +952,12 @@ function TripGolfTransferTimeline({
   items,
   onOpen,
   onViewAll,
+  onAdd,
 }: {
   items: TripItem[];
   onOpen: (item: TripItem) => void;
   onViewAll: () => void;
+  onAdd?: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const entries = items
@@ -999,7 +1001,7 @@ function TripGolfTransferTimeline({
         ...safeSectionStyle,
         display: "grid",
         gap: expanded ? 12 : 0,
-        padding: 14,
+        padding: 12,
         borderRadius: 22,
         border:
           "1px solid color-mix(in srgb, var(--accent) 24%, var(--border))",
@@ -1098,8 +1100,8 @@ function TripGolfTransferTimeline({
                   key={item.id}
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "62px 20px minmax(0, 1fr)",
-                    gap: 8,
+                    gridTemplateColumns: "46px 16px minmax(0, 1fr)",
+                    gap: 5,
                     minWidth: 0,
                   }}
                 >
@@ -1210,6 +1212,7 @@ function TripGolfTransferTimeline({
                   >
                     {imageUrl ? (
                       <img
+                        className="fw-trip-journey-course-image"
                         src={fileUrl(imageUrl)}
                         alt=""
                         loading="lazy"
@@ -1296,6 +1299,25 @@ function TripGolfTransferTimeline({
               );
             })}
           </div>
+
+          {onAdd ? (
+            <button
+              type="button"
+              onClick={onAdd}
+              className="fw-button-primary"
+              style={{
+                width: "100%",
+                minHeight: 44,
+                padding: "0 16px",
+                borderRadius: "var(--fw-pill-radius)",
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 950,
+              }}
+            >
+              + Add to itinerary
+            </button>
+          ) : null}
 
           <button
             type="button"
@@ -7563,6 +7585,13 @@ export default function TripDetailPage() {
           items={trip.items ?? []}
           onOpen={(item) => openItemDetails(item)}
           onViewAll={() => openSubview("timeline")}
+          onAdd={
+            canAddTripItems
+              ? () => {
+                  if (tripId) nav(addItemPath());
+                }
+              : undefined
+          }
         />
       ) : null}
 
