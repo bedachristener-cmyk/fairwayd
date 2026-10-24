@@ -218,7 +218,8 @@ html[data-theme="ocean"] {
   --control-disabled-text: #b9c5d6;
 }
 
-html[data-theme="lagoon"] {
+html[data-theme="lagoon"],
+html[data-theme="lagoon-edge"] {
   --bg: #061a1d;
   --card: #0b292d;
   --muted: #10363a;
@@ -299,6 +300,125 @@ html[data-theme="lagoon"] {
   --fw-pill-radius: 999px;
   --fw-pill-shadow: 0 10px 26px rgba(0, 0, 0, 0.22);
   --fw-atmosphere-card-glow: rgba(45, 212, 191, 0.12);
+}
+
+html[data-theme="lagoon-light"] {
+  --bg: #f2fbf9;
+  --card: #fffdfa;
+  --muted: #e3f3f1;
+  --text: #123438;
+  --sub: #557478;
+  --border: #c4e1dd;
+  --green: #0f8f85;
+  --accent: #0f8f85;
+  --accent-strong: #086c66;
+  --accent-soft: rgba(15, 143, 133, 0.13);
+  --sand: #d79f47;
+  --sand-soft: rgba(215, 159, 71, 0.13);
+  --sky: #2d9fc0;
+  --sky-soft: rgba(45, 159, 192, 0.13);
+  --coral: #d96855;
+  --coral-soft: rgba(217, 104, 85, 0.12);
+  --danger: #c53c3c;
+  --danger-soft: rgba(197, 60, 60, 0.09);
+  --atmosphere-golf: #4e9d70;
+  --atmosphere-travel: #bc8434;
+  --atmosphere-finance: #a87525;
+  --atmosphere-document: #668e99;
+  --atmosphere-social: #3d969d;
+  --atmosphere-golf-soft: rgba(78, 157, 112, 0.12);
+  --atmosphere-travel-soft: rgba(188, 132, 52, 0.11);
+  --atmosphere-finance-soft: rgba(168, 117, 37, 0.11);
+  --atmosphere-document-soft: rgba(102, 142, 153, 0.11);
+  --atmosphere-social-soft: rgba(61, 150, 157, 0.11);
+  --fw-atmosphere-bg:
+    radial-gradient(circle at 12% 6%, rgba(45, 200, 187, 0.2), transparent 34%),
+    radial-gradient(circle at 88% 2%, rgba(251, 139, 114, 0.16), transparent 30%),
+    radial-gradient(circle at 52% 100%, rgba(244, 196, 119, 0.18), transparent 38%),
+    linear-gradient(180deg, #fafffd 0%, #f2fbf9 58%, #edf7f4 100%);
+  --fw-page-shell-bg: rgba(255, 253, 250, 0.76);
+  --fw-page-shell-border: rgba(15, 143, 133, 0.14);
+  --fw-destination-hero-bg: linear-gradient(
+    145deg,
+    rgba(255, 253, 250, 0.95),
+    rgba(227, 243, 241, 0.91)
+  );
+  --fw-destination-hero-border: rgba(15, 143, 133, 0.18);
+  --fw-destination-hero-overlay:
+    linear-gradient(
+      to top,
+      rgba(255, 253, 250, 0.92),
+      rgba(255, 253, 250, 0.68),
+      rgba(255, 253, 250, 0.32)
+    ),
+    linear-gradient(135deg, rgba(45, 200, 187, 0.14), rgba(251, 139, 114, 0.1));
+  --fw-destination-hero-title: #123438;
+  --fw-destination-hero-copy: rgba(18, 52, 56, 0.84);
+  --fw-destination-hero-subtle: rgba(18, 52, 56, 0.62);
+  --fw-destination-hero-pill-bg: rgba(255, 253, 250, 0.78);
+  --fw-destination-hero-pill-bg-hover: rgba(255, 253, 250, 0.96);
+  --fw-destination-hero-pill-border: rgba(15, 143, 133, 0.24);
+  --fw-destination-hero-pill-text: #123438;
+  --bottom-tabs-bg: rgba(255, 253, 250, 0.92);
+  --bottom-tab-active: #086c66;
+  --bottom-tab-inactive: #607d7f;
+  --bottom-tab-indicator: #0f8f85;
+  --fw-pill-active-bg: #bce7e1;
+  --fw-pill-active-text: #123438;
+  --fw-pill-inactive-bg: #fffdfa;
+  --fw-pill-inactive-border: #c4e1dd;
+  --fw-pill-info-bg: #e3f3f1;
+  --fw-pill-info-border: #badbd7;
+  --fw-pill-action-border: #0f8f85;
+  --fw-pill-action-text: #123438;
+  --fw-pill-cta-bg: #0f8f85;
+  --fw-pill-cta-bg-hover: #087a72;
+  --fw-pill-cta-text: #ffffff;
+  --control-selected-bg: #123438;
+  --control-selected-text: #ffffff;
+  --control-selected-subtext: rgba(255, 255, 255, 0.76);
+  --control-disabled-bg: #e2eeeb;
+  --control-disabled-border: #b6cbc7;
+  --control-disabled-text: #637a7b;
+  --fw-pill-radius: 999px;
+  --fw-pill-shadow: 0 9px 24px rgba(18, 52, 56, 0.08);
+  --fw-atmosphere-card-glow: rgba(45, 200, 187, 0.13);
+}
+
+html[data-theme="lagoon-edge"] {
+  --fw-pill-radius: 7px;
+}
+
+html[data-theme="lagoon-edge"] :where(
+  button,
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select,
+  .fw-surface-card,
+  .fw-surface-card-muted,
+  .fw-feed-composer,
+  .fw-post-card,
+  .fw-trip-detail-hero,
+  .fw-trip-info-panel,
+  .fw-context-card,
+  .fw-context-map,
+  .fw-explore-desktop-hero,
+  .fw-explore-destination-card,
+  .fw-explore-note-card,
+  .fw-trip-card,
+  .fw-trip-item-card,
+  .fw-course-desktop-hero,
+  .fw-course-desktop-identity,
+  .fw-course-desktop-section,
+  .fw-course-desktop-about,
+  .fw-course-desktop-empty,
+  .fw-auth-input,
+  .card,
+  .fw-card,
+  .profile-card,
+  .feed-card
+) {
+  border-radius: 7px !important;
 }
 
 html[data-theme="warm"] {
