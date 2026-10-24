@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { useAdminStatus } from "../auth/useAdminStatus";
 import { useMe } from "../auth/useMe";
 import logo from "../assets/logo.png";
 import { API_BASE } from "../api/base";
@@ -98,6 +99,7 @@ export default function TopRail() {
   const location = useLocation();
   const auth = useAuth() as any;
   const { me } = useMe(true);
+  const isAdmin = useAdminStatus();
 
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -136,7 +138,6 @@ export default function TopRail() {
   }, [me?.avatarUrl, auth?.user?.avatarUrl, auth?.me?.avatarUrl]);
 
   const avatarUrl = fileUrl(rawAvatarUrl);
-  const isAdmin = ["beda"].includes((handle || "").toLowerCase());
 
   useEffect(() => {
     function handleResize() {
@@ -640,9 +641,18 @@ export default function TopRail() {
             action: () => setAdminMenuExpanded((value) => !value),
             isActive:
               location.pathname === "/feedback-admin" ||
+              location.pathname === "/admin/users" ||
               location.pathname === "/admin/course-submissions" ||
               location.pathname === "/admin/course-submissions/history",
             children: [
+              {
+                key: "admin-users",
+                label: "Registered Users",
+                subtitle: "Browse registered users",
+                icon: <Users size={18} strokeWidth={2.2} />,
+                action: () => navigateFromMenu("/admin/users"),
+                isActive: location.pathname === "/admin/users",
+              },
               {
                 key: "feedback-admin",
                 label: t("feedback_admin"),

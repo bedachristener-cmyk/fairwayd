@@ -19,6 +19,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { API_BASE } from "../api/base";
 import { fileUrl } from "../api/fileUrl";
 import { useAuth } from "../auth/AuthContext";
+import { useAdminStatus } from "../auth/useAdminStatus";
 import { useMe } from "../auth/useMe";
 import { t } from "../i18n/strings";
 import logo from "../assets/logo.png";
@@ -136,10 +137,10 @@ export default function DesktopSidebar() {
   const loc = useLocation();
   const { isAuthenticated, token } = useAuth();
   const { me } = useMe(true);
+  const isAdmin = useAdminStatus();
   const [nextTrip, setNextTrip] = useState<
     { trip: SidebarTrip; nextTime: number } | null
   >(null);
-  const isAdmin = ["beda"].includes((me?.handle || "").toLowerCase());
   const avatarUrl = fileUrl(me?.avatarUrl);
   const displayName = me?.name || me?.handle || t("fairwayd_golfer");
 
@@ -326,6 +327,14 @@ export default function DesktopSidebar() {
       label: t("admin"),
       items: isAdmin
         ? [
+            {
+              key: "admin-users",
+              path: "/admin/users",
+              label: "Registered Users",
+              icon: <Users size={18} strokeWidth={2.2} />,
+              protected: true,
+              isActive: activeExact("/admin/users"),
+            },
             {
               key: "feedback-admin",
               path: "/feedback-admin",
