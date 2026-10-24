@@ -15,6 +15,7 @@ import {
   TripItemPaymentMode,
   TripItemVisibility,
   TripRole,
+  Visibility,
 } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -158,7 +159,30 @@ const tripMemberInclude = {
 } satisfies Prisma.TripMemberInclude;
 
 const tripItemInclude = {
-  course: true,
+  course: {
+    include: {
+      posts: {
+        where: {
+          visibility: Visibility.PUBLIC,
+          images: {
+            some: {},
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        take: 1,
+        select: {
+          images: {
+            take: 1,
+            select: {
+              url: true,
+            },
+          },
+        },
+      },
+    },
+  },
   createdBy: {
     select: tripUserSelect,
   },
