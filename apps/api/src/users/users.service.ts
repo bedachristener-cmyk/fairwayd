@@ -14,6 +14,7 @@ import {
 } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { normalizeSupportedCurrency } from '../currency';
+import { deleteStoredUpload } from '../storage/r2.service';
 
 const MIN_HANDLE_LENGTH = 3;
 const PROFILE_TEXT_LIMIT = 240;
@@ -242,6 +243,60 @@ export class UsersService {
     });
   }
 
+  async updatePrivacy(userId: string, privacy: unknown) {
+    const value = cleanAccountPrivacy(privacy);
+    if (!value) throw new BadRequestException('Missing account privacy');
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { privacy: value },
+      select: userProfileSelect,
+    });
+  }
+
+  async deleteAccount(userId: string, confirmation: unknown) {
+    if (confirmation !== 'DELETE') {
+      throw new BadRequestException('Type DELETE to confirm account deletion');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        avatarUrl: true,
+        posts: { select: { images: { select: { url: true } } } },
+        createdTrips: {
+          select: {
+            coverImageUrl: true,
+            documents: { select: { fileUrl: true } },
+          },
+        },
+      },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const media = new Set<string>();
+    if (user.avatarUrl) media.add(user.avatarUrl);
+    for (const post of user.posts) {
+      for (const image of post.images) media.add(image.url);
+    }
+    for (const trip of user.createdTrips) {
+      if (trip.coverImageUrl) media.add(trip.coverImageUrl);
+      for (const document of trip.documents) media.add(document.fileUrl);
+    }
+
+    await this.prisma.user.delete({ where: { id: userId } });
+
+    const cleanup = await Promise.allSettled(
+      [...media].map((url) => deleteStoredUpload(url)),
+    );
+
+    return {
+      ok: true,
+      mediaCleanupFailures: cleanup.filter((result) => result.status === 'rejected')
+        .length,
+    };
+  }
+
   async updatePreferredCurrency(userId: string, preferredCurrency: unknown) {
     let currency: string;
     try {
@@ -289,7 +344,7 @@ export class UsersService {
     return { total, page: pageNumber, pageSize: 25, items };
   }
 
-  async searchUsers(q: string) {
+  async searchUsers(q: string, viewerUserId?: string) {
     const query = q.trim();
 
     if (!query || query.length < 2) {
@@ -298,9 +353,19 @@ export class UsersService {
 
     const items = await this.prisma.user.findMany({
       where: {
-        handle: {
-          not: null,
-        },
+        AND: [
+          { handle: { not: null } },
+          viewerUserId
+            ? {
+                NOT: {
+                  OR: [
+                    { blockedBy: { some: { blockerId: viewerUserId } } },
+                    { blockedUsers: { some: { blockedId: viewerUserId } } },
+                  ],
+                },
+              }
+            : {},
+        ],
         OR: [
           {
             handle: {
@@ -368,6 +433,21 @@ export class UsersService {
 
     if (!user) throw new NotFoundException('User not found');
 
+    if (
+      viewerUserId !== user.id &&
+      (await this.prisma.userBlock.findFirst({
+        where: {
+          OR: [
+            { blockerId: viewerUserId, blockedId: user.id },
+            { blockerId: user.id, blockedId: viewerUserId },
+          ],
+        },
+        select: { id: true },
+      }))
+    ) {
+      throw new NotFoundException('User not found');
+    }
+
     const isSelf = viewerUserId === user.id;
     const isAcceptedFollower = isSelf
       ? false
@@ -423,6 +503,21 @@ export class UsersService {
     });
 
     if (!profileUser) throw new NotFoundException('User not found');
+
+    if (
+      viewerUserId !== profileUser.id &&
+      (await this.prisma.userBlock.findFirst({
+        where: {
+          OR: [
+            { blockerId: viewerUserId, blockedId: profileUser.id },
+            { blockerId: profileUser.id, blockedId: viewerUserId },
+          ],
+        },
+        select: { id: true },
+      }))
+    ) {
+      throw new NotFoundException('User not found');
+    }
 
     const isSelf = viewerUserId === profileUser.id;
     const isAcceptedFollower = isSelf
@@ -628,6 +723,17 @@ export class UsersService {
       throw new BadRequestException('Cannot follow yourself');
 
     const target = await this.mustGetUserPrivacy(targetUserId);
+
+    const blocked = await this.prisma.userBlock.findFirst({
+      where: {
+        OR: [
+          { blockerId: meId, blockedId: targetUserId },
+          { blockerId: targetUserId, blockedId: meId },
+        ],
+      },
+      select: { id: true },
+    });
+    if (blocked) throw new BadRequestException('This user is unavailable');
 
     const desiredStatus =
       target.privacy === AccountPrivacy.PUBLIC
