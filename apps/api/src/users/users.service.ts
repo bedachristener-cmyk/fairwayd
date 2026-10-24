@@ -631,11 +631,17 @@ export class UsersService {
     });
 
     if (!existing && row.status === FollowStatus.PENDING) {
+      const requester = await this.prisma.user.findUnique({
+        where: { id: meId },
+        select: { name: true, handle: true },
+      });
+      const requesterName =
+        requester?.name?.trim() || (requester?.handle ? `@${requester.handle}` : 'Someone');
       await this.notifications.createNotification({
         userId: targetUserId,
         type: 'follow_request',
         title: 'New follow request',
-        body: 'Someone wants to connect with you.',
+        body: `${requesterName} wants to connect with you.`,
         link: '/follow-requests',
       });
     }
