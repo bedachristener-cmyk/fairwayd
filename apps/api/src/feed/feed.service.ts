@@ -8,23 +8,35 @@ export class FeedService {
 
   async getCourseFeed(userId: string) {
     // 1) follower scope: me + ACCEPTED following only
-    const following = await this.prisma.follow.findMany({
-      where: { followerId: userId, status: FollowStatus.ACCEPTED },
-      select: { followingId: true },
-    });
-
-    const followingIds = following.map((f) => f.followingId);
-
-    const followedDestinations = await this.prisma.destinationFollow.findMany({
-      where: { userId },
-      select: {
-        destination: {
-          select: {
-            code: true,
+    const [following, followedDestinations, blocks] = await Promise.all([
+      this.prisma.follow.findMany({
+        where: { followerId: userId, status: FollowStatus.ACCEPTED },
+        select: { followingId: true },
+      }),
+      this.prisma.destinationFollow.findMany({
+        where: { userId },
+        select: {
+          destination: {
+            select: {
+              code: true,
+            },
           },
         },
-      },
-    });
+      }),
+      this.prisma.userBlock.findMany({
+        where: {
+          OR: [{ blockerId: userId }, { blockedId: userId }],
+        },
+        select: { blockerId: true, blockedId: true },
+      }),
+    ]);
+
+    const blockedUserIds = blocks.map((block) =>
+      block.blockerId === userId ? block.blockedId : block.blockerId,
+    );
+    const followingIds = following
+      .map((follow) => follow.followingId)
+      .filter((id) => !blockedUserIds.includes(id));
 
     const followedDestinationCodes = followedDestinations
       .map((d) => d.destination?.code)
@@ -36,7 +48,10 @@ export class FeedService {
     // - followed destinations: PUBLIC only
     const posts = await this.prisma.post.findMany({
       where: {
-        OR: [
+        AND: [
+          { NOT: { userId: { in: blockedUserIds } } },
+          {
+            OR: [
           // my own posts -> all visibilities
           {
             userId,
@@ -60,6 +75,8 @@ export class FeedService {
             course: {
               country: { in: followedDestinationCodes },
             },
+          },
+            ],
           },
         ],
       },
