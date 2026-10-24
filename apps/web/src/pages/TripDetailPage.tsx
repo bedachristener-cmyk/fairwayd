@@ -4099,6 +4099,7 @@ export default function TripDetailPage() {
     "idle" | "uploading" | "uploaded" | "failed"
   >("idle");
   const [itemDocumentUploadMessage, setItemDocumentUploadMessage] = useState("");
+  const [editRelatedDocumentsOpen, setEditRelatedDocumentsOpen] = useState(false);
   const [expandedItemDocumentId, setExpandedItemDocumentId] = useState<string | null>(null);
   const [itemDocumentMemberQuery, setItemDocumentMemberQuery] = useState("");
   const [activity, setActivity] = useState<TripActivity[]>([]);
@@ -4523,6 +4524,9 @@ export default function TripDetailPage() {
 
   function startEdit(item: TripItem) {
     setErr(null);
+    setEditRelatedDocumentsOpen(false);
+    setExpandedItemDocumentId(null);
+    setItemDocumentMemberQuery("");
     setEditingItemId(item.id);
     const canUseGroupVisibility = canEditTrip;
     const itemVisibility = item.visibility || (canUseGroupVisibility ? "GROUP" : "PRIVATE");
@@ -10163,19 +10167,61 @@ export default function TripDetailPage() {
                               background: "color-mix(in srgb, var(--bg) 54%, var(--card))",
                             }}
                           >
-                            <div style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
-                              Related documents
-                            </div>
-                            <div
+                            <button
+                              type="button"
+                              aria-expanded={editRelatedDocumentsOpen}
+                              aria-controls={`trip-edit-related-documents-${item.id}`}
+                              onClick={() => setEditRelatedDocumentsOpen((open) => !open)}
                               style={{
-                                display: "grid",
-                                gap: 7,
-                                padding: 9,
-                                borderRadius: 12,
-                                border: "1px solid var(--border)",
-                                background: "var(--card)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: 12,
+                                minHeight: 38,
+                                width: "100%",
+                                padding: 0,
+                                border: 0,
+                                background: "transparent",
+                                color: "var(--text)",
+                                textAlign: "left",
+                                cursor: "pointer",
+                                font: "inherit",
                               }}
                             >
+                              <span style={{ display: "grid", gap: 3, minWidth: 0 }}>
+                                <strong style={{ fontSize: 12, fontWeight: 950 }}>
+                                  Related documents
+                                </strong>
+                                <span style={{ color: "var(--sub)", fontSize: 12, fontWeight: 750 }}>
+                                  {editDraft.documentIds.length} selected · {documents.length} available
+                                </span>
+                              </span>
+                              <ChevronDown
+                                aria-hidden="true"
+                                size={18}
+                                style={{
+                                  flexShrink: 0,
+                                  transform: editRelatedDocumentsOpen
+                                    ? "rotate(180deg)" : "rotate(0deg)",
+                                  transition: "transform 160ms ease",
+                                }}
+                              />
+                            </button>
+                            {editRelatedDocumentsOpen ? (
+                              <div
+                                id={`trip-edit-related-documents-${item.id}`}
+                                style={{ display: "grid", gap: 7 }}
+                              >
+                                <div
+                                  style={{
+                                    display: "grid",
+                                    gap: 7,
+                                    padding: 9,
+                                    borderRadius: 12,
+                                    border: "1px solid var(--border)",
+                                    background: "var(--card)",
+                                  }}
+                                >
                               <div
                                 style={{ color: "var(--text)", fontSize: 11, fontWeight: 900 }}
                               >
@@ -10646,6 +10692,8 @@ export default function TripDetailPage() {
                                 })}
                               </div>
                             )}
+                              </div>
+                            ) : null}
                           </div>
 
                           <textarea
