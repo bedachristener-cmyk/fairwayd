@@ -571,8 +571,9 @@ export default function PrivacySecurityPage() {
           </>
         ) : (
           <p style={textStyle}>
-            This account uses Google Sign-In. Password management is handled by
-            Google.
+            No Fairwayd password is stored for this account. Accounts that use
+            email and password can change it here. If you signed in with Google,
+            password management remains with Google.
           </p>
         )}
       </section>
