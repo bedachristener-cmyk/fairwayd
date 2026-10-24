@@ -25,19 +25,31 @@ export function normalizePostCollectionName(value: unknown) {
 
 export function visiblePostWhere(userId: string): Prisma.PostWhereInput {
   return {
-    OR: [
-      { userId },
-      { visibility: Visibility.PUBLIC },
+    AND: [
       {
-        visibility: Visibility.FOLLOWERS,
-        user: {
-          followers: {
-            some: {
-              followerId: userId,
-              status: 'ACCEPTED',
+        NOT: {
+          OR: [
+            { user: { blockedBy: { some: { blockerId: userId } } } },
+            { user: { blockedUsers: { some: { blockedId: userId } } } },
+          ],
+        },
+      },
+      {
+        OR: [
+          { userId },
+          { visibility: Visibility.PUBLIC },
+          {
+            visibility: Visibility.FOLLOWERS,
+            user: {
+              followers: {
+                some: {
+                  followerId: userId,
+                  status: 'ACCEPTED',
+                },
+              },
             },
           },
-        },
+        ],
       },
     ],
   };
