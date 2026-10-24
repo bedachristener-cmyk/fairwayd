@@ -572,8 +572,9 @@ export default function PrivacySecurityPage() {
         ) : (
           <p style={textStyle}>
             No Fairwayd password is stored for this account. Accounts that use
-            email and password can change it here. If you signed in with Google,
-            password management remains with Google.
+            email and password can change it here, or reset it with “Forgot
+            password” on the login page. If you signed in with Google, password
+            management remains with Google.
           </p>
         )}
       </section>
