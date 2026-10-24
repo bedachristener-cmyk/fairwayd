@@ -262,33 +262,37 @@ export class SafetyService {
     if (!report) throw new NotFoundException('Report not found');
     if (!report.targetId) throw new BadRequestException('Report has no target id');
 
-    let removeOperation: unknown;
+    const resolveReport = () =>
+      this.prisma.contentReport.update({
+        where: { id },
+        data: { status: ReportStatus.REVIEWED, reviewedAt: new Date() },
+      });
+
     if (report.targetType === ReportTargetType.POST) {
       const target = await this.prisma.post.findUnique({
         where: { id: report.targetId },
         select: { id: true },
       });
       if (!target) throw new NotFoundException('Reported post not found');
-      removeOperation = this.prisma.post.delete({ where: { id: report.targetId } });
+
+      await this.prisma.$transaction([
+        this.prisma.post.delete({ where: { id: report.targetId } }),
+        resolveReport(),
+      ]);
     } else if (report.targetType === ReportTargetType.COMMENT) {
       const target = await this.prisma.comment.findUnique({
         where: { id: report.targetId },
         select: { id: true },
       });
       if (!target) throw new NotFoundException('Reported comment not found');
-      removeOperation = this.prisma.comment.delete({ where: { id: report.targetId } });
+
+      await this.prisma.$transaction([
+        this.prisma.comment.delete({ where: { id: report.targetId } }),
+        resolveReport(),
+      ]);
     } else {
       throw new BadRequestException('Only posts and comments can be removed here');
     }
 
-    await this.prisma.$transaction([
-      removeOperation,
-      this.prisma.contentReport.update({
-        where: { id },
-        data: { status: ReportStatus.REVIEWED, reviewedAt: new Date() },
-      }),
-    ]);
-
     return { ok: true, removedType: report.targetType, removedId: report.targetId };
-  }
-}
+  }}
