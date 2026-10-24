@@ -14,7 +14,11 @@ export default function LoginPanel() {
 
   const [mode, setMode] = useState<
     "signin" | "register" | "verify" | "forgotPassword" | "resetPassword"
-  >("signin");
+  >(() =>
+    new URLSearchParams(loc.search).get("auth") === "forgot-password"
+      ? "forgotPassword"
+      : "signin",
+  );
   const [msg, setMsg] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
