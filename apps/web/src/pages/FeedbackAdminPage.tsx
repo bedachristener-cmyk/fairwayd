@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { API_BASE } from "../api/base";
+import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
 type FeedbackItem = {
@@ -139,6 +140,7 @@ export default function FeedbackAdminPage() {
         >
           Feedback Admin
         </div>
+        <Link to="/admin/users" style={{ display: "inline-block", margin: "8px 0", color: "var(--text)" }}>Registered users →</Link>
         <div style={{ color: "var(--sub)", fontSize: 14 }}>
           Feedback from stage testers.
         </div>
