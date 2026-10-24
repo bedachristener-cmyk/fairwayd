@@ -509,6 +509,7 @@ export default function AddTripItemPage() {
     useState<CourseSearchResult | null>(null);
   const [trip, setTrip] = useState<Trip | null>(null);
   const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
+  const [relatedDocumentsOpen, setRelatedDocumentsOpen] = useState(false);
   const [expandedDocumentId, setExpandedDocumentId] = useState<string | null>(null);
   const [memberPickerDocumentId, setMemberPickerDocumentId] = useState<string | null>(null);
   const [documentMemberQuery, setDocumentMemberQuery] = useState("");
@@ -1681,17 +1682,68 @@ export default function AddTripItemPage() {
   );
 
   const renderRelatedDocuments = (
-    <Card title="Related documents" subtitle="Attach an existing trip document to this item.">
-      <div
+    <section
+      style={{
+        ...sectionCardStyle,
+        borderLeft: "4px solid var(--item-accent, var(--accent-strong))",
+      }}
+    >
+      <button
+        type="button"
+        aria-expanded={relatedDocumentsOpen}
+        aria-controls="trip-item-related-documents"
+        onClick={() => setRelatedDocumentsOpen((open) => !open)}
         style={{
-          display: "grid",
-          gap: 7,
-          padding: 10,
-          borderRadius: 14,
-          border: "1px solid var(--border)",
-          background: "color-mix(in srgb, var(--card) 72%, var(--bg))",
+          appearance: "none",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          width: "100%",
+          minHeight: 38,
+          gap: 12,
+          padding: 0,
+          border: 0,
+          background: "transparent",
+          color: "var(--text)",
+          cursor: "pointer",
+          textAlign: "left",
+          font: "inherit",
         }}
       >
+        <span style={{ display: "grid", gap: 3, minWidth: 0 }}>
+          <strong style={{ fontSize: 14, fontWeight: 950 }}>
+            Related documents
+          </strong>
+          <span style={sectionIntroStyle}>
+            {selectedDocumentIds.length} selected · {trip?.documents?.length ?? 0} available
+          </span>
+        </span>
+        <ChevronDown
+          aria-hidden="true"
+          size={19}
+          style={{
+            flex: "0 0 auto",
+            transform: relatedDocumentsOpen ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 160ms ease",
+          }}
+        />
+      </button>
+
+      {relatedDocumentsOpen ? (
+        <div id="trip-item-related-documents" style={{ display: "grid", gap: 9 }}>
+          <div style={sectionIntroStyle}>
+            Attach an existing trip document to this item.
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gap: 7,
+              padding: 10,
+              borderRadius: 14,
+              border: "1px solid var(--border)",
+              background: "color-mix(in srgb, var(--card) 72%, var(--bg))",
+            }}
+          >
         <div style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
           Upload new document
         </div>
@@ -2087,7 +2139,9 @@ export default function AddTripItemPage() {
           })}
         </div>
       )}
-    </Card>
+        </div>
+      ) : null}
+    </section>
   );
 
   const renderVisibility = (
