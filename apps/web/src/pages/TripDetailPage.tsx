@@ -2658,7 +2658,7 @@ function timelineCostSummaryText(item: TripItem, members: TripMember[], baseCurr
 }
 
 function timelineCostBreakdownText(item: TripItem, members: TripMember[], baseCurrency: string) {
-  return budgetCostsForItem(item, members).flatMap((cost, index) => {
+  return budgetCostsForItem(item, members).flatMap((cost) => {
     const amount = finiteAmount(cost.amount);
     if (amount <= 0) return [];
     const label = cost.label?.trim();
