@@ -509,6 +509,7 @@ export default function AddTripItemPage() {
     useState<CourseSearchResult | null>(null);
   const [trip, setTrip] = useState<Trip | null>(null);
   const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
+  const [relatedDocumentsOpen, setRelatedDocumentsOpen] = useState(false);
   const [expandedDocumentId, setExpandedDocumentId] = useState<string | null>(null);
   const [memberPickerDocumentId, setMemberPickerDocumentId] = useState<string | null>(null);
   const [documentMemberQuery, setDocumentMemberQuery] = useState("");
@@ -1681,413 +1682,466 @@ export default function AddTripItemPage() {
   );
 
   const renderRelatedDocuments = (
-    <Card title="Related documents" subtitle="Attach an existing trip document to this item.">
-      <div
+    <section
+      style={{
+        ...sectionCardStyle,
+        borderLeft: "4px solid var(--item-accent, var(--accent-strong))",
+      }}
+    >
+      <button
+        type="button"
+        aria-expanded={relatedDocumentsOpen}
+        aria-controls="trip-item-related-documents"
+        onClick={() => setRelatedDocumentsOpen((open) => !open)}
         style={{
-          display: "grid",
-          gap: 7,
-          padding: 10,
-          borderRadius: 14,
-          border: "1px solid var(--border)",
-          background: "color-mix(in srgb, var(--card) 72%, var(--bg))",
+          appearance: "none",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          width: "100%",
+          minHeight: 38,
+          gap: 12,
+          padding: 0,
+          border: 0,
+          background: "transparent",
+          color: "var(--text)",
+          cursor: "pointer",
+          textAlign: "left",
+          font: "inherit",
         }}
       >
-        <div style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
-          Upload new document
-        </div>
-        <input
-          ref={documentInputRef}
-          type="file"
-          accept="application/pdf,image/jpeg,image/png,image/webp"
-          onChange={(event) => {
-            setDocumentUploadFile(event.target.files?.[0] ?? null);
-            setDocumentUploadState("idle");
-            setDocumentUploadMessage("");
-          }}
+        <span style={{ display: "grid", gap: 3, minWidth: 0 }}>
+          <strong style={{ fontSize: 14, fontWeight: 950 }}>
+            Related documents
+          </strong>
+          <span style={sectionIntroStyle}>
+            {selectedDocumentIds.length} selected · {trip?.documents?.length ?? 0} available
+          </span>
+        </span>
+        <ChevronDown
+          aria-hidden="true"
+          size={19}
           style={{
-            ...fieldStyle,
-            minHeight: 38,
-            fontSize: 12,
-            padding: "7px 10px",
+            flex: "0 0 auto",
+            transform: relatedDocumentsOpen ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 160ms ease",
           }}
         />
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-          <button
-            type="button"
-            onClick={uploadRelatedDocument}
-            disabled={!documentUploadFile || documentUploadState === "uploading"}
+      </button>
+
+      {relatedDocumentsOpen ? (
+        <div id="trip-item-related-documents" style={{ display: "grid", gap: 9 }}>
+          <div style={sectionIntroStyle}>
+            Attach an existing trip document to this item.
+          </div>
+          <div
             style={{
-              ...secondaryButtonStyle,
-              minHeight: 36,
-              cursor:
-                !documentUploadFile || documentUploadState === "uploading"
-                  ? "default"
-                  : "pointer",
-              opacity: !documentUploadFile || documentUploadState === "uploading" ? 0.65 : 1,
+              display: "grid",
+              gap: 7,
+              padding: 10,
+              borderRadius: 14,
+              border: "1px solid var(--border)",
+              background: "color-mix(in srgb, var(--card) 72%, var(--bg))",
             }}
           >
-            {documentUploadState === "uploading" ? "Uploading..." : "Upload document"}
-          </button>
-          {documentUploadMessage ? (
-            <span
-              style={{
-                color: documentUploadState === "failed" ? "var(--danger)" : "var(--sub)",
-                fontSize: 12,
-                fontWeight: 800,
+            <div style={{ color: "var(--text)", fontSize: 12, fontWeight: 950 }}>
+              Upload new document
+            </div>
+            <input
+              ref={documentInputRef}
+              type="file"
+              accept="application/pdf,image/jpeg,image/png,image/webp"
+              onChange={(event) => {
+                setDocumentUploadFile(event.target.files?.[0] ?? null);
+                setDocumentUploadState("idle");
+                setDocumentUploadMessage("");
               }}
-            >
-              {documentUploadMessage}
-            </span>
-          ) : null}
-        </div>
-        {visibility === "SELECTED" ? (
-          <div style={sectionIntroStyle}>
-            {t("trip_document_visible_members")}: {visibleToMemberIds.length}
-          </div>
-        ) : null}
-      </div>
-
-      {(trip?.documents ?? []).length === 0 ? (
-        <div style={sectionIntroStyle}>
-          No documents yet. Upload a booking confirmation, voucher or screenshot.
-        </div>
-      ) : (
-        <div style={{ display: "grid", gap: 7 }}>
-          {(trip?.documents ?? []).map((document) => {
-            const selected = selectedDocumentIds.includes(document.id);
-            const isOwner = document.uploadedByUserId === user?.id;
-            const isExpanded = expandedDocumentId === document.id;
-            const documentName = document.title || document.fileName;
-            const visibilityMemberIds = (document.visibilityMembers ?? []).map(
-              (selection) => selection.tripMemberId,
-            );
-            const visibilityMemberCount = visibilityMemberIds.length;
-            const isMemberPickerOpen = memberPickerDocumentId === document.id;
-            const normalizedMemberQuery = documentMemberQuery.trim().toLocaleLowerCase();
-            const matchingMembers = (trip?.members ?? []).filter((member) =>
-              memberDisplayName(member).toLocaleLowerCase().includes(normalizedMemberQuery),
-            );
-            const visibilityLabel =
-              document.visibility === "PRIVATE"
-                ? t("trip_visibility_private")
-                : document.visibility === "SELECTED"
-                  ? `${t("trip_visibility_selected")} · ${visibilityMemberCount}`
-                  : t("trip_visibility_group");
-
-            return (
-              <div
-                key={document.id}
+              style={{
+                ...fieldStyle,
+                minHeight: 38,
+                fontSize: 12,
+                padding: "7px 10px",
+              }}
+            />
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+              <button
+                type="button"
+                onClick={uploadRelatedDocument}
+                disabled={!documentUploadFile || documentUploadState === "uploading"}
                 style={{
-                  display: "grid",
-                  gap: isExpanded ? 9 : 7,
-                  maxWidth: "100%",
-                  padding: "9px 10px",
-                  borderRadius: 14,
-                  border: selected
-                    ? `1px solid ${theme.color}`
-                    : "1px solid var(--border)",
-                  background: selected ? theme.soft : "transparent",
-                  color: "var(--text)",
-                  fontSize: 12,
-                  fontWeight: 850,
-                  overflow: "hidden",
+                  ...secondaryButtonStyle,
+                  minHeight: 36,
+                  cursor:
+                    !documentUploadFile || documentUploadState === "uploading"
+                      ? "default"
+                      : "pointer",
+                  opacity: !documentUploadFile || documentUploadState === "uploading" ? 0.65 : 1,
                 }}
               >
-                <div
+                {documentUploadState === "uploading" ? "Uploading..." : "Upload document"}
+              </button>
+              {documentUploadMessage ? (
+                <span
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 9,
-                    minWidth: 0,
+                    color: documentUploadState === "failed" ? "var(--danger)" : "var(--sub)",
+                    fontSize: 12,
+                    fontWeight: 800,
                   }}
                 >
-                  <label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 7,
-                      minWidth: 0,
-                      flex: "1 1 auto",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selected}
-                      onChange={(event) => {
-                        setSelectedDocumentIds((current) =>
-                          event.target.checked
-                            ? [...current, document.id]
-                            : current.filter((id) => id !== document.id),
-                        );
-                      }}
-                    />
-                    <span
-                      style={{
-                        minWidth: 0,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {documentName}
-                    </span>
-                  </label>
+                  {documentUploadMessage}
+                </span>
+              ) : null}
+            </div>
+            {visibility === "SELECTED" ? (
+              <div style={sectionIntroStyle}>
+                {t("trip_document_visible_members")}: {visibleToMemberIds.length}
+              </div>
+            ) : null}
+          </div>
 
-                  {isOwner ? (
-                    <button
-                      type="button"
-                      aria-expanded={isExpanded}
-                      aria-controls={`document-permissions-${document.id}`}
-                      aria-label={`Permissions for ${documentName}: ${visibilityLabel}`}
-                      onClick={() => {
-                        setExpandedDocumentId(isExpanded ? null : document.id);
-                        setMemberPickerDocumentId(null);
-                        setDocumentMemberQuery("");
-                      }}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "flex-end",
-                        gap: 5,
-                        flex: "0 0 auto",
-                        minHeight: 30,
-                        maxWidth: "52%",
-                        padding: "4px 7px",
-                        border: 0,
-                        background: "transparent",
-                        color: "var(--sub)",
-                        cursor: "pointer",
-                        font: "inherit",
-                        fontSize: 11,
-                        fontWeight: 850,
-                      }}
-                    >
-                      <span
-                        style={{
-                          minWidth: 0,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {visibilityLabel}
-                      </span>
-                      <ChevronDown
-                        aria-hidden="true"
-                        size={15}
-                        style={{
-                          flex: "0 0 auto",
-                          transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
-                          transition: "transform 160ms ease",
-                        }}
-                      />
-                    </button>
-                  ) : (
-                    <span style={{ color: "var(--sub)", fontSize: 11 }}>
-                      {visibilityLabel}
-                    </span>
-                  )}
-                </div>
+          {(trip?.documents ?? []).length === 0 ? (
+            <div style={sectionIntroStyle}>
+              No documents yet. Upload a booking confirmation, voucher or screenshot.
+            </div>
+          ) : (
+            <div style={{ display: "grid", gap: 7 }}>
+              {(trip?.documents ?? []).map((document) => {
+                const selected = selectedDocumentIds.includes(document.id);
+                const isOwner = document.uploadedByUserId === user?.id;
+                const isExpanded = expandedDocumentId === document.id;
+                const documentName = document.title || document.fileName;
+                const visibilityMemberIds = (document.visibilityMembers ?? []).map(
+                  (selection) => selection.tripMemberId,
+                );
+                const visibilityMemberCount = visibilityMemberIds.length;
+                const isMemberPickerOpen = memberPickerDocumentId === document.id;
+                const normalizedMemberQuery = documentMemberQuery.trim().toLocaleLowerCase();
+                const matchingMembers = (trip?.members ?? []).filter((member) =>
+                  memberDisplayName(member).toLocaleLowerCase().includes(normalizedMemberQuery),
+                );
+                const visibilityLabel =
+                  document.visibility === "PRIVATE"
+                    ? t("trip_visibility_private")
+                    : document.visibility === "SELECTED"
+                      ? `${t("trip_visibility_selected")} · ${visibilityMemberCount}`
+                      : t("trip_visibility_group");
 
-                {isOwner && isExpanded ? (
+                return (
                   <div
-                    id={`document-permissions-${document.id}`}
+                    key={document.id}
                     style={{
                       display: "grid",
-                      gap: 8,
-                      paddingTop: 8,
-                      borderTop: "1px solid var(--border)",
+                      gap: isExpanded ? 9 : 7,
+                      maxWidth: "100%",
+                      padding: "9px 10px",
+                      borderRadius: 14,
+                      border: selected
+                        ? `1px solid ${theme.color}`
+                        : "1px solid var(--border)",
+                      background: selected ? theme.soft : "transparent",
+                      color: "var(--text)",
+                      fontSize: 12,
+                      fontWeight: 850,
+                      overflow: "hidden",
                     }}
                   >
-                    <select
-                      aria-label={`${t("trip_document_visibility")}: ${documentName}`}
-                      value={document.visibility ?? "SHARED"}
-                      onChange={(event) => {
-                        const nextVisibility = event.target.value as TripDocumentVisibility;
-                        if (nextVisibility !== "SELECTED") {
-                          setMemberPickerDocumentId(null);
-                          setDocumentMemberQuery("");
-                        }
-                        const memberIds =
-                          nextVisibility === "SELECTED" &&
-                          (document.visibilityMembers ?? []).length === 0 &&
-                          myMembership?.id
-                            ? [myMembership.id]
-                            : (document.visibilityMembers ?? []).map(
-                                (member) => member.tripMemberId,
-                              );
-                        void updateRelatedDocumentVisibility(
-                          document.id,
-                          nextVisibility,
-                          memberIds,
-                        );
-                      }}
+                    <div
                       style={{
-                        ...fieldStyle,
-                        minHeight: 34,
-                        padding: "5px 8px",
-                        fontSize: 12,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 9,
+                        minWidth: 0,
                       }}
                     >
-                      <option value="SHARED">{t("trip_visibility_group")}</option>
-                      <option value="SELECTED">{t("trip_visibility_selected")}</option>
-                      <option value="PRIVATE">{t("trip_visibility_private")}</option>
-                    </select>
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 7,
+                          minWidth: 0,
+                          flex: "1 1 auto",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={(event) => {
+                            setSelectedDocumentIds((current) =>
+                              event.target.checked
+                                ? [...current, document.id]
+                                : current.filter((id) => id !== document.id),
+                            );
+                          }}
+                        />
+                        <span
+                          style={{
+                            minWidth: 0,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {documentName}
+                        </span>
+                      </label>
 
-                    {document.visibility === "SELECTED" ? (
-                      <div style={{ display: "grid", gap: 6 }}>
+                      {isOwner ? (
                         <button
                           type="button"
-                          aria-expanded={isMemberPickerOpen}
-                          aria-controls={`document-members-${document.id}`}
-                          aria-label={`Choose members for ${documentName}: ${visibilityMemberCount} selected`}
+                          aria-expanded={isExpanded}
+                          aria-controls={`document-permissions-${document.id}`}
+                          aria-label={`Permissions for ${documentName}: ${visibilityLabel}`}
                           onClick={() => {
-                            setMemberPickerDocumentId(isMemberPickerOpen ? null : document.id);
+                            setExpandedDocumentId(isExpanded ? null : document.id);
+                            setMemberPickerDocumentId(null);
                             setDocumentMemberQuery("");
                           }}
                           style={{
-                            ...fieldStyle,
-                            display: "flex",
+                            display: "inline-flex",
                             alignItems: "center",
-                            justifyContent: "space-between",
-                            minHeight: 36,
-                            padding: "6px 9px",
+                            justifyContent: "flex-end",
+                            gap: 5,
+                            flex: "0 0 auto",
+                            minHeight: 30,
+                            maxWidth: "52%",
+                            padding: "4px 7px",
+                            border: 0,
+                            background: "transparent",
+                            color: "var(--sub)",
                             cursor: "pointer",
-                            textAlign: "left",
-                            fontSize: 12,
+                            font: "inherit",
+                            fontSize: 11,
                             fontWeight: 850,
                           }}
                         >
-                          <span>
-                            {visibilityMemberCount === 1
-                              ? "1 member selected"
-                              : `${visibilityMemberCount} members selected`}
+                          <span
+                            style={{
+                              minWidth: 0,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {visibilityLabel}
                           </span>
                           <ChevronDown
                             aria-hidden="true"
                             size={15}
                             style={{
-                              transform: isMemberPickerOpen
-                                ? "rotate(180deg)"
-                                : "rotate(0deg)",
+                              flex: "0 0 auto",
+                              transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
                               transition: "transform 160ms ease",
                             }}
                           />
                         </button>
+                      ) : (
+                        <span style={{ color: "var(--sub)", fontSize: 11 }}>
+                          {visibilityLabel}
+                        </span>
+                      )}
+                    </div>
 
-                        {isMemberPickerOpen ? (
-                          <div
-                            id={`document-members-${document.id}`}
-                            style={{
-                              display: "grid",
-                              gap: 7,
-                              padding: 8,
-                              borderRadius: 11,
-                              border: "1px solid var(--border)",
-                              background: "var(--card)",
-                            }}
-                          >
-                            <input
-                              type="search"
-                              aria-label={`Search members for ${documentName}`}
-                              placeholder="Search members"
-                              value={documentMemberQuery}
-                              onChange={(event) => setDocumentMemberQuery(event.target.value)}
+                    {isOwner && isExpanded ? (
+                      <div
+                        id={`document-permissions-${document.id}`}
+                        style={{
+                          display: "grid",
+                          gap: 8,
+                          paddingTop: 8,
+                          borderTop: "1px solid var(--border)",
+                        }}
+                      >
+                        <select
+                          aria-label={`${t("trip_document_visibility")}: ${documentName}`}
+                          value={document.visibility ?? "SHARED"}
+                          onChange={(event) => {
+                            const nextVisibility = event.target.value as TripDocumentVisibility;
+                            if (nextVisibility !== "SELECTED") {
+                              setMemberPickerDocumentId(null);
+                              setDocumentMemberQuery("");
+                            }
+                            const memberIds =
+                              nextVisibility === "SELECTED" &&
+                              (document.visibilityMembers ?? []).length === 0 &&
+                              myMembership?.id
+                                ? [myMembership.id]
+                                : (document.visibilityMembers ?? []).map(
+                                    (member) => member.tripMemberId,
+                                  );
+                            void updateRelatedDocumentVisibility(
+                              document.id,
+                              nextVisibility,
+                              memberIds,
+                            );
+                          }}
+                          style={{
+                            ...fieldStyle,
+                            minHeight: 34,
+                            padding: "5px 8px",
+                            fontSize: 12,
+                          }}
+                        >
+                          <option value="SHARED">{t("trip_visibility_group")}</option>
+                          <option value="SELECTED">{t("trip_visibility_selected")}</option>
+                          <option value="PRIVATE">{t("trip_visibility_private")}</option>
+                        </select>
+
+                        {document.visibility === "SELECTED" ? (
+                          <div style={{ display: "grid", gap: 6 }}>
+                            <button
+                              type="button"
+                              aria-expanded={isMemberPickerOpen}
+                              aria-controls={`document-members-${document.id}`}
+                              aria-label={`Choose members for ${documentName}: ${visibilityMemberCount} selected`}
+                              onClick={() => {
+                                setMemberPickerDocumentId(isMemberPickerOpen ? null : document.id);
+                                setDocumentMemberQuery("");
+                              }}
                               style={{
                                 ...fieldStyle,
-                                minHeight: 34,
-                                padding: "5px 8px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                minHeight: 36,
+                                padding: "6px 9px",
+                                cursor: "pointer",
+                                textAlign: "left",
                                 fontSize: 12,
-                              }}
-                            />
-                            <div style={{ display: "flex", gap: 7 }}>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void updateRelatedDocumentVisibility(
-                                    document.id,
-                                    "SELECTED",
-                                    (trip?.members ?? []).map((member) => member.id),
-                                  )
-                                }
-                                style={{ ...secondaryButtonStyle, minHeight: 30, fontSize: 11 }}
-                              >
-                                Select all
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void updateRelatedDocumentVisibility(
-                                    document.id,
-                                    "SELECTED",
-                                    [],
-                                  )
-                                }
-                                style={{ ...secondaryButtonStyle, minHeight: 30, fontSize: 11 }}
-                              >
-                                Clear
-                              </button>
-                            </div>
-                            <div
-                              style={{
-                                display: "grid",
-                                gap: 3,
-                                maxHeight: 220,
-                                overflowY: "auto",
-                                overscrollBehavior: "contain",
+                                fontWeight: 850,
                               }}
                             >
-                              {matchingMembers.length === 0 ? (
-                                <div style={sectionIntroStyle}>No matching members.</div>
-                              ) : (
-                                matchingMembers.map((member) => {
-                                  const checked = visibilityMemberIds.includes(member.id);
-                                  return (
-                                    <label
-                                      key={member.id}
-                                      style={{
-                                        display: "flex",
-                                        gap: 6,
-                                        alignItems: "center",
-                                        minHeight: 30,
-                                        fontSize: 11,
-                                      }}
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        checked={checked}
-                                        onChange={(event) => {
-                                          const nextIds = event.target.checked
-                                            ? [...new Set([...visibilityMemberIds, member.id])]
-                                            : visibilityMemberIds.filter(
-                                                (id) => id !== member.id,
+                              <span>
+                                {visibilityMemberCount === 1
+                                  ? "1 member selected"
+                                  : `${visibilityMemberCount} members selected`}
+                              </span>
+                              <ChevronDown
+                                aria-hidden="true"
+                                size={15}
+                                style={{
+                                  transform: isMemberPickerOpen
+                                    ? "rotate(180deg)"
+                                    : "rotate(0deg)",
+                                  transition: "transform 160ms ease",
+                                }}
+                              />
+                            </button>
+
+                            {isMemberPickerOpen ? (
+                              <div
+                                id={`document-members-${document.id}`}
+                                style={{
+                                  display: "grid",
+                                  gap: 7,
+                                  padding: 8,
+                                  borderRadius: 11,
+                                  border: "1px solid var(--border)",
+                                  background: "var(--card)",
+                                }}
+                              >
+                                <input
+                                  type="search"
+                                  aria-label={`Search members for ${documentName}`}
+                                  placeholder="Search members"
+                                  value={documentMemberQuery}
+                                  onChange={(event) => setDocumentMemberQuery(event.target.value)}
+                                  style={{
+                                    ...fieldStyle,
+                                    minHeight: 34,
+                                    padding: "5px 8px",
+                                    fontSize: 12,
+                                  }}
+                                />
+                                <div style={{ display: "flex", gap: 7 }}>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      void updateRelatedDocumentVisibility(
+                                        document.id,
+                                        "SELECTED",
+                                        (trip?.members ?? []).map((member) => member.id),
+                                      )
+                                    }
+                                    style={{ ...secondaryButtonStyle, minHeight: 30, fontSize: 11 }}
+                                  >
+                                    Select all
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      void updateRelatedDocumentVisibility(
+                                        document.id,
+                                        "SELECTED",
+                                        [],
+                                      )
+                                    }
+                                    style={{ ...secondaryButtonStyle, minHeight: 30, fontSize: 11 }}
+                                  >
+                                    Clear
+                                  </button>
+                                </div>
+                                <div
+                                  style={{
+                                    display: "grid",
+                                    gap: 3,
+                                    maxHeight: 220,
+                                    overflowY: "auto",
+                                    overscrollBehavior: "contain",
+                                  }}
+                                >
+                                  {matchingMembers.length === 0 ? (
+                                    <div style={sectionIntroStyle}>No matching members.</div>
+                                  ) : (
+                                    matchingMembers.map((member) => {
+                                      const checked = visibilityMemberIds.includes(member.id);
+                                      return (
+                                        <label
+                                          key={member.id}
+                                          style={{
+                                            display: "flex",
+                                            gap: 6,
+                                            alignItems: "center",
+                                            minHeight: 30,
+                                            fontSize: 11,
+                                          }}
+                                        >
+                                          <input
+                                            type="checkbox"
+                                            checked={checked}
+                                            onChange={(event) => {
+                                              const nextIds = event.target.checked
+                                                ? [...new Set([...visibilityMemberIds, member.id])]
+                                                : visibilityMemberIds.filter(
+                                                    (id) => id !== member.id,
+                                                  );
+                                              void updateRelatedDocumentVisibility(
+                                                document.id,
+                                                "SELECTED",
+                                                nextIds,
                                               );
-                                          void updateRelatedDocumentVisibility(
-                                            document.id,
-                                            "SELECTED",
-                                            nextIds,
-                                          );
-                                        }}
-                                      />
-                                      <span>{memberDisplayName(member)}</span>
-                                    </label>
-                                  );
-                                })
-                              )}
-                            </div>
+                                            }}
+                                          />
+                                          <span>{memberDisplayName(member)}</span>
+                                        </label>
+                                      );
+                                    })
+                                  )}
+                                </div>
+                              </div>
+                            ) : null}
                           </div>
                         ) : null}
                       </div>
                     ) : null}
                   </div>
-                ) : null}
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          )}
         </div>
-      )}
-    </Card>
+      ) : null}
+    </section>
   );
 
   const renderVisibility = (
