@@ -1433,7 +1433,7 @@ export default function PostCard({
                     maxWidth: "100%",
                     height: "auto",
                     display: "block",
-                    margin: "0 auto",
+                    margin: 0,
                     objectFit: "contain",
                     maxHeight: isMobile
                       ? "min(80dvh, 720px)"
