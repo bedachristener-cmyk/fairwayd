@@ -386,6 +386,9 @@ export default function PostCard({
   const [editVisibility, setEditVisibility] = useState<
     "PUBLIC" | "FOLLOWERS" | "PRIVATE"
   >((post.visibility as "PUBLIC" | "FOLLOWERS" | "PRIVATE") ?? "PUBLIC");
+  const [editCourseId, setEditCourseId] = useState(post.course.id);
+  const [editCourses, setEditCourses] = useState<PostCourse[]>([post.course]);
+  const [editCoursesLoading, setEditCoursesLoading] = useState(false);
 
   useEffect(() => {
     setLocalContent(post.content ?? "");
@@ -395,6 +398,12 @@ export default function PostCard({
     setEditContent(post.content ?? "");
     setEditVisibility(
       (post.visibility as "PUBLIC" | "FOLLOWERS" | "PRIVATE") ?? "PUBLIC",
+    );
+    setEditCourseId(post.course.id);
+    setEditCourses((current) =>
+      current.some((course) => course.id === post.course.id)
+        ? current
+        : [post.course, ...current],
     );
 
     const nextLiked =
@@ -422,11 +431,43 @@ export default function PostCard({
     post.id,
     post.content,
     post.visibility,
+    post.course,
     post.likes,
     post.comments,
     post._count,
     currentUserId,
   ]);
+
+  async function loadEditCourses() {
+    if (editCoursesLoading || editCourses.length > 1) return;
+
+    try {
+      setEditCoursesLoading(true);
+      const res = await fetch(`${API_BASE}/courses`);
+      if (!res.ok) throw new Error(`Failed to load courses: ${res.status}`);
+      const data = await res.json();
+      const courses = Array.isArray(data) ? data : data?.items;
+      if (Array.isArray(courses)) {
+        const nextCourses = courses
+          .filter(
+            (course: unknown): course is PostCourse =>
+              !!course &&
+              typeof course === "object" &&
+              typeof (course as PostCourse).id === "string" &&
+              typeof (course as PostCourse).name === "string",
+          )
+          .sort((a: PostCourse, b: PostCourse) =>
+            a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+          );
+        setEditCourses(nextCourses);
+      }
+    } catch (err) {
+      console.error("Course list load failed", err);
+      setEditError(t("save_changes_failed"));
+    } finally {
+      setEditCoursesLoading(false);
+    }
+  }
 
   async function handleSaveEdit() {
     if (!auth?.token) return;
@@ -446,8 +487,10 @@ export default function PostCard({
       const payload: {
         content?: string;
         visibility: "PUBLIC" | "FOLLOWERS" | "PRIVATE";
+        courseId: string;
       } = {
         visibility: editVisibility,
+        courseId: editCourseId,
       };
 
       if (trimmed) {
@@ -480,6 +523,7 @@ export default function PostCard({
         (updated?.visibility as "PUBLIC" | "FOLLOWERS" | "PRIVATE") ??
           editVisibility,
       );
+      setEditCourseId(updated?.course?.id ?? editCourseId);
 
       onPostUpdated?.(updated);
 
@@ -1008,8 +1052,10 @@ export default function PostCard({
                             e.stopPropagation();
                             setEditContent(localContent);
                             setEditVisibility(localVisibility);
+                            setEditCourseId(post.course.id);
                             setEditError("");
                             setIsEditing(true);
+                            void loadEditCourses();
                             setIsMenuOpen(false);
                           }}
                           style={{
@@ -1118,6 +1164,39 @@ export default function PostCard({
               }}
             />
 
+            <label
+              style={{
+                display: "grid",
+                gap: 6,
+                color: "var(--sub)",
+                fontSize: 12,
+                fontWeight: 800,
+              }}
+            >
+              {t("golf_course")}
+              <select
+                value={editCourseId}
+                onChange={(e) => setEditCourseId(e.target.value)}
+                disabled={editCoursesLoading}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 12,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg)",
+                  color: "var(--text)",
+                  boxSizing: "border-box",
+                  font: "inherit",
+                }}
+              >
+                {editCourses.map((course) => (
+                  <option key={course.id} value={course.id}>
+                    {course.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             <select
               value={editVisibility}
               onChange={(e) =>
@@ -1163,8 +1242,7 @@ export default function PostCard({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setEditContent(localContent);
-                  handleSaveEdit();
+                  void handleSaveEdit();
                 }}
                 disabled={saveBusy}
                 style={{
@@ -1186,6 +1264,7 @@ export default function PostCard({
                 onClick={() => {
                   setEditContent(localContent);
                   setEditVisibility(localVisibility);
+                  setEditCourseId(post.course.id);
                   setEditError("");
                   setIsEditing(false);
                 }}
