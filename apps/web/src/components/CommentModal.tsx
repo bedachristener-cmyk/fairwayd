@@ -193,6 +193,7 @@ export default function CommentModal({
       setLoading(true);
 
       const res = await fetch(`${API_BASE}/posts/${post.id}/comments`, {
+        cache: "no-store",
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -564,6 +565,9 @@ export default function CommentModal({
                       }}
                     >
                       {reply.user?.name || `@${reply.user?.handle ?? "user"}`}
+                      {reply.user?.handle && reply.user?.name
+                        ? ` · @${reply.user.handle}`
+                        : ""}
                     </button>
 
                     {renderCommentContent(reply)}
@@ -780,6 +784,9 @@ export default function CommentModal({
                 }}
               >
                 {comment.user?.name || `@${comment.user?.handle ?? "user"}`}
+                {comment.user?.handle && comment.user?.name
+                  ? ` · @${comment.user.handle}`
+                  : ""}
               </button>
 
               {renderCommentContent(comment)}
