@@ -36,6 +36,11 @@ type CreateCommentBody = {
 type UpdatePostBody = {
   content?: string;
   visibility?: 'PUBLIC' | 'FOLLOWERS' | 'PRIVATE';
+  courseId?: string;
+};
+
+type UpdateCommentBody = {
+  content?: string;
 };
 
 function safeImageExt(original: string, mimeType?: string) {
@@ -130,6 +135,17 @@ export class PostsController {
   async toggleCommentLike(@Param('id') id: string, @Req() req: any) {
     const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
     return this.posts.toggleCommentLike(id, userId);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Patch('comments/:id')
+  async updateComment(
+    @Param('id') id: string,
+    @Req() req: any,
+    @Body() body: UpdateCommentBody,
+  ) {
+    const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
+    return this.posts.updateComment(id, userId, body?.content ?? '');
   }
 
   @UseGuards(AuthGuard('jwt'))
