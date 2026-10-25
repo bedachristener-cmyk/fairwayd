@@ -190,15 +190,16 @@ export default function ContentReportsAdminPage() {
     >
       <MobilePageHeader title="Content reports" />
 
-      <div style={{ margin: "12px 0 18px" }}>
-        <h1 style={{ margin: 0, fontSize: 28, lineHeight: 1.15 }}>
-          Content reports
-        </h1>
-        <p style={{ margin: "7px 0 0", color: "var(--sub)", lineHeight: 1.5 }}>
-          Review reported posts, comments and profiles. Removing content is
-          permanent; resolving or dismissing only closes the report.
-        </p>
-      </div>
+      <p
+        style={{
+          margin: "12px 0 18px",
+          color: "var(--sub)",
+          lineHeight: 1.5,
+        }}
+      >
+        Review reported posts, comments and profiles. Removing content is
+        permanent; resolving or dismissing only closes the report.
+      </p>
 
       <div
         className="fw-segmented"
