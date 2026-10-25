@@ -16,6 +16,7 @@ type CreatePostBody = {
 type UpdatePostBody = {
   content?: string;
   visibility?: 'PUBLIC' | 'FOLLOWERS' | 'PRIVATE';
+  courseId?: string;
 };
 
 @Injectable()
@@ -486,6 +487,20 @@ export class PostsService {
             : Visibility.PUBLIC;
     }
 
+    if (typeof body?.courseId === 'string') {
+      const courseId = body.courseId.trim();
+      if (!courseId) throw new BadRequestException('Missing courseId');
+
+      const course = await this.prisma.course.findUnique({
+        where: { id: courseId },
+        select: { id: true },
+      });
+      if (!course) {
+        throw new BadRequestException(`Unknown courseId ${courseId}`);
+      }
+      data.course = { connect: { id: courseId } };
+    }
+
     if (Object.keys(data).length === 0) {
       throw new BadRequestException('Nothing to update');
     }
@@ -772,6 +787,45 @@ export class PostsService {
     }
 
     return roots;
+  }
+
+  async updateComment(commentId: string, userId: string, content: string) {
+    const cid = commentId?.trim();
+    const uid = userId?.trim();
+    const text = content?.trim();
+
+    if (!cid) throw new BadRequestException('Missing commentId');
+    if (!uid) throw new BadRequestException('Missing userId');
+    if (!text) throw new BadRequestException('Comment cannot be empty');
+
+    const comment = await this.prisma.comment.findUnique({
+      where: { id: cid },
+      select: { id: true, userId: true },
+    });
+
+    if (!comment) {
+      throw new BadRequestException(`Unknown commentId ${cid}`);
+    }
+    if (comment.userId !== uid) {
+      throw new UnauthorizedException('You can only edit your own comments');
+    }
+
+    return this.prisma.comment.update({
+      where: { id: cid },
+      data: { content: text },
+      include: {
+        user: {
+          select: {
+            id: true,
+            handle: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+        likes: { select: { userId: true } },
+        _count: { select: { likes: true } },
+      },
+    });
   }
 
   async createComment(
