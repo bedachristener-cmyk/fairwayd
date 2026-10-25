@@ -4086,7 +4086,7 @@ img.fw-avatar-img {
   max-width: 100% !important;
   height: auto !important;
   display: block !important;
-  margin-left: auto !important;
+  margin-left: 0 !important;
   margin-right: auto !important;
   border-radius: 0 !important;
 }
