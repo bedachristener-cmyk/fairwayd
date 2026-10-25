@@ -65,7 +65,7 @@ export default function CommentModal({
   onClose,
   onCommentCreated,
 }: CommentModalProps) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const nav = useNavigate();
 
   const [comments, setComments] = useState<CommentItem[]>([]);
@@ -76,6 +76,10 @@ export default function CommentModal({
   const [replyTargetId, setReplyTargetId] = useState<string | null>(null);
   const [replyDraft, setReplyDraft] = useState("");
   const [replySending, setReplySending] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editCommentDraft, setEditCommentDraft] = useState("");
+  const [editCommentBusy, setEditCommentBusy] = useState(false);
+  const [editCommentError, setEditCommentError] = useState("");
 
   const [expandedReplyIds, setExpandedReplyIds] = useState<Set<string>>(
     () => new Set(),
@@ -309,6 +313,132 @@ export default function CommentModal({
     }
   };
 
+  const startCommentEdit = (comment: CommentItem) => {
+    setEditingCommentId(comment.id);
+    setEditCommentDraft(comment.content);
+    setEditCommentError("");
+  };
+
+  const cancelCommentEdit = () => {
+    setEditingCommentId(null);
+    setEditCommentDraft("");
+    setEditCommentError("");
+  };
+
+  const saveCommentEdit = async () => {
+    const commentId = editingCommentId;
+    const content = editCommentDraft.trim();
+    if (!token || !commentId || !content || editCommentBusy) return;
+
+    try {
+      setEditCommentBusy(true);
+      setEditCommentError("");
+      const res = await fetch(`${API_BASE}/posts/comments/${commentId}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content }),
+      });
+      if (!res.ok) throw new Error(`Failed to update comment: ${res.status}`);
+
+      const updateTree = (items: CommentItem[]): CommentItem[] =>
+        items.map((item) => ({
+          ...item,
+          content: item.id === commentId ? content : item.content,
+          replies: item.replies ? updateTree(item.replies) : item.replies,
+        }));
+      setComments((items) => updateTree(items));
+      cancelCommentEdit();
+    } catch (err) {
+      console.error("Comment update failed", err);
+      setEditCommentError("Could not save comment.");
+    } finally {
+      setEditCommentBusy(false);
+    }
+  };
+
+  const renderCommentContent = (comment: CommentItem) => {
+    if (editingCommentId !== comment.id) {
+      return (
+        <div
+          style={{
+            fontSize: 14,
+            marginTop: 3,
+            lineHeight: 1.45,
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+          }}
+        >
+          {comment.content}
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ display: "grid", gap: 7, marginTop: 6, minWidth: 220 }}>
+        <textarea
+          value={editCommentDraft}
+          onChange={(event) => setEditCommentDraft(event.target.value)}
+          rows={2}
+          autoFocus
+          style={{
+            width: "100%",
+            boxSizing: "border-box",
+            padding: 9,
+            borderRadius: 10,
+            border: "1px solid var(--border)",
+            background: "var(--bg)",
+            color: "var(--text)",
+            resize: "vertical",
+            font: "inherit",
+          }}
+        />
+        {editCommentError ? (
+          <span style={{ color: "var(--danger)", fontSize: 12 }}>
+            {editCommentError}
+          </span>
+        ) : null}
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            type="button"
+            onClick={() => void saveCommentEdit()}
+            disabled={editCommentBusy || !editCommentDraft.trim()}
+            style={{
+              border: "none",
+              borderRadius: 999,
+              padding: "6px 10px",
+              background: "var(--brand)",
+              color: "#fff",
+              fontWeight: 800,
+              cursor: "pointer",
+              opacity: editCommentBusy || !editCommentDraft.trim() ? 0.6 : 1,
+            }}
+          >
+            {editCommentBusy ? t("saving") : t("save")}
+          </button>
+          <button
+            type="button"
+            onClick={cancelCommentEdit}
+            disabled={editCommentBusy}
+            style={{
+              border: "1px solid var(--border)",
+              borderRadius: 999,
+              padding: "6px 10px",
+              background: "var(--bg)",
+              color: "var(--text)",
+              fontWeight: 800,
+              cursor: "pointer",
+            }}
+          >
+            {t("cancel")}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   const toggleReplies = (commentId: string) => {
     setExpandedReplyIds((prev) => {
       const next = new Set(prev);
@@ -411,16 +541,7 @@ export default function CommentModal({
                       {reply.user?.name || `@${reply.user?.handle ?? "user"}`}
                     </button>
 
-                    <div
-                      style={{
-                        fontSize: 14,
-                        marginTop: 3,
-                        lineHeight: 1.45,
-                        whiteSpace: "pre-wrap",
-                      }}
-                    >
-                      {reply.content}
-                    </div>
+                    {renderCommentContent(reply)}
                   </div>
 
                   <div
@@ -466,6 +587,24 @@ export default function CommentModal({
                     >
                       {isReplyBoxOpen ? t("cancel") : t("reply")}
                     </button>
+
+                    {reply.user.id === user?.id ? (
+                      <button
+                        type="button"
+                        onClick={() => startCommentEdit(reply)}
+                        style={{
+                          border: "none",
+                          background: "transparent",
+                          color: "var(--sub)",
+                          fontWeight: 800,
+                          cursor: "pointer",
+                          padding: 0,
+                          fontSize: 12,
+                        }}
+                      >
+                        {t("edit")}
+                      </button>
+                    ) : null}
 
                     <span>
                       {reply.createdAt
@@ -618,17 +757,7 @@ export default function CommentModal({
                 {comment.user?.name || `@${comment.user?.handle ?? "user"}`}
               </button>
 
-              <div
-                style={{
-                  fontSize: 14,
-                  marginTop: 3,
-                  lineHeight: 1.45,
-                  whiteSpace: "pre-wrap",
-                  wordBreak: "break-word",
-                }}
-              >
-                {comment.content}
-              </div>
+              {renderCommentContent(comment)}
             </div>
 
             <div
@@ -674,6 +803,24 @@ export default function CommentModal({
               >
                 {isReplyBoxOpen ? t("cancel") : t("reply")}
               </button>
+
+              {comment.user.id === user?.id ? (
+                <button
+                  type="button"
+                  onClick={() => startCommentEdit(comment)}
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    color: "var(--sub)",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    padding: 0,
+                    fontSize: 12,
+                  }}
+                >
+                  {t("edit")}
+                </button>
+              ) : null}
 
               <span>
                 {comment.createdAt
