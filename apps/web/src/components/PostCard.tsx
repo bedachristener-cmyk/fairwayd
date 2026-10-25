@@ -1429,9 +1429,11 @@ export default function PostCard({
                   alt={t("post_image_alt")}
                   loading="lazy"
                   style={{
-                    width: "100%",
+                    width: "auto",
+                    maxWidth: "100%",
                     height: "auto",
                     display: "block",
+                    margin: "0 auto",
                     objectFit: "contain",
                     maxHeight: isMobile
                       ? "min(80dvh, 720px)"
