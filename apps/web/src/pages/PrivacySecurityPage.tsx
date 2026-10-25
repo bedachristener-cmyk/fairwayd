@@ -185,7 +185,6 @@ export default function PrivacySecurityPage() {
         behavior: "smooth",
         block: "start",
       });
-      document.getElementById("report-reason")?.focus({ preventScroll: true });
       setReportFocused(true);
     }, 80);
     const highlightTimer = window.setTimeout(() => setReportFocused(false), 2400);
@@ -487,7 +486,7 @@ export default function PrivacySecurityPage() {
         id="content-report"
         style={{
           ...cardStyle,
-          scrollMarginTop: 16,
+          scrollMarginTop: "clamp(88px, 14vh, 140px)",
           borderColor: reportFocused
             ? "color-mix(in srgb, var(--brand) 72%, var(--border))"
             : "var(--border)",
