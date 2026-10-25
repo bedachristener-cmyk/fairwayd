@@ -40,6 +40,7 @@ type CommentItem = {
   createdAt: string;
   parentId?: string | null;
   likedByMe?: boolean;
+  canEdit?: boolean;
   _count?: {
     likes?: number;
   };
@@ -87,6 +88,7 @@ export default function CommentModal({
   })();
   const currentUserId = user?.id ?? tokenUserId;
   const isOwnComment = (comment: CommentItem) =>
+    comment.canEdit === true ||
     (!!currentUserId && comment.user.id === currentUserId) ||
     (!!user?.handle &&
       comment.user.handle?.toLocaleLowerCase() === user.handle.toLocaleLowerCase());
