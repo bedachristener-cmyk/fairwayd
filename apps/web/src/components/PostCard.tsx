@@ -387,6 +387,7 @@ export default function PostCard({
     "PUBLIC" | "FOLLOWERS" | "PRIVATE"
   >((post.visibility as "PUBLIC" | "FOLLOWERS" | "PRIVATE") ?? "PUBLIC");
   const [editCourseId, setEditCourseId] = useState(post.course.id);
+  const [editCourseQuery, setEditCourseQuery] = useState("");
   const [editCourses, setEditCourses] = useState<PostCourse[]>([post.course]);
   const [editCoursesLoading, setEditCoursesLoading] = useState(false);
 
@@ -400,6 +401,7 @@ export default function PostCard({
       (post.visibility as "PUBLIC" | "FOLLOWERS" | "PRIVATE") ?? "PUBLIC",
     );
     setEditCourseId(post.course.id);
+    setEditCourseQuery("");
     setEditCourses((current) =>
       current.some((course) => course.id === post.course.id)
         ? current
@@ -1053,6 +1055,7 @@ export default function PostCard({
                             setEditContent(localContent);
                             setEditVisibility(localVisibility);
                             setEditCourseId(post.course.id);
+                            setEditCourseQuery("");
                             setEditError("");
                             setIsEditing(true);
                             void loadEditCourses();
@@ -1174,9 +1177,11 @@ export default function PostCard({
               }}
             >
               {t("golf_course")}
-              <select
-                value={editCourseId}
-                onChange={(e) => setEditCourseId(e.target.value)}
+              <input
+                type="search"
+                value={editCourseQuery}
+                onChange={(e) => setEditCourseQuery(e.target.value)}
+                placeholder={`🔍 ${t("golf_course")}`}
                 disabled={editCoursesLoading}
                 style={{
                   width: "100%",
@@ -1188,12 +1193,46 @@ export default function PostCard({
                   boxSizing: "border-box",
                   font: "inherit",
                 }}
+              />
+              <select
+                value={editCourseId}
+                onChange={(e) => {
+                  const nextId = e.target.value;
+                  setEditCourseId(nextId);
+                  const selected = editCourses.find(
+                    (course) => course.id === nextId,
+                  );
+                  setEditCourseQuery(selected?.name ?? "");
+                }}
+                disabled={editCoursesLoading}
+                size={editCourseQuery.trim() ? 5 : 1}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 12,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg)",
+                  color: "var(--text)",
+                  boxSizing: "border-box",
+                  font: "inherit",
+                }}
               >
-                {editCourses.map((course) => (
-                  <option key={course.id} value={course.id}>
-                    {course.name}
-                  </option>
-                ))}
+                {editCourses
+                  .filter((course) => {
+                    const query = editCourseQuery.trim().toLocaleLowerCase();
+                    return (
+                      course.id === editCourseId ||
+                      (!query ? course.id === editCourseId : course.name
+                        .toLocaleLowerCase()
+                        .includes(query))
+                    );
+                  })
+                  .slice(0, 60)
+                  .map((course) => (
+                    <option key={course.id} value={course.id}>
+                      {course.name}
+                    </option>
+                  ))}
               </select>
             </label>
 
@@ -1265,6 +1304,7 @@ export default function PostCard({
                   setEditContent(localContent);
                   setEditVisibility(localVisibility);
                   setEditCourseId(post.course.id);
+                  setEditCourseQuery("");
                   setEditError("");
                   setIsEditing(false);
                 }}
