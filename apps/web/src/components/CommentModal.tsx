@@ -67,6 +67,29 @@ export default function CommentModal({
 }: CommentModalProps) {
   const { token, user } = useAuth();
   const nav = useNavigate();
+  const tokenUserId = (() => {
+    if (!token) return null;
+    try {
+      const encoded = token.split(".")[1]
+        ?.replace(/-/g, "+")
+        .replace(/_/g, "/");
+      if (!encoded) return null;
+      const padded = encoded.padEnd(Math.ceil(encoded.length / 4) * 4, "=");
+      const claims = JSON.parse(window.atob(padded)) as {
+        sub?: string;
+        id?: string;
+        userId?: string;
+      };
+      return claims.sub ?? claims.id ?? claims.userId ?? null;
+    } catch {
+      return null;
+    }
+  })();
+  const currentUserId = user?.id ?? tokenUserId;
+  const isOwnComment = (comment: CommentItem) =>
+    (!!currentUserId && comment.user.id === currentUserId) ||
+    (!!user?.handle &&
+      comment.user.handle?.toLocaleLowerCase() === user.handle.toLocaleLowerCase());
 
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -588,7 +611,7 @@ export default function CommentModal({
                       {isReplyBoxOpen ? t("cancel") : t("reply")}
                     </button>
 
-                    {reply.user.id === user?.id ? (
+                    {isOwnComment(reply) ? (
                       <button
                         type="button"
                         onClick={() => startCommentEdit(reply)}
@@ -602,7 +625,7 @@ export default function CommentModal({
                           fontSize: 12,
                         }}
                       >
-                        {t("edit")}
+                        ✏️ {t("edit")}
                       </button>
                     ) : null}
 
@@ -804,7 +827,7 @@ export default function CommentModal({
                 {isReplyBoxOpen ? t("cancel") : t("reply")}
               </button>
 
-              {comment.user.id === user?.id ? (
+              {isOwnComment(comment) ? (
                 <button
                   type="button"
                   onClick={() => startCommentEdit(comment)}
@@ -818,7 +841,7 @@ export default function CommentModal({
                     fontSize: 12,
                   }}
                 >
-                  {t("edit")}
+                  ✏️ {t("edit")}
                 </button>
               ) : null}
 
