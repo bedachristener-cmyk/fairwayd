@@ -403,11 +403,19 @@ export default function CommentModal({
     }
 
     return (
-      <div style={{ display: "grid", gap: 7, marginTop: 6, minWidth: 220 }}>
+      <div
+        style={{
+          display: "grid",
+          gap: 8,
+          marginTop: 6,
+          width: "min(520px, calc(100vw - 110px))",
+          maxWidth: "100%",
+        }}
+      >
         <textarea
           value={editCommentDraft}
           onChange={(event) => setEditCommentDraft(event.target.value)}
-          rows={2}
+          rows={4}
           autoFocus
           style={{
             width: "100%",
@@ -418,6 +426,8 @@ export default function CommentModal({
             background: "var(--bg)",
             color: "var(--text)",
             resize: "vertical",
+            minHeight: 104,
+            lineHeight: 1.45,
             font: "inherit",
           }}
         />
