@@ -4080,10 +4080,14 @@ img.fw-avatar-img {
   box-sizing: border-box !important;
 }
 
-img.fw-post-img {
-  width: 100% !important;
+.fw-post-card img.fw-post-img,
+.fw-shell-main img.fw-post-img {
+  width: auto !important;
+  max-width: 100% !important;
   height: auto !important;
   display: block !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
   border-radius: 0 !important;
 }
 
