@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
 import { useMe } from "../auth/useMe";
@@ -127,6 +127,8 @@ export default function PrivacySecurityPage() {
   const [reportDetails, setReportDetails] = useState("");
   const [reportBusy, setReportBusy] = useState(false);
   const [reportMsg, setReportMsg] = useState<string | null>(null);
+  const [reportFocused, setReportFocused] = useState(false);
+  const reportSectionRef = useRef<HTMLElement | null>(null);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
@@ -174,6 +176,25 @@ export default function PrivacySecurityPage() {
   useEffect(() => {
     if (me?.privacy) setPrivacy(me.privacy);
   }, [me?.privacy]);
+
+  useEffect(() => {
+    if (!searchParams.get("reportId") && !searchParams.get("reportType")) return;
+
+    const scrollTimer = window.setTimeout(() => {
+      reportSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+      document.getElementById("report-reason")?.focus({ preventScroll: true });
+      setReportFocused(true);
+    }, 80);
+    const highlightTimer = window.setTimeout(() => setReportFocused(false), 2400);
+
+    return () => {
+      window.clearTimeout(scrollTimer);
+      window.clearTimeout(highlightTimer);
+    };
+  }, [searchParams]);
 
   useEffect(() => {
     void loadBlockedUsers();
@@ -461,7 +482,21 @@ export default function PrivacySecurityPage() {
         {safetyMsg ? <p role="status" style={textStyle}>{safetyMsg}</p> : null}
       </section>
 
-      <section style={cardStyle}>
+      <section
+        ref={reportSectionRef}
+        id="content-report"
+        style={{
+          ...cardStyle,
+          scrollMarginTop: 16,
+          borderColor: reportFocused
+            ? "color-mix(in srgb, var(--brand) 72%, var(--border))"
+            : "var(--border)",
+          boxShadow: reportFocused
+            ? "0 0 0 3px color-mix(in srgb, var(--brand) 22%, transparent)"
+            : "none",
+          transition: "border-color 180ms ease, box-shadow 180ms ease",
+        }}
+      >
         <h2 style={sectionTitleStyle}>Report content</h2>
         <p style={textStyle}>
           Paste the link or ID of a post, comment or profile. Reports are
