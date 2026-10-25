@@ -766,6 +766,7 @@ export class PostsService {
         user: comment.user,
         _count: comment._count,
         likedByMe,
+        canEdit: !!userId && comment.userId === userId,
         replies: [],
       } as any); // 👈 DAS HINZUFÜGEN
     }
