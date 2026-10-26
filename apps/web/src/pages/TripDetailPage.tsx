@@ -6970,47 +6970,44 @@ export default function TripDetailPage() {
   }
 
   function renderGolfRoundCompactCard(item: TripItem, key: string, displayKey?: string) {
-    const accent = calendarItemAccent(item);
     const canEditCurrentItem = canEditTripItem(item);
     const courseId = item.course?.id ?? item.courseId;
     const metadataRows = overviewMetadataRowsForItem(item, displayKey);
-    const metadata = renderOverviewMetadataRows(metadataRows);
+    const metadata = renderOverviewMetadataRows(metadataRows.filter((row) =>
+      row.label !== "After round" || !/^(after[\s-]*round|[-–—])$/i.test(row.value.trim()),
+    ));
+    const imageUrl = item.course?.posts?.[0]?.images?.[0]?.url;
 
     return (
       <article
         key={key}
-        className="fw-trip-item-card"
-        style={{
-          display: "grid",
-          gap: 0,
-          ...sectionInnerCardStyle,
-          border: `1px solid ${accent.border}`,
-          background: "color-mix(in srgb, var(--card) 96%, var(--bg))",
-          boxShadow: "0 10px 24px rgba(0,0,0,0.1)",
-          overflow: "hidden",
-          minWidth: 0,
-        }}
+        className="fw-trip-item-card fw-tee-time-card"
       >
-        <TripItemCardHeader
-          item={item}
-          displayKey={displayKey}
-          variant="overview"
-          onTitleClick={courseId ? () => nav(`/courses/${courseId}`) : undefined}
-        />
-
-        {metadata ? (
-          <div
-            className="fw-trip-item-card__body"
-            style={{
-              padding: "12px",
-              display: "grid",
-              gap: 10,
-              background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
-            }}
-          >
+        <div className="fw-tee-time-card__main">
+          <div className="fw-tee-time-card__media">
+            <Flag aria-hidden="true" size={32} />
+            {imageUrl ? (
+              <img
+                src={fileUrl(imageUrl)}
+                alt=""
+                loading="lazy"
+                onError={(event) => { event.currentTarget.hidden = true; }}
+              />
+            ) : null}
+          </div>
+          <div className="fw-tee-time-card__content">
+            <div className="fw-tee-time-card__date">{compactDateLabel(displayKey || dateKey(item))}</div>
+            <div className="fw-tee-time-card__category">GOLF</div>
+            <h3 className="fw-tee-time-card__title">
+              {courseId ? (
+                <button type="button" onClick={() => nav(`/courses/${courseId}`)}>
+                  {tripItemTitle(item)}
+                </button>
+              ) : tripItemTitle(item)}
+            </h3>
             {metadata}
           </div>
-        ) : null}
+        </div>
 
         <div
           className="fw-trip-item-card__actions"
@@ -7424,14 +7421,7 @@ export default function TripDetailPage() {
                   </div>
                 </div>
 
-                {trip?.destination ? (
-                  <div
-                    className="fw-trip-info-destination"
-                    style={{ fontSize: 13, color: "var(--sub)" }}
-                  >
-                    {trip.destination}
-                  </div>
-                ) : null}
+
 
                 {tripRange ? (
                   <div
