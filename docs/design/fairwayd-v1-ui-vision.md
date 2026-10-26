@@ -6,7 +6,7 @@ Target: make the real working Fairwayd interface visually match the promo-video 
 
 ## Approved direction
 
-- Product brand line for the new work: **Discover. Find. Inspire.** (The older V2 edit displays "Discover. Plan. Connect." in places; do not reintroduce that older slogan.)
+- Brand language is under creative review: **Connect** is essential because Fairwayd connects golfers. Proposed full sequence: **Discover. Find. Connect. Inspire.**; **Plan** remains an explicit key product capability and prominent Trip/itinerary section. Do not finalize marketing wording without owner approval. Earlier video variants say Discover / Plan / Connect and Discover / Find / Inspire; preserve the underlying functions while harmonizing all UI labels.
 - Premium golf/travel visual language: deep forest/emerald, warm cream/light card surfaces, restrained golf-gold accents, image-led destination/golf cards, clear typography, subtle motion and layered card composition.
 - Mobile-first (9:16 phone UI), fully usable on desktop and in PWA.
 - Match the **specific UI composition** seen in the reel, not merely its color palette.
@@ -22,7 +22,7 @@ Frame times are measured in seconds from the start of the *24-second V2 Pop Edit
 | 00:02 | Intro: huge golf imagery, layered phone mock, golden pill CTA, cream/forest contrast | Landing / entry hero; responsive without forced mock frame |
 | 00:05 | **Discover**: visually rich course/destination cards; card group labelled Explore / Find / Inspire | Course discovery/search and Explore cards |
 | 00:08–00:11 | **Plan Golf Trips**: phone with trip itinerary, grouped golf/travel/budgets, cream list cards on branded background | Trips list, Trip Details, day-by-day Trail, golf/transfer/hotel entries and expense summaries |
-| 00:14 | **Connect**: social connections/friends view in dark green phone UI | Friends, requests, following / followers |
+| 00:14 | **Connect**: existing *original* “Connect with Golfers” frame differs materially in visual quality and language from other concept UI screens. **Reference for functionality only — not visual target.** | Rebuild Friends / requests / following / followers in the premium emerald, cream, gold and photo-led language of other reel screens; keep functional connections intact |
 | 00:17 | **Share Your Golf Journey**: cream overlaid cards on imagery, community focus | Feed, post cards, profile/community |
 | 00:20–00:23 | Outro: large landscape, phone mock, vivid yellow CTA | Landing / campaigns (actual app should not imitate a static trailer overlay) |
 
@@ -42,8 +42,10 @@ The app's **existing Trip Trail with Golf and Transfer** is an established imple
 - Course search, result cards, map and destination views matching the visual weight and rounded image-led card patterns of 00:05.
 - Keep filters, back navigation, results and course links intact.
 
-### UI-03 — Inspire / Community
-- Friends and Feed visual alignment (00:14, 00:17), with existing relationships, privacy and post interactions intact.
+### UI-03 — Connect & Inspire / Community
+- **Do not visually copy the original 00:14 “Connect with Golfers” screen.** Design a replacement matching the premium look of the other promo screens while retaining genuine Friends, follow requests and follower/following interactions.
+- Feed visual alignment (00:17) with existing relationships, privacy and post interactions intact.
+- Product review gate: compare a new premium Connect mockup against Discover and Trips; consistent composition is a priority.
 
 ### UI-04 — Navigation and cross-app system
 - Centralized design tokens for color, spacing, typography, radii, shadows and motion.
