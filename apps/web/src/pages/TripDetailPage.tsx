@@ -6998,7 +6998,6 @@ export default function TripDetailPage() {
         className="fw-trip-item-card fw-tee-time-card"
       >
         <header className="fw-tee-time-card__heading">
-            <div className="fw-tee-time-card__category">GOLF</div>
             <h3 className="fw-tee-time-card__title">
               {courseId ? (
                 <button type="button" onClick={() => nav(`/courses/${courseId}`)}>
@@ -7006,6 +7005,7 @@ export default function TripDetailPage() {
                 </button>
               ) : tripItemTitle(item)}
             </h3>
+            <span className="fw-tee-time-card__category">GOLF</span>
         </header>
         <div className="fw-tee-time-card__main">
           <div className="fw-tee-time-card__media">
