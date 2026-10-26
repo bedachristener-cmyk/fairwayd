@@ -4299,3 +4299,42 @@ img.fw-avatar-img {
   .fw-trip-vision-trail__item { transition: none !important; }
   .fw-trip-vision-trail__item:hover { transform: none; }
 }
+
+/* UI-01C: uniform large Journey cards, both image and icon items. */
+.fw-trip-vision-trail {
+  --fw-vision-trail-gold: #9a7429;
+}
+.fw-trip-vision-trail__item {
+  min-height: 112px !important;
+  grid-template-columns: 88px minmax(0, 1fr) 16px !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+.fw-trip-vision-trail__item .fw-trip-journey-course-image {
+  width: 88px !important;
+  height: 76px !important;
+  aspect-ratio: 22 / 19;
+  object-fit: cover;
+}
+.fw-trip-vision-trail__item > span:first-child {
+  width: 88px !important;
+  height: 76px !important;
+  border-radius: 13px !important;
+}
+@media (prefers-color-scheme: dark) {
+  .fw-trip-vision-trail {
+    --fw-vision-trail-gold: #e9bd68;
+  }
+}
+@media (max-width: 520px) {
+  .fw-trip-vision-trail__item {
+    min-height: 112px !important;
+    grid-template-columns: 76px minmax(0, 1fr) 16px !important;
+    gap: 9px !important;
+  }
+  .fw-trip-vision-trail__item .fw-trip-journey-course-image,
+  .fw-trip-vision-trail__item > span:first-child {
+    width: 76px !important;
+    height: 76px !important;
+  }
+}
