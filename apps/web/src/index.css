@@ -4511,3 +4511,24 @@ img.fw-avatar-img {
   background: var(--card) !important;
   box-shadow: 0 9px 24px rgba(14, 55, 41, .09) !important;
 }
+
+/* The Leaflet popup follows the active theme and the trip card design. */
+.fw-trip-map-popup .leaflet-popup-content-wrapper { background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 18px; }
+.fw-trip-map-popup .leaflet-popup-tip { background: var(--card); }
+.fw-trip-map-popup .leaflet-popup-content { margin: 14px; width: min(260px, calc(100vw - 92px)) !important; }
+.fw-trip-map-popup a.leaflet-popup-close-button { color: var(--text); }
+.fw-trip-map-popup__card { display: grid; gap: 10px; color: var(--text); --fw-tee-gold: var(--fw-trip-category); }
+.fw-trip-map-popup__heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; padding-right: 14px; }
+.fw-trip-map-popup__heading > strong { font-size: 15px; overflow-wrap: anywhere; }
+.fw-trip-map-popup__body { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: 10px; }
+.fw-trip-map-popup__media { position: relative; display: grid; place-items: center; width: 80px; height: 80px; border-radius: 12px; overflow: hidden; color: var(--fw-trip-category); background: color-mix(in srgb, var(--fw-trip-category) 10%, var(--card)); }
+.fw-trip-map-popup__media img,
+.fw-shell-main .fw-trip-map-popup__media img { position: absolute; inset: 0; width: 100% !important; height: 100% !important; object-fit: cover; }
+.fw-trip-map-popup__media img[hidden],
+.fw-shell-main .fw-trip-map-popup__media img[hidden] { display: none !important; }
+.fw-trip-map-popup__details { display: grid; align-content: start; gap: 6px; min-width: 0; }
+.fw-trip-map-popup__details > div { display: grid; gap: 2px; min-width: 0; }
+.fw-trip-map-popup__details span { font-size: 10px; font-weight: 700; color: var(--sub); }
+.fw-trip-map-popup__details strong { font-size: 12px; color: var(--text); overflow-wrap: anywhere; }
+.fw-trip-map-popup__action { justify-self: start; padding: 6px 10px; border-radius: 9px; border: 1px solid var(--border); background: var(--card); color: var(--text); font: inherit; font-size: 12px; cursor: pointer; }
+.fw-cost-category { display: inline-flex; align-items: center; gap: 4px; margin-right: 7px; padding: 3px 6px; border-radius: 6px; color: var(--fw-trip-category); background: color-mix(in srgb, var(--fw-trip-category) 10%, var(--card)); font-size: 10px; font-weight: 850; text-transform: uppercase; vertical-align: middle; }

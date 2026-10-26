@@ -253,6 +253,7 @@ type TripMapMarker = {
   timeLabel: string;
   courseId?: string | null;
   courseName?: string | null;
+  imageUrl?: string | null;
   locationName?: string | null;
   address?: string | null;
   lat: number;
@@ -647,6 +648,7 @@ const defaultTravelChecklistItems: TravelChecklistItem[] = [
   { id: "tee-times-confirmed", label: "Tee times confirmed" },
   { id: "golf-equipment", label: "Golf equipment" },
   { id: "travel-insurance", label: "Travel insurance" },
+  { id: "travel-visa", label: "Visa / eVisa" },
 ];
 
 const defaultTeeTimeChecklistItems: TravelChecklistItem[] = [
@@ -3686,111 +3688,28 @@ function TripMapView({
               position={[marker.lat, marker.lon]}
               icon={tripMarkerIcon(marker)}
             >
-              <Popup>
-                <div
-                  style={{
-                    minWidth: 210,
-                    display: "grid",
-                    gap: 9,
-                    color: "var(--text)",
-                    fontFamily: "system-ui",
-                  }}
-                >
-                  <div style={{ display: "grid", gap: 4 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <span
-                        style={{
-                          borderRadius: 999,
-                          border: "1px solid var(--border)",
-                          padding: "3px 7px",
-                          color: "var(--sub)",
-                          fontSize: 11,
-                          fontWeight: 950,
-                        }}
-                      >
-                        {marker.number}. {marker.typeLabel}
-                      </span>
+              <Popup className="fw-trip-map-popup" maxWidth={290}>
+                <div className="fw-trip-map-popup__card"
+                  style={{ "--fw-trip-category": tripCategoryColor(marker.typeKey) } as React.CSSProperties}>
+                  <div className="fw-trip-map-popup__heading">
+                    <span className="fw-tee-time-card__category">{marker.number}. {marker.typeLabel}</span>
+                    <strong>{marker.title}</strong>
+                  </div>
+                  <div className="fw-trip-map-popup__body">
+                    <div className="fw-trip-map-popup__media">
+                      {(() => { const Icon = itemIcon(marker.typeKey); return <Icon size={28} aria-hidden="true" />; })()}
+                      {marker.imageUrl ? <img src={fileUrl(marker.imageUrl)} alt="" loading="lazy"
+                        onError={(event) => { event.currentTarget.hidden = true; }} /> : null}
                     </div>
-                    <div
-                      style={{
-                        fontWeight: 950,
-                        fontSize: 14,
-                        lineHeight: 1.25,
-                      }}
-                    >
-                      {marker.title}
+                    <div className="fw-trip-map-popup__details">
+                      {marker.dateLabel ? <div><span>Date</span><strong>{marker.dateLabel}</strong></div> : null}
+                      {marker.timeLabel ? <div><span>{marker.typeKey === "golf_round" || marker.typeKey === "course" ? "Tee time" : "Time"}</span><strong>{marker.typeKey === "golf_round" || marker.typeKey === "course" ? marker.startTime || marker.timeLabel : marker.timeLabel}</strong></div> : null}
+                      {marker.locationName && marker.locationName !== marker.title ? <div><span>Location</span><strong>{marker.locationName}</strong></div> : null}
+                      {marker.address && marker.address !== marker.locationName ? <div><span>Address</span><strong>{marker.address}</strong></div> : null}
                     </div>
                   </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 6,
-                      color: "var(--sub)",
-                      fontSize: 12,
-                      fontWeight: 800,
-                    }}
-                  >
-                    <span>{marker.dateLabel}</span>
-                    {marker.timeLabel ? <span>{marker.timeLabel}</span> : null}
-                  </div>
-                  {marker.courseName ||
-                  marker.locationName ||
-                  marker.address ? (
-                    <div style={{ display: "grid", gap: 5, fontSize: 12 }}>
-                      {marker.courseName ? (
-                        <div style={{ color: "var(--sub)", lineHeight: 1.35 }}>
-                          <span style={{ fontWeight: 950 }}>Course </span>
-                          <span style={{ color: "var(--text)" }}>
-                            {marker.courseName}
-                          </span>
-                        </div>
-                      ) : null}
-                      {marker.locationName ? (
-                        <div style={{ color: "var(--sub)", lineHeight: 1.35 }}>
-                          <span style={{ fontWeight: 950 }}>Location </span>
-                          <span style={{ color: "var(--text)" }}>
-                            {marker.locationName}
-                          </span>
-                        </div>
-                      ) : null}
-                      {marker.address ? (
-                        <div style={{ color: "var(--sub)", lineHeight: 1.35 }}>
-                          <span style={{ fontWeight: 950 }}>Address </span>
-                          <span style={{ color: "var(--text)" }}>
-                            {marker.address}
-                          </span>
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  {marker.courseId ? (
-                    <button
-                      type="button"
-                      onClick={() => onOpenCourse(marker.courseId as string)}
-                      style={{
-                        width: "fit-content",
-                        height: 30,
-                        padding: "0 10px",
-                        borderRadius: 999,
-                        border: "1px solid var(--border)",
-                        background: "transparent",
-                        color: "var(--sub)",
-                        cursor: "pointer",
-                        fontWeight: 900,
-                        fontSize: 12,
-                      }}
-                    >
-                      Open course
-                    </button>
-                  ) : null}
+                  {marker.courseId ? <button type="button" className="fw-trip-map-popup__action"
+                    onClick={() => onOpenCourse(marker.courseId as string)}>Open course</button> : null}
                 </div>
               </Popup>
             </Marker>
@@ -4376,6 +4295,7 @@ export default function TripDetailPage() {
   const [expandedItemDocumentId, setExpandedItemDocumentId] = useState<string | null>(null);
   const [itemDocumentMemberQuery, setItemDocumentMemberQuery] = useState("");
   const [activity, setActivity] = useState<TripActivity[]>([]);
+  const [activityExpanded, setActivityExpanded] = useState(false);
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityErr, setActivityErr] = useState<string | null>(null);
   const [myCostsData, setMyCostsData] = useState<MyTripCostsResponse | null>(null);
@@ -6172,6 +6092,7 @@ export default function TripDetailPage() {
           id: item.id,
           number: 0,
           title:
+            (isGolfItem(item) ? courseName : "") ||
             item.title ||
             courseName ||
             item.locationName ||
@@ -6183,6 +6104,7 @@ export default function TripDetailPage() {
           timeLabel: formatTimeRange(item),
           courseId,
           courseName: courseName || null,
+          imageUrl: item.course?.posts?.[0]?.images?.[0]?.url ?? null,
           locationName: item.locationName?.trim() || null,
           address: item.address?.trim() || null,
           lat,
@@ -8868,16 +8790,15 @@ export default function TripDetailPage() {
             gap: 10,
           }}
         >
-          <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
-            <div style={sectionTitleTextStyle}>
-              Recent activity
-            </div>
-            <div style={sectionSubtitleTextStyle}>
-              {activityLoading
-                ? "Loading updates..."
-                : "Latest shared trip updates"}
-            </div>
-          </div>
+          <button type="button" aria-expanded={activityExpanded} aria-controls="trip-recent-activity"
+            onClick={() => setActivityExpanded((current) => !current)}
+            style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: "1 1 180px", padding: 0, border: 0, background: "transparent", color: "var(--text)", textAlign: "left", cursor: "pointer" }}>
+            <span style={{ display: "grid", gap: 2, minWidth: 0 }}>
+              <span style={sectionTitleTextStyle}>Recent activity</span>
+              <span style={sectionSubtitleTextStyle}>{activityLoading ? "Loading updates..." : "Latest shared trip updates"}</span>
+            </span>
+            <ChevronDown aria-hidden="true" size={18} style={{ marginLeft: "auto", transform: activityExpanded ? "rotate(180deg)" : undefined }} />
+          </button>
           <button
             type="button"
             onClick={loadActivity}
@@ -8899,6 +8820,7 @@ export default function TripDetailPage() {
           </button>
         </div>
 
+        {activityExpanded ? <div id="trip-recent-activity" style={{ display: "grid", gap: 8 }}>
         {activityErr ? (
           <div
             style={{
@@ -8972,6 +8894,7 @@ export default function TripDetailPage() {
             ))}
           </div>
         )}
+        </div> : null}
       </section>
       </>
       ) : null}
@@ -11773,6 +11696,8 @@ export default function TripDetailPage() {
             ) : (
               <div style={{ display: "grid", gap: 8 }}>
                 {budgetItems.map(({ item, amount, missingConversionCount }) => {
+                  const Icon = itemIcon(item.type);
+                  const categoryColor = tripCategoryColor(item.type);
                   const participants = effectiveParticipants(item, trip?.members ?? []);
                   const shared = item.expenseType !== "PERSONAL";
                   const payer = payerSummary(item) || "Not set";
@@ -11785,6 +11710,7 @@ export default function TripDetailPage() {
                         gap: 7,
                         padding: 10,
                         ...sectionMutedCardStyle,
+                        border: `1px solid color-mix(in srgb, ${categoryColor} 32%, var(--border))`,
                       }}
                     >
                       <div
@@ -11805,6 +11731,9 @@ export default function TripDetailPage() {
                             minWidth: 0,
                           }}
                         >
+                          <span className="fw-cost-category" style={{ "--fw-trip-category": categoryColor } as React.CSSProperties}>
+                            <Icon size={14} aria-hidden="true" />{itemTypeLabel(item.type)}
+                          </span>
                           {tripItemTitle(item)}
                         </div>
                         <div
