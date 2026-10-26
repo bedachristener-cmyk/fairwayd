@@ -1607,42 +1607,6 @@ function calendarDateParts(key: string) {
   };
 }
 
-function eventDateBlockParts(key: string) {
-  if (key === "unscheduled") {
-    return { weekday: "Tee", date: "--.--" };
-  }
-
-  const date = new Date(`${key}T00:00:00.000Z`);
-  if (Number.isNaN(date.getTime())) {
-    return { weekday: "Tee", date: "--.--" };
-  }
-
-  const weekday = new Intl.DateTimeFormat(undefined, {
-    weekday: "short",
-  }).format(date);
-  const parts = new Intl.DateTimeFormat(undefined, {
-    day: "2-digit",
-    month: "2-digit",
-  }).formatToParts(date);
-  const day = parts.find((part) => part.type === "day")?.value ?? "--";
-  const month = parts.find((part) => part.type === "month")?.value ?? "--";
-
-  return { weekday, date: `${day}.${month}` };
-}
-
-function itineraryVisualDateLabel(key: string) {
-  if (key === "unscheduled") return "";
-
-  const date = new Date(`${key}T00:00:00.000Z`);
-  if (Number.isNaN(date.getTime())) return "";
-
-  return new Intl.DateTimeFormat(undefined, {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(date);
-}
-
 function compactDateLabel(key: string) {
   if (key === "unscheduled") return "";
 
@@ -1954,10 +1918,6 @@ function flightNumberText(item: TripItem) {
   return (item.title || "").replace(/^Flight\s+/i, "").trim();
 }
 
-function flightSummaryLine(item: TripItem) {
-  return [flightNumberText(item), item.provider?.trim()].filter(Boolean).join(" · ");
-}
-
 function finiteAmount(value?: number | null) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
@@ -2017,22 +1977,6 @@ function endDateInputValue(item: TripItem) {
   if (Number.isNaN(date.getTime())) return "";
 
   return date.toISOString().slice(0, 10);
-}
-
-function formatDateRange(item: TripItem) {
-  const start = formatItemDate(itemDateValue(item));
-  const end = formatItemDate(item.endDate);
-
-  if (!start || !end) return "";
-
-  const startKey = dateKey(item);
-  const endDate = new Date(item.endDate as string);
-  const endKey = Number.isNaN(endDate.getTime())
-    ? ""
-    : endDate.toISOString().slice(0, 10);
-
-  if (!endKey || startKey === endKey) return "";
-  return `${start} - ${end}`;
 }
 
 function tripDateRange(items?: TripItem[]) {
@@ -2201,6 +2145,92 @@ function tripItemStayNights(item: TripItem) {
   return `${nights} ${nights === 1 ? "night" : "nights"}`;
 }
 
+function overviewMetadataRowsForItem(
+  item: TripItem,
+  displayKey?: string,
+): { label: string; value: string }[] {
+  const startKey = isCalendarSpanningItem(item) ? dateKey(item) : displayKey || dateKey(item);
+  const startDate = formatItemDate(startKey);
+  const endDate = item.endDate ? formatItemDate(item.endDate) : "";
+  const startTime = formatTime(item);
+  const endTime = item.endTime?.trim() || "";
+  const providerLine = item.provider?.trim() ?? "";
+  const booking = item.bookingRef?.trim() ?? "";
+  const routeOrLocation = compactItemWhereLine(item);
+
+  if (isGolfItem(item)) {
+    const expectedEnd = expectedGolfEndTime(item);
+    const duration = expectedEnd
+      ? `Ends ${expectedEnd}`
+      : formatDurationMinutes(item.roundDurationMinutes);
+    const departure = item.departureFromHotelTime?.trim()
+      ? `Depart ${item.departureFromHotelTime.trim()}`
+      : "";
+
+    return [
+      { label: "Tee time", value: startTime },
+      { label: "Duration", value: duration },
+      { label: "Transfer", value: departure },
+      { label: "After round", value: compactGolfReturnLine(item) },
+    ];
+  }
+
+  if (isFlightItem(item)) {
+    const origin = item.locationName?.trim() ?? "";
+    const destination = item.address?.trim() ?? "";
+    const route = origin && destination ? `${origin} -> ${destination}` : "";
+    const departure = [startDate, startTime].filter(Boolean).join(" ");
+    const arrival = [endDate, endTime].filter(Boolean).join(" ");
+
+    return [
+      { label: "Route", value: route },
+      { label: "Departure", value: departure },
+      { label: "Arrival", value: arrival },
+      { label: "Airline", value: providerLine },
+      { label: "Flight", value: flightNumberText(item) },
+      { label: "Booking", value: booking },
+    ];
+  }
+
+  if (isHotelItem(item)) {
+    return [
+      { label: "Check-in", value: [startDate, startTime].filter(Boolean).join(" ") },
+      { label: "Check-out", value: [endDate, endTime].filter(Boolean).join(" ") },
+      { label: "Stay", value: tripItemStayNights(item) },
+      { label: "Location", value: routeOrLocation },
+      { label: "Booking", value: booking },
+    ];
+  }
+
+  if (isTransportItem(item)) {
+    const pickup = [startDate, startTime].filter(Boolean).join(" ");
+    const returnOrArrival = [endDate, endTime].filter(Boolean).join(" ");
+
+    return [
+      { label: "Pickup", value: pickup },
+      { label: isCarRentalItem(item) ? "Return" : "Arrival", value: returnOrArrival },
+      { label: "Route", value: routeOrLocation },
+      { label: "Provider", value: providerLine },
+      { label: "Booking", value: booking },
+    ];
+  }
+
+  if (isNoteItem(item)) {
+    return [
+      { label: "Date", value: startDate },
+      { label: "Note", value: compactNoteLine(item) },
+    ];
+  }
+
+  return [
+    { label: "When", value: [startDate, formatTimeRange(item)].filter(Boolean).join(" ") },
+    { label: "Where", value: routeOrLocation },
+    { label: "Provider", value: providerLine },
+    { label: "Booking", value: booking },
+  ];
+}
+
+
 function TripItemCardHeader({
   item, displayKey, onTitleClick, variant = "default",
 }: {
@@ -2209,8 +2239,13 @@ function TripItemCardHeader({
   onTitleClick?: () => void;
   variant?: "default" | "overview";
 }) {
-  const dateBlock = eventDateBlockParts(displayKey || dateKey(item));
-  const visualDate = itineraryVisualDateLabel(displayKey || dateKey(item));
+  const metadataRows = overviewMetadataRowsForItem(item, displayKey);
+  if (isGolfItem(item)) metadataRows.unshift({ label: "Date", value: formatItemDate(displayKey || dateKey(item)) });
+  const rows = metadataRows.filter((row) =>
+    row.value.trim() &&
+    !(row.label === "Route" && row.value === tripItemHeaderTitle(item)) &&
+    !(row.label === "After round" && /^(after[\s-]*round|[-–—])$/i.test(row.value.trim())),
+  );
   const Icon = itemIcon(item.type);
   const imageUrl = isGolfItem(item) ? item.course?.posts?.[0]?.images?.[0]?.url : undefined;
   return (
@@ -2229,9 +2264,7 @@ function TripItemCardHeader({
             onError={(event) => { event.currentTarget.hidden = true; }} /> : null}
         </div>
         <div className="fw-trip-journey-header__info">
-          {visualDate ? <div aria-label={`${dateBlock.weekday} ${dateBlock.date}`}><span>Date</span><strong>{visualDate}</strong></div> : null}
-          {formatTimeRange(item) ? <div><span>Time</span><strong>{formatTimeRange(item)}</strong></div> : null}
-          {compactItemWhereLine(item) ? <div><span>Location</span><strong>{compactItemWhereLine(item)}</strong></div> : null}
+          {rows.map((row) => <div key={row.label}><span>{row.label}</span><strong>{row.value}</strong></div>)}
         </div>
       </div>
     </div>
@@ -4077,12 +4110,6 @@ function TripCalendarView({
                 const courseId = item.course?.id ?? item.courseId;
                 const canEditCurrentItem = canEditItem(item);
                 const accent = calendarItemAccent(item);
-                const whenLine = compactItemWhenLine(item, selected.key);
-                const whereLine = compactItemWhereLine(item);
-                const isFlight = isFlightItem(item);
-                const flightSummary = isFlight ? flightSummaryLine(item) : "";
-                const providerLine =
-                  !isFlight && item.provider?.trim() ? item.provider.trim() : "";
                 const compactCostSummary = timelineCostSummaryText(
                   item,
                   members,
@@ -4114,32 +4141,11 @@ function TripCalendarView({
                     <div
                       style={{
                         display: "grid",
-                        gap: isFlight ? 6 : 8,
-                        padding: isFlight ? 8 : 11,
+                        gap: 6,
+                        padding: "4px 11px 11px",
                       }}
                     >
-                      {flightSummary || whereLine || whenLine || compactCostSummary || providerLine ? (
-                        <div
-                          style={{
-                            display: "grid",
-                            gap: 4,
-                            color: "var(--text)",
-                            fontSize: 12,
-                            lineHeight: 1.28,
-                            fontWeight: 900,
-                          }}
-                        >
-                          {flightSummary ? <div>{flightSummary}</div> : null}
-                          {!isFlight && whereLine ? <div>{whereLine}</div> : null}
-                          {whenLine ? <div style={{ color: "var(--sub)" }}>{whenLine}</div> : null}
-                          {compactCostSummary ? (
-                            <div style={{ color: "var(--sub)" }}>{compactCostSummary}</div>
-                          ) : null}
-                          {providerLine ? (
-                            <div style={{ color: "var(--sub)" }}>{providerLine}</div>
-                          ) : null}
-                        </div>
-                      ) : null}
+                      {compactCostSummary ? <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 800 }}>{compactCostSummary}</div> : null}
 
                       <div
                         style={{
@@ -6711,91 +6717,6 @@ export default function TripDetailPage() {
         ))}
       </div>
     );
-  }
-
-  function overviewMetadataRowsForItem(
-    item: TripItem,
-    displayKey?: string,
-  ): { label: string; value: string }[] {
-    const startKey = displayKey || dateKey(item);
-    const startDate = compactDateLabel(startKey);
-    const endDate = item.endDate ? compactDateLabel(dayKeyFromValue(item.endDate)) : "";
-    const startTime = formatTime(item);
-    const endTime = item.endTime?.trim() || "";
-    const providerLine = item.provider?.trim() ?? "";
-    const booking = item.bookingRef?.trim() ?? "";
-    const routeOrLocation = compactItemWhereLine(item);
-
-    if (isGolfItem(item)) {
-      const expectedEnd = expectedGolfEndTime(item);
-      const duration = expectedEnd
-        ? `Ends ${expectedEnd}`
-        : formatDurationMinutes(item.roundDurationMinutes);
-      const departure = item.departureFromHotelTime?.trim()
-        ? `Depart ${item.departureFromHotelTime.trim()}`
-        : "";
-
-      return [
-        { label: "Tee time", value: startTime },
-        { label: "Duration", value: duration },
-        { label: "Transfer", value: departure },
-        { label: "After round", value: compactGolfReturnLine(item) },
-      ];
-    }
-
-    if (isFlightItem(item)) {
-      const origin = item.locationName?.trim() ?? "";
-      const destination = item.address?.trim() ?? "";
-      const route = origin && destination ? `${origin} -> ${destination}` : "";
-      const departure = [startDate, startTime].filter(Boolean).join(" ");
-      const arrival = [endDate, endTime].filter(Boolean).join(" ");
-
-      return [
-        { label: "Route", value: route },
-        { label: "Departure", value: departure },
-        { label: "Arrival", value: arrival },
-        { label: "Airline", value: providerLine },
-        { label: "Flight", value: flightNumberText(item) },
-        { label: "Booking", value: booking },
-      ];
-    }
-
-    if (isHotelItem(item)) {
-      return [
-        { label: "Check-in", value: [startDate, startTime].filter(Boolean).join(" ") },
-        { label: "Check-out", value: [endDate, endTime].filter(Boolean).join(" ") },
-        { label: "Stay", value: tripItemStayNights(item) },
-        { label: "Location", value: routeOrLocation },
-        { label: "Booking", value: booking },
-      ];
-    }
-
-    if (isTransportItem(item)) {
-      const pickup = [startDate, startTime].filter(Boolean).join(" ");
-      const returnOrArrival = [endDate, endTime].filter(Boolean).join(" ");
-
-      return [
-        { label: "Pickup", value: pickup },
-        { label: isCarRentalItem(item) ? "Return" : "Arrival", value: returnOrArrival },
-        { label: "Route", value: routeOrLocation },
-        { label: "Provider", value: providerLine },
-        { label: "Booking", value: booking },
-      ];
-    }
-
-    if (isNoteItem(item)) {
-      return [
-        { label: "Date", value: startDate },
-        { label: "Note", value: compactNoteLine(item) },
-      ];
-    }
-
-    return [
-      { label: "When", value: [startDate, formatTimeRange(item)].filter(Boolean).join(" ") },
-      { label: "Where", value: routeOrLocation },
-      { label: "Provider", value: providerLine },
-      { label: "Booking", value: booking },
-    ];
   }
 
   function renderOverviewJourneyCard(item: TripItem, key: string, displayKey?: string) {
@@ -9705,15 +9626,12 @@ export default function TripDetailPage() {
 
             <div style={{ display: "grid", gap: 10 }}>
               {items.map((item, itemIndex) => {
-                const time = formatTimeRange(item);
-                const dateRange = formatDateRange(item);
                 const courseId = item.course?.id ?? item.courseId;
                 const courseName = item.course?.name;
                 const itemType = String(item.type ?? "").toLowerCase();
                 const accent = calendarItemAccent(item);
                 const isGolf =
                   itemType === "golf_round" || itemType === "course";
-                const isFlight = isFlightItem(item);
                 const canOpenCourse = isGolf && !!courseId;
                 const isEditing = editingItemId === item.id && !!editDraft;
                 const editIsGolf =
@@ -9735,9 +9653,6 @@ export default function TripDetailPage() {
                   canEditTrip &&
                   itemIndex < items.length - 1 &&
                   !isMoving;
-                const compactWhen = compactItemWhenLine(item);
-                const compactWhere = compactItemWhereLine(item);
-                const flightSummary = isFlight ? flightSummaryLine(item) : "";
                 const compactCostSummary = timelineCostSummaryText(
                   item,
                   trip?.members ?? [],
@@ -11000,29 +10915,7 @@ export default function TripDetailPage() {
                               padding: 11,
                             }}
                           >
-                            <div
-                              style={{
-                                display: "grid",
-                                gap: 4,
-                                color: "var(--text)",
-                                fontSize: 13,
-                                lineHeight: 1.3,
-                                fontWeight: 900,
-                              }}
-                            >
-                              {flightSummary ? (
-                                <div>{flightSummary}</div>
-                              ) : null}
-                              <div>
-                                {isFlight
-                                  ? compactWhen || formatDateLabel(dateKey(item))
-                                  : dateRange || compactWhen || formatDateLabel(dateKey(item))}
-                                {!isGolf && !isFlight && time && !compactWhen ? ` · ${time}` : ""}
-                              </div>
-                              {!isFlight && compactWhere ? (
-                                <div style={{ color: "var(--sub)" }}>{compactWhere}</div>
-                              ) : null}
-                            </div>
+
 
                             {compactCostSummary ? (
                               <div
