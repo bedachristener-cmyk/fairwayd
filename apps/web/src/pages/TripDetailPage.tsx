@@ -1255,7 +1255,7 @@ function TripGolfTransferTimeline({
                       <span
                         style={{
                           color: "var(--fw-vision-trail-gold)",
-                          fontSize: 10,
+                          fontSize: 12,
                           lineHeight: 1.1,
                           fontWeight: 950,
                           letterSpacing: "0.08em",
