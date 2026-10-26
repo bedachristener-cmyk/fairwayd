@@ -6972,7 +6972,21 @@ export default function TripDetailPage() {
   function renderGolfRoundCompactCard(item: TripItem, key: string, displayKey?: string) {
     const canEditCurrentItem = canEditTripItem(item);
     const courseId = item.course?.id ?? item.courseId;
-    const metadataRows = overviewMetadataRowsForItem(item, displayKey);
+    const roundDateKey = displayKey || dateKey(item);
+    const dateLabel = compactDateLabel(roundDateKey);
+    const roundDateLabel = dateLabel ? `${dateLabel} ${roundDateKey.slice(0, 4)}` : "";
+    const metadataRows = [
+      { label: "Date", value: roundDateLabel },
+      ...overviewMetadataRowsForItem(item, displayKey).map((row) => {
+        if (row.label === "Duration" && row.value.startsWith("Ends ")) {
+          return { label: "End time", value: row.value.slice(5) };
+        }
+        if (row.label === "Transfer" && row.value.startsWith("Depart ")) {
+          return { label: "Transfer", value: row.value.slice(7) };
+        }
+        return row;
+      }),
+    ];
     const metadata = renderOverviewMetadataRows(metadataRows.filter((row) =>
       row.label !== "After round" || !/^(after[\s-]*round|[-–—])$/i.test(row.value.trim()),
     ));
@@ -6983,6 +6997,16 @@ export default function TripDetailPage() {
         key={key}
         className="fw-trip-item-card fw-tee-time-card"
       >
+        <header className="fw-tee-time-card__heading">
+            <div className="fw-tee-time-card__category">GOLF</div>
+            <h3 className="fw-tee-time-card__title">
+              {courseId ? (
+                <button type="button" onClick={() => nav(`/courses/${courseId}`)}>
+                  {tripItemTitle(item)}
+                </button>
+              ) : tripItemTitle(item)}
+            </h3>
+        </header>
         <div className="fw-tee-time-card__main">
           <div className="fw-tee-time-card__media">
             <Flag aria-hidden="true" size={32} />
@@ -6996,15 +7020,6 @@ export default function TripDetailPage() {
             ) : null}
           </div>
           <div className="fw-tee-time-card__content">
-            <div className="fw-tee-time-card__date">{compactDateLabel(displayKey || dateKey(item))}</div>
-            <div className="fw-tee-time-card__category">GOLF</div>
-            <h3 className="fw-tee-time-card__title">
-              {courseId ? (
-                <button type="button" onClick={() => nav(`/courses/${courseId}`)}>
-                  {tripItemTitle(item)}
-                </button>
-              ) : tripItemTitle(item)}
-            </h3>
             {metadata}
           </div>
         </div>
