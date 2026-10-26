@@ -580,12 +580,6 @@ const socialSectionCardStyle: React.CSSProperties = {
   border: "1px solid color-mix(in srgb, var(--atmosphere-social) 22%, var(--border))",
 };
 
-const sectionInnerCardStyle: React.CSSProperties = {
-  borderRadius: 16,
-  border: "1px solid color-mix(in srgb, var(--border) 76%, transparent)",
-  background: "color-mix(in srgb, var(--card) 88%, var(--bg))",
-};
-
 const sectionMutedCardStyle: React.CSSProperties = {
   borderRadius: 16,
   border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
@@ -6969,13 +6963,16 @@ export default function TripDetailPage() {
     ];
   }
 
-  function renderGolfRoundCompactCard(item: TripItem, key: string, displayKey?: string) {
+  function renderOverviewJourneyCard(item: TripItem, key: string, displayKey?: string) {
     const canEditCurrentItem = canEditTripItem(item);
-    const courseId = item.course?.id ?? item.courseId;
+    const golf = isGolfItem(item);
+    const title = tripItemHeaderTitle(item);
+    const courseId = golf ? item.course?.id ?? item.courseId : undefined;
+    const Icon = isTransportItem(item) && !isCarRentalItem(item) ? Route : itemIcon(item.type);
     const roundDateKey = displayKey || dateKey(item);
     const dateLabel = compactDateLabel(roundDateKey);
     const roundDateLabel = dateLabel ? `${dateLabel} ${roundDateKey.slice(0, 4)}` : "";
-    const metadataRows = [
+    const metadataRows = golf ? [
       { label: "Date", value: roundDateLabel },
       ...overviewMetadataRowsForItem(item, displayKey).map((row) => {
         if (row.label === "Duration" && row.value.startsWith("Ends ")) {
@@ -6986,11 +6983,11 @@ export default function TripDetailPage() {
         }
         return row;
       }),
-    ];
+    ] : overviewMetadataRowsForItem(item, displayKey);
     const metadata = renderOverviewMetadataRows(metadataRows.filter((row) =>
       row.label !== "After round" || !/^(after[\s-]*round|[-–—])$/i.test(row.value.trim()),
     ));
-    const imageUrl = item.course?.posts?.[0]?.images?.[0]?.url;
+    const imageUrl = golf ? item.course?.posts?.[0]?.images?.[0]?.url : undefined;
 
     return (
       <article
@@ -6998,18 +6995,18 @@ export default function TripDetailPage() {
         className="fw-trip-item-card fw-tee-time-card"
       >
         <header className="fw-tee-time-card__heading">
+            <span className="fw-tee-time-card__category">{itemTypeLabel(item.type)}</span>
             <h3 className="fw-tee-time-card__title">
               {courseId ? (
                 <button type="button" onClick={() => nav(`/courses/${courseId}`)}>
-                  {tripItemTitle(item)}
+                  {title}
                 </button>
-              ) : tripItemTitle(item)}
+              ) : title}
             </h3>
-            <span className="fw-tee-time-card__category">GOLF</span>
         </header>
         <div className="fw-tee-time-card__main">
           <div className="fw-tee-time-card__media">
-            <Flag aria-hidden="true" size={32} />
+            <Icon aria-hidden="true" size={32} />
             {imageUrl ? (
               <img
                 src={fileUrl(imageUrl)}
@@ -7627,7 +7624,7 @@ export default function TripDetailPage() {
         ) : (
           <div style={{ display: "grid", gap: 12 }}>
             {upcomingTeeTimes.map((item) =>
-              renderGolfRoundCompactCard(item, `tee-${item.id}`, dateKey(item)),
+              renderOverviewJourneyCard(item, `tee-${item.id}`, dateKey(item)),
             )}
           </div>
         )}
@@ -7687,80 +7684,9 @@ export default function TripDetailPage() {
 
         {travelEssentialsItems.length > 0 ? (
           <div style={{ display: "grid", gap: 12 }}>
-            {travelEssentialsItems.map(({ item, displayKey }) => {
-              if (isGolfItem(item)) {
-                return renderGolfRoundCompactCard(
-                  item,
-                  `essentials-${item.id}`,
-                  displayKey,
-                );
-              }
-
-              const accent = calendarItemAccent(item);
-              const metadataRows = overviewMetadataRowsForItem(item, displayKey);
-              const metadata = renderOverviewMetadataRows(metadataRows);
-
-              return (
-                <article
-                  key={`essentials-${item.id}`}
-                  className="fw-trip-item-card"
-                  style={{
-                    display: "grid",
-                    gap: 0,
-                    ...sectionInnerCardStyle,
-                    border: `1px solid ${accent.border}`,
-                    background: "color-mix(in srgb, var(--card) 96%, var(--bg))",
-                    boxShadow: "0 10px 24px rgba(0,0,0,0.1)",
-                    overflow: "hidden",
-                    minWidth: 0,
-                  }}
-                >
-                  <TripItemCardHeader
-                    item={item}
-                    displayKey={displayKey}
-                    variant="overview"
-                  />
-
-                  {metadata ? (
-                    <div
-                      className="fw-trip-item-card__body"
-                      style={{
-                        padding: "12px",
-                        display: "grid",
-                        gap: 10,
-                        background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
-                      }}
-                    >
-                      {metadata}
-                    </div>
-                  ) : null}
-
-                  <div
-                    className="fw-trip-item-card__actions"
-                    style={{
-                      ...wrappingActionRowStyle,
-                      gap: 6,
-                      padding: "0 12px 12px",
-                      background: "color-mix(in srgb, var(--card) 94%, var(--bg))",
-                    }}
-                  >
-                    {renderMapActionLinks(item, `essentials-${item.id}`)}
-                    <button
-                      type="button"
-                      className="fw-pill fw-pill--meta"
-                      onClick={(event) => openItemDetails(item, event)}
-                      style={{
-                        cursor: "pointer",
-                        whiteSpace: "nowrap",
-                        ...secondaryButtonStyle,
-                      }}
-                    >
-                      Details
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
+            {travelEssentialsItems.map(({ item, displayKey }) =>
+              renderOverviewJourneyCard(item, `essentials-${item.id}`, displayKey),
+            )}
           </div>
         ) : null}
       </section>
