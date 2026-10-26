@@ -22,6 +22,8 @@ jobs:
           cache-dependency-path: apps/api/package-lock.json
       - run: npm ci
       - run: npm run build
+        env:
+          NEON_DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
   web-build:
     runs-on: ubuntu-latest
     defaults:
