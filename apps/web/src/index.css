@@ -4166,3 +4166,82 @@ img.fw-avatar-img {
     transform: scale(1);
   }
 }
+
+/* Fairwayd UI Vision / UI-01A: video-inspired Trip list, theme-aware.
+   Deliberately scoped to Trips; TripDetail editor and data flow remain untouched. */
+.fw-trips-page-shell {
+  --fw-trip-vision-gold: #ba9145;
+  --fw-trip-vision-green: #174b3e;
+}
+.fw-trips-page-shell .fw-trips-page-title {
+  letter-spacing: -0.035em !important;
+  font-weight: 900;
+}
+.fw-trips-page-shell .fw-trips-page-subtitle {
+  line-height: 1.5 !important;
+}
+.fw-trips-page-shell .fw-trip-card {
+  border-radius: 22px !important;
+  border-color: color-mix(in srgb, var(--fw-trip-vision-green) 20%, var(--border)) !important;
+  background: color-mix(in srgb, var(--card) 93%, #f8f2e5) !important;
+  box-shadow: 0 12px 34px rgba(18, 51, 40, 0.09) !important;
+  overflow: hidden;
+  isolation: isolate;
+}
+.fw-trips-page-shell .fw-trip-card:focus-visible {
+  outline: 3px solid var(--fw-trip-vision-gold);
+  outline-offset: 3px;
+}
+.fw-trips-page-shell .fw-trip-card__media {
+  border-radius: 22px 0 0 22px !important;
+}
+.fw-trips-page-shell .fw-trip-card__media::after {
+  background: linear-gradient(125deg, rgba(10, 43, 33, 0.03), rgba(7, 37, 29, 0.2));
+}
+.fw-trips-page-shell .fw-trip-card__body {
+  align-content: center;
+  gap: 7px !important;
+}
+.fw-trip-card__eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  font-weight: 900;
+  color: color-mix(in srgb, var(--fw-trip-vision-gold) 75%, var(--text));
+}
+.fw-trips-page-shell .fw-trip-card__title {
+  font-weight: 900 !important;
+  letter-spacing: -0.025em;
+}
+.fw-trip-card__explore {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: fit-content;
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: 900;
+  color: color-mix(in srgb, var(--fw-trip-vision-green) 65%, var(--text));
+}
+.fw-trip-card__explore span {
+  font-size: 17px;
+  line-height: 1;
+  color: var(--fw-trip-vision-gold);
+}
+@media (max-width: 980px) {
+  .fw-trips-page-shell .fw-trip-card {
+    border-radius: 20px !important;
+    min-height: 156px !important;
+  }
+  .fw-trips-page-shell .fw-trip-card__media {
+    border-radius: 20px 0 0 20px !important;
+  }
+  .fw-trips-page-shell .fw-trip-card__body {
+    padding: 12px 12px 12px 0 !important;
+    gap: 5px !important;
+  }
+  .fw-trip-card__eyebrow { font-size: 9px; }
+  .fw-trip-card__explore { font-size: 11px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fw-trips-page-shell .fw-trip-card { transition: none !important; }
+}
