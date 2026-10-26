@@ -4302,7 +4302,7 @@ img.fw-avatar-img {
 
 /* UI-01C: uniform large Journey cards, both image and icon items. */
 .fw-trip-vision-trail {
-  --fw-vision-trail-gold: #9a7429;
+  --fw-vision-trail-gold: #805c18;
 }
 .fw-trip-vision-trail__item {
   min-height: 112px !important;
@@ -4321,12 +4321,7 @@ img.fw-avatar-img {
   height: 76px !important;
   border-radius: 13px !important;
 }
-@media (prefers-color-scheme: dark) {
-  .fw-trip-vision-trail {
-    --fw-vision-trail-gold: #e9bd68;
-  }
-}
-@media (max-width: 520px) {
+ @media (max-width: 520px) {
   .fw-trip-vision-trail__item {
     min-height: 112px !important;
     grid-template-columns: 76px minmax(0, 1fr) 16px !important;
@@ -4337,4 +4332,12 @@ img.fw-avatar-img {
     width: 76px !important;
     height: 76px !important;
   }
+}
+
+/* Ensure the category label respects the active theme rather than OS preference.
+   Existing app themes set data-theme on document root. */
+:root[data-theme="dark"] .fw-trip-vision-trail,
+:root[data-theme="lagoon"] .fw-trip-vision-trail,
+:root[data-theme="ocean"] .fw-trip-vision-trail {
+  --fw-vision-trail-gold: #e9bd68;
 }
