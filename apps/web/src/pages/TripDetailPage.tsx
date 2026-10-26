@@ -7238,6 +7238,14 @@ export default function TripDetailPage() {
               Edit trip
             </button>
           ) : null}
+          {!editingTrip ? (
+            <div className="fw-trip-hero-caption">
+              <h1 className="fw-trip-hero-caption__title">{trip?.title ?? "Trip"}</h1>
+              {trip?.destination?.trim() ? (
+                <p className="fw-trip-hero-caption__destination">{trip.destination}</p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         <div
@@ -7388,18 +7396,6 @@ export default function TripDetailPage() {
               </div>
             ) : (
               <>
-                <div
-                  className="fw-trip-info-title"
-                  style={{
-                    fontSize: 19,
-                    lineHeight: 1.15,
-                    fontWeight: 950,
-                    color: "var(--text)",
-                    textShadow: "0 2px 18px rgba(0,0,0,0.35)",
-                  }}
-                >
-                  {trip?.title ?? "Trip"}
-                </div>
 
                 <div className="fw-trip-summary-meta-grid" aria-label="Trip summary">
                   <div className="fw-trip-summary-meta-column">
