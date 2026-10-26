@@ -4408,3 +4408,64 @@ img.fw-avatar-img {
     padding: 60px 32px 30px;
   }
 }
+
+/* UI-01E: course imagery and round details share a compact journey card. */
+.fw-tee-time-card {
+  --fw-tee-gold: #805c18;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--card);
+  color: var(--text);
+  overflow: hidden;
+  box-shadow: 0 9px 24px rgba(14, 55, 41, .09);
+}
+:root[data-theme="dark"] .fw-tee-time-card,
+:root[data-theme="lagoon"] .fw-tee-time-card,
+:root[data-theme="ocean"] .fw-tee-time-card { --fw-tee-gold: #e9bd68; }
+.fw-tee-time-card__main {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px;
+  align-items: start;
+}
+.fw-tee-time-card__media {
+  position: relative;
+  width: 112px;
+  height: 156px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  overflow: hidden;
+  color: var(--fw-tee-gold);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 20%, var(--card)), var(--bg));
+}
+.fw-tee-time-card__media img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.fw-tee-time-card__media img[hidden] { display: none; }
+.fw-tee-time-card__content { min-width: 0; }
+.fw-tee-time-card__date { color: var(--sub); font-size: 12px; font-weight: 650; }
+.fw-tee-time-card__category { color: var(--fw-tee-gold); font-size: 12px; font-weight: 850; letter-spacing: .12em; margin-top: 7px; }
+.fw-tee-time-card__title { margin: 5px 0 12px; font-size: 18px; line-height: 1.25; overflow-wrap: anywhere; }
+.fw-tee-time-card__title button { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.fw-tee-time-card .fw-trip-item-card__meta-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.fw-tee-time-card .fw-trip-item-card__meta-row { padding: 0; border: 0; background: none; min-width: 0; overflow-wrap: anywhere; }
+.fw-tee-time-card .fw-trip-item-card__meta-row > span { font-size: 11px; }
+.fw-tee-time-card .fw-trip-item-card__meta-row > strong { font-size: 13px; }
+.fw-tee-time-card .fw-trip-item-card__actions { border-top: 1px solid var(--border); padding: 11px 14px !important; }
+@media (min-width: 700px) {
+  .fw-tee-time-card__main { grid-template-columns: 180px minmax(0, 1fr); gap: 20px; padding: 18px; }
+  .fw-tee-time-card__media { width: 180px; height: 170px; }
+  .fw-tee-time-card .fw-trip-item-card__meta-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 380px) {
+  .fw-tee-time-card__main { grid-template-columns: 84px minmax(0, 1fr); gap: 10px; padding: 10px; }
+  .fw-tee-time-card__media { width: 84px; height: 132px; }
+  .fw-tee-time-card__title { font-size: 16px; }
+}
