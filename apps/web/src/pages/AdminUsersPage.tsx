@@ -10,6 +10,7 @@ type UserEntry = {
   email: string | null;
   createdAt: string;
   emailVerifiedAt: string | null;
+  role: "ADMIN" | "USER";
 };
 type Result = { total: number; page: number; pageSize: number; items: UserEntry[] };
 
@@ -21,6 +22,7 @@ export default function AdminUsersPage() {
   const [data, setData] = useState<Result | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [savingId, setSavingId] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -50,11 +52,35 @@ export default function AdminUsersPage() {
     return () => controller.abort();
   }, [token, search, page]);
 
+  async function changeRole(user: UserEntry, role: "ADMIN" | "USER") {
+    if (!token || savingId || user.role === role) return;
+    if (!window.confirm(`Change @${user.handle || user.id} to ${role}?`)) return;
+    setSavingId(user.id);
+    setError("");
+    try {
+      const res = await fetch(`${API_BASE}/users/admin/${encodeURIComponent(user.id)}/role`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || "Could not change user role.");
+      }
+      setData(prev => prev ? { ...prev, items: prev.items.map(item =>
+        item.id === user.id ? { ...item, role } : item) } : prev);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not change user role.");
+    } finally {
+      setSavingId(null);
+    }
+  }
+
   return (
     <main style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 18px 90px", color: "var(--text)" }}>
       <Link to="/feedback-admin" style={{ color: "var(--sub)" }}>← Admin</Link>
       <h1 style={{ fontSize: 28, marginBottom: 4 }}>Registered users</h1>
-      <p style={{ color: "var(--sub)", marginTop: 0 }}>Admin-only directory · read-only</p>
+      <p style={{ color: "var(--sub)", marginTop: 0 }}>Admin-only directory · manage roles</p>
       <label style={{ display: "grid", gap: 6, marginBottom: 20 }}>
         <span>Search name, handle or email</span>
         <input
@@ -69,7 +95,7 @@ export default function AdminUsersPage() {
       {!error && data && (
         <div style={{ overflowX: "auto", border: "1px solid var(--border)", borderRadius: 14 }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 650, textAlign: "left" }}>
-            <thead><tr>{["Name", "Handle", "Email", "Registered", "Email verified"].map((heading) =>
+            <thead><tr>{["Name", "Handle", "Email", "Registered", "Email verified", "Role"].map((heading) =>
               <th key={heading} style={{ padding: 12, borderBottom: "1px solid var(--border)" }}>{heading}</th>)}</tr></thead>
             <tbody>{data.items.map((user) => (
               <tr key={user.id}>
@@ -78,6 +104,7 @@ export default function AdminUsersPage() {
                 <td style={{ padding: 12, borderBottom: "1px solid var(--border)" }}>{user.email || "—"}</td>
                 <td style={{ padding: 12, borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>{new Date(user.createdAt).toLocaleDateString()}</td>
                 <td style={{ padding: 12, borderBottom: "1px solid var(--border)" }}>{user.emailVerifiedAt ? "Yes" : "No"}</td>
+                <td style={{ padding: 12, borderBottom: "1px solid var(--border)" }}><select aria-label={`Role for ${user.handle || user.name || user.id}`} value={user.role} disabled={savingId !== null} onChange={(e) => void changeRole(user, e.target.value as "ADMIN" | "USER")}><option value="USER">User</option><option value="ADMIN">Admin</option></select></td>
               </tr>
             ))}</tbody>
           </table>
