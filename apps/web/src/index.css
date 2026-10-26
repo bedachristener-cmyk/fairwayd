@@ -4454,7 +4454,7 @@ img.fw-avatar-img {
 .fw-shell-main .fw-tee-time-card__media img[hidden] { display: none !important; }
 .fw-tee-time-card__content { min-width: 0; }
 .fw-tee-time-card__heading { display: flex; align-items: baseline; justify-content: flex-start; gap: 9px; padding: 12px 14px 9px; }
-.fw-tee-time-card__category { flex-shrink: 0; color: var(--fw-tee-gold); font-size: 10px; font-weight: 850; letter-spacing: .08em; padding: 3px 6px; border-radius: 6px; background: color-mix(in srgb, var(--fw-tee-gold) 10%, transparent); }
+.fw-tee-time-card__category { text-transform: uppercase; flex-shrink: 0; color: var(--fw-tee-gold); font-size: 10px; font-weight: 850; letter-spacing: .08em; padding: 3px 6px; border-radius: 6px; background: color-mix(in srgb, var(--fw-tee-gold) 10%, transparent); }
 .fw-tee-time-card__title { min-width: 0; flex: 0 1 auto; text-align: left; margin: 0; font-size: 16px; line-height: 1.25; overflow-wrap: anywhere; }
 .fw-tee-time-card__title button { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: inherit; cursor: pointer; }
 .fw-tee-time-card .fw-trip-item-card__meta-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 5px; }
