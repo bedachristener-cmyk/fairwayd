@@ -1082,7 +1082,7 @@ function TripGolfTransferTimeline({
               const type = String(item.type ?? "").toLowerCase();
               const isGolf = type === "golf_round" || type === "course";
               const Icon = isGolf ? Flag : itemIcon(item.type);
-              const accent = isGolf ? "var(--accent)" : "#2f91d8";
+              const accent = tripCategoryColor(item.type);
               const dayNumber = dayNumbers.get(key);
               const imageUrl = isGolf
                 ? item.course?.posts?.[0]?.images?.[0]?.url
@@ -1232,8 +1232,8 @@ function TripGolfTransferTimeline({
                           borderRadius: 12,
                           display: "grid",
                           placeItems: "center",
-                          color: "#fff",
-                          background: accent,
+                          color: accent,
+                          background: `color-mix(in srgb, ${accent} 10%, var(--card))`,
                         }}
                       >
                         <Icon size={19} strokeWidth={2.35} />
@@ -1248,7 +1248,7 @@ function TripGolfTransferTimeline({
                     >
                       <span
                         style={{
-                          color: "var(--fw-vision-trail-gold)",
+                          color: accent,
                           fontSize: 12,
                           lineHeight: 1.1,
                           fontWeight: 950,
@@ -1353,10 +1353,9 @@ function itemIcon(type?: string | null): LucideIcon {
 
   if (value === "flight" || value === "flights") return Plane;
   if (value === "golf_round" || value === "course") return Flag;
-  if (value === "hotel") return Hotel;
-  if (value === "transfer" || value === "transport" || value === "car_rental") {
-    return Car;
-  }
+  if (value === "hotel" || value === "stay" || value === "accommodation") return Hotel;
+  if (value === "transfer" || value === "transport") return Route;
+  if (value === "car_rental") return Car;
   if (value === "restaurant") return UtensilsCrossed;
   if (value === "activity") return MapPin;
   if (value === "free_day") return Sun;
@@ -1371,7 +1370,7 @@ function itemTypeLabel(type?: string | null) {
   const value = String(type ?? "").toLowerCase();
 
   if (value === "golf_round" || value === "course") return "Golf";
-  if (value === "hotel") return "Hotel";
+  if (value === "hotel" || value === "stay" || value === "accommodation") return "Hotel";
   if (value === "transfer" || value === "transport") return "Transfer";
   if (value === "car_rental") return "Car rental";
   if (value === "flight" || value === "flights") return "Flight";
@@ -1384,7 +1383,7 @@ function calendarIndicator(type?: string | null): CalendarIndicator {
   const value = String(type ?? "").toLowerCase();
 
   if (value === "golf_round" || value === "course") return "Golf";
-  if (value === "hotel") return "Hotel";
+  if (value === "hotel" || value === "stay" || value === "accommodation") return "Hotel";
   if (value === "transfer" || value === "transport") return "Transfer";
   if (value === "car_rental") return "Car rental";
   if (value === "flight" || value === "flights") return "Flight";
@@ -1396,7 +1395,7 @@ function calendarSection(type?: string | null): CalendarSection {
   const value = String(type ?? "").toLowerCase();
 
   if (value === "golf_round" || value === "course") return "Golf";
-  if (value === "hotel") return "Hotel";
+  if (value === "hotel" || value === "stay" || value === "accommodation") return "Hotel";
   if (value === "transfer" || value === "transport" || value === "car_rental") {
     return "Transfers / Car";
   }
@@ -1405,82 +1404,28 @@ function calendarSection(type?: string | null): CalendarSection {
   return "Other";
 }
 
+function tripCategoryColor(type?: string | null) {
+  const colors: Record<CalendarIndicator, string> = {
+    Golf: "var(--fw-trip-golf)",
+    Hotel: "var(--fw-trip-hotel)",
+    Transfer: "var(--fw-trip-transfer)",
+    "Car rental": "var(--fw-trip-car)",
+    Flight: "var(--fw-trip-flight)",
+    Restaurant: "var(--fw-trip-restaurant)",
+    Other: "var(--fw-trip-other)",
+  };
+  return colors[calendarIndicator(type)];
+}
+
 function calendarItemAccent(item: TripItem) {
-  const value = String(item.type ?? "").toLowerCase();
-
-  if (value === "flight" || value === "flights") {
-    return {
-      border: "color-mix(in srgb, #2f91d8 72%, var(--border))",
-      header: "#2f91d8",
-      rail: "color-mix(in srgb, #2f91d8 94%, var(--border))",
-      headerText: "#fff",
-      headerSubText: "rgba(255,255,255,0.78)",
-      pill: "Flight",
-    };
-  }
-
-  if (value === "hotel" || value === "stay" || value === "accommodation") {
-    return {
-      border: "color-mix(in srgb, #c95f4f 74%, var(--border))",
-      header: "#c95f4f",
-      rail: "color-mix(in srgb, #c95f4f 94%, var(--border))",
-      headerText: "#fff",
-      headerSubText: "rgba(255,255,255,0.78)",
-      pill: "Hotel",
-    };
-  }
-
-  if (value === "golf_round" || value === "course") {
-    return {
-      border: "color-mix(in srgb, var(--accent) 74%, var(--border))",
-      header: "var(--accent)",
-      rail: "color-mix(in srgb, var(--accent) 96%, var(--border))",
-      headerText: "#fff",
-      headerSubText: "rgba(255,255,255,0.78)",
-      pill: "Golf",
-    };
-  }
-
-  if (value === "transfer" || value === "transport") {
-    return {
-      border: "color-mix(in srgb, #b86f16 74%, var(--border))",
-      header: "#b86f16",
-      rail: "color-mix(in srgb, #b86f16 96%, var(--border))",
-      headerText: "#fff",
-      headerSubText: "rgba(255,255,255,0.78)",
-      pill: "Transfer",
-    };
-  }
-
-  if (value === "car_rental") {
-    return {
-      border: "color-mix(in srgb, #2f6fb9 74%, var(--border))",
-      header: "#2f6fb9",
-      rail: "color-mix(in srgb, #2f6fb9 96%, var(--border))",
-      headerText: "#fff",
-      headerSubText: "rgba(255,255,255,0.78)",
-      pill: "Car rental",
-    };
-  }
-
-  if (value === "restaurant") {
-    return {
-      border: "color-mix(in srgb, #d15f32 74%, var(--border))",
-      header: "#d15f32",
-      rail: "color-mix(in srgb, #d15f32 94%, var(--border))",
-      headerText: "#fff",
-      headerSubText: "rgba(255,255,255,0.78)",
-      pill: "Restaurant",
-    };
-  }
-
+  const color = tripCategoryColor(item.type);
   return {
-    border: "color-mix(in srgb, #64748b 62%, var(--border))",
-    header: "#64748b",
-    rail: "color-mix(in srgb, #64748b 88%, var(--border))",
-    headerText: "#fff",
+    border: `color-mix(in srgb, ${color} 28%, var(--border))`,
+    header: color,
+    rail: color,
+    headerText: "var(--fw-trip-on-category)",
     headerSubText: "rgba(255,255,255,0.78)",
-    pill: "Other",
+    pill: calendarIndicator(item.type),
   };
 }
 
@@ -1488,7 +1433,7 @@ function budgetCategory(type?: string | null): BudgetCategory {
   const value = String(type ?? "").toLowerCase();
 
   if (value === "golf_round" || value === "course") return "Golf";
-  if (value === "hotel") return "Hotel";
+  if (value === "hotel" || value === "stay" || value === "accommodation") return "Hotel";
   if (value === "transfer" || value === "transport" || value === "car_rental") {
     return "Transfer";
   }
@@ -2257,150 +2202,37 @@ function tripItemStayNights(item: TripItem) {
 }
 
 function TripItemCardHeader({
-  item,
-  displayKey,
-  onTitleClick,
-  variant = "default",
+  item, displayKey, onTitleClick, variant = "default",
 }: {
   item: TripItem;
   displayKey?: string;
   onTitleClick?: () => void;
   variant?: "default" | "overview";
 }) {
-  const accent = calendarItemAccent(item);
   const dateBlock = eventDateBlockParts(displayKey || dateKey(item));
   const visualDate = itineraryVisualDateLabel(displayKey || dateKey(item));
-  const typeLabel = itemTypeLabel(item.type).toUpperCase();
-  const title = tripItemHeaderTitle(item);
   const Icon = itemIcon(item.type);
-  const isOverview = variant === "overview";
-  const titleStyle: React.CSSProperties = {
-    appearance: "none",
-    WebkitAppearance: "none",
-    border: 0,
-    padding: 0,
-    margin: 0,
-    background: "transparent",
-    color: accent.headerText,
-    cursor: onTitleClick ? "pointer" : "default",
-    font: "inherit",
-    fontSize: isOverview ? 21 : 15,
-    fontWeight: 950,
-    lineHeight: isOverview ? 1.12 : 1.18,
-    textAlign: "left",
-    overflowWrap: "anywhere",
-  };
-
+  const imageUrl = isGolfItem(item) ? item.course?.posts?.[0]?.images?.[0]?.url : undefined;
   return (
-    <div
-      className={isOverview ? "fw-trip-item-card__header" : undefined}
-      style={{
-        borderBottom: isOverview ? 0 : `1px solid ${accent.border}`,
-        borderRight: isOverview ? `1px solid ${accent.border}` : undefined,
-        background: isOverview ? accent.header : accent.header,
-        padding: isOverview ? 14 : 12,
-        display: "grid",
-        gridTemplateColumns: isOverview ? "minmax(0, 1fr)" : "50px 1px minmax(0, 1fr)",
-        alignItems: isOverview ? "start" : "center",
-        alignContent: isOverview ? "start" : undefined,
-        rowGap: isOverview ? 18 : undefined,
-        columnGap: isOverview ? 0 : 11,
-      }}
-    >
-      <div
-        aria-hidden="true"
-        className={isOverview ? "fw-trip-item-card__date-block" : undefined}
-        style={{
-          display: "grid",
-          gap: 3,
-          justifyItems: "start",
-          alignContent: "center",
-          minHeight: isOverview ? undefined : undefined,
-          borderRadius: undefined,
-          background: undefined,
-          border: undefined,
-        }}
-      >
-        {isOverview ? (
-          <span
-            className="fw-trip-item-card__date-line"
-            style={{
-              color: accent.headerText,
-              fontSize: 18,
-              lineHeight: 1.08,
-              fontWeight: 950,
-            }}
-          >
-            {visualDate}
-          </span>
-        ) : (
-          <>
-            <span
-              style={{
-                color: accent.headerSubText,
-                fontSize: 10,
-                lineHeight: 1,
-                fontWeight: 950,
-                textTransform: "uppercase",
-              }}
-            >
-              {dateBlock.weekday}
-            </span>
-            <span
-              style={{
-                color: accent.headerText,
-                fontSize: 15,
-                lineHeight: 1,
-                fontWeight: 950,
-              }}
-            >
-              {dateBlock.date}
-            </span>
-          </>
-        )}
+    <div className="fw-trip-journey-header" data-variant={variant}
+      style={{ "--fw-trip-category": tripCategoryColor(item.type) } as React.CSSProperties}>
+      <div className="fw-tee-time-card__heading">
+        <span className="fw-tee-time-card__category">{itemTypeLabel(item.type)}</span>
+        <h3 className="fw-tee-time-card__title">
+          {onTitleClick ? <button type="button" onClick={onTitleClick}>{tripItemHeaderTitle(item)}</button> : tripItemHeaderTitle(item)}
+        </h3>
       </div>
-      <div
-        aria-hidden="true"
-        style={{
-          width: 1,
-          alignSelf: "stretch",
-          background: "rgba(255,255,255,0.34)",
-          display: isOverview ? "none" : undefined,
-        }}
-      />
-      <div
-        className={isOverview ? "fw-trip-item-card__visual-copy" : undefined}
-        style={{ minWidth: 0, display: "grid", gap: 4 }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            minWidth: 0,
-          }}
-        >
-          {isOverview ? null : <Icon aria-hidden="true" size={14} strokeWidth={2.5} />}
-          <span
-            className={isOverview ? "fw-trip-item-card__type-label" : undefined}
-            style={{
-              color: accent.headerSubText,
-              fontSize: 11,
-              lineHeight: 1.1,
-              fontWeight: 950,
-              textTransform: "uppercase",
-            }}
-          >
-            {typeLabel}
-          </span>
+      <div className="fw-tee-time-card__main">
+        <div className="fw-tee-time-card__media">
+          <Icon aria-hidden="true" size={28} />
+          {imageUrl ? <img src={fileUrl(imageUrl)} alt="" loading="lazy"
+            onError={(event) => { event.currentTarget.hidden = true; }} /> : null}
         </div>
-        {onTitleClick ? (
-          <button type="button" onClick={onTitleClick} style={titleStyle}>
-            {title}
-          </button>
-        ) : (
-          <div style={titleStyle}>{title}</div>
-        )}
+        <div className="fw-trip-journey-header__info">
+          {visualDate ? <div aria-label={`${dateBlock.weekday} ${dateBlock.date}`}><span>Date</span><strong>{visualDate}</strong></div> : null}
+          {formatTimeRange(item) ? <div><span>Time</span><strong>{formatTimeRange(item)}</strong></div> : null}
+          {compactItemWhereLine(item) ? <div><span>Location</span><strong>{compactItemWhereLine(item)}</strong></div> : null}
+        </div>
       </div>
     </div>
   );
@@ -4176,6 +4008,8 @@ function TripCalendarView({
                       key={label}
                       title={`${label} ${count}`}
                       style={{
+                        color: tripCategoryColor(label === "Golf" ? "golf_round" : label === "Car rental" ? "car_rental" : label.toLowerCase()),
+                        background: "var(--card)",
                         width: count > 1 ? "auto" : 5,
                         height: count > 1 ? 8 : 5,
                         minWidth: 5,
@@ -4258,6 +4092,7 @@ function TripCalendarView({
                 return (
                   <article
                     key={`${selected.key}-${item.id}-${section}`}
+                    className="fw-trip-schedule-card"
                     style={{
                       display: "grid",
                       gap: 0,
@@ -6993,6 +6828,7 @@ export default function TripDetailPage() {
       <article
         key={key}
         className="fw-trip-item-card fw-tee-time-card"
+        style={{ "--fw-trip-category": tripCategoryColor(item.type) } as React.CSSProperties}
       >
         <header className="fw-tee-time-card__heading">
             <span className="fw-tee-time-card__category">{itemTypeLabel(item.type)}</span>
@@ -9915,6 +9751,7 @@ export default function TripDetailPage() {
                   <article
                     key={item.id}
                     id={tripItemDomId(item.id)}
+                    className="fw-trip-schedule-card"
                     style={
                       isEditing
                         ? {

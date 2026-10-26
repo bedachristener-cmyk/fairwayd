@@ -4472,3 +4472,42 @@ img.fw-avatar-img {
   .fw-tee-time-card__media { width: 100%; height: 90px; }
   .fw-tee-time-card__title { font-size: 16px; }
 }
+
+/* Shared semantic palette for trip overview, trail, timeline and calendar. */
+:root {
+  --fw-trip-on-category: #fff;
+  --fw-trip-golf: #28764c;
+  --fw-trip-hotel: #b74f40;
+  --fw-trip-transfer: #976018;
+  --fw-trip-car: #2f6fb9;
+  --fw-trip-flight: #287bb5;
+  --fw-trip-restaurant: #b95029;
+  --fw-trip-other: #64748b;
+}
+:root:is([data-theme="dark"], [data-theme="lagoon"], [data-theme="ocean"]) {
+  --fw-trip-on-category: #102019;
+  --fw-trip-golf: #78c99b;
+  --fw-trip-hotel: #ef9c8d;
+  --fw-trip-transfer: #e6b56b;
+  --fw-trip-car: #8eb7ed;
+  --fw-trip-flight: #80c4ed;
+  --fw-trip-restaurant: #f3aa85;
+  --fw-trip-other: #b1c0d2;
+}
+.fw-tee-time-card, .fw-trip-journey-header { --fw-tee-gold: var(--fw-trip-category, var(--fw-trip-golf)) !important; }
+.fw-trip-journey-header { background: var(--card); color: var(--text); }
+.fw-trip-journey-header .fw-tee-time-card__media,
+.fw-tee-time-card .fw-tee-time-card__media {
+  color: var(--fw-trip-category);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--fw-trip-category) 12%, var(--card)), var(--card));
+}
+.fw-trip-journey-header__info { display: grid; gap: 6px; min-width: 0; align-content: start; }
+.fw-trip-journey-header__info > div { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 3px 8px; min-width: 0; }
+.fw-trip-journey-header__info span { color: var(--sub); font-size: 11px; font-weight: 700; }
+.fw-trip-journey-header__info strong { color: var(--text); font-size: 13px; overflow-wrap: anywhere; min-width: 0; }
+
+.fw-trip-schedule-card {
+  border-radius: 20px !important;
+  background: var(--card) !important;
+  box-shadow: 0 9px 24px rgba(14, 55, 41, .09) !important;
+}
