@@ -4411,7 +4411,7 @@ img.fw-avatar-img {
 
 /* UI-01E: course imagery and round details share a compact journey card. */
 .fw-trip-item-card.fw-tee-time-card {
-  display: block;
+  display: block !important;
   --fw-tee-gold: #805c18;
   min-width: 0;
   border: 1px solid var(--border);
@@ -4442,7 +4442,8 @@ img.fw-avatar-img {
   color: var(--fw-tee-gold);
   background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 20%, var(--card)), var(--bg));
 }
-/* Override the mobile shell's generic height:auto image rule. */
+/* Fill the media tile in both desktop and mobile shells. */
+.fw-tee-time-card__media img,
 .fw-shell-main .fw-tee-time-card__media img {
   position: absolute;
   inset: 0;
@@ -4451,6 +4452,7 @@ img.fw-avatar-img {
   display: block;
   object-fit: cover;
 }
+.fw-tee-time-card__media img[hidden],
 .fw-shell-main .fw-tee-time-card__media img[hidden] { display: none !important; }
 .fw-tee-time-card__content { min-width: 0; }
 .fw-tee-time-card__heading { display: flex; align-items: baseline; justify-content: flex-start; gap: 9px; padding: 12px 14px 9px; }
@@ -4532,3 +4534,9 @@ img.fw-avatar-img {
 .fw-trip-map-popup__details strong { font-size: 12px; color: var(--text); overflow-wrap: anywhere; }
 .fw-trip-map-popup__action { justify-self: start; padding: 6px 10px; border-radius: 9px; border: 1px solid var(--border); background: var(--card); color: var(--text); font: inherit; font-size: 12px; cursor: pointer; }
 .fw-cost-category { display: inline-flex; align-items: center; gap: 4px; margin-right: 7px; padding: 3px 6px; border-radius: 6px; color: var(--fw-trip-category); background: color-mix(in srgb, var(--fw-trip-category) 10%, var(--card)); font-size: 10px; font-weight: 850; text-transform: uppercase; vertical-align: middle; }
+
+/* Keep trip details together on wide screens while preserving the mobile layout. */
+@media (min-width: 981px) {
+  .fw-tee-time-card__content,
+  .fw-trip-journey-header__info { max-width: 520px; width: 100%; }
+}
