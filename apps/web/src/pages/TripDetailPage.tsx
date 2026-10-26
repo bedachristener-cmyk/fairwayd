@@ -1205,9 +1205,7 @@ function TripGolfTransferTimeline({
                         "color-mix(in srgb, var(--card) 90%, var(--bg))",
                       color: "var(--text)",
                       display: "grid",
-                      gridTemplateColumns: imageUrl
-                        ? "72px minmax(0, 1fr) 16px"
-                        : "38px minmax(0, 1fr) 16px",
+                      gridTemplateColumns: "88px minmax(0, 1fr) 16px",
                       alignItems: "center",
                       gap: 10,
                       textAlign: "left",
@@ -1222,8 +1220,8 @@ function TripGolfTransferTimeline({
                         alt=""
                         loading="lazy"
                         style={{
-                          width: 72,
-                          height: 52,
+                          width: 88,
+                          height: 76,
                           display: "block",
                           objectFit: "cover",
                           borderRadius: 11,
@@ -1235,8 +1233,8 @@ function TripGolfTransferTimeline({
                       <span
                         aria-hidden="true"
                         style={{
-                          width: 38,
-                          height: 38,
+                          width: 88,
+                          height: 76,
                           borderRadius: 12,
                           display: "grid",
                           placeItems: "center",
@@ -1256,7 +1254,7 @@ function TripGolfTransferTimeline({
                     >
                       <span
                         style={{
-                          color: isGolf ? "var(--accent-strong)" : accent,
+                          color: "var(--fw-vision-trail-gold)",
                           fontSize: 10,
                           lineHeight: 1.1,
                           fontWeight: 950,
