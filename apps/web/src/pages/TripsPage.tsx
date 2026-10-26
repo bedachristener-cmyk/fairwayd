@@ -673,6 +673,7 @@ export default function TripsPage() {
                     gap: 3,
                   }}
                 >
+                  <div className="fw-trip-card__eyebrow">GOLF JOURNEY</div>
                   <h2
                     className="fw-trip-card__title"
                     style={{
@@ -725,6 +726,7 @@ export default function TripsPage() {
                       </span>
                     ) : null}
                   </div>
+                  <div className="fw-trip-card__explore" aria-hidden="true">Explore trip <span>↗</span></div>
                 </div>
               </article>
             );
