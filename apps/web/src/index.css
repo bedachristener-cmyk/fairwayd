@@ -4245,3 +4245,57 @@ img.fw-avatar-img {
 @media (prefers-reduced-motion: reduce) {
   .fw-trips-page-shell .fw-trip-card { transition: none !important; }
 }
+
+/* UI Vision / Trip Trail: elevated itinerary treatment; scoped to the existing
+   working Golf & Transfers section, preserving its data, controls and access. */
+.fw-trip-vision-trail {
+  padding: clamp(16px, 3vw, 26px) !important;
+  border-radius: 26px !important;
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--border)) !important;
+  background:
+    radial-gradient(ellipse at 100% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 65%),
+    color-mix(in srgb, var(--card) 90%, #f5eee0) !important;
+  box-shadow: 0 17px 40px rgba(15, 49, 37, .12) !important;
+}
+.fw-trip-vision-trail__heading {
+  font-size: clamp(17px, 3.5vw, 23px) !important;
+  letter-spacing: -.035em !important;
+  line-height: 1.15 !important;
+}
+.fw-trip-vision-trail__content {
+  padding-top: 15px;
+  border-top: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border));
+}
+.fw-trip-vision-trail__entry {
+  grid-template-columns: 49px 17px minmax(0, 1fr) !important;
+  gap: 8px !important;
+}
+.fw-trip-vision-trail__item {
+  min-height: 76px;
+  border-radius: 18px !important;
+  padding: 12px !important;
+  background: color-mix(in srgb, var(--card) 91%, #fff8eb) !important;
+  border-color: color-mix(in srgb, var(--accent) 19%, var(--border)) !important;
+  box-shadow: 0 9px 22px rgba(14, 55, 41, .10) !important;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+.fw-trip-vision-trail__item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(14, 55, 41, .15) !important;
+}
+.fw-trip-vision-trail__item:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+.fw-trip-vision-trail__item .fw-trip-journey-course-image {
+  border-radius: 13px !important;
+}
+@media (max-width: 520px) {
+  .fw-trip-vision-trail { padding: 14px !important; border-radius: 21px !important; }
+  .fw-trip-vision-trail__entry { grid-template-columns: 45px 15px minmax(0, 1fr) !important; gap: 5px !important; }
+  .fw-trip-vision-trail__item { padding: 9px !important; gap: 7px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fw-trip-vision-trail__item { transition: none !important; }
+  .fw-trip-vision-trail__item:hover { transform: none; }
+}

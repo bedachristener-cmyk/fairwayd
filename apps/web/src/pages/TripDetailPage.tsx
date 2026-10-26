@@ -959,7 +959,7 @@ function TripGolfTransferTimeline({
   onViewAll: () => void;
   onAdd?: () => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const entries = items
     .map((item, index) => ({ item, index, key: dateKey(item) }))
     .filter(({ item }) => isGolfOrTransferTimelineItem(item))
@@ -996,6 +996,7 @@ function TripGolfTransferTimeline({
 
   return (
     <section
+      className="fw-trip-vision-trail"
       aria-labelledby="golf-transfer-timeline-title"
       style={{
         ...safeSectionStyle,
@@ -1053,6 +1054,7 @@ function TripGolfTransferTimeline({
         >
           <span
             id="golf-transfer-timeline-title"
+            className="fw-trip-vision-trail__heading"
             style={sectionTitleTextStyle}
           >
             Golf & transfers
@@ -1078,6 +1080,7 @@ function TripGolfTransferTimeline({
       {expanded ? (
         <div
           id="golf-transfer-timeline-content"
+          className="fw-trip-vision-trail__content"
           style={{ display: "grid", gap: 10 }}
         >
           <div style={{ display: "grid" }}>
@@ -1098,6 +1101,7 @@ function TripGolfTransferTimeline({
               return (
                 <div
                   key={item.id}
+                  className="fw-trip-vision-trail__entry"
                   style={{
                     display: "grid",
                     gridTemplateColumns: "46px 16px minmax(0, 1fr)",
@@ -1186,6 +1190,7 @@ function TripGolfTransferTimeline({
                   </div>
 
                   <button
+                    className="fw-trip-vision-trail__item"
                     type="button"
                     onClick={() => onOpen(item)}
                     style={{
