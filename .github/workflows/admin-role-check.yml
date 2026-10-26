@@ -1,0 +1,40 @@
+name: Admin Role Checks
+on:
+  push:
+    branches: [feature/admin-role-management]
+  pull_request:
+    paths:
+      - 'apps/api/**'
+      - 'apps/web/**'
+      - '.github/workflows/admin-role-check.yml'
+jobs:
+  api-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/api/package-lock.json
+      - run: npm ci
+      - run: npm run build
+        env:
+          NEON_DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
+  web-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+      - run: npm run build

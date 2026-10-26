@@ -20,7 +20,7 @@ import { memoryStorage } from 'multer';
 import { extname } from 'path';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { AdminGuard, isFairwaydAdmin } from '../auth/admin.guard';
+import { AdminGuard } from '../auth/admin.guard';
 import { uploadToR2 } from '../storage/r2.service';
 import { UpdateUserPreferencesDto } from './dto/update-user-preferences.dto';
 
@@ -43,8 +43,9 @@ export class UsersController {
   // ---------------------------------------------------------
   @UseGuards(AuthGuard('jwt'))
   @Get('me/admin-status')
-  adminStatus(@Req() req: any) {
-    return { isAdmin: isFairwaydAdmin(req.user) };
+  async adminStatus(@Req() req: any) {
+    const userId = req?.user?.userId ?? req?.user?.id;
+    return { isAdmin: await this.users.isAdmin(userId) };
   }
 
   @UseGuards(AuthGuard('jwt'))
@@ -318,6 +319,13 @@ export class UsersController {
   @Get('admin/list')
   adminListUsers(@Query('q') q?: string, @Query('page') page?: string) {
     return this.users.listAdminUsers(q ?? '', page);
+  }
+
+  @UseGuards(AuthGuard('jwt'), AdminGuard)
+  @Patch('admin/:id/role')
+  async adminSetRole(@Req() req: any, @Param('id') id: string, @Body() body: { role?: string }) {
+    const actingId = req?.user?.userId ?? req?.user?.id;
+    return this.users.setAdminRole(actingId, id, body?.role);
   }
 
   // ---------------------------------------------------------

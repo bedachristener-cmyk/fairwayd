@@ -11,7 +11,9 @@ import {
   FollowStatus,
   Prisma,
   Visibility,
+  AdminRole,
 } from '@prisma/client';
+import { isLegacyAdmin } from '../auth/admin.guard';
 import { NotificationsService } from '../notifications/notifications.service';
 import { normalizeSupportedCurrency } from '../currency';
 import { deleteStoredUpload } from '../storage/r2.service';
@@ -316,6 +318,35 @@ export class UsersService {
   // User search
   // =========================================================
 
+  async isAdmin(userId: string | undefined): Promise<boolean> {
+    if (!userId) return false;
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, handle: true, adminRole: true },
+    });
+    return !!user && (user.adminRole === AdminRole.ADMIN ||
+      (user.adminRole === null && isLegacyAdmin(user)));
+  }
+
+  async setAdminRole(actingId: string, targetId: string, role: unknown) {
+    if (role !== 'ADMIN' && role !== 'USER') {
+      throw new BadRequestException('Role must be ADMIN or USER');
+    }
+    if (actingId === targetId && role === 'USER') {
+      throw new BadRequestException('You cannot remove your own admin access');
+    }
+    const target = await this.prisma.user.findUnique({
+      where: { id: targetId }, select: { id: true },
+    });
+    if (!target) throw new NotFoundException('User not found');
+    const updated = await this.prisma.user.update({
+      where: { id: targetId },
+      data: { adminRole: role as AdminRole },
+      select: { id: true, adminRole: true },
+    });
+    return { id: updated.id, role: updated.adminRole };
+  }
+
   async listAdminUsers(q: string, page?: string) {
     const query = (q || '').trim().slice(0, 100);
     const pageNumber = Math.max(1, Math.min(10000, Number.parseInt(page || '1', 10) || 1));
@@ -334,14 +365,19 @@ export class UsersService {
         where,
         select: {
           id: true, name: true, handle: true, email: true,
-          createdAt: true, emailVerifiedAt: true,
+          createdAt: true, emailVerifiedAt: true, adminRole: true,
         },
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip: (pageNumber - 1) * 25,
         take: 25,
       }),
     ]);
-    return { total, page: pageNumber, pageSize: 25, items };
+    return { total, page: pageNumber, pageSize: 25, items: items.map(user => ({
+      id: user.id, name: user.name, handle: user.handle, email: user.email,
+      createdAt: user.createdAt, emailVerifiedAt: user.emailVerifiedAt,
+      role: user.adminRole === AdminRole.ADMIN ||
+        (user.adminRole === null && isLegacyAdmin(user)) ? "ADMIN" : "USER",
+    })) };
   }
 
   async searchUsers(q: string, viewerUserId?: string) {
