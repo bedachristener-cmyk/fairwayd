@@ -4453,10 +4453,10 @@ img.fw-avatar-img {
 }
 .fw-shell-main .fw-tee-time-card__media img[hidden] { display: none !important; }
 .fw-tee-time-card__content { min-width: 0; }
-.fw-tee-time-card__heading { padding: 14px 14px 10px; }
-.fw-tee-time-card__category { color: var(--fw-tee-gold); font-size: 12px; font-weight: 850; letter-spacing: .12em; margin-top: 0; }
-.fw-tee-time-card__title { margin: 4px 0 0; font-size: 18px; line-height: 1.25; overflow-wrap: anywhere; }
-.fw-tee-time-card__title button { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.fw-tee-time-card__heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 14px 10px; }
+.fw-tee-time-card__category { flex-shrink: 0; color: var(--fw-tee-gold); font-size: 12px; font-weight: 850; letter-spacing: .12em; margin-top: 0; }
+.fw-tee-time-card__title { min-width: 0; flex: 1; text-align: right; margin: 0; font-size: 16px; line-height: 1.25; overflow-wrap: anywhere; }
+.fw-tee-time-card__title button { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: inherit; cursor: pointer; }
 .fw-tee-time-card .fw-trip-item-card__meta-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
 .fw-tee-time-card .fw-trip-item-card__meta-row { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: 8px; row-gap: 2px; padding: 0; border: 0; background: none; min-width: 0; overflow-wrap: anywhere; }
 .fw-tee-time-card .fw-trip-item-card__meta-row > span { font-size: 11px; }
@@ -4465,7 +4465,7 @@ img.fw-avatar-img {
 @media (min-width: 700px) {
   .fw-tee-time-card__main { grid-template-columns: 180px minmax(0, 1fr); gap: 20px; padding: 0 18px 16px; }
   .fw-tee-time-card__media { width: 180px; height: 120px; }
-  .fw-tee-time-card__heading { padding: 18px 18px 12px; }
+  .fw-tee-time-card__heading { padding: 14px 18px 12px; }
 }
 @media (max-width: 380px) {
   .fw-tee-time-card__main { grid-template-columns: minmax(0, 35%) minmax(0, 1fr); gap: 10px; padding: 0 10px 12px; }

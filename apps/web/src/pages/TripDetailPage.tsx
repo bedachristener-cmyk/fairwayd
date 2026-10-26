@@ -959,7 +959,7 @@ function TripGolfTransferTimeline({
   onViewAll: () => void;
   onAdd?: () => void;
 }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const entries = items
     .map((item, index) => ({ item, index, key: dateKey(item) }))
     .filter(({ item }) => isGolfOrTransferTimelineItem(item))
