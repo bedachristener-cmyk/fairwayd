@@ -5,6 +5,7 @@ import { fileUrl } from "../api/fileUrl";
 import { useAuth } from "../auth/AuthContext";
 import CourseRatingSummary from "../components/CourseRatingSummary";
 import PostCard from "../components/PostCard";
+import CommentModal from "../components/CommentModal";
 import { getMonetizationLinksForCourse } from "../data/monetization";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
 import { t } from "../i18n/strings";
@@ -34,6 +35,8 @@ type Post = {
     handle: string;
   };
   images?: { id: string; url: string }[];
+  comments?: unknown[];
+  _count?: { likes?: number; comments?: number };
 };
 
 type Course = {
@@ -359,6 +362,7 @@ export default function CoursePage() {
   } as const;
   const [course, setCourse] = useState<Course | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
@@ -962,6 +966,20 @@ export default function CoursePage() {
     </section>
   );
 
+  const activeCommentPost = posts.find((post) => post.id === activeCommentPostId);
+  const commentModal = activeCommentPost ? (
+    <CommentModal
+      post={activeCommentPost}
+      isMobile={isMobile}
+      onClose={() => setActiveCommentPostId(null)}
+      onCommentCreated={(postId) => {
+        setPosts((previous) => previous.map((post) => post.id === postId
+          ? { ...post, _count: { ...post._count, comments: (post._count?.comments ?? post.comments?.length ?? 0) + 1 } }
+          : post));
+      }}
+    />
+  ) : null;
+
   if (!isMobile) {
     return (
       <div className="fw-course-desktop-v2">
@@ -1119,7 +1137,7 @@ export default function CoursePage() {
                 <span>{t("be_first_share_course")}</span>
               </div>
             ) : (
-              posts.map((p) => <PostCard key={p.id} post={p} isMobile={false} courseRating={ratingSummary} courseRatingLoading={!ratingSummary} myRating={myRating} />)
+              posts.map((p) => <PostCard key={p.id} post={p} isMobile={false} courseRating={ratingSummary} courseRatingLoading={!ratingSummary} myRating={myRating} onCommentClick={setActiveCommentPostId} />)
             )}
           </section>
         ) : null}
@@ -1195,6 +1213,7 @@ export default function CoursePage() {
             </div>
           </section>
         ) : null}
+        {commentModal}
       </div>
     );
   }
@@ -1870,9 +1889,10 @@ export default function CoursePage() {
             </div>
           </div>
         ) : (
-          posts.map((p) => <PostCard key={p.id} post={p} isMobile={isMobile} courseRating={ratingSummary} courseRatingLoading={!ratingSummary} myRating={myRating} />)
+          posts.map((p) => <PostCard key={p.id} post={p} isMobile={isMobile} courseRating={ratingSummary} courseRatingLoading={!ratingSummary} myRating={myRating} onCommentClick={setActiveCommentPostId} />)
         )}
       </div>
+      {commentModal}
     </div>
   );
 }
