@@ -1119,7 +1119,7 @@ export default function CoursePage() {
                 <span>{t("be_first_share_course")}</span>
               </div>
             ) : (
-              posts.map((p) => <PostCard key={p.id} post={p} isMobile={false} />)
+              posts.map((p) => <PostCard key={p.id} post={p} isMobile={false} courseRating={ratingSummary} courseRatingLoading={!ratingSummary} myRating={myRating} />)
             )}
           </section>
         ) : null}
@@ -1870,7 +1870,7 @@ export default function CoursePage() {
             </div>
           </div>
         ) : (
-          posts.map((p) => <PostCard key={p.id} post={p} isMobile={isMobile} />)
+          posts.map((p) => <PostCard key={p.id} post={p} isMobile={isMobile} courseRating={ratingSummary} courseRatingLoading={!ratingSummary} myRating={myRating} />)
         )}
       </div>
     </div>

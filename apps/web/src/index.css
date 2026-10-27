@@ -4591,7 +4591,7 @@ img.fw-avatar-img {
 .fw-feed-filters button[aria-pressed="false"] { background: var(--card) !important; color: var(--text) !important; }
 .fw-feed-stream .fw-post-card { border-radius: 20px !important; box-shadow: 0 10px 26px rgba(14, 55, 41, .08) !important; }
 .fw-feed-stream .fw-post-image-wrap { border-radius: 14px !important; overflow: hidden !important; background: var(--muted) !important; }
-.fw-feed-stream .fw-post-card img.fw-post-img { margin-left: auto !important; margin-right: auto !important; object-fit: contain !important; }
+.fw-post-card img.fw-post-img { margin-left: 0 !important; margin-right: auto !important; object-fit: contain !important; }
 .fw-feed-community button:focus-visible, .fw-feed-filters button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 
 /* Keep community profiles scrollable without a visible scrollbar. */

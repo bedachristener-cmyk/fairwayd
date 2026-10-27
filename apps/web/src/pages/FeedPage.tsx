@@ -954,7 +954,7 @@ export default function FeedPage() {
         const nextCourseRatings: Record<string, RatingSummary | null> = {};
         const nextMyRatings: Record<string, MyRating | null> = {};
 
-        for (const courseId of uniqueCourseIds) {
+        await Promise.all(uniqueCourseIds.map(async (courseId) => {
           try {
             const summary = await getRatingSummary(courseId);
             nextCourseRatings[courseId] = summary ?? emptySummary;
@@ -971,7 +971,11 @@ export default function FeedPage() {
             console.error("My rating failed for course", courseId, err);
             nextMyRatings[courseId] = null;
           }
-        }
+          if (!cancelled) {
+            setCourseRatings((previous) => ({ ...previous, [courseId]: nextCourseRatings[courseId] }));
+            setMyRatings((previous) => ({ ...previous, [courseId]: nextMyRatings[courseId] }));
+          }
+        }));
 
         if (cancelled) return;
 
@@ -3183,6 +3187,7 @@ export default function FeedPage() {
                           }
                         : null
                     }
+                    courseRatingLoading={!(p.course.id in courseRatings)}
                     myRating={myRatings[p.course.id] ?? null}
                     onPostDeleted={(postId) => {
                       setPosts((prev) =>
