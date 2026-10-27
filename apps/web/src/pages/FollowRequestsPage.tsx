@@ -230,9 +230,9 @@ export default function FollowRequestsPage() {
         width: "100%",
         maxWidth: "100%",
         boxSizing: "border-box",
-        padding: 14,
+        padding: "12px 14px 20px",
         display: "grid",
-        gap: 14,
+        gap: 12,
         overflowX: "hidden",
       }}
     >
@@ -248,6 +248,7 @@ export default function FollowRequestsPage() {
             type="button"
             onClick={load}
             disabled={loading}
+            aria-label={loading ? "Refreshing requests" : "Refresh requests"}
             style={{
               minHeight: 40,
               padding: "0 12px",
@@ -267,7 +268,7 @@ export default function FollowRequestsPage() {
             }}
           >
             <RefreshCw size={14} strokeWidth={2.2} />
-            {loading ? "Refreshing..." : "Refresh"}
+            <span className="follow-requests-refresh-label">{loading ? "Refreshing..." : "Refresh"}</span>
           </button>
         }
       />
@@ -296,13 +297,14 @@ export default function FollowRequestsPage() {
             gap: 6,
             background: "var(--bg)",
             padding: 4,
-            borderRadius: 12,
+            borderRadius: 14,
             border: "1px solid var(--border)",
           }}
         >
           <button
             type="button"
             onClick={() => setActiveTab("incoming")}
+            aria-pressed={activeTab === "incoming"}
             style={{
               flex: 1,
               height: 36,
@@ -311,8 +313,9 @@ export default function FollowRequestsPage() {
               cursor: "pointer",
               fontWeight: 800,
               background:
-                activeTab === "incoming" ? "var(--card)" : "transparent",
-              color: "var(--text)",
+                activeTab === "incoming" ? "var(--accent-soft)" : "transparent",
+              color: activeTab === "incoming" ? "var(--accent-strong)" : "var(--sub)",
+              boxShadow: activeTab === "incoming" ? "inset 0 0 0 1px var(--accent)" : "none",
             }}
           >
             Incoming {pendingCount > 0 ? `(${pendingCount})` : ""}
@@ -321,6 +324,7 @@ export default function FollowRequestsPage() {
           <button
             type="button"
             onClick={() => setActiveTab("sent")}
+            aria-pressed={activeTab === "sent"}
             style={{
               flex: 1,
               height: 36,
@@ -328,8 +332,9 @@ export default function FollowRequestsPage() {
               border: "none",
               cursor: "pointer",
               fontWeight: 800,
-              background: activeTab === "sent" ? "var(--card)" : "transparent",
-              color: "var(--text)",
+              background: activeTab === "sent" ? "var(--accent-soft)" : "transparent",
+              color: activeTab === "sent" ? "var(--accent-strong)" : "var(--sub)",
+              boxShadow: activeTab === "sent" ? "inset 0 0 0 1px var(--accent)" : "none",
             }}
           >
             Sent {sentCount > 0 ? `(${sentCount})` : ""}
@@ -555,8 +560,9 @@ export default function FollowRequestsPage() {
       ) : activeTab === "incoming" ? (
       <div
         style={{
-          borderTop: "1px solid var(--border)",
-          borderBottom: "1px solid var(--border)",
+          border: "1px solid var(--border)",
+          borderRadius: 16,
+          overflow: "hidden",
           background: "var(--card)",
         }}
       >
@@ -685,8 +691,9 @@ export default function FollowRequestsPage() {
       ) : (
         <div
           style={{
-            borderTop: "1px solid var(--border)",
-            borderBottom: "1px solid var(--border)",
+            border: "1px solid var(--border)",
+            borderRadius: 16,
+            overflow: "hidden",
             background: "var(--card)",
           }}
         >
