@@ -4540,3 +4540,36 @@ img.fw-avatar-img {
   .fw-tee-time-card__content,
   .fw-trip-journey-header__info { max-width: 520px; width: 100%; }
 }
+
+/* Connect: a warm, photo-led community surface using real relationships. */
+.fw-connect-page { align-content: start; }
+.fw-connect-hero, .fw-connect-network, .fw-connect-list {
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border)) !important;
+  background: var(--card) !important;
+  border-radius: 22px !important;
+  box-shadow: 0 12px 30px rgba(14, 55, 41, .09) !important;
+  overflow: hidden;
+}
+.fw-connect-hero { padding: 22px; background: radial-gradient(ellipse at 100% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 62%), var(--card) !important; }
+.fw-connect-hero__eyebrow, .fw-connect-network__heading span { color: #805c18; font-size: 10px; font-weight: 850; letter-spacing: .12em; }
+:root:is([data-theme="dark"], [data-theme="lagoon"], [data-theme="ocean"]) .fw-connect-hero__eyebrow,
+:root:is([data-theme="dark"], [data-theme="lagoon"], [data-theme="ocean"]) .fw-connect-network__heading span { color: #e9bd68; }
+.fw-connect-hero h2, .fw-connect-network h2 { margin: 6px 0 0; color: var(--text); letter-spacing: -.03em; }
+.fw-connect-hero h2 { font-size: clamp(23px, 5vw, 30px); line-height: 1.1; }
+.fw-connect-hero p { margin: 9px 0 16px; color: var(--sub); font-size: 13px; line-height: 1.45; }
+.fw-connect-hero__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.fw-connect-hero__actions button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-weight: 800; font-size: 12px; cursor: pointer; }
+.fw-connect-hero__actions button:first-child { background: #1f5a41; border-color: #1f5a41; color: #fff; }
+.fw-connect-network { padding: 17px 18px; }
+.fw-connect-network__heading { display: flex; align-items: center; justify-content: space-between; color: var(--sub); }
+.fw-connect-network h2 { font-size: 17px; }
+.fw-connect-network__people { display: flex; gap: 15px; overflow-x: auto; padding: 15px 2px 3px; }
+.fw-connect-person { display: grid; justify-items: center; align-content: start; gap: 7px; flex: 0 0 74px; width: 74px; min-width: 0; padding: 0; background: transparent; border: 0; color: var(--text); cursor: pointer; }
+.fw-connect-person > div { width: 58px !important; height: 58px !important; min-width: 58px !important; min-height: 58px !important; max-width: 58px !important; max-height: 58px !important; border-color: color-mix(in srgb, var(--accent) 55%, var(--card)) !important; }
+.fw-connect-person > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 750; }
+.fw-connect-tabs { border-radius: 16px !important; padding: 5px !important; background: color-mix(in srgb, var(--card) 82%, var(--bg)) !important; }
+.fw-connect-tabs button { min-height: 40px; border-radius: 12px !important; }
+.fw-connect-tabs button[aria-pressed="true"] { box-shadow: 0 4px 12px rgba(14,55,41,.10); }
+.fw-connect-list__item { min-height: 72px; padding: 13px 15px !important; }
+.fw-connect-hero button:focus-visible, .fw-connect-person:focus-visible, .fw-connect-tabs button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 520px) { .fw-connect-hero { padding: 18px; } .fw-connect-network { padding: 15px; } }

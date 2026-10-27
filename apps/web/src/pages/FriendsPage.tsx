@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Search, UserPlus, Users } from "lucide-react";
 import { API_BASE } from "../api/base";
 import { fetchSentFollowRequests } from "../api/followRequests";
 import { useAuth } from "../auth/AuthContext";
@@ -69,6 +70,7 @@ function UserAvatar({ user }: { user: UserItem }) {
         }}
       >
         <img
+          className="fw-avatar-img"
           src={fileUrl(user.avatarUrl)}
           alt={label}
           style={{
@@ -219,6 +221,7 @@ export default function FriendsPage() {
 
   return (
     <div
+      className="fw-connect-page"
       style={{
         padding: "14px 14px 100px",
         display: "grid",
@@ -231,7 +234,40 @@ export default function FriendsPage() {
     >
       <MobilePageHeader title="Friends" subtitle="Your golf network" />
 
+      <section className="fw-connect-hero" aria-labelledby="connect-title">
+        <div className="fw-connect-hero__eyebrow">FAIRWAYD COMMUNITY</div>
+        <h2 id="connect-title">Connect with golfers</h2>
+        <p>Keep in touch with the golfers you meet along the way.</p>
+        <div className="fw-connect-hero__actions">
+          <button type="button" onClick={() => nav("/users")}>
+            <Search size={16} aria-hidden="true" /> Find golfers
+          </button>
+          <button type="button" onClick={() => nav("/follow-requests")}>
+            <UserPlus size={16} aria-hidden="true" /> Follow requests
+          </button>
+        </div>
+      </section>
+
+      {!loading && following.length > 0 ? (
+        <section className="fw-connect-network" aria-labelledby="connect-network-title">
+          <div className="fw-connect-network__heading">
+            <div><span>YOUR COMMUNITY</span><h2 id="connect-network-title">Golfers you follow</h2></div>
+            <Users size={19} aria-hidden="true" />
+          </div>
+          <div className="fw-connect-network__people">
+            {following.map((person) => (
+              <button type="button" key={person.id} className="fw-connect-person" onClick={() => nav(`/u/${person.handle}`)}>
+                <UserAvatar user={person} />
+                <span>{person.name || person.handle}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+
       <div
+        className="fw-connect-tabs"
         style={{
           display: "flex",
           gap: 6,
@@ -243,6 +279,7 @@ export default function FriendsPage() {
       >
         <button
           type="button"
+          aria-pressed={tab === "following"}
           onClick={() => setTab("following")}
           style={{
             flex: 1,
@@ -260,6 +297,7 @@ export default function FriendsPage() {
 
         <button
           type="button"
+          aria-pressed={tab === "followers"}
           onClick={() => setTab("followers")}
           style={{
             flex: 1,
@@ -277,6 +315,7 @@ export default function FriendsPage() {
       </div>
 
       <div
+        className="fw-connect-list"
         style={{
           borderTop: "1px solid var(--border)",
           borderBottom: "1px solid var(--border)",
@@ -338,6 +377,7 @@ export default function FriendsPage() {
             return (
               <div
                 key={user.id}
+                className="fw-connect-list__item"
                 style={{
                   width: "100%",
                   maxWidth: "100%",
