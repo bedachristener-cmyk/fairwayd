@@ -1,0 +1,2 @@
+ALTER TABLE "Course" ADD COLUMN "coverImageId" TEXT;
+ALTER TABLE "Course" ADD CONSTRAINT "Course_coverImageId_fkey" FOREIGN KEY ("coverImageId") REFERENCES "PostImage"("id") ON DELETE SET NULL ON UPDATE CASCADE;

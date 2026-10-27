@@ -8,11 +8,15 @@ import {
   Req,
   UseGuards,
   NotFoundException,
+  BadRequestException,
+  Body,
+  Put,
 } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CoursesService } from './courses.service';
 import { CourseContoursService } from './course-contours.service';
 import { AuthGuard } from '@nestjs/passport';
+import { AdminGuard } from '../auth/admin.guard';
 
 @ApiTags('courses')
 @Controller('courses')
@@ -169,5 +173,20 @@ export class CoursesController {
   @ApiOperation({ summary: 'Get a course by id' })
   getById(@Param('id') id: string) {
     return this.coursesService.getById(id);
+  }
+
+  @Get(':id/cover-image')
+  async getCoverImage(@Param('id') id: string) {
+    return this.coursesService.getCoverImage(id);
+  }
+
+  @UseGuards(AuthGuard('jwt'), AdminGuard)
+  @Put(':id/cover-image')
+  async setCoverImage(@Param('id') id: string, @Body() body: unknown) {
+    if (!body || typeof body !== 'object' || !('imageId' in body) ||
+        !((body as { imageId: unknown }).imageId === null || typeof (body as { imageId: unknown }).imageId === 'string')) {
+      throw new BadRequestException('imageId must be a string or null');
+    }
+    return this.coursesService.setCoverImage(id, (body as { imageId: string | null }).imageId);
   }
 }

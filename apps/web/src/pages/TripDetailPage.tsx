@@ -1,3 +1,4 @@
+import { useCourseCoverImages } from "../hooks/useCourseCoverImages";
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useParams } from "react-router-dom";
@@ -4211,7 +4212,16 @@ export default function TripDetailPage() {
   const teeTimesSectionRef = useRef<HTMLElement | null>(null);
   const checklistSectionRef = useRef<HTMLElement | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
-  const [trip, setTrip] = useState<Trip | null>(null);
+  const [rawTrip, setTrip] = useState<Trip | null>(null);
+  const [courseCovers] = useCourseCoverImages((rawTrip?.items ?? []).map((item) => item.course?.id ?? ""));
+  const trip = useMemo(() => rawTrip ? {
+    ...rawTrip,
+    items: rawTrip.items?.map((item) => {
+      const cover = item.course && courseCovers[item.course.id];
+      if (!item.course || !cover) return item;
+      return { ...item, course: { ...item.course, posts: cover.image ? [{ images: [{ url: cover.image.url }] }] : [] } };
+    }),
+  } : null, [rawTrip, courseCovers]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [showingCachedTrip, setShowingCachedTrip] = useState(false);

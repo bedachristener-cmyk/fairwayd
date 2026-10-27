@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 
@@ -16,6 +16,35 @@ export class CoursesService {
     return this.prisma.course.findUnique({
       where: { id },
     });
+  }
+
+  async getCoverImage(id: string) {
+    const course = await this.prisma.course.findUnique({ where: { id }, select: { coverImageId: true } });
+    if (!course) throw new NotFoundException('Course not found');
+    const selected = course.coverImageId ? await this.prisma.postImage.findFirst({
+      where: { id: course.coverImageId, post: { courseId: id, visibility: 'PUBLIC' } },
+      select: { id: true, url: true },
+    }) : null;
+    const fallback = selected ? null : await this.prisma.post.findFirst({
+      where: { courseId: id, visibility: 'PUBLIC', images: { some: {} } },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      select: { images: { orderBy: { id: 'asc' }, take: 1, select: { id: true, url: true } } },
+    });
+    return { image: selected ?? fallback?.images[0] ?? null, isSelected: !!selected };
+  }
+
+  async setCoverImage(id: string, imageId: string | null) {
+    if (!await this.prisma.course.findUnique({ where: { id }, select: { id: true } })) {
+      throw new NotFoundException('Course not found');
+    }
+    if (imageId !== null) {
+      const image = await this.prisma.postImage.findFirst({
+        where: { id: imageId, post: { courseId: id, visibility: 'PUBLIC' } }, select: { id: true },
+      });
+      if (!image) throw new BadRequestException('Image must belong to a public post of this course');
+    }
+    await this.prisma.course.update({ where: { id }, data: { coverImageId: imageId } });
+    return this.getCoverImage(id);
   }
 
   // ------------------------------------------------------------
