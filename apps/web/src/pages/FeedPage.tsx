@@ -421,7 +421,7 @@ export default function FeedPage() {
     }
     return networkGolfers.map((golfer, index) => ({ golfer, index, activity: counts.get(golfer.id) }))
       .sort((a, b) => (b.activity?.count ?? 0) - (a.activity?.count ?? 0) || (b.activity?.latest ?? 0) - (a.activity?.latest ?? 0) || a.index - b.index)
-      .slice(0, 5);
+      .slice(0, 8);
   }, [networkGolfers, posts]);
   const [courseFollowBusyId, setCourseFollowBusyId] = useState<string | null>(
     null,
