@@ -74,6 +74,7 @@ type PostCardProps = {
   courseFollowBusy?: boolean;
   onCourseFollowToggle?: (courseId: string) => void;
   courseRating?: PostCourseRating | null;
+  courseRatingLoading?: boolean;
   myRating?: { overall: number } | null;
 
   onPostUpdated?: (updatedPost: any) => void;
@@ -93,6 +94,7 @@ export default function PostCard({
   courseFollowBusy,
   onCourseFollowToggle,
   courseRating,
+  courseRatingLoading = false,
   myRating,
   onPostUpdated,
   onPostDeleted,
@@ -877,7 +879,7 @@ export default function PostCard({
                       display: "inline-flex",
                       alignItems: "center",
                       gap: 0,
-                      flexWrap: "nowrap",
+                      flexWrap: "wrap",
                       minHeight: 28,
                       maxWidth: "100%",
                       padding: "4px 9px",
@@ -904,18 +906,16 @@ export default function PostCard({
                     <span
                       style={{
                         minWidth: 0,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
+                        whiteSpace: "normal",
                       }}
                     >
-                      {courseRating && courseRating.count > 0
+                      {courseRatingLoading ? "…" : courseRating && courseRating.count > 0
                         ? `\u2B50 ${courseRating.overall.toFixed(1)} \u2022 ${
                             courseRating.count
                           } ${
                             courseRating.count === 1 ? t("rating_singular") : t("rating_plural")
                           } \u2022 ${t("rate_course")}`
-                        : `${t("no_course_rating_yet")} \u2022 ${t("be_the_first")}`}
+                        : t("no_course_rating_yet")}
                     </span>
                   </button>
                 </div>
@@ -1344,7 +1344,7 @@ export default function PostCard({
               whiteSpace: "pre-wrap",
               lineHeight: 1.54,
               wordBreak: "break-word",
-              fontSize: 14,
+              fontSize: 16,
               color: "var(--text)",
             }}
           >
@@ -1390,6 +1390,7 @@ export default function PostCard({
         <div
           style={{
             display: "grid",
+            gridTemplateColumns: "minmax(0, 1fr)",
             gap: 10,
             marginTop: 12,
             width: "100%",
