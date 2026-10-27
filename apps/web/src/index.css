@@ -4668,3 +4668,31 @@ img.fw-avatar-img {
 @media (max-width: 980px) {
   .fw-composer-actions { position: sticky; bottom: 0; z-index: 5; background: var(--card); padding-bottom: 10px !important; }
 }
+
+/* Shared selection accents: muted gold for navigation and filters. */
+:root, html[data-theme] {
+  --fw-selection-bg: #f5ecdc;
+  --fw-selection-text: #735018;
+  --fw-selection-border: #b69050;
+  --fw-pill-active-bg: var(--fw-selection-bg);
+  --fw-pill-active-text: var(--fw-selection-text);
+  --bottom-tab-active: var(--fw-selection-text);
+  --bottom-tab-indicator: var(--fw-selection-border);
+}
+html:is([data-theme="dark"], [data-theme="ocean"], [data-theme="lagoon"]),
+:root:not([data-theme]) {
+  --fw-selection-bg: #3a3020;
+  --fw-selection-text: #f2cf8a;
+  --fw-selection-border: #a98549;
+}
+.fw-segmented__item--active,
+.fw-pill--active {
+  border-color: var(--fw-selection-border);
+}
+.fw-connect-tabs button[aria-pressed="true"],
+.fw-feed-filters button[aria-pressed="true"] {
+  background: var(--fw-selection-bg) !important;
+  color: var(--fw-selection-text) !important;
+  border-color: var(--fw-selection-border) !important;
+  box-shadow: inset 0 0 0 1px var(--fw-selection-border);
+}
