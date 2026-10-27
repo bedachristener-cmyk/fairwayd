@@ -5,12 +5,19 @@ import "leaflet/dist/leaflet.css";
 import "./index.css";
 import "./leafletIconFix";
 import App from "./App";
+import { recoverMissingFeedStyles } from "./styleRecovery";
 import {
   applyShape,
   applyTheme,
   getInitialShape,
   getInitialTheme,
 } from "./theme/theme";
+
+if (document.readyState === "complete") {
+  void recoverMissingFeedStyles();
+} else {
+  window.addEventListener("load", () => { void recoverMissingFeedStyles(); }, { once: true });
+}
 
 applyTheme(getInitialTheme());
 applyShape(getInitialShape());
