@@ -19,6 +19,7 @@ type UserItem = {
 };
 
 type FriendsTab = "following" | "followers";
+type VisiblePostActivity = { userId: string; createdAt: number };
 
 function readItems(data: unknown): unknown[] {
   if (Array.isArray(data)) return data;
@@ -127,6 +128,7 @@ export default function FriendsPage() {
   const [sentRequestsLoaded, setSentRequestsLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [followBackBusyId, setFollowBackBusyId] = useState<string | null>(null);
+  const [visiblePosts, setVisiblePosts] = useState<VisiblePostActivity[] | null>(null);
 
   const followingIds = useMemo(
     () => new Set(following.map((user) => user.id)),
@@ -134,6 +136,39 @@ export default function FriendsPage() {
   );
 
   const items = tab === "following" ? following : followers;
+  const featured = useMemo(() => {
+    const activity = new Map<string, { count: number; latest: number }>();
+    for (const post of visiblePosts ?? []) {
+      const previous = activity.get(post.userId) ?? { count: 0, latest: 0 };
+      activity.set(post.userId, { count: previous.count + 1, latest: Math.max(previous.latest, post.createdAt) });
+    }
+    return items.map((person, index) => ({ person, index, activity: activity.get(person.id) }))
+      .sort((a, b) => (b.activity?.count ?? 0) - (a.activity?.count ?? 0) ||
+        (b.activity?.latest ?? 0) - (a.activity?.latest ?? 0) || a.index - b.index)
+      .slice(0, 5);
+  }, [items, visiblePosts]);
+
+  useEffect(() => {
+    if (!auth?.token) { setVisiblePosts(null); return; }
+    const controller = new AbortController();
+    setVisiblePosts(null);
+    void fetch(`${API_BASE}/posts/feed?take=100`, {
+      headers: { Authorization: `Bearer ${auth.token}` }, signal: controller.signal,
+    }).then(async (res) => {
+      if (!res.ok) throw new Error(`Feed unavailable: ${res.status}`);
+      const data: unknown = await res.json();
+      const posts = readItems(data).flatMap((entry): VisiblePostActivity[] => {
+        if (!entry || typeof entry !== "object") return [];
+        const post = entry as { userId?: unknown; user?: { id?: unknown }; createdAt?: unknown };
+        const userId = post.user?.id ?? post.userId;
+        const createdAt = typeof post.createdAt === "string" ? Date.parse(post.createdAt) : NaN;
+        return typeof userId === "string" && Number.isFinite(createdAt) ? [{ userId, createdAt }] : [];
+      });
+      if (!controller.signal.aborted) setVisiblePosts(posts);
+    }).catch(() => { if (!controller.signal.aborted) setVisiblePosts(null); });
+    return () => controller.abort();
+  }, [auth?.token]);
+
 
   const loadFriends = useCallback(async () => {
     if (!auth?.token) return;
@@ -235,9 +270,7 @@ export default function FriendsPage() {
       <MobilePageHeader title="Friends" subtitle="Your golf network" />
 
       <section className="fw-connect-hero" aria-labelledby="connect-title">
-        <div className="fw-connect-hero__eyebrow">FAIRWAYD COMMUNITY</div>
         <h2 id="connect-title">Connect with golfers</h2>
-        <p>Keep in touch with the golfers you meet along the way.</p>
         <div className="fw-connect-hero__actions">
           <button type="button" onClick={() => nav("/users")}>
             <Search size={16} aria-hidden="true" /> Find golfers
@@ -248,23 +281,25 @@ export default function FriendsPage() {
         </div>
       </section>
 
-      {!loading && following.length > 0 ? (
+      {!loading && featured.length > 0 ? (
         <section className="fw-connect-network" aria-labelledby="connect-network-title">
           <div className="fw-connect-network__heading">
-            <div><span>YOUR COMMUNITY</span><h2 id="connect-network-title">Golfers you follow</h2></div>
+            <div><span>YOUR COMMUNITY</span><h2 id="connect-network-title">{tab === "following" ? "Golfers you follow" : "Your followers"}</h2></div>
             <Users size={19} aria-hidden="true" />
           </div>
           <div className="fw-connect-network__people">
-            {following.map((person) => (
+            {featured.map(({ person }) => (
               <button type="button" key={person.id} className="fw-connect-person" onClick={() => nav(`/u/${person.handle}`)}>
                 <UserAvatar user={person} />
                 <span>{person.name || person.handle}</span>
               </button>
             ))}
           </div>
+          {featured.some(({ activity }) => activity) ? (
+            <p className="fw-connect-network__caption">Ranked by visible posts in your recent feed</p>
+          ) : null}
         </section>
       ) : null}
-
 
       <div
         className="fw-connect-tabs"
