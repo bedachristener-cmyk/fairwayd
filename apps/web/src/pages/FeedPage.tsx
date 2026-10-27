@@ -31,6 +31,7 @@ import { fileUrl } from "../api/fileUrl";
 import { t } from "../i18n/strings";
 
 type PostImage = { id: string; url: string };
+type NetworkGolfer = { id: string; handle: string; name?: string | null; avatarUrl?: string | null };
 
 type Post = {
   id: string;
@@ -409,6 +410,19 @@ export default function FeedPage() {
 
   const [followedCourseIds, setFollowedCourseIds] = useState<string[]>([]);
   const [followedUserIds, setFollowedUserIds] = useState<string[]>([]);
+  const [networkGolfers, setNetworkGolfers] = useState<NetworkGolfer[]>([]);
+  const featuredGolfers = useMemo(() => {
+    const counts = new Map<string, { count: number; latest: number }>();
+    for (const post of posts) {
+      if (!post.user?.id) continue;
+      const previous = counts.get(post.user.id) ?? { count: 0, latest: 0 };
+      const timestamp = Date.parse(post.createdAt);
+      counts.set(post.user.id, { count: previous.count + 1, latest: Math.max(previous.latest, Number.isFinite(timestamp) ? timestamp : 0) });
+    }
+    return networkGolfers.map((golfer, index) => ({ golfer, index, activity: counts.get(golfer.id) }))
+      .sort((a, b) => (b.activity?.count ?? 0) - (a.activity?.count ?? 0) || (b.activity?.latest ?? 0) - (a.activity?.latest ?? 0) || a.index - b.index)
+      .slice(0, 5);
+  }, [networkGolfers, posts]);
   const [courseFollowBusyId, setCourseFollowBusyId] = useState<string | null>(
     null,
   );
@@ -734,6 +748,7 @@ export default function FeedPage() {
   const loadFollowedUsers = useCallback(async () => {
     if (!token) {
       setFollowedUserIds([]);
+      setNetworkGolfers([]);
       return;
     }
 
@@ -754,6 +769,12 @@ export default function FeedPage() {
       const data = await res.json();
       const items = Array.isArray(data?.items) ? data.items : [];
 
+      setNetworkGolfers(items.flatMap((row: any): NetworkGolfer[] => {
+        const person = row?.following;
+        return typeof person?.id === "string" && typeof person?.handle === "string"
+          ? [{ id: person.id, handle: person.handle, name: person.name, avatarUrl: person.avatarUrl }]
+          : [];
+      }));
       setFollowedUserIds(
         items
           .map((row: any) => row?.following?.id ?? row?.followingId)
@@ -765,6 +786,7 @@ export default function FeedPage() {
     } catch (err) {
       console.error("Failed to load followed users", err);
       setFollowedUserIds([]);
+      setNetworkGolfers([]);
     }
   }, [token, logout]);
 
@@ -2844,6 +2866,7 @@ export default function FeedPage() {
                   <button
                     key={filter.value}
                     type="button"
+                    aria-pressed={active}
                     onClick={() => setFeedFilter(filter.value)}
                     style={{
                       flex: "0 0 auto",
@@ -2865,6 +2888,26 @@ export default function FeedPage() {
                 );
               })}
             </div>
+
+            {feedFilter === "following" && featuredGolfers.length > 0 ? (
+              <section className="fw-feed-community" aria-labelledby="feed-community-title">
+                <div className="fw-feed-community__heading">
+                  <div><span>YOUR COMMUNITY</span><h2 id="feed-community-title">Golfers you follow</h2></div>
+                  <button type="button" onClick={() => nav("/friends")}>View all</button>
+                </div>
+                <div className="fw-feed-community__people">
+                  {featuredGolfers.map(({ golfer }) => (
+                    <button key={golfer.id} type="button" className="fw-feed-community__person"
+                      onClick={() => nav(`/u/${encodeURIComponent(golfer.handle)}`)}>
+                      <span className="fw-feed-community__avatar">
+                        {golfer.avatarUrl ? <img className="fw-avatar-img" src={fileUrl(golfer.avatarUrl)} alt="" loading="lazy" /> : (golfer.name || golfer.handle).slice(0, 1).toUpperCase()}
+                      </span>
+                      <span className="fw-feed-community__name">{golfer.name || golfer.handle}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ) : null}
 
             {feedFilter === "saved" && collections.length > 0 ? (
               <div
