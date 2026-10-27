@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import "./FollowRequestsPage.css";
 import { ArrowLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import {
@@ -304,6 +305,7 @@ export default function FollowRequestsPage() {
           <button
             type="button"
             onClick={() => setActiveTab("incoming")}
+            className="follow-requests-tab"
             aria-pressed={activeTab === "incoming"}
             style={{
               flex: 1,
@@ -312,10 +314,6 @@ export default function FollowRequestsPage() {
               border: "none",
               cursor: "pointer",
               fontWeight: 800,
-              background:
-                activeTab === "incoming" ? "var(--accent-soft)" : "transparent",
-              color: activeTab === "incoming" ? "var(--accent-strong)" : "var(--sub)",
-              boxShadow: activeTab === "incoming" ? "inset 0 0 0 1px var(--accent)" : "none",
             }}
           >
             Incoming {pendingCount > 0 ? `(${pendingCount})` : ""}
@@ -324,6 +322,7 @@ export default function FollowRequestsPage() {
           <button
             type="button"
             onClick={() => setActiveTab("sent")}
+            className="follow-requests-tab"
             aria-pressed={activeTab === "sent"}
             style={{
               flex: 1,
@@ -332,9 +331,6 @@ export default function FollowRequestsPage() {
               border: "none",
               cursor: "pointer",
               fontWeight: 800,
-              background: activeTab === "sent" ? "var(--accent-soft)" : "transparent",
-              color: activeTab === "sent" ? "var(--accent-strong)" : "var(--sub)",
-              boxShadow: activeTab === "sent" ? "inset 0 0 0 1px var(--accent)" : "none",
             }}
           >
             Sent {sentCount > 0 ? `(${sentCount})` : ""}

@@ -1,0 +1,23 @@
+.follow-requests-tab {
+  background: transparent;
+  color: var(--sub);
+}
+
+.follow-requests-tab[aria-pressed="true"] {
+  background: #f5ecdc;
+  color: #735018;
+  box-shadow: inset 0 0 0 1px #b69050;
+}
+
+html[data-theme="dark"] .follow-requests-tab[aria-pressed="true"],
+html[data-theme="ocean"] .follow-requests-tab[aria-pressed="true"],
+html[data-theme="lagoon"] .follow-requests-tab[aria-pressed="true"] {
+  background: #3a3020;
+  color: #f2cf8a;
+  box-shadow: inset 0 0 0 1px #a98549;
+}
+
+.follow-requests-tab:focus-visible {
+  outline: 3px solid #b69050;
+  outline-offset: 2px;
+}
