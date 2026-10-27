@@ -809,117 +809,7 @@ export default function PostCard({
                 @{post.user.handle}
               </div>
 
-              <div
-                className="fw-post-course-meta"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  flexWrap: "wrap",
-                  marginTop: 8,
-                  minWidth: 0,
-                }}
-              >
-                <button
-                  type="button"
-                  className="fw-post-course-link"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelectCourse?.();
-                  }}
-                  disabled={!onSelectCourse}
-                  title={onSelectCourse ? t("open_this_course") : undefined}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    padding: 0,
-                    margin: 0,
-                    fontWeight: 760,
-                    fontSize: 13,
-                    color: "var(--text)",
-                    cursor: onSelectCourse ? "pointer" : "default",
-                    textAlign: "left",
-                    minWidth: 0,
-                  }}
-                >
-                  ⛳ {post.course.name}
-                </button>
-                  <div
-                    style={{
-                      display: "inline-flex",
-                      flexDirection: "row",
-                      alignItems: "flex-start",
-                      gap: 0,
-                      padding: 0,
-                      borderRadius: 999,
-                      background: "transparent",
-                      border: "none",
-                      minWidth: 0,
-                    }}
-                  >
-                  <button
-                    type="button"
-                    className="fw-pill fw-pill--meta fw-pill--info fw-post-rating"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      nav(`/courses/${post.course.id}`, {
-                        state: {
-                          openRating: true,
-                          scrollToRating: true,
-                        },
-                      });
-                    }}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                    title={myRating ? t("edit_your_rating") : t("rate_this_course")}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 0,
-                      flexWrap: "wrap",
-                      minHeight: 28,
-                      maxWidth: "100%",
-                      padding: "4px 9px",
-                      margin: 0,
-                      border:
-                        "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
-                      borderRadius: 14,
-                      background: "var(--card)",
-                      color: "color-mix(in srgb, var(--text) 82%, var(--sub))",
-                      fontSize: 11.5,
-                      fontWeight: 520,
-                      letterSpacing: 0,
-                      lineHeight: 1.2,
-                      textAlign: "left",
-                      cursor: "pointer",
-                      width: "fit-content",
-                      minWidth: 0,
-                      overflow: "hidden",
-                      position: "relative",
-                      zIndex: 2,
-                      pointerEvents: "auto",
-                    }}
-                  >
-                    <span
-                      style={{
-                        minWidth: 0,
-                        whiteSpace: "normal",
-                      }}
-                    >
-                      {courseRatingLoading ? "…" : courseRating && courseRating.count > 0
-                        ? `\u2B50 ${courseRating.overall.toFixed(1)} \u2022 ${
-                            courseRating.count
-                          } ${
-                            courseRating.count === 1 ? t("rating_singular") : t("rating_plural")
-                          } \u2022 ${t("rate_course")}`
-                        : t("no_course_rating_yet")}
-                    </span>
-                  </button>
-                </div>
-              </div>
+
             </div>
           </div>
 
@@ -1152,6 +1042,121 @@ export default function PostCard({
             ) : null}
           </div>
         </div>
+
+              <div
+                className="fw-post-course-meta"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  flexWrap: "wrap",
+                  marginTop: 8,
+                  minWidth: 0,
+                }}
+              >
+                <button
+                  type="button"
+                  className="fw-post-course-link"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectCourse?.();
+                  }}
+                  disabled={!onSelectCourse}
+                  title={onSelectCourse ? t("open_this_course") : undefined}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    padding: 0,
+                    margin: 0,
+                    fontWeight: 760,
+                    fontSize: 13,
+                    color: "var(--text)",
+                    cursor: onSelectCourse ? "pointer" : "default",
+                    textAlign: "left",
+                    minWidth: 0,
+                  }}
+                >
+                  ⛳ {post.course.name}
+                </button>
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      flexDirection: "row",
+                      alignItems: "flex-start",
+                      gap: 0,
+                      padding: 0,
+                      borderRadius: 999,
+                      background: "transparent",
+                      border: "none",
+                      minWidth: 0,
+                    }}
+                  >
+                  <button
+                    type="button"
+                    className="fw-pill fw-pill--meta fw-pill--info fw-post-rating"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      nav(`/courses/${post.course.id}`, {
+                        state: {
+                          openRating: true,
+                          scrollToRating: true,
+                        },
+                      });
+                    }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    title={myRating ? t("edit_your_rating") : t("rate_this_course")}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 0,
+                      flexWrap: "wrap",
+                      minHeight: 28,
+                      maxWidth: "100%",
+                      padding: "4px 9px",
+                      margin: 0,
+                      border:
+                        "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
+                      borderRadius: 14,
+                      background: "var(--card)",
+                      color: "color-mix(in srgb, var(--text) 82%, var(--sub))",
+                      fontSize: 11.5,
+                      fontWeight: 520,
+                      letterSpacing: 0,
+                      lineHeight: 1.2,
+                      textAlign: "left",
+                      cursor: "pointer",
+                      width: "fit-content",
+                      minWidth: 0,
+                      overflow: "hidden",
+                      position: "relative",
+                      zIndex: 2,
+                      pointerEvents: "auto",
+                    }}
+                  >
+                    <span
+                      style={{
+                        minWidth: 0,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {courseRatingLoading ? "…" : courseRating && courseRating.count > 0
+                        ? `\u2B50 ${courseRating.overall.toFixed(1)} \u2022 ${
+                            courseRating.count
+                          } ${
+                            courseRating.count === 1 ? t("rating_singular") : t("rating_plural")
+                          } \u2022 ${t("rate_course")}`
+                        : t("no_course_rating_yet")}
+                    </span>
+                  </button>
+                </div>
+              </div>
+        <div className="fw-post-divider" aria-hidden="true" />
 
         {isEditing ? (
           <div
@@ -1391,6 +1396,7 @@ export default function PostCard({
           style={{
             display: "grid",
             gridTemplateColumns: "minmax(0, 1fr)",
+            padding: isMobile ? "0 11px" : "0 12px",
             gap: 10,
             marginTop: 12,
             width: "100%",
