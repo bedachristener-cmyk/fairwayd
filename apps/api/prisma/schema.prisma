@@ -251,6 +251,8 @@ model Course {
   followers   CourseFollow[]
   ratings     CourseRating[]
   posts       Post[]
+  coverImageId String?
+  coverImage PostImage? @relation("CourseCoverImage", fields: [coverImageId], references: [id], onDelete: SetNull)
   reviews     Review[]
   tripItems   TripItem[]
   // Linked services extend this existing course; never duplicate its location.
@@ -374,6 +376,7 @@ model PostImage {
   postId String
   url    String
   post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  coverForCourses Course[] @relation("CourseCoverImage")
 
   @@index([postId])
 }

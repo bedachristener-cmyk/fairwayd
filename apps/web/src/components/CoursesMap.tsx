@@ -1,3 +1,5 @@
+import { useCourseCoverImages } from "../hooks/useCourseCoverImages";
+import { fileUrl } from "../api/fileUrl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import L from "leaflet";
@@ -40,6 +42,7 @@ type Course = {
 type Geo = { lat: number; lon: number };
 
 type CoursePost = {
+  visibility?: string | null;
   images?: { id: string; url: string }[];
 };
 
@@ -590,12 +593,13 @@ export default function CoursesMap() {
 
   const selectedCourseId = activeCourseId ?? highlightedCourseId;
 
+  const [courseCovers] = useCourseCoverImages(selectedCourseId ? [selectedCourseId] : []);
   const activeCourseHero = useMemo(
     () =>
       activeCourse
-        ? resolveCourseHeroImage(activeCourse, activeCoursePosts)
+        ? courseCovers[activeCourse.id]?.image ? { url: fileUrl(courseCovers[activeCourse.id]!.image!.url), source: "real" as const } : resolveCourseHeroImage(activeCourse, activeCoursePosts.filter((post) => post.visibility === "PUBLIC"))
         : null,
-    [activeCourse, activeCoursePosts],
+    [activeCourse, activeCoursePosts, courseCovers],
   );
 
   const searchResults = useMemo(() => {

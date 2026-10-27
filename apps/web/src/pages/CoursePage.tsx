@@ -1,3 +1,5 @@
+import { useAdminStatus } from "../auth/useAdminStatus";
+import { useCourseCoverImages } from "../hooks/useCourseCoverImages";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { API_BASE } from "../api/base";
@@ -345,6 +347,11 @@ export default function CoursePage() {
   const nav = useNavigate();
   const location = useLocation();
   const { token } = useAuth();
+  const isAdmin = useAdminStatus();
+  const [courseCovers, setCourseCovers] = useCourseCoverImages(courseId ? [courseId] : []);
+  const [coverPickerOpen, setCoverPickerOpen] = useState(false);
+  const [coverBusy, setCoverBusy] = useState(false);
+  const [coverError, setCoverError] = useState("");
   const { setSelectedCourse } = useSelectedCourse();
 
   const isMobile = window.innerWidth <= 980;
@@ -716,7 +723,39 @@ export default function CoursePage() {
     course?.par ? `Par ${course.par}` : null,
     formatAccessLabel(course?.access),
   ].filter(Boolean);
-  const heroImage = resolveCourseHeroImage(course, posts);
+  const selectedCover = courseId ? courseCovers[courseId] : undefined;
+  const heroImage = selectedCover?.image
+    ? { url: fileUrl(selectedCover.image.url), source: "real" as const }
+    : resolveCourseHeroImage(course, posts.filter((post) => post.visibility === "PUBLIC"));
+  const publicPhotos = posts.filter((post) => post.visibility === "PUBLIC").flatMap((post) => post.images ?? []);
+  const saveCourseCover = async (imageId: string | null) => {
+    if (!token || !courseId) return;
+    setCoverBusy(true);
+    setCoverError("");
+    try {
+      const response = await fetch(`${API_BASE}/courses/${encodeURIComponent(courseId)}/cover-image`, {
+        method: "PUT", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ imageId }),
+      });
+      if (!response.ok) throw new Error("Could not save the course image.");
+      const cover = await response.json();
+      setCourseCovers((previous) => ({ ...previous, [courseId]: cover }));
+      setCoverPickerOpen(false);
+    } catch { setCoverError("Could not save the course image. Please try again."); }
+    finally { setCoverBusy(false); }
+  };
+  const coverPicker = isAdmin ? <section className="fw-course-cover-picker">
+    <button type="button" onClick={() => setCoverPickerOpen((open) => !open)}>{coverPickerOpen ? "Close image selection" : "Choose course image"}</button>
+    {coverPickerOpen ? <div>
+      <p>Choose an image from a public post. This image will appear across the app.</p>
+      <button type="button" disabled={coverBusy} onClick={() => void saveCourseCover(null)}>Use automatic selection</button>
+      {coverError ? <p role="alert">{coverError}</p> : null}
+      <div className="fw-course-cover-picker__grid">
+        {publicPhotos.map((image) => <button key={image.id} type="button" disabled={coverBusy} aria-label="Choose this course image" aria-pressed={selectedCover?.isSelected && selectedCover.image?.id === image.id} onClick={() => void saveCourseCover(image.id)}><img src={fileUrl(image.url)} alt="" /></button>)}
+      </div>
+      {publicPhotos.length === 0 ? <p>No public images available.</p> : null}
+    </div> : null}
+  </section> : null;
   const photoImages = posts
     .flatMap((post) =>
       (post.images ?? []).map((image) => ({
@@ -1086,6 +1125,7 @@ export default function CoursePage() {
           ) : null}
         </section>
 
+        {coverPicker}
         <section ref={ratingSectionRef} className="fw-course-desktop-rating">
           <CourseRatingSummary
             rating={ratingSummary}
@@ -1288,6 +1328,7 @@ export default function CoursePage() {
             <span className="fw-ai-image-badge">{t("ai_generated_image")}</span>
           ) : null}
         </div>
+        {coverPicker}
         <div style={{ display: "grid", gap: 8 }}>
           <div
             style={{
