@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../api/base";
 import { fileUrl } from "../api/fileUrl";
@@ -68,6 +69,16 @@ export default function CommentModal({
 }: CommentModalProps) {
   const { token, user } = useAuth();
   const nav = useNavigate();
+  useEffect(() => {
+    const bodyOverflow = document.body.style.overflow;
+    const rootOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = bodyOverflow;
+      document.documentElement.style.overflow = rootOverflow;
+    };
+  }, []);
   const tokenUserId = (() => {
     if (!token) return null;
     try {
@@ -983,7 +994,7 @@ export default function CommentModal({
     );
   };
 
-  return (
+  return createPortal(
     <div
       onClick={onClose}
       style={{
@@ -1090,6 +1101,9 @@ export default function CommentModal({
               minHeight: 0,
               overflowY: "auto",
               display: "grid",
+              gridAutoRows: "max-content",
+              alignContent: "start",
+              overscrollBehavior: "contain",
               gap: 16,
               paddingBottom: isMobile ? 120 : 16,
               WebkitOverflowScrolling: "touch",
@@ -1325,6 +1339,7 @@ export default function CommentModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
