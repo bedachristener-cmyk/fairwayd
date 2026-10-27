@@ -4595,3 +4595,16 @@ img.fw-avatar-img {
 .fw-feed-stream .fw-post-card img.fw-post-img { margin-left: auto !important; margin-right: auto !important; object-fit: contain !important; }
 .fw-feed-community button:focus-visible, .fw-feed-filters button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 @media (min-width: 981px) { .fw-feed-community { margin: 0; } }
+
+/* Keep community profiles scrollable without a visible scrollbar. */
+.fw-feed-community__people,
+.fw-connect-network__people {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.fw-feed-community__people::-webkit-scrollbar,
+.fw-connect-network__people::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
