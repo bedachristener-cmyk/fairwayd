@@ -4663,6 +4663,8 @@ img.fw-avatar-img {
 .fw-composer-course { display: grid; gap: 8px; padding: 12px 0; border-top: 1px solid var(--border); }
 .fw-composer-course > label { color: var(--text); font-size: 13px; font-weight: 750; }
 .fw-composer-course-hint { color: var(--sub); font-size: 12px; }
+.fw-composer-course-image { position: relative; display: grid; place-items: center; flex: 0 0 64px; width: 64px; height: 52px; overflow: hidden; border-radius: 10px; background: var(--muted); }
+.fw-shell-main .fw-composer-course-image img { position: absolute; inset: 0; width: 100% !important; height: 100% !important; object-fit: cover; }
 @media (max-width: 980px) {
   .fw-composer-actions { position: sticky; bottom: 0; z-index: 5; background: var(--card); padding-bottom: 10px !important; }
 }

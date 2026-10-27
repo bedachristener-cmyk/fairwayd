@@ -11,12 +11,16 @@ export default function CourseDropdown({
   onSelect,
   onClear,
   placeholder,
+  selectedImageUrl,
+  tileWhenSelected = false,
 }: {
   courses: CourseLite[];
   selectedCourseId: string | null;
   onSelect: (courseId: string) => void;
   onClear?: () => void;
   placeholder?: string;
+  selectedImageUrl?: string | null;
+  tileWhenSelected?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -124,18 +128,21 @@ export default function CourseDropdown({
   return (
     <div
       ref={rootRef}
-      style={{ position: "relative", display: "inline-block" }}
+      style={{ position: "relative", display: tileWhenSelected && selected ? "block" : "inline-block" }}
     >
       {/* Chip */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         style={{
-          display: "inline-flex",
+          display: tileWhenSelected && selected ? "flex" : "inline-flex",
           alignItems: "center",
+          justifyContent: "space-between",
+          width: tileWhenSelected && selected ? "100%" : undefined,
+          minWidth: 0,
           gap: 10,
-          padding: "8px 14px",
-          borderRadius: 999,
+          padding: tileWhenSelected && selected ? "6px 6px 6px 14px" : "8px 14px",
+          borderRadius: tileWhenSelected && selected ? 14 : 999,
           border: "1px solid var(--border)",
           background: "var(--card)",
           color: "var(--text)",
@@ -145,12 +152,18 @@ export default function CourseDropdown({
           boxShadow: "none",
         }}
       >
-        <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <span style={{ display: "flex", gap: 8, alignItems: "center", minWidth: 0, textAlign: "left" }}>
           <span>⛳</span>
           <span>
             {selected ? selected.name : (placeholder ?? t("course_choose"))}
           </span>
         </span>
+        {tileWhenSelected && selected ? (
+          <span className="fw-composer-course-image" aria-hidden="true">
+            <span>⛳</span>
+            {selectedImageUrl ? <img key={selectedImageUrl} src={selectedImageUrl} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : null}
+          </span>
+        ) : null}
       </button>
 
       {/* Dropdown */}

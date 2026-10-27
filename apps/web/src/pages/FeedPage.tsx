@@ -20,6 +20,7 @@ import { FeedCardsSkeleton } from "../components/PolishStates";
 import { useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useSelectedCourse } from "../state/SelectedCourseContext";
+import { useCourseCoverImages } from "../hooks/useCourseCoverImages";
 import { getCroppedImageFile } from "../utils/cropImage";
 import {
   getRatingSummary,
@@ -456,6 +457,7 @@ export default function FeedPage() {
   const [posting, setPosting] = useState(false);
   const [composerHint, setComposerHint] = useState<string | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [composerCourseCovers] = useCourseCoverImages(composerOpen && selectedCourse?.id ? [selectedCourse.id] : []);
 
   const draftRef = useRef<HTMLTextAreaElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
@@ -1749,6 +1751,8 @@ export default function FeedPage() {
                     <CourseDropdown
                       courses={coursesLite}
                       selectedCourseId={selectedCourse?.id ?? null}
+                      tileWhenSelected
+                      selectedImageUrl={selectedCourse?.id && composerCourseCovers[selectedCourse.id]?.image ? fileUrl(composerCourseCovers[selectedCourse.id]!.image!.url) : null}
                       onSelect={(id) => {
                         const course = courses.find((item) => item.id === id);
                         if (course) { setSelectedCourse(course); setComposerHint(null); }
