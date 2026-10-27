@@ -1006,35 +1006,10 @@ export default function FeedPage() {
   const selectedLat = selectedCourseFull?.lat ?? selectedCourse?.lat;
   const selectedLon = selectedCourseFull?.lon ?? selectedCourse?.lon;
 
-  const selectedHoles = selectedCourseFull?.holes ?? null;
-  const selectedWebsite = selectedCourseFull?.website ?? null;
-
-  const selectedCity = selectedCourseFull?.city ?? null;
-  const selectedRegion = selectedCourseFull?.region ?? null;
   const selectedCountry = selectedCourseFull?.country ?? null;
-
-  const selectedLocationLabel = [selectedCity, selectedRegion, selectedCountry]
-    .filter(
-      (value): value is string =>
-        typeof value === "string" && value.trim().length > 0,
-    )
-    .join(", ");
-
-  const isSelectedCourseFollowed = selectedCourseId
-    ? followedCourseIds.includes(selectedCourseId)
-    : false;
-  const isSelectedCourseFollowBusy = courseFollowBusyId === selectedCourseId;
-
   const supportsDirectCamera =
     typeof navigator !== "undefined" &&
     /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-  const normalizedSelectedWebsite =
-    selectedWebsite && selectedWebsite.trim().length > 0
-      ? /^https?:\/\//i.test(selectedWebsite)
-        ? selectedWebsite
-        : `https://${selectedWebsite}`
-      : null;
 
   const selectedIsComplete =
     Boolean(selectedCourse?.id) &&
@@ -1123,26 +1098,12 @@ export default function FeedPage() {
 
   const openGalleryPicker = () => {
     if (posting) return;
-
-    if (!selectedCourse) {
-      setComposerHint(`${t("composer_choose_course_first")} ⛳`);
-      draftRef.current?.focus();
-      return;
-    }
-
     setComposerHint(null);
     galleryInputRef.current?.click();
   };
 
   const openCameraPicker = () => {
     if (posting) return;
-
-    if (!selectedCourse) {
-      setComposerHint(`${t("composer_choose_course_first")} ⛳`);
-      draftRef.current?.focus();
-      return;
-    }
-
     setComposerHint(null);
     cameraInputRef.current?.click();
   };
@@ -1617,6 +1578,7 @@ export default function FeedPage() {
             }}
           >
             <div className="fw-feed-composer" style={composerBoxStyle}>
+              {!composerOpen ? (
               <button
                 className="fw-feed-composer-trigger"
                 type="button"
@@ -1693,6 +1655,7 @@ export default function FeedPage() {
                   {t("whats_your_golf_moment")}
                 </div>
               </button>
+              ) : null}
 
               {composerOpen ? (
                 <div
@@ -1716,16 +1679,7 @@ export default function FeedPage() {
                     >
                       {t("create_post")}
                     </div>
-                    <div
-                      style={{
-                        marginTop: 3,
-                        fontSize: 12,
-                        color: "var(--sub)",
-                        lineHeight: 1.35,
-                      }}
-                    >
-                      {t("composer_steps")}
-                    </div>
+
                   </div>
 
                   <button
@@ -1763,403 +1717,48 @@ export default function FeedPage() {
                     overflowX: "hidden",
                   }}
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 9,
-                      alignItems: isMobile ? "stretch" : "flex-start",
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 7,
-                        flex: 1,
-                        minWidth: isMobile ? "100%" : 260,
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 750,
-                          color: "var(--sub)",
-                          textTransform: "uppercase",
-                          letterSpacing: 0.5,
-                        }}
-                      >
-                        Course
-                      </div>
-
-                      <CourseDropdown
-                        courses={coursesLite}
-                        selectedCourseId={selectedCourse?.id ?? null}
-                        onSelect={(id) => {
-                          const c = courses.find((x) => x.id === id);
-                          if (c) {
-                            setSelectedCourse(c);
-                            setComposerHint(null);
-                          }
-                        }}
-                        onClear={() => {
-                          clearSelectedCourse();
-                          setComposerHint(null);
-                        }}
-                        placeholder={t("course_choose")}
-                      />
-
-                      {!selectedCourse ? (
-                        <div
-                          style={{
-                            fontSize: 12,
-                            color: composerHint ? "var(--text)" : "var(--sub)",
-                            fontWeight: composerHint ? 800 : 400,
-                          }}
-                        >
-                          {composerHint ??
-                            t("composer_pick_course_before_posting")}
-                        </div>
-                      ) : (
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: isMobile ? "stretch" : "center",
-                            justifyContent: "space-between",
-                            gap: 10,
-                            flexWrap: isMobile ? "wrap" : "nowrap",
-                            padding: isMobile ? "10px 11px" : "11px 13px",
-                            borderRadius: 16,
-                            border:
-                              "1px solid color-mix(in srgb, var(--border) 74%, transparent)",
-                            background:
-                              "color-mix(in srgb, var(--card) 96%, var(--bg))",
-                            boxShadow: "none",
-                          }}
-                        >
-                          <div
-                            style={{
-                              minWidth: 0,
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: 3,
-                              flex: 1,
-                            }}
-                          >
-                            <div
-                              style={{
-                                fontSize: 11,
-                                fontWeight: 750,
-                                color: "var(--sub)",
-                                textTransform: "uppercase",
-                                letterSpacing: 0.5,
-                              }}
-                            >
-                              {t("selected_course")}
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (!selectedCourseId) return;
-                                nav(`/courses/${selectedCourseId}`);
-                              }}
-                              style={{
-                                padding: 0,
-                                margin: 0,
-                                border: "none",
-                                background: "transparent",
-                                color: "var(--text)",
-                                fontSize: isMobile ? 15 : 16,
-                                fontWeight: 820,
-                                textAlign: "left",
-                                cursor: selectedCourseId
-                                  ? "pointer"
-                                  : "default",
-                                lineHeight: 1.25,
-                                wordBreak: "break-word",
-                              }}
-                            >
-                              {selectedCourse.name}
-                            </button>
-                            <div
-                              style={{
-                                fontSize: 12,
-                                color: "var(--sub)",
-                                lineHeight: 1.35,
-                              }}
-                            >
-                              {t("selected_course_help")}
-                            </div>
-
-                            {(selectedLocationLabel ||
-                              selectedHoles !== null ||
-                              normalizedSelectedWebsite) && (
-                              <div
-                                style={{
-                                  display: "flex",
-                                  flexWrap: "wrap",
-                                  gap: 8,
-                                  marginTop: 2,
-                                }}
-                              >
-                                {selectedLocationLabel ? (
-                                  <span
-                                    style={{
-                                      fontSize: 12,
-                                      color: "var(--sub)",
-                                      padding: "6px 10px",
-                                      borderRadius: 999,
-                                      border:
-                                        "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
-                                      background: "var(--card)",
-                                    }}
-                                  >
-                                    📍 {selectedLocationLabel}
-                                  </span>
-                                ) : null}
-
-                                {selectedHoles !== null ? (
-                                  <span
-                                    style={{
-                                      fontSize: 12,
-                                      color: "var(--sub)",
-                                      padding: "6px 10px",
-                                      borderRadius: 999,
-                                      border:
-                                        "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
-                                      background: "var(--card)",
-                                    }}
-                                  >
-                                    ⛳ {selectedHoles} {t("holes")}
-                                  </span>
-                                ) : null}
-
-
-                                {normalizedSelectedWebsite ? (
-                                  <a
-                                    href={normalizedSelectedWebsite}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    style={{
-                                      fontSize: 12,
-                                      color: "var(--text)",
-                                      padding: "6px 10px",
-                                      borderRadius: 999,
-                                      border:
-                                        "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
-                                      background: "var(--card)",
-                                      textDecoration: "none",
-                                      fontWeight: 700,
-                                    }}
-                                  >
-                                    {t("website")}
-                                  </a>
-                                ) : null}
-                              </div>
-                            )}
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (
-                                !selectedCourseId ||
-                                isSelectedCourseFollowBusy
-                              ) {
-                                return;
-                              }
-                              handleToggleCourseFollow(selectedCourseId);
-                            }}
-                            disabled={
-                              !selectedCourseId || isSelectedCourseFollowBusy
-                            }
-                            style={{
-                              alignSelf: isMobile ? "flex-start" : "center",
-                              minWidth: isMobile ? "auto" : 118,
-                              minHeight: 32,
-                              padding: "6px 10px",
-                              borderRadius: 999,
-                              border: isSelectedCourseFollowed
-                                ? "1px solid var(--fw-pill-active-bg)"
-                                : "1px solid var(--border)",
-                              background: isSelectedCourseFollowed
-                                ? "var(--fw-pill-active-bg)"
-                                : "var(--card)",
-                              color: "var(--text)",
-                              fontWeight: 720,
-                              fontSize: 12,
-                              cursor:
-                                !selectedCourseId || isSelectedCourseFollowBusy
-                                  ? "default"
-                                  : "pointer",
-                              opacity:
-                                !selectedCourseId || isSelectedCourseFollowBusy
-                                  ? 0.7
-                                  : 1,
-                              whiteSpace: "nowrap",
-                              boxShadow: isSelectedCourseFollowed
-                                ? "none"
-                                : "none",
-                              transition:
-                                "background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease",
-                            }}
-                          >
-                            {isSelectedCourseFollowBusy
-                              ? t("updating")
-                              : isSelectedCourseFollowed
-                                ? `✓ ${t("following")}`
-                                : t("follow")}
-                          </button>
-                        </div>
-                      )}
+                  <div className="fw-composer-author">
+                    <span className="fw-composer-avatar">
+                      {composerAvatarUrl ? <img src={composerAvatarUrl} alt="" /> : avatarLabel}
+                    </span>
+                    <div className="fw-composer-identity">
+                      <strong>{me?.name || user?.name || me?.handle || user?.handle || handle}</strong>
+                      {(me?.handle || user?.handle || handle) ? <span>@{me?.handle || user?.handle || handle}</span> : null}
                     </div>
-
-                    <div
-                      style={{
-                        display: "grid",
-                        gap: 7,
-                        width: "100%",
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 750,
-                          color: "var(--sub)",
-                          textTransform: "uppercase",
-                          letterSpacing: 0.5,
-                        }}
-                      >
-                        {t("visibility")}
-                      </div>
-
-                      <div
-                        role="radiogroup"
-                        aria-label={t("post_visibility")}
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                          gap: 7,
-                        }}
-                      >
-                        {VISIBILITY_OPTIONS.map((option) => {
-                          const active = visibility === option.value;
-
-                          return (
-                            <button
-                              key={option.value}
-                              type="button"
-                              className={`fw-pill ${
-                                active ? "fw-pill--active" : "fw-pill--inactive"
-                              }`}
-                              role="radio"
-                              aria-checked={active}
-                              onClick={() => setVisibility(option.value)}
-                              disabled={posting}
-                              style={{
-                                width: "100%",
-                                cursor: posting ? "default" : "pointer",
-                                opacity: posting ? 0.65 : 1,
-                              }}
-                            >
-                              {t(option.labelKey)}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
+                    <label className="fw-composer-visibility">
+                      <span className="fw-composer-sr-only">{t("post_visibility")}</span>
+                      <select value={visibility} onChange={(event) => setVisibility(event.target.value as typeof visibility)} disabled={posting}>
+                        {VISIBILITY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{t(option.labelKey)}</option>)}
+                      </select>
+                    </label>
                   </div>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      gap: 10,
-                      marginTop: 10,
-                      padding: "0",
+                  <textarea
+                    ref={draftRef}
+                    className="fw-composer-text"
+                    value={draft}
+                    onChange={(event) => {
+                      setDraft(event.target.value);
+                      if (err) setErr(null);
+                      if (composerHint) setComposerHint(null);
                     }}
-                  >
-                    <div
-                      style={{
-                        width: 36,
-                        height: 36,
-                        minWidth: 36,
-                        borderRadius: "50%",
-                        border: "1px solid var(--border)",
-                        background: "var(--card)",
-                        color: "var(--text)",
-                        display: "grid",
-                        placeItems: "center",
-                        fontSize: 13,
-                        fontWeight: 850,
-                        overflow: "hidden",
-                        flexShrink: 0,
+                    placeholder={t("composer_moment_placeholder")}
+                    aria-label={t("composer_moment_placeholder")}
+                    rows={4}
+                    disabled={posting}
+                  />
+                  <div className="fw-composer-course">
+                    <label>⛳ {t("course_choose")}</label>
+                    <CourseDropdown
+                      courses={coursesLite}
+                      selectedCourseId={selectedCourse?.id ?? null}
+                      onSelect={(id) => {
+                        const course = courses.find((item) => item.id === id);
+                        if (course) { setSelectedCourse(course); setComposerHint(null); }
                       }}
-                    >
-                      {composerAvatarUrl ? (
-                        <img
-                          src={composerAvatarUrl}
-                          alt="avatar"
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                            display: "block",
-                          }}
-                        />
-                      ) : (
-                        avatarLabel
-                      )}
-                    </div>
-
-                    <div
-                      style={{
-                        display: "grid",
-                        gap: 5,
-                        flex: 1,
-                        minWidth: 0,
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 750,
-                          color: "var(--sub)",
-                          textTransform: "uppercase",
-                          letterSpacing: 0.5,
-                        }}
-                      >
-                        Moment
-                      </div>
-
-                      <textarea
-                        ref={draftRef}
-                        value={draft}
-                        onChange={(e) => {
-                          setDraft(e.target.value);
-                          if (err) setErr(null);
-                          if (composerHint) setComposerHint(null);
-                        }}
-                        placeholder={t("composer_moment_placeholder")}
-                        rows={4}
-                        style={{
-                          width: "100%",
-                          boxSizing: "border-box",
-                          borderRadius: 0,
-                          border: "none",
-                          padding: "2px 0 6px",
-                          background: "transparent",
-                          color: "var(--text)",
-                          fontSize: 16,
-                          lineHeight: 1.42,
-                          outline: "none",
-                          resize: "none",
-                          minHeight: isMobile ? 96 : 108,
-                        }}
-                        disabled={posting}
-                      />
-                    </div>
+                      onClear={() => { clearSelectedCourse(); setComposerHint(null); }}
+                      placeholder={t("course_choose")}
+                    />
+                    {!selectedCourse ? <div className="fw-composer-course-hint">{composerHint ?? t("composer_pick_course_before_posting")}</div> : null}
                   </div>
                   <div
                     style={{
