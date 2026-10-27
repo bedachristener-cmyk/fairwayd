@@ -2892,7 +2892,7 @@ export default function FeedPage() {
             {feedFilter === "following" && featuredGolfers.length > 0 ? (
               <section className="fw-feed-community" aria-labelledby="feed-community-title">
                 <div className="fw-feed-community__heading">
-                  <div><span>YOUR COMMUNITY</span><h2 id="feed-community-title">Golfers you follow</h2></div>
+                  <span id="feed-community-title">YOUR COMMUNITY</span>
                   <button type="button" onClick={() => nav("/friends")}>View all</button>
                 </div>
                 <div className="fw-feed-community__people">
