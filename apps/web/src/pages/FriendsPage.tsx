@@ -349,6 +349,12 @@ export default function FriendsPage() {
         </button>
       </div>
 
+      {tab === "followers" ? (
+        <p className="fw-connect-direction-note">
+          These golfers follow you. The status beside each name shows whether you follow them back.
+        </p>
+      ) : null}
+
       <div
         className="fw-connect-list"
         style={{
@@ -537,7 +543,7 @@ export default function FriendsPage() {
                     Following
                   </div>
                 ) : requested || !sentRequestsLoaded ? (
-                  <span className="fw-pill fw-pill--meta">{requested ? "Requested" : "Checking..."}</span>
+                  <span className="fw-pill fw-pill--meta" title={requested ? "Your follow request is pending" : undefined}>{requested ? "Requested" : "Checking..."}</span>
                 ) : (
                   <button
                     type="button"

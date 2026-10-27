@@ -4574,3 +4574,5 @@ img.fw-avatar-img {
 .fw-connect-list__item { min-height: 72px; padding: 13px 15px !important; }
 .fw-connect-hero button:focus-visible, .fw-connect-person:focus-visible, .fw-connect-tabs button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 @media (max-width: 520px) { .fw-connect-hero { padding: 14px 16px; } .fw-connect-network { padding: 15px; } }
+
+.fw-connect-direction-note { margin: -5px 2px 0; color: var(--sub); font-size: 12px; line-height: 1.4; }
