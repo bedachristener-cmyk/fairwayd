@@ -331,7 +331,9 @@ export default function PostCard({
       ? [{ image: activeImage, index: activeImageIndex }]
       : validImages.map((image, index) => ({ image, index }));
 
-  const createdLabel = new Date(post.createdAt).toLocaleString();
+  const createdLabel = new Date(post.createdAt).toLocaleString(undefined, {
+    day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
   const displayName = post.user?.name?.trim() || post.user?.handle || "User";
   const avatarLabel = displayName.slice(0, 1).toUpperCase();
 
@@ -673,6 +675,7 @@ export default function PostCard({
       }}
     >
       <div
+        className="fw-post-content"
         style={{
           padding: isMobile ? "0 11px" : "0 12px",
           width: "100%",
@@ -682,6 +685,7 @@ export default function PostCard({
         }}
       >
         <div
+          className="fw-post-header"
           style={{
             display: "flex",
             alignItems: "flex-start",
@@ -691,6 +695,7 @@ export default function PostCard({
           }}
         >
           <div
+            className="fw-post-author"
             style={{
               display: "flex",
               alignItems: "flex-start",
@@ -803,6 +808,7 @@ export default function PostCard({
               </div>
 
               <div
+                className="fw-post-course-meta"
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -814,6 +820,7 @@ export default function PostCard({
               >
                 <button
                   type="button"
+                  className="fw-post-course-link"
                   onClick={(e) => {
                     e.stopPropagation();
                     onSelectCourse?.();
@@ -850,7 +857,7 @@ export default function PostCard({
                   >
                   <button
                     type="button"
-                    className="fw-pill fw-pill--meta fw-pill--info"
+                    className="fw-pill fw-pill--meta fw-pill--info fw-post-rating"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -917,6 +924,7 @@ export default function PostCard({
           </div>
 
           <div
+            className="fw-post-header-meta"
             style={{
               display: "flex",
               flexDirection: "column",
@@ -927,6 +935,7 @@ export default function PostCard({
             }}
           >
             <div
+              className="fw-post-date"
               style={{
                 fontSize: 12,
                 color: "var(--sub)",
@@ -939,6 +948,7 @@ export default function PostCard({
 
             {localVisibility ? (
               <div
+                className="fw-post-visibility"
                 style={{
                   fontSize: 11,
                   color: "var(--sub)",
@@ -952,6 +962,7 @@ export default function PostCard({
             {onCourseFollowToggle ? (
               <button
                 type="button"
+                className="fw-post-course-follow"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -987,6 +998,7 @@ export default function PostCard({
             ) : null}
             {token ? (
               <div
+                className="fw-post-menu-wrap"
                 ref={menuRef}
                 style={{
                   marginTop: 4,
@@ -1326,6 +1338,7 @@ export default function PostCard({
           </div>
         ) : (
           <div
+            className="fw-post-copy"
             style={{
               marginTop: 7,
               whiteSpace: "pre-wrap",
@@ -1591,6 +1604,7 @@ export default function PostCard({
       ) : null}
 
       <div
+        className="fw-post-actions"
         style={{
           display: "flex",
           gap: isMobile ? 7 : 10,
