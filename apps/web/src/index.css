@@ -4658,8 +4658,11 @@ img.fw-avatar-img {
 .fw-composer-identity span { color: var(--sub); font-size: 12px; }
 .fw-composer-visibility select { max-width: 130px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--muted); color: var(--text); font: inherit; font-size: 12px; }
 .fw-composer-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-.fw-composer-text { display: block; width: 100%; min-height: 120px; box-sizing: border-box; margin: 12px 0; padding: 10px 0; border: 0; background: transparent; color: var(--text); font: inherit; font-size: 16px; line-height: 1.45; resize: vertical; }
+.fw-composer-text { display: block; width: 100%; min-height: 88px; box-sizing: border-box; margin: 12px 0; padding: 10px 0; border: 0; background: transparent; color: var(--text); font: inherit; font-size: 16px; line-height: 1.45; resize: vertical; }
 .fw-composer-text:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 .fw-composer-course { display: grid; gap: 8px; padding: 12px 0; border-top: 1px solid var(--border); }
 .fw-composer-course > label { color: var(--text); font-size: 13px; font-weight: 750; }
 .fw-composer-course-hint { color: var(--sub); font-size: 12px; }
+@media (max-width: 980px) {
+  .fw-composer-actions { position: sticky; bottom: 0; z-index: 5; background: var(--card); padding-bottom: 10px !important; }
+}

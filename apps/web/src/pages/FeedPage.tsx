@@ -1584,7 +1584,6 @@ export default function FeedPage() {
                 type="button"
                 onClick={() => {
                   setComposerOpen(true);
-                  window.setTimeout(() => draftRef.current?.focus(), 50);
                 }}
                 style={{
                   width: "100%",
@@ -1714,7 +1713,7 @@ export default function FeedPage() {
                     maxWidth: "100%",
                     minWidth: 0,
                     boxSizing: "border-box",
-                    overflowX: "hidden",
+                    overflowX: "visible",
                   }}
                 >
                   <div className="fw-composer-author">
@@ -1743,11 +1742,10 @@ export default function FeedPage() {
                     }}
                     placeholder={t("composer_moment_placeholder")}
                     aria-label={t("composer_moment_placeholder")}
-                    rows={4}
+                    rows={3}
                     disabled={posting}
                   />
                   <div className="fw-composer-course">
-                    <label>⛳ {t("course_choose")}</label>
                     <CourseDropdown
                       courses={coursesLite}
                       selectedCourseId={selectedCourse?.id ?? null}
@@ -1761,6 +1759,7 @@ export default function FeedPage() {
                     {!selectedCourse ? <div className="fw-composer-course-hint">{composerHint ?? t("composer_pick_course_before_posting")}</div> : null}
                   </div>
                   <div
+                    className="fw-composer-actions"
                     style={{
                       display: "flex",
                       gap: 10,
@@ -2009,18 +2008,6 @@ export default function FeedPage() {
                         justifyContent: "flex-end",
                       }}
                     >
-                      {!selectedCourse && (
-                        <span
-                          style={{
-                            fontSize: 12,
-                            color: "var(--sub)",
-                            fontWeight: 700,
-                          }}
-                        >
-                          {t("composer_choose_course_first_to_post")}
-                        </span>
-                      )}
-
                       {selectedCourse &&
                         !draft.trim() &&
                         files.length === 0 && (
