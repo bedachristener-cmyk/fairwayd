@@ -1,3 +1,5 @@
+import { Optional } from '@nestjs/common';
+import { ModerationService, moderationEnabled, requireImageCheck, requireTextCheck } from '../moderation/moderation.service';
 import {
   BadRequestException,
   Body,
@@ -41,6 +43,7 @@ function courseSubmissionImageFileFilter(
 export class CourseSubmissionsController {
   constructor(
     private readonly courseSubmissionsService: CourseSubmissionsService,
+    @Optional() private readonly moderation?: ModerationService,
   ) {}
 
   @UseGuards(AuthGuard('jwt'))
@@ -61,6 +64,9 @@ export class CourseSubmissionsController {
     @UploadedFiles() files: Express.Multer.File[] = [],
   ) {
     const userId = req.user?.userId ?? req.user?.id ?? req.user?.sub;
+    await requireTextCheck(this.moderation, userId, 'PROFILE_TEXT', [body?.name, body?.description, body?.notes].filter(v => typeof v === 'string').join('\n'));
+    for (const file of files) await requireImageCheck(this.moderation, userId, 'COURSE_IMAGE', file);
+    if (moderationEnabled() && body?.imageUrl) throw new BadRequestException('Please upload an image file rather than an image URL.');
     const images: {
       url: string;
       path: string;

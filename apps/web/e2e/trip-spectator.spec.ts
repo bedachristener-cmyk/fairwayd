@@ -46,7 +46,10 @@ for (const width of [390, 1280]) {
     await page.getByRole('button', { name: /Calendar/ }).click();
     await expect(page.getByText('Seapine Golf', { exact: true }).first()).toBeVisible();
     await assertReadOnly();
-    await page.screenshot({ path: `/tmp/trip-spectator-calendar-${width}.png`, fullPage: true });
+    // A viewport capture preserves the calendar state. Chromium full-page
+    // captures can resize the responsive shell and remount its route subtree.
+    await expect(page.getByRole('button', { name: 'Back to trip', exact: true })).toBeVisible();
+    await page.screenshot({ path: `/tmp/trip-spectator-calendar-${width}.png`, fullPage: false });
     await page.getByRole('button', { name: 'Back to trip', exact: true }).click();
     await page.getByRole('button', { name: 'Map Stops and route', exact: true }).click();
     await expect(page.locator('[data-trip-swipe-ignore="true"] .leaflet-container')).toBeVisible();

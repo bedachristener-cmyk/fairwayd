@@ -63,6 +63,7 @@ model User {
   blockedUsers                   UserBlock[]              @relation("UserBlocker")
   blockedBy                      UserBlock[]              @relation("UserBlocked")
   contentReports                 ContentReport[]
+  moderationCases                ContentModerationCase[]
 }
 
 model UserBlock {
@@ -1003,4 +1004,26 @@ enum GolfServiceProviderRole {
 enum AdminRole {
   USER
   ADMIN
+}
+
+model ContentModerationCase {
+  id String @id @default(cuid())
+  userId String
+  scope String
+  digest String
+  blockedFingerprint String?
+  status String @default("PENDING")
+  categories String[]
+  text String?
+  bytes Bytes?
+  mimeType String?
+  reviewerId String?
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  decidedAt DateTime?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, scope, digest])
+  @@index([blockedFingerprint])
+  @@index([expiresAt])
+  @@index([status, createdAt])
 }

@@ -1,3 +1,5 @@
+import { Optional } from '@nestjs/common';
+import { ModerationService, requireImageCheck, requireTextCheck } from '../moderation/moderation.service';
 import {
   BadRequestException,
   Body,
@@ -36,7 +38,7 @@ function safeExt(original: string) {
 @ApiBearerAuth('jwt')
 @Controller('users')
 export class UsersController {
-  constructor(private readonly users: UsersService) {}
+  constructor(private readonly users: UsersService, @Optional() private readonly moderation?: ModerationService) {}
 
   // ---------------------------------------------------------
   // Current user (used by onboarding)
@@ -180,6 +182,7 @@ export class UsersController {
       /[^a-z0-9]/gi,
       '',
     );
+    await requireImageCheck(this.moderation, userId, 'AVATAR', file);
     const key = `avatars/${userId}-${Date.now()}.${ext}`;
 
     const avatarUrl = await uploadToR2(

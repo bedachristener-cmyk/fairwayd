@@ -38,7 +38,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: |
-          npx playwright test e2e/email-notifications.spec.ts e2e/trip-spectator.spec.ts e2e/trip-document-visibility.spec.ts --project=chromium
+          npx playwright test e2e/email-notifications.spec.ts e2e/trip-spectator.spec.ts e2e/trip-document-visibility.spec.ts e2e/moderation-admin.spec.ts --project=chromium
           npx playwright test e2e/landing-page-v2.spec.ts --grep "login panel" --project=chromium
         env:
           CI: 'true'
@@ -51,5 +51,6 @@ jobs:
             /tmp/activity-email-*.png
             /tmp/email-settings-*.png
             /tmp/trip-spectator-*.png
+            /tmp/moderation-admin-*.png
             apps/web/test-results/**
           if-no-files-found: ignore

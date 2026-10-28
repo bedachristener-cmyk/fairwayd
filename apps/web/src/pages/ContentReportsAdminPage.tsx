@@ -188,6 +188,7 @@ export default function ContentReportsAdminPage() {
         color: "var(--text)",
       }}
     >
+      <Link to="/admin/moderation">Automatic content checks</Link>
       <MobilePageHeader title="Content reports" />
 
       <p

@@ -1,3 +1,5 @@
+import { Optional } from '@nestjs/common';
+import { ModerationService, requireTextCheck } from '../moderation/moderation.service';
 import {
   BadRequestException,
   UnauthorizedException,
@@ -24,6 +26,7 @@ export class PostsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    @Optional() private readonly moderation?: ModerationService,
   ) {}
 
   private async blockedUserIds(userId?: string) {
@@ -404,6 +407,8 @@ export class PostsService {
       throw new BadRequestException('Missing content');
     }
 
+    await requireTextCheck(this.moderation, uid, 'POST_TEXT', content || '');
+
     const visibility =
       body?.visibility === 'PRIVATE'
         ? Visibility.PRIVATE
@@ -475,6 +480,7 @@ export class PostsService {
 
     if (typeof body?.content === 'string') {
       const trimmedContent = body.content.trim();
+      await requireTextCheck(this.moderation, uid, 'POST_TEXT', trimmedContent);
       data.content = trimmedContent;
     }
 
@@ -811,6 +817,7 @@ export class PostsService {
       throw new UnauthorizedException('You can only edit your own comments');
     }
 
+    await requireTextCheck(this.moderation, uid, 'COMMENT_TEXT', text);
     return this.prisma.comment.update({
       where: { id: cid },
       data: { content: text },
@@ -874,6 +881,7 @@ export class PostsService {
       await this.assertInteractionAllowed(uid, parentComment.userId);
     }
 
+    await requireTextCheck(this.moderation, uid, 'COMMENT_TEXT', text);
     const comment = await this.prisma.comment.create({
       data: {
         postId: pid,
