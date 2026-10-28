@@ -65,7 +65,8 @@ function cleanTripRole(role?: TripRole) {
   if (
     role !== TripRole.OWNER &&
     role !== TripRole.ADMIN &&
-    role !== TripRole.MEMBER
+    role !== TripRole.MEMBER &&
+    role !== TripRole.VIEWER
   ) {
     throw new BadRequestException('Unsupported trip member role');
   }
@@ -356,6 +357,15 @@ function manageableTripItemWhereForMembership(
   return { OR: or };
 }
 
+export function spectatorTrip(trip: any) {
+  const fields = ['id', 'type', 'title', 'date', 'startsAt', 'endDate', 'startTime', 'endTime', 'locationName', 'address', 'sortOrder'];
+  const items = (trip.items ?? []).filter((item: any) => item.visibility === 'GROUP').map((item: any) => ({
+    ...Object.fromEntries(fields.map(key => [key, item[key] ?? null])),
+    course: item.course ? { id: item.course.id, name: item.course.name, city: item.course.city, country: item.course.country } : null,
+  }));
+  return { id: trip.id, title: trip.title, destination: trip.destination, coverImageUrl: trip.coverImageUrl, viewerRole: 'VIEWER', members: [], items, _count: { items: items.length } };
+}
+
 @Injectable()
 export class TripsService {
   constructor(
@@ -438,8 +448,10 @@ export class TripsService {
       },
     });
 
-    return trips.map((trip) => ({
+    return trips.map((trip) => trip.members.some(member => member.userId === userId && member.role === TripRole.VIEWER) ? spectatorTrip(trip) : ({
       ...trip,
+      members: trip.members.filter(member => member.role !== TripRole.VIEWER),
+      spectators: trip.members.filter(member => member.role === TripRole.VIEWER),
       items: this.filterTripItemsForUser(
         trip.items,
         userId,
@@ -454,7 +466,7 @@ export class TripsService {
   }
 
   async findOne(tripId: string, userId: string) {
-    const membership = await this.assertIsTripMember(tripId, userId);
+    const membership = await this.assertIsTripMember(tripId, userId, true);
 
     const trip = await this.prisma.trip.findUnique({
       where: {
@@ -484,8 +496,11 @@ export class TripsService {
       throw new NotFoundException('Trip not found');
     }
 
+    if (membership.role === TripRole.VIEWER) return spectatorTrip(trip);
     return {
       ...trip,
+      members: trip.members.filter(member => member.role !== TripRole.VIEWER),
+      spectators: trip.members.filter(member => member.role === TripRole.VIEWER),
       documents: trip.documents.map((document) =>
         this.publicTripDocument(document),
       ),
@@ -698,6 +713,8 @@ export class TripsService {
 
     return {
       ...trip,
+      members: trip.members.filter(member => member.role !== TripRole.VIEWER),
+      spectators: trip.members.filter(member => member.role === TripRole.VIEWER),
       items: this.filterTripItemsDocumentsForUser(
         trip.items,
         userId,
@@ -722,7 +739,7 @@ export class TripsService {
     await this.assertIsTripMember(tripId, userId);
 
     return this.prisma.tripMember.findMany({
-      where: { tripId },
+      where: { tripId, role: { not: TripRole.VIEWER } },
       orderBy: { createdAt: 'asc' },
       include: tripMemberInclude,
     });
@@ -937,6 +954,7 @@ export class TripsService {
       throw new BadRequestException('Provide either userId or displayName');
     }
 
+    if (displayName && dto.role === TripRole.VIEWER) throw new BadRequestException('Spectators need a Fairwayd account');
     if (displayName) {
       const existingGuest = await this.prisma.tripMember.findFirst({
         where: {
@@ -1043,6 +1061,7 @@ export class TripsService {
     const role = cleanTripRole(dto.role);
 
     const member = await this.findTripMemberOrThrow(tripId, memberId);
+    if (role === TripRole.VIEWER && member.role !== TripRole.VIEWER) throw new BadRequestException('Add spectators separately; existing participants cannot be converted');
     if (member.role === TripRole.OWNER && role !== TripRole.OWNER) {
       await this.assertNotFinalOwner(tripId, member.id);
     }
@@ -1595,7 +1614,7 @@ export class TripsService {
             _count: {
               select: {
                 items: true,
-                members: true,
+                members: { where: { role: { not: TripRole.VIEWER } } },
               },
             },
           },
@@ -1614,7 +1633,7 @@ export class TripsService {
     return invite;
   }
 
-  private async assertIsTripMember(tripId: string, userId: string) {
+  private async assertIsTripMember(tripId: string, userId: string, allowViewer = false) {
     const membership = await this.prisma.tripMember.findUnique({
       where: {
         tripId_userId: {
@@ -1631,6 +1650,8 @@ export class TripsService {
     if (!membership) {
       throw new NotFoundException('Trip not found');
     }
+
+    if (membership.role === TripRole.VIEWER && !allowViewer) throw new ForbiddenException('Spectators can only read the itinerary');
 
     return membership;
   }
@@ -1707,6 +1728,7 @@ export class TripsService {
     const members = await this.prisma.tripMember.findMany({
       where: {
         tripId,
+        role: { not: TripRole.VIEWER },
         OR: where,
       },
       select: {
@@ -1759,7 +1781,7 @@ export class TripsService {
     }
 
     const members = await this.prisma.tripMember.findMany({
-      where: { tripId },
+      where: { tripId, role: { not: TripRole.VIEWER } },
       orderBy: { createdAt: 'asc' },
       select: { id: true },
     });
@@ -2083,6 +2105,7 @@ export class TripsService {
       where: { id: tripId },
       include: {
         members: {
+          where: { role: { not: TripRole.VIEWER } },
           orderBy: { createdAt: 'asc' },
           include: tripMemberInclude,
         },
@@ -2139,6 +2162,7 @@ export class TripsService {
       where: {
         id,
         tripId,
+        role: { not: TripRole.VIEWER },
       },
       select: {
         id: true,

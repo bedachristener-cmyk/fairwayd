@@ -129,11 +129,12 @@ type Trip = {
   baseCurrency?: string | null;
   coverImageUrl?: string | null;
   members?: TripMember[];
+  spectators?: TripMember[];
   items?: TripItem[];
   documents?: TripDocument[];
 };
 
-type TripRole = "OWNER" | "ADMIN" | "MEMBER";
+type TripRole = "OWNER" | "ADMIN" | "MEMBER" | "VIEWER";
 
 type TripItemVisibility = "GROUP" | "SELECTED" | "PRIVATE";
 type ExpenseType = "PERSONAL" | "SHARED";
@@ -500,6 +501,7 @@ const memberTripItemVisibilityOptions: {
 ];
 
 const memberRoleOptions: TripRole[] = ["MEMBER", "ADMIN", "OWNER"];
+const newMemberRoleOptions: TripRole[] = [...memberRoleOptions, "VIEWER"];
 
 const tripDocumentCategories: TripDocumentCategory[] = [
   "FLIGHT",
@@ -4704,7 +4706,7 @@ export default function TripDetailPage() {
 
         const data = await res.json();
         const existingIds = new Set(
-          (trip?.members ?? [])
+          [...(trip?.members ?? []), ...(trip?.spectators ?? [])]
             .map((member) => member.userId)
             .filter((id): id is string => Boolean(id)),
         );
@@ -9120,9 +9122,9 @@ export default function TripDetailPage() {
                   minWidth: 104,
                 }}
               >
-                {memberRoleOptions.map((role) => (
+                {newMemberRoleOptions.map((role) => (
                   <option key={role} value={role}>
-                    {role}
+                    {role === "VIEWER" ? "Spectator (read only)" : role}
                   </option>
                 ))}
               </select>
@@ -9307,7 +9309,7 @@ export default function TripDetailPage() {
         ) : null}
 
         <div style={{ ...safeSectionStyle, display: "grid", gap: 8 }}>
-          {(trip?.members ?? []).map((member) => {
+          {[...(trip?.members ?? []), ...(trip?.spectators ?? [])].map((member) => {
             const memberUser = member.user;
             return (
               <div
@@ -9386,9 +9388,9 @@ export default function TripDetailPage() {
                       fontWeight: 900,
                     }}
                   >
-                    {memberRoleOptions.map((role) => (
+                    {(member.role === "VIEWER" ? ["VIEWER", ...memberRoleOptions] : memberRoleOptions).map((role) => (
                       <option key={role} value={role}>
-                        {role}
+                        {role === "VIEWER" ? "Spectator" : role}
                       </option>
                     ))}
                   </select>
