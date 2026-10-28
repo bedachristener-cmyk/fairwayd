@@ -119,7 +119,8 @@ test("header Sign in reaches and highlights the login panel", async ({ page }) =
     .click();
 
   await expect(panel).toHaveClass(/is-highlighted/);
-  await expect(panel.locator('input[type="email"]')).toBeFocused();
+  await expect(panel).toBeFocused();
+  await expect(panel.locator('input[type="email"]')).not.toBeFocused();
 });
 
 test("header Destinations preserves the existing signed-out gate", async ({ page }) => {
@@ -158,7 +159,8 @@ test("Sign in scrolls to, highlights, and focuses the login panel", async ({ pag
     .click();
 
   await expect(panel).toHaveClass(/is-highlighted/);
-  await expect(panel.locator('input[type="email"]')).toBeFocused();
+  await expect(panel).toBeFocused();
+  await expect(panel.locator('input[type="email"]')).not.toBeFocused();
   await expect(panel).toBeInViewport();
 });
 
