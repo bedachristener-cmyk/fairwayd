@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { Resend } from 'resend';
 import { renderActivityEmail } from '../notifications/activity-email';
 
@@ -23,10 +25,12 @@ export class MailService {
   }) {
     const apiKey = process.env.RESEND_API_KEY?.trim();
     if (!apiKey) throw new Error('Mail delivery is not configured');
-    const { html, text } = renderActivityEmail(input);
+    const { html, text } = renderActivityEmail({ ...input, logoUrl: 'cid:fairwayd-logo' });
+    const logo = readFileSync(join(process.cwd(), 'assets', 'fairwayd-logo.png')); 
     const result = await new Resend(apiKey).emails.send({
       from: this.getSender(), to: input.email,
       subject: `Fairwayd · ${input.title}`, html, text,
+      attachments: [{ filename: 'fairwayd-logo.png', content: logo, contentId: 'fairwayd-logo' }],
     }, { idempotencyKey: `notification/${input.notificationId}` });
     if (result.error || !result.data?.id) throw new Error('Notification email delivery failed');
     return result.data.id;
