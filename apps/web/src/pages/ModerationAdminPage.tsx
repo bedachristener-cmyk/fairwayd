@@ -49,12 +49,12 @@ export default function ModerationAdminPage() {
     } catch (e) { setError(e instanceof Error ? e.message : 'Request failed.'); }
     finally { setBusy(''); }
   }
-  return <main className="fw-page" style={{ maxWidth: 900, margin: 'auto', padding: '20px 16px 100px', display: 'grid', gap: 16 }}>
+  return <main className="fw-page" style={{ maxWidth: 900, margin: 'auto', padding: '20px 16px 100px', display: 'grid', gap: 16, alignContent: 'start', lineHeight: 1.5 }}>
     <Link to="/admin/reports">Back to content reports</Link>
     <h1>Automatic content checks</h1>
     {enabled === false ? <p role="status">Automatic checks are not active. Server configuration and privacy disclosures must be completed before activation.</p> : enabled === true ? <p role="status">Automatic checks are active.</p> : null}
     <p>Flagged uploads are not published. Review only when needed: previews can contain disturbing material. An approval permits the same user to resubmit the exact content within 24 hours; it does not publish automatically. Blocked child-safety cases have no preview or approval option.</p>
-    <button type="button" onClick={() => void load()}>Refresh</button>
+    <button className="fw-button-secondary" type="button" onClick={() => void load()}>Refresh</button>
     {error ? <p role="alert">{error}</p> : null}
     {!error && !items.length ? <p>No current reviews.</p> : null}
     {items.map(item => <article key={item.id} style={{ border: '1px solid var(--border)', background: 'var(--card)', borderRadius: 16, padding: 16, overflowWrap: 'anywhere' }}>
@@ -64,10 +64,10 @@ export default function ModerationAdminPage() {
       <p>Expires: {new Date(item.expiresAt).toLocaleString()}</p>
       {item.text ? <blockquote style={{ whiteSpace: 'pre-wrap' }}>{item.text}</blockquote> : null}
       {item.status === 'PENDING' ? <>
-        {item.mimeType && token ? <><button type="button" onClick={() => setPreview(preview === item.id ? '' : item.id)}>{preview === item.id ? 'Hide preview' : 'Show potentially disturbing image'}</button>{preview === item.id ? <Preview id={item.id} token={token} /> : null}</> : null}
+        {item.mimeType && token ? <><button className="fw-button-secondary" type="button" onClick={() => setPreview(preview === item.id ? '' : item.id)}>{preview === item.id ? 'Hide preview' : 'Show potentially disturbing image'}</button>{preview === item.id ? <Preview id={item.id} token={token} /> : null}</> : null}
         <div style={{ display: 'flex', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
-          <button type="button" disabled={Boolean(busy)} onClick={() => void decide(item.id, 'APPROVED')}>Approve unchanged resubmission</button>
-          <button type="button" disabled={Boolean(busy)} onClick={() => void decide(item.id, 'REJECTED')}>Reject</button>
+          <button className="fw-button-secondary" type="button" disabled={Boolean(busy)} onClick={() => void decide(item.id, 'APPROVED')}>Approve unchanged resubmission</button>
+          <button className="fw-button-secondary" type="button" disabled={Boolean(busy)} onClick={() => void decide(item.id, 'REJECTED')}>Reject</button>
         </div>
       </> : null}
     </article>)}
