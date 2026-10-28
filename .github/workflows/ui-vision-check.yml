@@ -49,4 +49,5 @@ jobs:
             /tmp/activity-email-*.png
             /tmp/email-settings-*.png
             /tmp/trip-spectator-*.png
+            apps/web/test-results/**
           if-no-files-found: ignore

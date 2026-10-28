@@ -8,7 +8,7 @@ for (const width of [390, 1280]) {
     await page.route('**/*', async route => {
       const path = new URL(route.request().url()).pathname;
       const json = (body: unknown) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
-      if (path.endsWith('/users/me')) return json({ id: 'viewer', handle: 'viewer', termsAcceptedAt: '2026-01-01', name: 'Viewer' });
+      if (path.endsWith('/users/me')) return json({ id: 'viewer', handle: 'viewer', termsAcceptedAt: '2026-01-01', name: 'Viewer', avatarUrl: '/logo.png' });
       if (path === '/api/trips/trip-spectator') return json({ id: 'trip-spectator', title: 'Thailand Golf', destination: 'Hua Hin', viewerRole: 'VIEWER', members: [], items: [{ id: 'item', type: 'golf_round', title: 'Seapine Golf', date: '2027-02-20', startTime: '09:44' }] });
       if (/\/trips\/trip-spectator\/(documents|my-costs|organizer-costs|activity)/.test(path)) { protectedRequests.push(path); return json({}); }
       if (path.startsWith('/api/')) return json({ items: [], count: 0 });
