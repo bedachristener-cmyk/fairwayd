@@ -99,9 +99,9 @@ export default function LandingPage() {
     loginPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     setHighlightLogin(true);
     window.setTimeout(() => {
-      loginPanelRef.current
-        ?.querySelector<HTMLInputElement>('input[type="email"]')
-        ?.focus({ preventScroll: true });
+      // Focus the panel, not an input: mobile keyboards and saved-password
+      // suggestions should only open when the user chooses email sign-in.
+      loginPanelRef.current?.focus({ preventScroll: true });
     }, 350);
     window.setTimeout(() => setHighlightLogin(false), 1200);
   }
@@ -234,6 +234,9 @@ export default function LandingPage() {
 
             <div
               ref={loginPanelRef}
+              tabIndex={-1}
+              role="region"
+              aria-labelledby="landing-login-title"
               className={`fw-landing__login-panel${highlightLogin ? " is-highlighted" : ""}`}
               data-testid="landing-login-panel"
             >
