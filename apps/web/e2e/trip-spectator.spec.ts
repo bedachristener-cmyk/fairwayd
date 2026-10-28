@@ -49,7 +49,7 @@ for (const width of [390, 1280]) {
     await page.screenshot({ path: `/tmp/trip-spectator-calendar-${width}.png`, fullPage: true });
     await page.getByRole('button', { name: 'Back to trip', exact: true }).click();
     await page.getByRole('button', { name: 'Map Stops and route', exact: true }).click();
-    await expect(page.locator('.leaflet-container')).toBeVisible();
+    await expect(page.locator('[data-trip-swipe-ignore="true"] .leaflet-container')).toBeVisible();
     await assertReadOnly();
   });
 }
