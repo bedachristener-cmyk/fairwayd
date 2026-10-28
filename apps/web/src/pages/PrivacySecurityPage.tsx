@@ -516,7 +516,7 @@ export default function PrivacySecurityPage() {
               padding: "10px 0",
             }}
           >
-            <div style={{ minWidth: 0 }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
               <p style={labelStyle}>{label}</p>
               <p style={textStyle}>{description}</p>
             </div>
@@ -530,6 +530,7 @@ export default function PrivacySecurityPage() {
               style={{
                 ...buttonStyle,
                 flexShrink: 0,
+                width: 64,
                 minWidth: 64,
                 background: emailPreferences?.[key]
                   ? "var(--fw-selection-bg, #f5ecdc)"

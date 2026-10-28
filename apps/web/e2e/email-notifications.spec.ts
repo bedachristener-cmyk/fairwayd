@@ -85,6 +85,10 @@ for (const width of [390, 1280]) {
     await expect(follow).toHaveAttribute("aria-checked", "false");
     await expect(page.getByRole("status")).toContainText("settings saved");
     await expect(page.locator("#email-notifications")).toBeVisible();
+    const switchBox = await trip.boundingBox();
+    expect(switchBox?.width).toBeLessThanOrEqual(80);
+    const labelBox = await page.locator('#email-notifications').getByText('When someone adds you to a trip.', { exact: true }).boundingBox();
+    expect(labelBox?.width).toBeGreaterThan(150);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
