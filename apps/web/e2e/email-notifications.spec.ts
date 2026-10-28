@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { renderActivityEmail } from "../../api/src/notifications/activity-email";
+import { readFileSync } from 'node:fs';
 
 async function setup(page: Page) {
   let settings = {
@@ -54,6 +55,7 @@ async function setup(page: Page) {
 for (const width of [390, 1280]) {
   test(`activity email layout is readable at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
+    await page.route('https://stage.example.test/logo.png', route => route.fulfill({ contentType: 'image/png', body: readFileSync(new URL('../public/logo.png', import.meta.url)) }));
     const email = renderActivityEmail({ name: 'Alex', title: 'Added to trip', body: 'Jamie added you to “Thailand Golf Escape”. Open the trip to see your itinerary and travel plans.', link: '/trips/example', baseUrl: 'https://stage.example.test' });
     await page.setContent(email.html);
     await expect(page.getByRole('heading', { name: 'Added to trip' })).toBeVisible();
