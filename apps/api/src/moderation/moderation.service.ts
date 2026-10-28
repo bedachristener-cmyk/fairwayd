@@ -103,8 +103,13 @@ export class ModerationService implements OnModuleInit, OnModuleDestroy {
   }
   async decide(id: string, reviewerId: string, decision: unknown) {
     if (decision !== 'APPROVED' && decision !== 'REJECTED') throw new BadRequestException('Choose APPROVED or REJECTED');
-    const result = await this.prisma.contentModerationCase.updateMany({ where: { id, status: 'PENDING', expiresAt: { gt: new Date() } }, data: { status: decision, reviewerId, decidedAt: new Date(), bytes: null, text: null, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) } });
-    if (!result.count) throw new ConflictException('This review is no longer pending. Refresh the list.');
+    const row = await this.prisma.contentModerationCase.findUnique({ where: { id }, select: { userId: true } });
+    if (!row) throw new NotFoundException('Review not found');
+    await this.prisma.$transaction(async tx => {
+      const result = await tx.contentModerationCase.updateMany({ where: { id, status: 'PENDING', expiresAt: { gt: new Date() } }, data: { status: decision, reviewerId, decidedAt: new Date(), bytes: null, text: null, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) } });
+      if (!result.count) throw new ConflictException('This review is no longer pending. Refresh the list.');
+      await tx.notification.create({ data: { userId: row.userId, actorUserId: reviewerId, type: 'content_moderation_decided', title: 'Content review complete', body: decision === 'APPROVED' ? `Your content (${id}) was approved. Submit the unchanged content again within 24 hours to publish it.` : `Your content (${id}) was not approved and has not been published. Contact support if you believe this is an error.`, emailPending: false } });
+    });
     return { ok: true };
   }
 }

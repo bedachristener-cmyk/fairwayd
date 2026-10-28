@@ -8,7 +8,7 @@ Stage feature code, disabled by default. No live moderation provider credential 
 2. Apply/rehearse the additive ContentModerationCase Prisma migration in an isolated copy first; do not substitute neondb for fairwayd_stage. SQL rehearsed on `moderation-rehearsal-20261028` (`br-crimson-sun-aguiy64v`), project `billowing-breeze-32238900`; parent Stage unchanged.
 3. Add a dedicated `OPENAI_MODERATION_API_KEY` as a sealed variable on Railway service **fairwayd-stage**, not fairwayd/Prod; set `CONTENT_MODERATION_ENABLED=true` only once the privacy notice and provider/account settings are ready. Enabled + missing key prevents startup. Other requests fail closed on provider failure; they never silently publish unchecked content. Keep the key server-side. No custom provider URL is accepted.
 4. Verify clean and flagged synthetic fixtures using mocks; then live benign text and an ordinary golf photo with an authorized test account. Never generate, upload, download or re-submit known/suspected child abuse imagery for testing or moderation. This API is not a CSAM detection system.
-5. Open Admin → Content reports → Automatic content checks. Test an ordinary false positive, approve, then resubmit the unchanged content as the original user. Decisions never automatically publish anything.
+5. Open Admin → Content reports → Automatic content checks. Test an ordinary false positive, approve, then resubmit the unchanged content as the original user. Decisions never automatically publish anything. The original user receives an in-app notification atomically with the decision; no email is queued.
 
 ## Behaviour and boundaries
 

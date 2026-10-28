@@ -5,7 +5,8 @@ const clean = { flagged: false, categories: { sexual: false, 'sexual/minors': fa
 const png = Buffer.from([137,80,78,71,13,10,26,10,0,0,0,0]);
 function setup() {
   const table = { findUnique: jest.fn().mockResolvedValue(null), count: jest.fn().mockResolvedValue(0), upsert: jest.fn().mockResolvedValue({ id: 'case-1' }), findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn(), updateMany: jest.fn().mockResolvedValue({ count: 1 }), deleteMany: jest.fn() };
-  const prisma = { contentModerationCase: table, $transaction: jest.fn(async (fn: any) => fn({ contentModerationCase: table })) };
+  const notifications = { create: jest.fn() };
+  const prisma = { contentModerationCase: table, $transaction: jest.fn(async (fn: any) => fn({ contentModerationCase: table, notification: notifications })) };
   return { table, prisma, service: new ModerationService(prisma as any) };
 }
 const originalFetch = global.fetch;
@@ -78,7 +79,7 @@ describe('Content checks', () => {
     await expect(service.assertText('u','POST_TEXT','x'.repeat(20001))).rejects.toThrow(BadRequestException); expect(global.fetch).not.toHaveBeenCalled();
   });
   it('removes sensitive payloads on an atomic decision and disallows stale decisions', async () => {
-    const { service, table } = setup(); await service.decide('case','admin','APPROVED');
+    const { service, table } = setup(); table.findUnique.mockResolvedValue({userId:'u'}); await service.decide('case','admin','APPROVED');
     expect(table.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ status:'PENDING' }), data: expect.objectContaining({ status:'APPROVED',reviewerId:'admin',bytes:null,text:null }) }));
     table.updateMany.mockResolvedValue({ count:0 }); await expect(service.decide('case','admin','APPROVED')).rejects.toThrow(ConflictException);
   });
