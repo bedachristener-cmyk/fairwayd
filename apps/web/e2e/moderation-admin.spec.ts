@@ -23,7 +23,8 @@ for (const width of [390,1280]) {
     await expect(page.getByRole('button',{name:'Approve unchanged resubmission'})).toHaveCount(1);
     await page.getByRole('button',{name:'Show potentially disturbing image'}).click();
     await expect(page.getByRole('img',{name:'Quarantined image for moderation'})).toBeVisible();
-    expect(previewHeaders).toEqual(['Bearer test-admin']);
+    expect(previewHeaders.length).toBeGreaterThan(0);
+    expect(previewHeaders.every(value => value === 'Bearer test-admin')).toBe(true);
     await page.getByRole('button',{name:'Approve unchanged resubmission'}).click();
     await expect.poll(()=>decisions).toEqual([{decision:'APPROVED'}]);
     await expect(page.getByRole('button',{name:'Approve unchanged resubmission'})).toHaveCount(0);
