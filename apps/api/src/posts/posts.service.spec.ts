@@ -2,6 +2,7 @@ import { PostsService } from './posts.service';
 
 function createService(prismaOverrides: Record<string, any> = {}) {
   const prisma = {
+    userBlock: { findFirst: jest.fn().mockResolvedValue(null) },
     post: {
       findUnique: jest.fn(),
     },

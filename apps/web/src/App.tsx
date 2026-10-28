@@ -1,3 +1,4 @@
+import ModerationAdminPage from './pages/ModerationAdminPage';
 import React from "react";
 import {
   BrowserRouter,
@@ -328,6 +329,7 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route path="/admin/moderation" element={<ProtectedRoute><OnboardingGuard><ModerationAdminPage /></OnboardingGuard></ProtectedRoute>} />
               <Route
                 path="/admin/reports"
                 element={

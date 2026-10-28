@@ -1,3 +1,4 @@
+import { ModerationModule } from './moderation/moderation.module';
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -43,6 +44,7 @@ import { SafetyModule } from './safety/safety.module';
     PostCollectionsModule,
     GolfServicesModule,
     SafetyModule,
+    ModerationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

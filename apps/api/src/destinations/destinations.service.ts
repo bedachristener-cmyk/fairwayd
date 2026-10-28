@@ -1,3 +1,5 @@
+import { Optional } from '@nestjs/common';
+import { ModerationService, requireTextCheck } from '../moderation/moderation.service';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Visibility } from '@prisma/client';
@@ -22,7 +24,7 @@ const DEFAULT_DESTINATIONS = [
 
 @Injectable()
 export class DestinationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, @Optional() private readonly moderation?: ModerationService) {}
 
   private async ensureDefaultDestinations() {
     try {
@@ -337,6 +339,7 @@ export class DestinationsService {
       throw new NotFoundException('Destination not found');
     }
 
+    await requireTextCheck(this.moderation, uid, 'DESTINATION_TEXT', trimmedText);
     const tip = await this.prisma.destinationTip.create({
       data: {
         destinationId: destination.id,

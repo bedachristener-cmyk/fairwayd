@@ -1,3 +1,5 @@
+import { Optional } from '@nestjs/common';
+import { ModerationService, requireImageCheck, requireTextCheck } from '../moderation/moderation.service';
 import {
   BadRequestException,
   Body,
@@ -58,7 +60,7 @@ function safeImageExt(original: string, mimeType?: string) {
 
 @Controller('posts')
 export class PostsController {
-  constructor(private readonly posts: PostsService) {}
+  constructor(private readonly posts: PostsService, @Optional() private readonly moderation?: ModerationService) {}
 
   @UseGuards(OptionalJwtAuthGuard)
   @Get('feed')
@@ -208,6 +210,8 @@ export class PostsController {
       throw new BadRequestException('Maximum 5 images per post');
     }
 
+    await requireTextCheck(this.moderation, userId, 'POST_TEXT', body?.content || '');
+    for (const file of uploadedImages) await requireImageCheck(this.moderation, userId, 'POST_IMAGE', file);
     const imageUrls: string[] = [];
 
     for (let i = 0; i < uploadedImages.length; i++) {

@@ -1,3 +1,5 @@
+import { Optional } from '@nestjs/common';
+import { ModerationService, requireImageCheck, requireTextCheck } from '../moderation/moderation.service';
 import {
   BadRequestException,
   Body,
@@ -69,7 +71,7 @@ function safeDocumentExt(original: string, mimeType?: string) {
 export class TripsController {
   private readonly logger = new Logger(TripsController.name);
 
-  constructor(private readonly tripsService: TripsService) {}
+  constructor(private readonly tripsService: TripsService, @Optional() private readonly moderation?: ModerationService) {}
 
   private async cleanupPrivateDocumentUpload(
     fileUrl: string,
@@ -304,6 +306,7 @@ export class TripsController {
   ) {
     if (!file) throw new BadRequestException("Missing file field 'cover'");
     await this.tripsService.assertCanManageTrip(id, req.user.id);
+    await requireImageCheck(this.moderation, req.user.id, 'TRIP_COVER', file);
 
     const ext = (file.mimetype?.split('/')[1] || 'bin').replace(
       /[^a-z0-9]/gi,
@@ -316,7 +319,7 @@ export class TripsController {
       file.mimetype || 'application/octet-stream',
     );
 
-    return this.tripsService.update(id, req.user.id, { coverImageUrl });
+    return this.tripsService.update(id, req.user.id, { coverImageUrl }, true);
   }
 
   @Delete(':id')

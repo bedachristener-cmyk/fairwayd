@@ -1,3 +1,5 @@
+import { Optional } from '@nestjs/common';
+import { ModerationService, requireTextCheck } from '../moderation/moderation.service';
 import {
   BadRequestException,
   ConflictException,
@@ -109,6 +111,7 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    @Optional() private readonly moderation?: ModerationService,
   ) {}
 
   // =========================================================
@@ -172,6 +175,7 @@ export class UsersService {
       favoriteGolfDestinationPrivacy?: unknown;
     },
   ) {
+    await requireTextCheck(this.moderation, userId, 'PROFILE_TEXT', [params.handle, params.name, params.bio, params.homeGolfClub, params.golfSlogan, params.favoriteGolfDestination].filter(v => typeof v === 'string').join('\n'));
     const safeHandle = normalizeHandle(params.handle);
     const accountPrivacy = cleanAccountPrivacy(params.privacy);
 

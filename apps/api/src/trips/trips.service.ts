@@ -1,3 +1,4 @@
+import { moderationEnabled } from '../moderation/moderation.service';
 import {
   BadRequestException,
   ConflictException,
@@ -673,7 +674,8 @@ export class TripsService {
     };
   }
 
-  async update(tripId: string, userId: string, dto: UpdateTripDto) {
+  async update(tripId: string, userId: string, dto: UpdateTripDto, moderatedCover = false) {
+    if (moderationEnabled() && dto.coverImageUrl && !moderatedCover) throw new BadRequestException('Use the image upload to change the cover.');
     const membership = await this.assertCanModifyTrip(tripId, userId);
 
     const trip = await this.prisma.trip.update({
