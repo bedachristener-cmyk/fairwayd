@@ -271,3 +271,14 @@ describe('Removal email presentation', () => {
     expect(email.html).toContain('Manage email notifications');
   });
 });
+
+describe('Named follow notifications', () => {
+  it('resolves stored actor identities and links their profiles without guessing legacy senders', async () => {
+    const notes = [{ id: '1', userId: 'viewer', actorUserId: 'actor', type: 'new_follower', body: 'Someone started following you.', link: '/profile' }, { id: '2', actorUserId: null, type: 'new_follower', body: 'Legacy', link: '/profile' }];
+    const prisma = { notification: { findMany: jest.fn().mockResolvedValue(notes) }, user: { findMany: jest.fn().mockResolvedValue([{ id: 'actor', name: 'Alex', handle: 'alex' }]) } };
+    const result = await new NotificationsService(prisma as any).listForUser('viewer');
+    expect(result[0]).toMatchObject({ body: 'Alex started following you.', link: '/u/alex' });
+    expect(result[1]).toEqual(notes[1]);
+    expect(prisma.notification.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { userId: 'viewer' } }));
+  });
+});
