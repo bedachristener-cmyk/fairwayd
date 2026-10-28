@@ -11,7 +11,13 @@ export function escapeEmailText(value: string) {
 export function notificationWebUrl() {
   const raw = process.env.FRONTEND_URL?.trim() || process.env.WEB_URL?.trim();
   if (!raw) throw new Error('FRONTEND_URL is required for notification emails');
-  const url = new URL(raw);
+  // Match the existing authentication URL normalization, including legacy
+  // host-only values and accidentally repeated HTTP prefixes.
+  const normalized = raw.replace(/^https?:\/\/https?:\/\//i, 'https://');
+  if (/^[a-z][a-z\d+.-]*:/i.test(normalized) && !/^https?:\/\//i.test(normalized)) {
+    throw new Error('Invalid notification frontend URL');
+  }
+  const url = new URL(/^https?:\/\//i.test(normalized) ? normalized : `https://${normalized}`);
   if (
     !['https:', 'http:'].includes(url.protocol) ||
     url.username ||

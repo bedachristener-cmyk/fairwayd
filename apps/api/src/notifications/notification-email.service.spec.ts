@@ -245,4 +245,11 @@ describe('Notification emails', () => {
     process.env.FRONTEND_URL = 'javascript:alert(1)';
     expect(() => notificationWebUrl()).toThrow();
   });
+
+  it('supports the same legacy frontend URL formats as authentication', () => {
+    process.env.FRONTEND_URL = 'stage.example.test/';
+    expect(notificationWebUrl()).toBe('https://stage.example.test');
+    process.env.FRONTEND_URL = 'https://https://stage.example.test/';
+    expect(notificationWebUrl()).toBe('https://stage.example.test');
+  });
 });

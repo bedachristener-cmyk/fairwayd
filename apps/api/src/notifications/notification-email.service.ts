@@ -185,9 +185,12 @@ export class NotificationEmailService implements OnModuleInit, OnModuleDestroy {
           );
         }
       }
-    } catch {
+    } catch (error) {
+      const kind = error instanceof Error ? error.name : 'UnknownError';
+      const code = error && typeof error === 'object' && 'code' in error && typeof error.code === 'string'
+        ? error.code.replace(/[^A-Za-z0-9_]/g, '').slice(0, 40) : 'none';
       this.logger.warn(
-        'Notification email queue could not be processed; check mail and frontend configuration.',
+        `Notification email queue could not be processed (${kind}, code=${code}); check mail and frontend configuration.`,
       );
     } finally {
       this.running = false;
