@@ -107,6 +107,7 @@ describe('Notification emails', () => {
 
   it.each([
     'trip_member_added',
+    'trip_member_removed',
     'follow_request',
     'follow_request_accepted',
     'new_follower',
@@ -238,6 +239,13 @@ describe('Notification emails', () => {
     expect(result.html).toContain('/privacy-security#email-notifications');
   });
 
+  it('delivers removals under the trip preference without an action button', async () => {
+    const { service, mail, prisma } = setup('trip_member_removed');
+    await service.deliverPending();
+    expect(mail.sendActivityNotification).toHaveBeenCalledWith(expect.objectContaining({ showAction: false, link: '/trips' }));
+    expect(prisma.follow.findUnique).not.toHaveBeenCalled();
+  });
+
   it('requires a valid configured frontend URL instead of using a production fallback', () => {
     delete process.env.FRONTEND_URL;
     delete process.env.WEB_URL;
@@ -251,5 +259,15 @@ describe('Notification emails', () => {
     expect(notificationWebUrl()).toBe('https://stage.example.test');
     process.env.FRONTEND_URL = 'https://https://stage.example.test/';
     expect(notificationWebUrl()).toBe('https://stage.example.test');
+  });
+});
+
+describe('Removal email presentation', () => {
+  it('includes the logo but no trip button or trip link', () => {
+    const email = renderActivityEmail({ name: 'Alex', title: 'Removed from trip', body: 'You were removed from Thailand.', link: '/trips', baseUrl: 'https://stage.example.test', showAction: false });
+    expect(email.html).toContain('https://stage.example.test/logo.png');
+    expect(email.html).not.toContain('Open Fairwayd');
+    expect(email.text).not.toContain('Open Fairwayd');
+    expect(email.html).toContain('Manage email notifications');
   });
 });
