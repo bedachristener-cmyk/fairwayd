@@ -54,10 +54,25 @@ export class NotificationsService {
     const uid = this.requireUserId(userId);
     const safeTake = Math.max(1, Math.min(Number(take) || 50, 50));
 
-    return this.prisma.notification.findMany({
+    const notifications = await this.prisma.notification.findMany({
       where: { userId: uid },
       orderBy: { createdAt: 'desc' },
       take: safeTake,
+    });
+    const followTypes = ['new_follower', 'follow_request', 'follow_request_accepted'];
+    const actorIds = [...new Set(notifications.filter(note => followTypes.includes(note.type) && note.actorUserId).map(note => note.actorUserId!))];
+    if (!actorIds.length) return notifications;
+    const actors = await this.prisma.user.findMany({ where: { id: { in: actorIds } }, select: { id: true, name: true, handle: true } });
+    const byId = new Map(actors.map(actor => [actor.id, actor]));
+    return notifications.map(note => {
+      if (!followTypes.includes(note.type) || !note.actorUserId) return note;
+      const actor = byId.get(note.actorUserId);
+      if (!actor) return note;
+      const name = actor.name?.trim() || (actor.handle ? `@${actor.handle}` : null);
+      if (!name) return note;
+      return { ...note, body: note.type === 'new_follower' ? `${name} started following you.`
+        : note.type === 'follow_request_accepted' ? `${name} accepted your follow request.` : `${name} wants to follow you.`,
+        link: note.type !== 'follow_request' && actor.handle ? `/u/${encodeURIComponent(actor.handle)}` : note.link };
     });
   }
 
