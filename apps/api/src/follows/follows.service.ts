@@ -62,6 +62,7 @@ export class FollowsService {
 
     await this.notifications.createNotification({
       userId: row.followerId,
+      actorUserId: myUserId,
       type: 'follow_request_accepted',
       title: 'Follow request accepted',
       body: 'Your follow request was accepted.',

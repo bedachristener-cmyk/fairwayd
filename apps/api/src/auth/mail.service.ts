@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Resend } from 'resend';
+import { renderActivityEmail } from '../notifications/activity-email';
 
 function emailDomain(value: string) {
   const match = String(value ?? '').match(/@([^>\s]+)/);
@@ -14,6 +15,21 @@ export class MailService {
       process.env.SMTP_FROM?.trim() ||
       'Fairwayd <noreply@fairwayd.ch>'
     );
+  }
+
+  async sendActivityNotification(input: {
+    email: string; name: string; title: string; body: string;
+    link: string; baseUrl: string; notificationId: string;
+  }) {
+    const apiKey = process.env.RESEND_API_KEY?.trim();
+    if (!apiKey) throw new Error('Mail delivery is not configured');
+    const { html, text } = renderActivityEmail(input);
+    const result = await new Resend(apiKey).emails.send({
+      from: this.getSender(), to: input.email,
+      subject: `Fairwayd · ${input.title}`, html, text,
+    }, { idempotencyKey: `notification/${input.notificationId}` });
+    if (result.error || !result.data?.id) throw new Error('Notification email delivery failed');
+    return result.data.id;
   }
 
   async sendMagicLink(email: string, link: string) {
@@ -48,10 +64,10 @@ export class MailService {
 
       <div style="padding-bottom:20px; border-bottom:1px solid #374151; margin-bottom:30px;">
   <div style="display:flex; align-items:flex-end;">
-    
-   <img 
-  src="https://fairwayd-git-stage-bedachristener-cmyks-projects.vercel.app/logo.png" 
-  alt="Fairwayd" 
+
+   <img
+  src="${(process.env.FRONTEND_URL || process.env.WEB_URL || 'https://www.fairwayd.golf').replace(/\/+$/, '')}/logo.png"
+  alt="Fairwayd"
   style="width:52px;height:52px;border-radius:13px;margin-right:18px;"
 />
 
@@ -71,7 +87,7 @@ export class MailService {
       </p>
 
       <p style="margin:0 0 26px 0;">
-        <a href="${link}" 
+        <a href="${link}"
            style="display:inline-block;padding:12px 20px;border-radius:999px;background:#8bd450;color:#0f172a;text-decoration:none;font-weight:700;">
           Sign in to Fairwayd
         </a>
@@ -137,7 +153,7 @@ export class MailService {
         <div style="font-family: Arial, sans-serif; line-height:1.5; max-width:560px; margin:0 auto; padding:28px; background:#111827; color:#f9fafb; border-radius:18px; border:1px solid #1f2937;">
           <div style="padding-bottom:20px; border-bottom:1px solid #374151; margin-bottom:30px;">
             <div style="display:flex; align-items:flex-end;">
-              <img src="https://fairwayd-git-stage-bedachristener-cmyks-projects.vercel.app/logo.png" alt="Fairwayd" style="width:52px;height:52px;border-radius:13px;margin-right:18px;" />
+              <img src="${(process.env.FRONTEND_URL || process.env.WEB_URL || 'https://www.fairwayd.golf').replace(/\/+$/, '')}/logo.png" alt="Fairwayd" style="width:52px;height:52px;border-radius:13px;margin-right:18px;" />
               <div style="font-size:28px;font-weight:700;line-height:1;color:#f9fafb;letter-spacing:-0.4px;">Fairwayd</div>
             </div>
           </div>
@@ -199,7 +215,7 @@ export class MailService {
         <div style="font-family: Arial, sans-serif; line-height:1.5; max-width:560px; margin:0 auto; padding:28px; background:#111827; color:#f9fafb; border-radius:18px; border:1px solid #1f2937;">
           <div style="padding-bottom:20px; border-bottom:1px solid #374151; margin-bottom:30px;">
             <div style="display:flex; align-items:flex-end;">
-              <img src="https://fairwayd-git-stage-bedachristener-cmyks-projects.vercel.app/logo.png" alt="Fairwayd" style="width:52px;height:52px;border-radius:13px;margin-right:18px;" />
+              <img src="${(process.env.FRONTEND_URL || process.env.WEB_URL || 'https://www.fairwayd.golf').replace(/\/+$/, '')}/logo.png" alt="Fairwayd" style="width:52px;height:52px;border-radius:13px;margin-right:18px;" />
               <div style="font-size:28px;font-weight:700;line-height:1;color:#f9fafb;letter-spacing:-0.4px;">Fairwayd</div>
             </div>
           </div>

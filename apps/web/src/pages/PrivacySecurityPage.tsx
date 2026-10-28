@@ -5,6 +5,11 @@ import { useMe } from "../auth/useMe";
 import MobilePageHeader from "../components/MobilePageHeader";
 import { useSearchParams } from "react-router-dom";
 
+type EmailPreferences = {
+  emailTripNotifications: boolean;
+  emailFollowNotifications: boolean;
+};
+
 type AccountPrivacy = "PUBLIC" | "PRIVATE";
 type ReportTarget = "POST" | "COMMENT" | "PROFILE" | "OTHER";
 type ReportReason =
@@ -102,6 +107,11 @@ export default function PrivacySecurityPage() {
   const { logout, token, refreshMe } = useAuth();
   const [searchParams] = useSearchParams();
   const { me, setMe } = useMe(true);
+  const [emailPreferences, setEmailPreferences] =
+    useState<EmailPreferences | null>(null);
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailMessage, setEmailMessage] = useState<string | null>(null);
   const [privacy, setPrivacy] = useState<AccountPrivacy>("PRIVATE");
   const [privacyBusy, setPrivacyBusy] = useState(false);
   const [privacyMsg, setPrivacyMsg] = useState<string | null>(null);
@@ -159,6 +169,49 @@ export default function PrivacySecurityPage() {
     },
     [token],
   );
+
+  useEffect(() => {
+    let active = true;
+    setEmailPreferences(null);
+    void authFetch("/notifications/email-preferences")
+      .then((data: EmailPreferences) => {
+        if (active) setEmailPreferences(data);
+      })
+      .catch((error: unknown) => {
+        if (active)
+          setEmailError(
+            error instanceof Error
+              ? error.message
+              : "Could not load email settings. Reload the page to try again.",
+          );
+      });
+    return () => {
+      active = false;
+    };
+  }, [authFetch]);
+
+  const saveEmailPreference = async (key: keyof EmailPreferences) => {
+    if (!emailPreferences || emailBusy) return;
+    setEmailBusy(true);
+    setEmailError(null);
+    setEmailMessage(null);
+    try {
+      const updated = (await authFetch("/notifications/email-preferences", {
+        method: "PATCH",
+        body: JSON.stringify({ [key]: !emailPreferences[key] }),
+      })) as EmailPreferences;
+      setEmailPreferences(updated);
+      setEmailMessage("Email notification settings saved.");
+    } catch (error) {
+      setEmailError(
+        error instanceof Error
+          ? error.message
+          : "Could not save email settings.",
+      );
+    } finally {
+      setEmailBusy(false);
+    }
+  };
 
   const loadBlockedUsers = useCallback(async () => {
     try {
@@ -428,6 +481,88 @@ export default function PrivacySecurityPage() {
           Posts still have their own audience: Public, Followers or Private.
         </p>
         {privacyMsg ? <p role="status" style={textStyle}>{privacyMsg}</p> : null}
+      </section>
+
+      <section
+        id="email-notifications"
+        style={{ ...cardStyle, scrollMarginTop: 90 }}
+      >
+        <h2 style={sectionTitleStyle}>Email notifications</h2>
+        <p style={textStyle}>
+          Choose which activity updates arrive by email. Notifications inside
+          Fairwayd stay available.
+        </p>
+        {(
+          [
+            [
+              "emailTripNotifications",
+              "Trip memberships",
+              "When someone adds you to a trip.",
+            ],
+            [
+              "emailFollowNotifications",
+              "Follow activity",
+              "New follow requests, accepted requests and new followers.",
+            ],
+          ] as const
+        ).map(([key, label, description]) => (
+          <div
+            key={key}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 14,
+              justifyContent: "space-between",
+              padding: "10px 0",
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <p style={labelStyle}>{label}</p>
+              <p style={textStyle}>{description}</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-label={label}
+              aria-checked={emailPreferences?.[key] ?? false}
+              disabled={!emailPreferences || emailBusy}
+              onClick={() => void saveEmailPreference(key)}
+              style={{
+                ...buttonStyle,
+                flexShrink: 0,
+                minWidth: 64,
+                background: emailPreferences?.[key]
+                  ? "var(--fw-selection-bg, #f5ecdc)"
+                  : "var(--bg)",
+                color: emailPreferences?.[key]
+                  ? "var(--fw-selection-text, #735018)"
+                  : "var(--sub)",
+                borderColor: emailPreferences?.[key]
+                  ? "var(--fw-selection-border, #b69050)"
+                  : "var(--border)",
+              }}
+            >
+              {!emailPreferences ? "…" : emailPreferences[key] ? "On" : "Off"}
+            </button>
+          </div>
+        ))}
+        {!emailPreferences && !emailError ? (
+          <p style={textStyle}>Loading email settings…</p>
+        ) : null}
+        <p style={textStyle}>
+          Sign-in, email verification and password-reset emails are not
+          affected. Activity emails are sent to your verified email address.
+        </p>
+        {emailError ? (
+          <p role="alert" style={textStyle}>
+            {emailError}
+          </p>
+        ) : null}
+        {emailMessage ? (
+          <p role="status" style={textStyle}>
+            {emailMessage}
+          </p>
+        ) : null}
       </section>
 
       <section style={cardStyle}>

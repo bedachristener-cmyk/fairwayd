@@ -14,6 +14,7 @@ function createService(prismaOverrides: Record<string, any> = {}) {
       findMany: jest.fn(),
       update: jest.fn(),
     },
+    userBlock: { findFirst: jest.fn().mockResolvedValue(null) },
     follow: {
       findFirst: jest.fn(),
       findUnique: jest.fn(),
@@ -257,6 +258,7 @@ describe('UsersService social/privacy regressions', () => {
       expect(notifications.createNotification).toHaveBeenCalledTimes(1);
       expect(notifications.createNotification).toHaveBeenCalledWith({
         userId: 'public-profile',
+        actorUserId: 'new-follower',
         type: 'new_follower',
         title: 'New follower',
         body: 'Someone started following you.',

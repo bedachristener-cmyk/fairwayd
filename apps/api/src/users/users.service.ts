@@ -809,6 +809,7 @@ export class UsersService {
         requester?.name?.trim() || (requester?.handle ? `@${requester.handle}` : 'Someone');
       await this.notifications.createNotification({
         userId: targetUserId,
+        actorUserId: meId,
         type: 'follow_request',
         title: 'New follow request',
         body: `${requesterName} wants to connect with you.`,
@@ -819,6 +820,7 @@ export class UsersService {
     if (!existing && row.status === FollowStatus.ACCEPTED) {
       await this.notifications.createNotification({
         userId: targetUserId,
+        actorUserId: meId,
         type: 'new_follower',
         title: 'New follower',
         body: 'Someone started following you.',
@@ -959,6 +961,7 @@ export class UsersService {
     if (changed) {
       await this.notifications.createNotification({
         userId: followerId,
+        actorUserId: meId,
         type: 'follow_request_accepted',
         title: 'Follow request accepted',
         body: 'Your follow request was accepted.',

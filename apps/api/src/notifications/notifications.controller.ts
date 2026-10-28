@@ -1,4 +1,12 @@
-import { Controller, Get, Param, Patch, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { NotificationsService } from './notifications.service';
 
@@ -10,6 +18,19 @@ function getRequestUserId(req: any) {
 @UseGuards(AuthGuard('jwt'))
 export class NotificationsController {
   constructor(private readonly notifications: NotificationsService) {}
+
+  @Get('email-preferences')
+  emailPreferences(@Req() req: any) {
+    return this.notifications.emailPreferences(getRequestUserId(req));
+  }
+
+  @Patch('email-preferences')
+  updateEmailPreferences(@Req() req: any, @Body() body: unknown) {
+    return this.notifications.updateEmailPreferences(
+      getRequestUserId(req),
+      body,
+    );
+  }
 
   @Get()
   list(@Req() req: any) {

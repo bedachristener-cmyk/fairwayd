@@ -656,6 +656,7 @@ describe('TripsService notifications', () => {
       expect(notifications.createNotification).toHaveBeenCalledTimes(1);
       expect(notifications.createNotification).toHaveBeenCalledWith({
         userId: 'added-user',
+        actorUserId: 'organizer',
         type: 'trip_member_added',
         title: 'Added to trip',
         body: 'Someone added you to a trip.',
