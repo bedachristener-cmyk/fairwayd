@@ -38,7 +38,8 @@ describe('Activity email delivery', () => {
       expect.objectContaining({
         from: 'Fairwayd <mail@example.test>',
         to: input.email,
-        html: expect.stringContaining('A &lt;golfer&gt;'),
+        html: expect.stringContaining('cid:fairwayd-logo'),
+          attachments: [expect.objectContaining({ contentId: 'fairwayd-logo', content: expect.any(Buffer) })],
         text: expect.stringContaining(
           'https://stage.example.test/trips/trip-1',
         ),
