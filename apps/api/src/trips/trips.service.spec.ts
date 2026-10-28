@@ -805,3 +805,16 @@ describe('TripsService notifications', () => {
     });
   });
 });
+
+describe('Trip member removal notifications', () => {
+  it.each([['other-user', false, true], ['organizer', false, false], [null, true, false]])('notifies only removed registered members (%s)', async (userId, isGuest, shouldNotify) => {
+    const { prisma, notifications, service } = createService();
+    mockOrganizer(prisma);
+    prisma.tripMember.findFirst.mockResolvedValue({ id: 'member', userId, isGuest, role: TripRole.MEMBER });
+    prisma.tripMember.delete = jest.fn().mockResolvedValue({});
+    prisma.trip.findUnique.mockResolvedValue({ title: 'Thailand' });
+    await service.deleteMember('trip', 'member', 'organizer');
+    if (shouldNotify) expect(notifications.createNotification).toHaveBeenCalledWith(expect.objectContaining({ userId, type: 'trip_member_removed', body: expect.stringContaining('Thailand'), link: '/trips' }));
+    else expect(notifications.createNotification).not.toHaveBeenCalled();
+  });
+});

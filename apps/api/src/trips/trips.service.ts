@@ -1062,7 +1062,17 @@ export class TripsService {
       await this.assertNotFinalOwner(tripId, member.id);
     }
 
+    const notifyRemoval = !member.isGuest && member.userId && member.userId !== userId;
+    const trip = notifyRemoval ? await this.prisma.trip.findUnique({ where: { id: tripId }, select: { title: true } }) : null;
     await this.prisma.tripMember.delete({ where: { id: memberId } });
+    if (notifyRemoval) {
+      await this.notifications.createNotification({
+        userId: member.userId!, actorUserId: userId,
+        type: 'trip_member_removed', title: 'Removed from trip',
+        body: `You were removed from “${trip?.title || 'a trip'}”. You no longer have access to this trip.`,
+        link: '/trips',
+      });
+    }
     return { ok: true };
   }
 

@@ -83,7 +83,7 @@ export class NotificationEmailService implements OnModuleInit, OnModuleDestroy {
             },
           });
           const enabled =
-            row.type === 'trip_member_added'
+            ['trip_member_added', 'trip_member_removed'].includes(row.type)
               ? recipient?.emailTripNotifications
               : followTypes.includes(row.type)
                 ? recipient?.emailFollowNotifications
@@ -133,6 +133,8 @@ export class NotificationEmailService implements OnModuleInit, OnModuleDestroy {
               continue;
             }
             body = `${actorName} added you to “${trip.title}”. Open the trip to see your itinerary and travel plans.`;
+          } else if (row.type === 'trip_member_removed') {
+            link = '/trips';
           } else {
             // A withdrawn request or removed connection should not trigger a delayed mail.
             const incoming = row.type !== 'follow_request_accepted';
@@ -173,6 +175,7 @@ export class NotificationEmailService implements OnModuleInit, OnModuleDestroy {
             link,
             baseUrl,
             notificationId: row.id,
+            showAction: row.type !== 'trip_member_removed',
           });
           await this.prisma.notification.update({
             where: { id: row.id },

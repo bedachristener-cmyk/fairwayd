@@ -87,7 +87,7 @@ for (const width of [390, 1280]) {
     await expect(page.locator("#email-notifications")).toBeVisible();
     const switchBox = await trip.boundingBox();
     expect(switchBox?.width).toBeLessThanOrEqual(80);
-    const labelBox = await page.locator('#email-notifications').getByText('When someone adds you to a trip.', { exact: true }).boundingBox();
+    const labelBox = await page.locator('#email-notifications').getByText('When someone adds you to or removes you from a trip.', { exact: true }).boundingBox();
     expect(labelBox?.width).toBeGreaterThan(150);
     expect(
       await page.evaluate(

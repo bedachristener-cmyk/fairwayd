@@ -19,7 +19,7 @@ export class MailService {
 
   async sendActivityNotification(input: {
     email: string; name: string; title: string; body: string;
-    link: string; baseUrl: string; notificationId: string;
+    link: string; baseUrl: string; notificationId: string; showAction?: boolean;
   }) {
     const apiKey = process.env.RESEND_API_KEY?.trim();
     if (!apiKey) throw new Error('Mail delivery is not configured');

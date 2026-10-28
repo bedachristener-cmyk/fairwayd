@@ -134,7 +134,7 @@ export class NotificationsService {
     }
 
     const emailCategory =
-      type === 'trip_member_added'
+      ['trip_member_added', 'trip_member_removed'].includes(type)
         ? 'emailTripNotifications'
         : [
               'follow_request',

@@ -497,7 +497,7 @@ export default function PrivacySecurityPage() {
             [
               "emailTripNotifications",
               "Trip memberships",
-              "When someone adds you to a trip.",
+              "When someone adds you to or removes you from a trip.",
             ],
             [
               "emailFollowNotifications",
