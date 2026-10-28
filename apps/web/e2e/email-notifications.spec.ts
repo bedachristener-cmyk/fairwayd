@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { renderActivityEmail } from "../../api/src/notifications/activity-email";
 
 async function setup(page: Page) {
   let settings = {
@@ -51,6 +52,15 @@ async function setup(page: Page) {
 }
 
 for (const width of [390, 1280]) {
+  test(`activity email layout is readable at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const email = renderActivityEmail({ name: 'Alex', title: 'Added to trip', body: 'Jamie added you to “Thailand Golf Escape”. Open the trip to see your itinerary and travel plans.', link: '/trips/example', baseUrl: 'https://stage.example.test' });
+    await page.setContent(email.html);
+    await expect(page.getByRole('heading', { name: 'Added to trip' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Open Fairwayd', exact: true })).toHaveAttribute('href', 'https://stage.example.test/trips/example');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: `/tmp/activity-email-${width}.png`, fullPage: true });
+  });
   test(`email settings persist independently and survive a failed save at ${width}px`, async ({
     page,
   }) => {
