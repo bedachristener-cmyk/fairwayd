@@ -6,8 +6,8 @@ Dieser Entwurf berücksichtigt die derzeitige Golf-, Reiseplanungs- und Social-F
 
 ## Vor Veröffentlichung zu entscheiden und zu verifizieren
 
-- **Betreiber – vom Nutzer anhand des Registereintrags bestätigt:** beeZONE, Beda Christener; Einzelunternehmen; Sitz Arisdorf; UID CHE-310.823.737. Vollständige Geschäfts-/Zustelladresse noch ergänzen. Fairwayd ist der Produktname.
-- **Kontakt:** tatsächlich eingerichtete und überwachte Postfächer. Im bisherigen Code stehen legal@fairwayd.golf und privacy@fairwayd.golf; deren Betrieb ist nicht bestätigt. Eine externe Meldemöglichkeit muss auch ohne Account erreichbar sein.
+- **Betreiber – vom Nutzer anhand des Registereintrags bestätigt:** beeZONE, Beda Christener; Einzelunternehmen; Sitz Arisdorf; UID CHE-310.823.737. Geschäfts-/Zustelladresse laut Nutzer: Hombergerstr. 14, 4422 Arisdorf, Schweiz. Fairwayd ist der Produktname.
+- **Kontakt – vom Nutzer bestätigt, Einrichtung noch ausstehend:** legal@fairwayd.golf für allgemeine/rechtliche Anfragen und privacy@fairwayd.golf für Datenschutzanfragen. Vor Veröffentlichung beide Adressen einrichten, externe Zustellung testen und regelmässige Bearbeitung sicherstellen. Eine externe Meldemöglichkeit muss auch ohne Account erreichbar sein.
 - **Alter – Produktentscheidung vom 28.10.2026:** erster Pilot für die bestehende volljährige Reisegruppe ab 18 Jahren; spätere Öffnung ab 16 Jahren als Ziel, erst nach Umsetzung und Prüfung geeigneter Schutzmassnahmen, Altersabfrage und erforderlicher Zustimmungen. Unter 16 nicht für V1.0 vorgesehen. Die technische Alterskontrolle ist noch nicht geprüft oder umgesetzt. Store-Inhaltsfreigabe, vertragliches Mindestalter und rechtlich erforderliche Elternzustimmung sind getrennt zu behandeln.
 - **Zielmärkte:** Schweiz, Wohnsitze der Pilotgruppe und spätere Ausrichtung auf EU/EWR oder andere Länder feststellen. Schweizer Rechtswahl ersetzt keine Prüfung zwingender ausländischer Vorschriften, insbesondere DSGVO/DSA bei entsprechendem Anwendungsbereich.
 - **Geschäftsmodell:** bestätigen, dass Fairwayd im Pilot keine eigenen Reisen verkauft, Buchungen verbindlich vermittelt, Zahlungen abwickelt oder Versicherungen vermittelt. Tatsächliche Tätigkeiten sind entscheidend.
@@ -23,7 +23,7 @@ Dieser Entwurf berücksichtigt die derzeitige Golf-, Reiseplanungs- und Social-F
 
 ## 1. Anbieter und Geltungsbereich
 
-Fairwayd wird betrieben von **beeZONE, Beda Christener**, Einzelunternehmen mit Sitz in Arisdorf, Schweiz, UID **CHE-310.823.737**, Geschäfts-/Zustelladresse: **[STRASSE, HAUSNUMMER, PLZ, ORT]**, nachfolgend «Betreiber». Kontakt: **[BESTÄTIGTE KONTAKTADRESSE]**.
+Fairwayd wird betrieben von **beeZONE, Beda Christener**, Einzelunternehmen mit Sitz in Arisdorf, Schweiz, UID **CHE-310.823.737**, Geschäfts-/Zustelladresse: **Hombergerstr. 14, 4422 Arisdorf, Schweiz**, nachfolgend «Betreiber». Kontakt: **legal@fairwayd.golf**.
 
 Diese Bedingungen gelten für die Website, die installierbare Web-App und die zugehörigen Fairwayd-Dienste. Die Community- und Inhaltsrichtlinien sind Bestandteil des Nutzungsvertrags. Die Datenschutzerklärung erläutert die Bearbeitung von Personendaten. Bei Widersprüchen gehen zwingendes Recht und ausdrücklich vereinbarte individuelle Regelungen vor.
 
@@ -180,7 +180,7 @@ Massnahmen sollen nachvollziehbar und verhältnismässig sein. Der Betreiber kan
 
 ## 1. Verantwortlicher und Kontakt
 
-Verantwortlich für die hier beschriebenen Bearbeitungen ist **beeZONE, Beda Christener**, Einzelunternehmen mit Sitz in Arisdorf, Schweiz, UID **CHE-310.823.737**, Geschäfts-/Zustelladresse: **[STRASSE, HAUSNUMMER, PLZ, ORT]**. Datenschutzanfragen: **[BESTÄTIGTES DATENSCHUTZPOSTFACH]**. Gegebenenfalls erforderliche ausländische Vertretungen: **[NACH ANWENDBARKEIT ERGÄNZEN]**.
+Verantwortlich für die hier beschriebenen Bearbeitungen ist **beeZONE, Beda Christener**, Einzelunternehmen mit Sitz in Arisdorf, Schweiz, UID **CHE-310.823.737**, Geschäfts-/Zustelladresse: **Hombergerstr. 14, 4422 Arisdorf, Schweiz**. Datenschutzanfragen: **privacy@fairwayd.golf**. Gegebenenfalls erforderliche ausländische Vertretungen: **[NACH ANWENDBARKEIT ERGÄNZEN]**.
 
 ## 2. Datenarten und Zwecke
 
