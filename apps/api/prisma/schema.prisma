@@ -32,6 +32,8 @@ model User {
   homeGolfClubPrivacy            FieldPrivacy            @default(PUBLIC)
   golfSloganPrivacy              FieldPrivacy            @default(PUBLIC)
   favoriteGolfDestinationPrivacy FieldPrivacy            @default(PUBLIC)
+  emailTripNotifications         Boolean                 @default(true)
+  emailFollowNotifications       Boolean                 @default(true)
   preferredCurrency              String?
   accounts                       AuthAccount[]
   comments                       Comment[]
@@ -212,6 +214,11 @@ model DestinationTipHelpful {
 }
 
 model Notification {
+  actorUserId String?
+  emailPending Boolean @default(false)
+  emailAttempts Int @default(0)
+  emailNextAttemptAt DateTime @default(now())
+  emailSentAt DateTime?
   id        String    @id @default(cuid())
   userId    String
   type      String
@@ -224,6 +231,7 @@ model Notification {
 
   @@index([userId, createdAt])
   @@index([userId, readAt])
+  @@index([emailPending, emailNextAttemptAt])
 }
 
 model Course {

@@ -1,8 +1,13 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 type CreateNotificationInput = {
   userId: string;
+  actorUserId?: string;
   type: string;
   title: string;
   body?: string | null;
@@ -12,6 +17,38 @@ type CreateNotificationInput = {
 @Injectable()
 export class NotificationsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async emailPreferences(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: this.requireUserId(userId) },
+      select: { emailTripNotifications: true, emailFollowNotifications: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    return user;
+  }
+
+  async updateEmailPreferences(userId: string, input: unknown) {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) {
+      throw new BadRequestException('Invalid notification settings');
+    }
+    const allowed = ['emailTripNotifications', 'emailFollowNotifications'];
+    const entries = Object.entries(input);
+    if (
+      !entries.length ||
+      entries.some(
+        ([key, value]) => !allowed.includes(key) || typeof value !== 'boolean',
+      )
+    ) {
+      throw new BadRequestException(
+        'Notification settings must be boolean values',
+      );
+    }
+    return this.prisma.user.update({
+      where: { id: this.requireUserId(userId) },
+      data: Object.fromEntries(entries),
+      select: { emailTripNotifications: true, emailFollowNotifications: true },
+    });
+  }
 
   async listForUser(userId: string, take = 50) {
     const uid = this.requireUserId(userId);
@@ -96,9 +133,40 @@ export class NotificationsService {
       throw new BadRequestException('Notification title is required');
     }
 
+    const emailCategory =
+      type === 'trip_member_added'
+        ? 'emailTripNotifications'
+        : [
+              'follow_request',
+              'follow_request_accepted',
+              'new_follower',
+            ].includes(type)
+          ? 'emailFollowNotifications'
+          : null;
+    const recipient =
+      emailCategory && input.actorUserId !== userId
+        ? await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+              email: true,
+              emailVerifiedAt: true,
+              emailTripNotifications: true,
+              emailFollowNotifications: true,
+            },
+          })
+        : null;
+    const emailPending = Boolean(
+      emailCategory &&
+      recipient?.email &&
+      recipient.emailVerifiedAt &&
+      recipient[emailCategory],
+    );
+
     return this.prisma.notification.create({
       data: {
         userId,
+        actorUserId: input.actorUserId,
+        emailPending,
         type,
         title,
         body,

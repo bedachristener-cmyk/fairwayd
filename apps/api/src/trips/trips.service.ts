@@ -1006,6 +1006,7 @@ export class TripsService {
 
       await this.notifications.createNotification({
         userId: memberUserId,
+        actorUserId: userId,
         type: 'trip_member_added',
         title: 'Added to trip',
         body: 'Someone added you to a trip.',
