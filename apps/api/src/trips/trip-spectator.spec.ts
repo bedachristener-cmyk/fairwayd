@@ -25,7 +25,7 @@ describe('Trip spectators', () => {
     expect(await service.findOne('trip', 'viewer')).toEqual(spectatorTrip(trip));
   });
 
-  it.each(['findMyCosts', 'findOrganizerCosts', 'findMembers', 'findDocuments', 'findDocument', 'findDocumentFile', 'updateDocumentVisibility', 'deleteDocument', 'findActivity', 'assertCanManageDocuments', 'createDocument', 'createItem', 'updateItem', 'moveItem', 'deleteItem'])('denies spectator access to %s before reading or changing protected data', async (method) => {
+  it.each(['assertCanManageTrip', 'findMyCosts', 'findOrganizerCosts', 'findMembers', 'findDocuments', 'findDocument', 'findDocumentFile', 'updateDocumentVisibility', 'deleteDocument', 'findActivity', 'assertCanManageDocuments', 'createDocument', 'createItem', 'updateItem', 'moveItem', 'deleteItem'])('denies spectator access to %s before reading or changing protected data', async (method) => {
     const { service } = setup();
     await expect((service as any)[method]('trip', 'viewer', {})).rejects.toThrow(ForbiddenException);
   });

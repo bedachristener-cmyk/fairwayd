@@ -303,6 +303,7 @@ export class TripsController {
     @UploadedFile() file?: Express.Multer.File,
   ) {
     if (!file) throw new BadRequestException("Missing file field 'cover'");
+    await this.tripsService.assertCanManageTrip(id, req.user.id);
 
     const ext = (file.mimetype?.split('/')[1] || 'bin').replace(
       /[^a-z0-9]/gi,

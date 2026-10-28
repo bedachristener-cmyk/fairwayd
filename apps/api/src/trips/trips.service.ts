@@ -373,6 +373,10 @@ export class TripsService {
     private readonly notifications: NotificationsService,
   ) {}
 
+  async assertCanManageTrip(tripId: string, userId: string) {
+    return this.assertCanModifyTrip(tripId, userId);
+  }
+
   async create(userId: string, dto: CreateTripDto) {
     let requestedBaseCurrency: string | undefined;
     if (dto.baseCurrency !== undefined) {

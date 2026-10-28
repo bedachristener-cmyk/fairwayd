@@ -82,10 +82,12 @@ async function mockTripApi(page: Page) {
     ],
   });
 
-  await page.route("**/api/**", async (route) => {
+  await page.route("**/*", async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
 
+    // The legacy onboarding client calls /users/me without the /api prefix.
+    if (path === "/users/me") return json(route, mockUser);
     if (!path.startsWith("/api/")) return route.continue();
 
     if (path === "/api/users/me") return json(route, mockUser);
