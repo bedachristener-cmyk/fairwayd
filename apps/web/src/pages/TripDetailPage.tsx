@@ -130,6 +130,7 @@ type Trip = {
   coverImageUrl?: string | null;
   members?: TripMember[];
   spectators?: TripMember[];
+  viewerRole?: TripRole;
   items?: TripItem[];
   documents?: TripDocument[];
 };
@@ -3736,7 +3737,9 @@ function TripCalendarView({
   onEditItem,
   onOpenCourse,
   onOpenDetails,
+  hideCosts = false,
 }: {
+  hideCosts?: boolean;
   days: CalendarDay[];
   items: TripItem[];
   members: TripMember[];
@@ -4067,7 +4070,7 @@ function TripCalendarView({
                         padding: "4px 11px 11px",
                       }}
                     >
-                      {compactCostSummary ? <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 800 }}>{compactCostSummary}</div> : null}
+                      {!hideCosts && compactCostSummary ? <div style={{ color: "var(--sub)", fontSize: 12, fontWeight: 800 }}>{compactCostSummary}</div> : null}
 
                       <div
                         style={{
@@ -4205,7 +4208,7 @@ function MemberAvatar({
   );
 }
 
-export default function TripDetailPage() {
+export default function TripDetailPage({ spectatorMode = false }: { spectatorMode?: boolean }) {
   const { tripId } = useParams();
   const nav = useNavigate();
   const { token, user, logout } = useAuth();
@@ -4215,6 +4218,8 @@ export default function TripDetailPage() {
   const checklistSectionRef = useRef<HTMLElement | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const [rawTrip, setTrip] = useState<Trip | null>(null);
+  const isSpectator = spectatorMode || rawTrip?.viewerRole === "VIEWER";
+  const availableSubviews = isSpectator ? subviewOrder.filter(view => view !== "budget" && view !== "documents") : subviewOrder;
   const [courseCovers] = useCourseCoverImages((rawTrip?.items ?? []).map((item) => item.course?.id ?? ""));
   const trip = useMemo(() => rawTrip ? {
     ...rawTrip,
@@ -4324,9 +4329,9 @@ export default function TripDetailPage() {
 
   const myMembership = trip?.members?.find((member) => member.userId === user?.id);
   const canEditTrip =
-    myMembership?.role === "OWNER" || myMembership?.role === "ADMIN";
-  const canAddTripItems = Boolean(myMembership);
-  const canUploadTripDocuments = Boolean(myMembership);
+    !isSpectator && (myMembership?.role === "OWNER" || myMembership?.role === "ADMIN");
+  const canAddTripItems = !isSpectator && Boolean(myMembership);
+  const canUploadTripDocuments = !isSpectator && Boolean(myMembership);
   const myCostsCurrency = myCostsData?.baseCurrency || trip?.baseCurrency?.trim() || "CHF";
   const myCostsBalancePreview = myCostsData?.summary.balancePreview ?? 0;
   const myCostsOwedToMe = myCostsOwedToMeBreakdown(myCostsData);
@@ -4340,6 +4345,7 @@ export default function TripDetailPage() {
   );
 
   function canEditTripItem(item: TripItem) {
+    if (isSpectator) return false;
     if (canEditTrip) return true;
     if (!user?.id) return false;
     if (item.visibility === "PRIVATE" && item.createdByUserId !== user.id) {
@@ -4351,10 +4357,10 @@ export default function TripDetailPage() {
   function moveSubview(direction: 1 | -1) {
     if (activeView === "overview") return;
 
-    const currentIndex = subviewOrder.indexOf(activeView);
+    const currentIndex = availableSubviews.indexOf(activeView);
     if (currentIndex < 0) return;
 
-    const next = subviewOrder[currentIndex + direction];
+    const next = availableSubviews[currentIndex + direction];
     if (next) setActiveView(next);
   }
 
@@ -4413,6 +4419,7 @@ export default function TripDetailPage() {
   }
 
   function openSubview(view: Exclude<TripView, "overview">) {
+    if (isSpectator && (view === "budget" || view === "documents")) return;
     setActiveView(view);
     window.setTimeout(() => {
       window.scrollTo({ top: 0, behavior: "auto" });
@@ -4456,14 +4463,14 @@ export default function TripDetailPage() {
       }
 
       const data = (await res.json()) as Trip;
-      const cachedAt = writeCachedTrip(tripId, data);
+      const cachedAt = isSpectator ? null : writeCachedTrip(tripId, data);
       setTrip(data);
       if (Array.isArray(data.documents)) setDocuments(data.documents);
       setCachedTripAt(cachedAt);
       setShowingCachedTrip(false);
       setRefreshTripMessage(null);
     } catch (e: any) {
-      const cachedTrip = readCachedTrip(tripId);
+      const cachedTrip = isSpectator ? null : readCachedTrip(tripId);
       if (cachedTrip) {
         setTrip(cachedTrip.trip);
         setCachedTripAt(cachedTrip.cachedAt);
@@ -4494,7 +4501,7 @@ export default function TripDetailPage() {
   }
 
   async function refreshCostViews() {
-    if (!token || !tripId) return;
+    if (!token || !tripId || isSpectator) return;
 
     try {
       const myData = await getMyTripCosts(tripId, token);
@@ -4523,7 +4530,7 @@ export default function TripDetailPage() {
   }, [token, tripId]);
 
   useEffect(() => {
-    if (!token || !tripId) {
+    if (!token || !tripId || isSpectator) {
       setMyCostsData(null);
       setMyCostsErr(null);
       return;
@@ -4556,7 +4563,7 @@ export default function TripDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, tripId]);
+  }, [token, tripId, isSpectator]);
 
   useEffect(() => {
     if (!token || !tripId || !canEditTrip) {
@@ -4602,12 +4609,12 @@ export default function TripDetailPage() {
   }, [tripId]);
 
   useEffect(() => {
-    if (!tripId) return;
+    if (!tripId || isSpectator) return;
     writeTeeTimeChecklist(tripId, checkedTeeTimeChecklistIds);
-  }, [tripId, checkedTeeTimeChecklistIds]);
+  }, [tripId, checkedTeeTimeChecklistIds, isSpectator]);
 
   async function loadDocuments() {
-    if (!token || !tripId) return;
+    if (!token || !tripId || isSpectator) return;
 
     try {
       setDocumentsLoading(true);
@@ -4637,7 +4644,7 @@ export default function TripDetailPage() {
   }
 
   async function loadActivity() {
-    if (!token || !tripId) return;
+    if (!token || !tripId || isSpectator) return;
 
     try {
       setActivityLoading(true);
@@ -4669,12 +4676,12 @@ export default function TripDetailPage() {
   useEffect(() => {
     loadActivity();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, tripId]);
+  }, [token, tripId, isSpectator]);
 
   useEffect(() => {
     loadDocuments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, tripId]);
+  }, [token, tripId, isSpectator]);
 
   useEffect(() => {
     let cancelled = false;
@@ -6835,6 +6842,8 @@ export default function TripDetailPage() {
         </div>
       ) : null}
 
+      {isSpectator && activeView === "overview" ? <div role="status" style={{ color: "var(--fw-selection-text)", background: "var(--fw-selection-bg)", padding: "10px 14px", borderRadius: 12 }}>Spectator · Read only</div> : null}
+
       {activeView === "overview" ? (
       <>
       <section
@@ -7433,7 +7442,7 @@ export default function TripDetailPage() {
               subtitle: "Local travel checklist",
               action: () => openOverviewSection(checklistSectionRef),
             },
-          ].map((tool) => (
+          ].filter(tool => !isSpectator || !["Budget", "Documents", "Checklist"].includes(tool.title)).map((tool) => (
             <OverviewNavigationRow
               key={tool.title}
               icon={tool.icon}
@@ -7445,7 +7454,7 @@ export default function TripDetailPage() {
         </div>
       </section>
 
-      {myMembership ? (
+      {!isSpectator && myMembership ? (
         <section
           style={{
             ...overviewAnchorStyle,
@@ -8694,6 +8703,7 @@ export default function TripDetailPage() {
         </section>
       ) : null}
 
+      {!isSpectator ? <>
       <section
         ref={checklistSectionRef}
         id="before-you-go"
@@ -8908,6 +8918,7 @@ export default function TripDetailPage() {
         )}
         </div> : null}
       </section>
+      </> : null}
       </>
       ) : null}
 
@@ -10203,7 +10214,7 @@ export default function TripDetailPage() {
                             </label>
                           ) : null}
 
-                          {editSupportsCosts ? (
+                          {!isSpectator && editSupportsCosts ? (
                             <TripItemBudgetSection
                               item={{ ...item, type: editDraft.type, title: editDraft.title }}
                               members={trip?.members ?? []}
@@ -10852,7 +10863,7 @@ export default function TripDetailPage() {
                           >
 
 
-                            {compactCostSummary ? (
+                            {!isSpectator && compactCostSummary ? (
                               <div
                                 style={{
                                   color: "var(--sub)",
@@ -10865,7 +10876,7 @@ export default function TripDetailPage() {
                                 {compactCostSummary}
                               </div>
                             ) : null}
-                            {compactGolfCostBreakdown.length > 0 ? (
+                            {!isSpectator && compactGolfCostBreakdown.length > 0 ? (
                               <div
                                 style={{
                                   display: "grid",
@@ -11001,6 +11012,7 @@ export default function TripDetailPage() {
       </section>
       ) : activeView === "calendar" ? (
         <TripCalendarView
+          hideCosts={isSpectator}
           days={calendarDays}
           items={trip?.items ?? []}
           members={trip?.members ?? []}
@@ -12209,7 +12221,7 @@ export default function TripDetailPage() {
       ) : null}
       </div>
 
-      {costSummaryDrilldown ? createPortal(
+      {!isSpectator && costSummaryDrilldown ? createPortal(
         <div
           role="dialog"
           aria-modal="true"
@@ -12524,7 +12536,7 @@ export default function TripDetailPage() {
                 </div>
               </section>
 
-              <TripItemBudgetSection
+              {!isSpectator ? <TripItemBudgetSection
                 item={detailsItem}
                 members={trip?.members ?? []}
                 baseCurrency={baseCurrency}
@@ -12538,8 +12550,9 @@ export default function TripDetailPage() {
                 onDeleteDraft={deleteBudgetDraft}
                 onSave={saveBudgetInline}
                 onEdit={openBudgetEdit}
-              />
+              /> : null}
 
+              {!isSpectator ? <>
               <section
                 style={{
                   ...sectionMutedCardStyle,
@@ -12607,6 +12620,8 @@ export default function TripDetailPage() {
                 )}
               </section>
 
+              </> : null}
+
               <div style={{ ...wrappingActionRowStyle, gap: 8, paddingTop: 2 }}>
                 {tripItemMapActions(detailsItem).map((action) => (
                   <a
@@ -12661,7 +12676,7 @@ export default function TripDetailPage() {
         document.body,
       ) : null}
 
-      {budgetModalOpen && budgetEditingItem && trip ? createPortal(
+      {!isSpectator && budgetModalOpen && budgetEditingItem && trip ? createPortal(
         <div
           role="dialog"
           aria-modal="true"

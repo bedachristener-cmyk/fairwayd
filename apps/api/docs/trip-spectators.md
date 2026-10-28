@@ -2,7 +2,7 @@
 
 Organizers add a registered account with role VIEWER (shown as Spectator / read only). Guests cannot be spectators. Existing participants cannot be converted to spectators because they may already have financial allocations; spectator-to-participant promotion is supported.
 
-VIEWER can read its own trip list and a restricted itinerary from GET /trips/:id. Only GROUP itinerary items are returned, with an explicit field allowlist. Notes, booking references, costs, participants, private/selected items and documents are excluded. The spectator page links to the normal Feed; following and post visibility rules remain unchanged.
+VIEWER can read its own trip list and a restricted itinerary from GET /trips/:id. Only GROUP itinerary items are returned, with an explicit field allowlist. Notes, booking references, costs, participants, private/selected items and documents are excluded. Spectators use the normal Trip layout with overview, timeline, calendar, map and read-only member display. Budget, documents, checklist, personal/group costs and Before you go are hidden, including private panels in item details. Activity is hidden because it may mention private items or financial changes. Course coordinates and public profile display fields are allowlisted; private profile fields are excluded. Protected endpoints are never requested by this view. Posts remain in the normal Feed; following and post visibility rules remain unchanged.
 
 All other member-level Trip service operations reject VIEWER through the common membership check; organizer operations already require OWNER or ADMIN. Document upload preflight, metadata/file retrieval, costs, trip activity and item mutations remain protected on the server.
 

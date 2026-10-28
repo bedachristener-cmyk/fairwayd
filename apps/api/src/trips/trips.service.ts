@@ -358,12 +358,16 @@ function manageableTripItemWhereForMembership(
 }
 
 export function spectatorTrip(trip: any) {
-  const fields = ['id', 'type', 'title', 'date', 'startsAt', 'endDate', 'startTime', 'endTime', 'locationName', 'address', 'sortOrder'];
+  const fields = ['id', 'type', 'title', 'date', 'startsAt', 'endDate', 'startTime', 'endTime', 'locationName', 'address', 'sortOrder', 'visibility', 'courseId', 'departureFromHotelTime', 'roundDurationMinutes', 'returnToHotel'];
   const items = (trip.items ?? []).filter((item: any) => item.visibility === 'GROUP').map((item: any) => ({
     ...Object.fromEntries(fields.map(key => [key, item[key] ?? null])),
-    course: item.course ? { id: item.course.id, name: item.course.name, city: item.course.city, country: item.course.country } : null,
+    course: item.course ? { id: item.course.id, name: item.course.name, city: item.course.city, country: item.course.country, lat: item.course.lat, lon: item.course.lon, website: item.course.website } : null,
   }));
-  return { id: trip.id, title: trip.title, destination: trip.destination, coverImageUrl: trip.coverImageUrl, viewerRole: 'VIEWER', members: [], items, _count: { items: items.length } };
+  const members = (trip.members ?? []).filter((member: any) => member.role !== TripRole.VIEWER).map((member: any) => ({
+    id: member.id, userId: member.userId, displayName: member.displayName, isGuest: member.isGuest, role: member.role,
+    user: member.user ? { id: member.user.id, name: member.user.name, handle: member.user.handle, avatarUrl: member.user.avatarUrl } : null,
+  }));
+  return { id: trip.id, title: trip.title, destination: trip.destination, coverImageUrl: trip.coverImageUrl, viewerRole: 'VIEWER', members, items, _count: { items: items.length } };
 }
 
 @Injectable()
