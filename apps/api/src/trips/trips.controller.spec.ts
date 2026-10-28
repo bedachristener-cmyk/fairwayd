@@ -1,8 +1,9 @@
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import {
   deletePrivateUpload,
   readStoredUpload,
   uploadPrivateToR2,
+  uploadToR2,
 } from '../storage/r2.service';
 import { TripsController } from './trips.controller';
 
@@ -96,5 +97,17 @@ describe('TripsController document downloads', () => {
     );
     expect(readStoredUpload).not.toHaveBeenCalled();
     expect(response.send).not.toHaveBeenCalled();
+  });
+});
+
+
+describe('Trip cover upload permissions', () => {
+  it('checks organizer permissions before writing an image to storage', async () => {
+    jest.clearAllMocks();
+    const service = { assertCanManageTrip: jest.fn().mockRejectedValue(new ForbiddenException()), update: jest.fn() };
+    const controller = new TripsController(service as any);
+    await expect(controller.uploadCover('trip', { user: { id: 'spectator' } }, { buffer: Buffer.from('png'), mimetype: 'image/png' } as Express.Multer.File)).rejects.toThrow(ForbiddenException);
+    expect(uploadToR2).not.toHaveBeenCalled();
+    expect(service.update).not.toHaveBeenCalled();
   });
 });

@@ -48,7 +48,7 @@ import CourseSubmissionsAdminPage from "./pages/CourseSubmissionsAdminPage";
 import CourseSubmissionHistoryAdminPage from "./pages/CourseSubmissionHistoryAdminPage";
 import AddTripItemPage from "./pages/AddTripItemPage";
 import CreateTripPage from "./pages/CreateTripPage";
-import TripDetailPage from "./pages/TripDetailPage";
+import TripDetailPage from "./pages/TripEntryPage";
 import TripInvitePage from "./pages/TripInvitePage";
 import TripsPage from "./pages/TripsPage";
 

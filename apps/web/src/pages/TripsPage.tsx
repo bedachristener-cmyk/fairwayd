@@ -19,6 +19,7 @@ type Trip = {
   destination?: string | null;
   coverImageUrl?: string | null;
   createdAt?: string | null;
+  viewerRole?: "VIEWER";
   members?: unknown[];
   items?: TripItem[];
   _count?: {
@@ -567,7 +568,7 @@ export default function TripsPage() {
             const flag = destinationFlag(trip.destination);
             const coverUrl = fileUrl(trip.coverImageUrl);
             const itemTypeCounts = tripItemTypeCounts(trip.items);
-            const summaryStats = [
+            const summaryStats = trip.viewerRole === "VIEWER" ? `Spectator · ${itemCount} itinerary items` : [
               `${memberCount} ${memberCount === 1 ? "member" : "members"}`,
               `${itemCount} ${itemCount === 1 ? "item" : "items"}`,
             ].join(" · ");

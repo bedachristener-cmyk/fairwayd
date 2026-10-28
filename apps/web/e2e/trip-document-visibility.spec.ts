@@ -82,10 +82,12 @@ async function mockTripApi(page: Page) {
     ],
   });
 
-  await page.route("**/api/**", async (route) => {
+  await page.route("**/*", async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
 
+    // The legacy onboarding client calls /users/me without the /api prefix.
+    if (path === "/users/me") return json(route, mockUser);
     if (!path.startsWith("/api/")) return route.continue();
 
     if (path === "/api/users/me") return json(route, mockUser);
@@ -150,11 +152,11 @@ test("flight cost actions use the flight blue accent", async ({ page }) => {
 
   const addCost = page.getByRole("button", { name: "+ Add cost" }).first();
   await expect(addCost).toBeVisible();
-  await expect(addCost).toHaveCSS("color", "rgb(47, 145, 216)");
+  await expect(addCost).toHaveCSS("color", "rgb(40, 123, 181)");
   await addCost.click();
 
   const saveCosts = page.getByRole("button", { name: "Save costs" }).first();
-  await expect(saveCosts).toHaveCSS("background-color", "rgb(47, 145, 216)");
+  await expect(saveCosts).toHaveCSS("background-color", "rgb(40, 123, 181)");
 });
 
 
@@ -163,6 +165,10 @@ test("trip item documents keep permissions collapsed until requested", async ({ 
   await page.goto("/trips/trip-1");
   await page.getByRole("button", { name: /Timeline/i }).click();
   await page.getByRole("button", { name: "Edit" }).click();
+
+  const relatedDocuments = page.getByRole("button", { name: /Related documents/ });
+  await expect(relatedDocuments).toHaveAttribute("aria-expanded", "false");
+  await relatedDocuments.click();
 
   await expect(page.getByText("Upload new document", { exact: true })).toBeVisible();
   await expect(page.getByText("Booking PDF", { exact: true })).toBeVisible();

@@ -37,7 +37,7 @@ jobs:
           cache-dependency-path: apps/web/package-lock.json
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npx playwright test e2e/email-notifications.spec.ts --project=chromium
+      - run: npx playwright test e2e/email-notifications.spec.ts e2e/trip-spectator.spec.ts e2e/trip-document-visibility.spec.ts --project=chromium
         env:
           CI: 'true'
           VITE_API_BASE_URL: http://127.0.0.1:3000
@@ -48,4 +48,6 @@ jobs:
           path: |
             /tmp/activity-email-*.png
             /tmp/email-settings-*.png
+            /tmp/trip-spectator-*.png
+            apps/web/test-results/**
           if-no-files-found: ignore
