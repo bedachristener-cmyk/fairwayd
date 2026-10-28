@@ -7,7 +7,7 @@ import TripDetailPage from './TripDetailPage';
 export default function TripEntryPage() {
   const { tripId } = useParams();
   const { token } = useAuth();
-  const [role, setRole] = useState<string | null>(null);
+  const [role, setRole] = useState<{ tripId: string; token: string; value: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     const abort = new AbortController();
@@ -19,13 +19,13 @@ export default function TripEntryPage() {
       if (!response.ok) throw new Error('This trip is not available to your account.');
       const data = await response.json();
       if (abort.signal.aborted) return;
-      setRole(data.viewerRole === 'VIEWER' ? 'VIEWER' : 'PARTICIPANT');
+      setRole({ tripId: tripId || '', token: token || '', value: data.viewerRole === 'VIEWER' ? 'VIEWER' : 'PARTICIPANT' });
     }
     if (token && tripId) void load().catch(e => { if (!abort.signal.aborted) setError(e.message); });
     return () => abort.abort();
   }, [token, tripId]);
 
   if (error) return <div className="fw-page" style={{ padding: 20 }}><p role="alert">{error}</p><Link to="/trips">Back to trips</Link></div>;
-  if (!role) return <div className="fw-page" style={{ padding: 20 }}>Loading trip…</div>;
-  return <TripDetailPage key={`${tripId}:${role}`} spectatorMode={role === 'VIEWER'} />;
+  if (!role || role.tripId !== tripId || role.token !== token) return <div className="fw-page" style={{ padding: 20 }}>Loading trip…</div>;
+  return <TripDetailPage key={`${tripId}:${role.value}`} spectatorMode={role.value === 'VIEWER'} />;
 }
