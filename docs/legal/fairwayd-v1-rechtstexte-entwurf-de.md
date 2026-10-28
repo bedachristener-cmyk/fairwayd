@@ -8,7 +8,7 @@ Dieser Entwurf berücksichtigt die derzeitige Golf-, Reiseplanungs- und Social-F
 
 - **Betreiber:** vollständige rechtliche Firma bzw. Name, Rechtsform, Geschäfts-/Zustelladresse, Sitz und gegebenenfalls UID. «Fairwayd» als Produktname genügt nicht zur Identifikation des Vertragspartners.
 - **Kontakt:** tatsächlich eingerichtete und überwachte Postfächer. Im bisherigen Code stehen legal@fairwayd.golf und privacy@fairwayd.golf; deren Betrieb ist nicht bestätigt. Eine externe Meldemöglichkeit muss auch ohne Account erreichbar sein.
-- **Alter:** Mindestalter festlegen. Für diesen ersten Entwurf wird eine ausschliesslich volljährige Pilotgruppe vorgeschlagen. Die nachstehende 18-Jahre-Klausel ist ein Vorschlag, keine bereits beschlossene oder technisch geprüfte Alterskontrolle.
+- **Alter – Produktentscheidung vom 28.10.2026:** erster Pilot für die bestehende volljährige Reisegruppe ab 18 Jahren; spätere Öffnung ab 16 Jahren als Ziel, erst nach Umsetzung und Prüfung geeigneter Schutzmassnahmen, Altersabfrage und erforderlicher Zustimmungen. Unter 16 nicht für V1.0 vorgesehen. Die technische Alterskontrolle ist noch nicht geprüft oder umgesetzt. Store-Inhaltsfreigabe, vertragliches Mindestalter und rechtlich erforderliche Elternzustimmung sind getrennt zu behandeln.
 - **Zielmärkte:** Schweiz, Wohnsitze der Pilotgruppe und spätere Ausrichtung auf EU/EWR oder andere Länder feststellen. Schweizer Rechtswahl ersetzt keine Prüfung zwingender ausländischer Vorschriften, insbesondere DSGVO/DSA bei entsprechendem Anwendungsbereich.
 - **Geschäftsmodell:** bestätigen, dass Fairwayd im Pilot keine eigenen Reisen verkauft, Buchungen verbindlich vermittelt, Zahlungen abwickelt oder Versicherungen vermittelt. Tatsächliche Tätigkeiten sind entscheidend.
 - **Datenschutz:** konkrete Vertragspartner, Verarbeitungs- und Zugriffsländer, Auftragsbearbeitungsverträge, Unterauftragnehmer und Übermittlungsgarantien prüfen; feste Lösch-/Backupfristen eintragen. Keine Aussage «alle Daten bleiben in der Schweiz» ohne Nachweis.
@@ -35,7 +35,7 @@ Fairwayd ist im hier beschriebenen Pilotbetrieb eine Planungs- und Kommunikation
 
 ## 3. Zugang, Mindestalter und Konto
 
-**Vorschlag für den Pilot:** Die Nutzung ist Personen ab 18 Jahren vorbehalten. [ALTERSREGEL BESTÄTIGEN UND MIT REGISTRIERUNG ABGLEICHEN.]
+**Mindestalter für den ersten Pilot:** Die Nutzung ist Personen ab 18 Jahren vorbehalten. [ALTERSREGEL VOR VERÖFFENTLICHUNG MIT REGISTRIERUNG ABGLEICHEN.] Eine spätere Öffnung für Personen ab 16 Jahren ist geplant, aber nicht Gegenstand dieser Pilotfassung und noch nicht freigeschaltet.
 
 Der Zugang zum Pilot kann auf eingeladene Personen beschränkt werden. Ein Anspruch auf Aufnahme besteht nicht. Angaben zur Registrierung müssen richtig sein; unzulässige Identitätstäuschung und das Auftreten als andere Person sind verboten. Pseudonyme sind zulässig, soweit sie nicht täuschen oder Rechte verletzen.
 
