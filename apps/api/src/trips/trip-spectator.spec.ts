@@ -20,6 +20,15 @@ describe('Trip spectators', () => {
     for (const key of ['amount', 'bookingRef', 'notes', 'costs', 'documentLinks', 'participants', 'posts', 'description', 'baseCurrency', 'documents']) expect(JSON.stringify(result)).not.toContain(`"${key}"`);
   });
 
+  it('includes safe course map data and member display fields without private user data', () => {
+    const result = spectatorTrip({ ...trip, members: [{ id: 'owner', userId: 'owner', role: TripRole.OWNER, user: { id: 'owner', name: 'Organizer', email: 'private@example.com', passwordHash: 'secret' } }], items: [{ ...trip.items[0], course: { id: 'course', name: 'Seapine', lat: 12.5, lon: 99.9, website: 'https://example.com', posts: [{ body: 'private' }] } }] });
+    expect(result.items[0].course).toMatchObject({ lat: 12.5, lon: 99.9 });
+    expect(result.members[0].user).toMatchObject({ name: 'Organizer' });
+    expect(JSON.stringify(result)).not.toContain('private@example.com');
+    expect(JSON.stringify(result)).not.toContain('passwordHash');
+    expect(JSON.stringify(result)).not.toContain('posts');
+  });
+
   it('returns the restricted projection when a spectator opens a trip', async () => {
     const { prisma, service } = setup(); prisma.trip.findUnique.mockResolvedValue(trip);
     expect(await service.findOne('trip', 'viewer')).toEqual(spectatorTrip(trip));
