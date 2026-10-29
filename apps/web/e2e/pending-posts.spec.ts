@@ -1,6 +1,24 @@
 import { test, expect } from '@playwright/test';
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1sAAAAASUVORK5CYII=', 'base64');
 for (const width of [390, 1280]) {
+  test(`course composer keeps a pending text post unpublished at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.addInitScript(() => { localStorage.setItem('fairwayd_token', 'author'); localStorage.setItem('fairwayd_lang', 'en'); });
+    await page.route('**/*', async route => {
+      const path = new URL(route.request().url()).pathname;
+      const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+      if (path.endsWith('/users/me')) return json({ id: 'author', handle: 'author', avatarUrl: '/logo.png', termsAcceptedAt: '2026-01-01' });
+      if (path === '/api/posts') return json({ status: 'PENDING_REVIEW', reviewId: 'text-reference' }, 202);
+      if (path.startsWith('/api/')) return json({ items: [], count: 0 });
+      return route.continue();
+    });
+    await page.goto('/compose/course');
+    await page.getByPlaceholder('Share your round, trip or golf story...').fill('Text needing review');
+    await page.getByRole('button', { name: 'Post', exact: true }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Your post is awaiting review' })).toContainText('text-reference');
+    expect(new URL(page.url()).pathname).toBe('/compose/course');
+    await expect(page.getByText('Posted!', { exact: true })).toHaveCount(0);
+  });
   test(`pending submission has a clear notice and never enters the feed at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.addInitScript(() => { localStorage.setItem('fairwayd_token', 'author'); localStorage.setItem('fairwayd_lang', 'en'); });
@@ -10,7 +28,7 @@ for (const width of [390, 1280]) {
     await page.route('**/*', async route => {
       const req = route.request(), path = new URL(req.url()).pathname;
       const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
-      if (path.endsWith('/users/me')) return json({ id: 'author', handle: 'author', name: 'Author', termsAcceptedAt: '2026-01-01' });
+      if (path.endsWith('/users/me')) return json({ id: 'author', handle: 'author', name: 'Author', avatarUrl: '/logo.png', termsAcceptedAt: '2026-01-01' });
       if (path === '/api/posts' && req.method() === 'POST') { await gate; return json({ status: 'PENDING_REVIEW', reviewId: 'draft-reference' }, 202); }
       if (path === '/api/courses' || path === '/courses') return json([course]);
       if (path.endsWith('/courses/search')) return json({ items: [course] });
@@ -43,7 +61,7 @@ for (const width of [390, 1280]) {
     await page.route('**/*', async route => {
       const req = route.request(), path = new URL(req.url()).pathname;
       const json = (body: unknown) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
-      if (path.endsWith('/users/me')) return json({ id: 'admin', handle: 'admin', termsAcceptedAt: '2026-01-01' });
+      if (path.endsWith('/users/me')) return json({ id: 'admin', handle: 'admin', avatarUrl: '/logo.png', termsAcceptedAt: '2026-01-01' });
       if (path === '/api/safety/admin/moderation/status') return json({ enabled: true, configured: true });
       if (path === '/api/safety/admin/moderation') return json([]);
       if (path === '/api/safety/admin/pending-posts') return json([{ id: 'draft', state, content: state === 'PENDING' ? 'Complete private post' : '', courseId: 'course', visibility: 'PRIVATE', categories: ['violence'], expiresAt: '2026-12-01', user: { name: 'Test Author' }, images: state === 'PENDING' ? [{ id: 'first' }, { id: 'second' }] : [] }]);

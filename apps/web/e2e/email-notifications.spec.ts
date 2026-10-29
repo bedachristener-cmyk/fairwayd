@@ -71,6 +71,7 @@ for (const width of [390, 1280]) {
     const api = await setup(page);
     const trip = page.getByRole("switch", { name: "Trip memberships" });
     const follow = page.getByRole("switch", { name: "Follow activity" });
+    await expect(page.getByRole("switch", { name: "Content reviews" })).toHaveAttribute("aria-checked", "true");
     await expect(trip).toHaveAttribute("aria-checked", "true");
     await trip.click();
     await expect(trip).toHaveAttribute("aria-checked", "false");
