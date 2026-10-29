@@ -18,7 +18,7 @@ function setup() {
     course: { findUnique: jest.fn().mockResolvedValue({ id: 'course' }) },
     user: { findMany: jest.fn().mockResolvedValue([{ id: 'admin', adminRole: 'ADMIN' }, { id: 'former', adminRole: 'USER' }]) },
     pendingPost: { findUnique: jest.fn().mockResolvedValue(null), findUniqueOrThrow: jest.fn().mockResolvedValue(draft), findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn(), count: jest.fn().mockResolvedValue(0), create: jest.fn().mockResolvedValue({ id: 'draft' }), update: jest.fn(), updateMany: jest.fn().mockResolvedValue({ count: 1 }), deleteMany: jest.fn() },
-    contentModerationCase: { findMany: jest.fn().mockResolvedValue([{ status: 'PENDING', categories: ['sexual'] }]), updateMany: jest.fn() },
+    contentModerationCase: { findFirst: jest.fn().mockResolvedValue(null), findMany: jest.fn().mockResolvedValue([{ status: 'PENDING', categories: ['sexual'] }]), updateMany: jest.fn() },
     pendingPostImage: { findFirst: jest.fn(), deleteMany: jest.fn() },
     notification: { create: jest.fn(), createMany: jest.fn() },
     post: { create: jest.fn().mockResolvedValue({ id: 'published' }) },
@@ -92,6 +92,15 @@ describe('Complete pending posts', () => {
     await expect(service.decide('draft', 'admin', 'APPROVED')).rejects.toThrow('write failed');
     expect(deleteStoredUpload).toHaveBeenCalledWith('https://storage.test/post.png');
     expect(prisma.pendingPost.updateMany).toHaveBeenLastCalledWith({ where: { id: 'draft', state: 'PUBLISHING', publishToken: expect.any(String) }, data: { state: 'PENDING', publishToken: null, leaseUntil: null } });
+  });
+  it('blocks publication when another account has since raised a child-safety fingerprint', async () => {
+    const { service, prisma } = setup();
+    prisma.contentModerationCase.findFirst.mockResolvedValue({ id: 'later-child-safety-signal' });
+    await expect(service.decide('draft', 'admin', 'APPROVED')).rejects.toThrow(BadRequestException);
+    expect(uploadToR2).not.toHaveBeenCalled(); expect(prisma.post.create).not.toHaveBeenCalled();
+    prisma.pendingPostImage.findFirst.mockResolvedValue({ bytes: file().buffer, mimeType: 'image/png' });
+    await expect(service.preview('draft', 'image')).rejects.toThrow('Preview unavailable');
+    expect(prisma.contentModerationCase.findFirst).toHaveBeenNthCalledWith(1, expect.objectContaining({ where: expect.objectContaining({ blockedFingerprint: { in: expect.arrayContaining([expect.any(String)]) } }) }));
   });
   it('refuses child-safety overrides, missing courses and forged decisions', async () => {
     const { service, prisma } = setup();
