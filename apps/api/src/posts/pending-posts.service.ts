@@ -88,6 +88,8 @@ export class PendingPostsService implements OnModuleInit, OnModuleDestroy {
   async preview(id: string, imageId: string) {
     const image = await this.prisma.pendingPostImage.findFirst({ where: { id: imageId, pendingPostId: id, pendingPost: { state: 'PENDING', expiresAt: { gt: new Date() } } }, select: { bytes: true, mimeType: true } });
     if (!image) throw new NotFoundException('Preview unavailable');
+    const fingerprint = createHash('sha256').update('image\0').update(Buffer.from(image.bytes)).digest('hex');
+    if (await this.prisma.contentModerationCase.findFirst({ where: { blockedFingerprint: fingerprint, expiresAt: { gt: new Date() } }, select: { id: true } })) throw new NotFoundException('Preview unavailable');
     return { bytes: Buffer.from(image.bytes), mimeType: image.mimeType };
   }
 
@@ -100,6 +102,9 @@ export class PendingPostsService implements OnModuleInit, OnModuleDestroy {
     try {
       const draft = await this.prisma.pendingPost.findUniqueOrThrow({ where: { id }, include: { images: { orderBy: { position: 'asc' } } } });
       if (decision === 'APPROVED') {
+        // Signals can arrive after this draft was quarantined, including from another account/scope.
+        const fingerprints = [createHash('sha256').update('text\0').update(draft.content.trim()).digest('hex'), ...draft.images.map(file => createHash('sha256').update('image\0').update(Buffer.from(file.bytes)).digest('hex'))];
+        if (await this.prisma.contentModerationCase.findFirst({ where: { blockedFingerprint: { in: fingerprints }, expiresAt: { gt: new Date() } }, select: { id: true } })) throw new BadRequestException('This content has no ordinary approval path.');
         const cases = await this.prisma.contentModerationCase.findMany({ where: { id: { in: draft.reviewCaseIds } }, select: { status: true, categories: true } });
         if (cases.some(c => c.status === 'BLOCKED' || c.categories.includes('sexual/minors'))) throw new BadRequestException('This content has no ordinary approval path.');
         if (!await this.prisma.course.findUnique({ where: { id: draft.courseId }, select: { id: true } })) throw new BadRequestException('The course no longer exists. Reject this post instead.');

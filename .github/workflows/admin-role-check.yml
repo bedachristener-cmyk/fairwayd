@@ -48,7 +48,9 @@ jobs:
           echo 'CREATE EXTENSION IF NOT EXISTS postgis;' > /tmp/ci-extensions.sql
           npx prisma db execute --file /tmp/ci-extensions.sql
           npx prisma db execute --file /tmp/before-pending.sql
-          npx prisma db execute --file prisma/migrations/20261029180000_pending_post_review/migration.sql
+          if ! grep -q '^model PendingPost {' /tmp/before-pending.prisma; then
+            npx prisma db execute --file prisma/migrations/20261029180000_pending_post_review/migration.sql
+          fi
           npm test -- --runInBand pending-posts.integration.spec.ts
   web-build:
     runs-on: ubuntu-latest
