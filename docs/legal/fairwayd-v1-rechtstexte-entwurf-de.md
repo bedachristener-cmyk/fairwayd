@@ -1,6 +1,6 @@
 # Fairwayd V1.0 – AGB, Community-Regeln und Datenschutz
 
-**Arbeitsentwurf vom 28. Oktober 2026. Nicht zur unveränderten Veröffentlichung bestimmt.**
+**Arbeitsentwurf, überarbeitet am 29. Oktober 2026. Nicht zur unveränderten Veröffentlichung bestimmt.**
 
 Dieser Entwurf berücksichtigt die derzeitige Golf-, Reiseplanungs- und Social-Funktionalität. Er ersetzt keine rechtliche Prüfung. Platzhalter in eckigen Klammern müssen vor Veröffentlichung ausgefüllt werden. Regeln müssen durch den tatsächlichen Betrieb und die technischen Möglichkeiten gedeckt sein. Die Nutzung durch eine kleine Reisegruppe beseitigt gesetzliche Pflichten nicht.
 
@@ -19,7 +19,7 @@ Dieser Entwurf berücksichtigt die derzeitige Golf-, Reiseplanungs- und Social-F
 
 # Teil A – Allgemeine Nutzungsbedingungen / AGB
 
-**Version:** [VERSION] · **Gültig ab:** [DATUM]
+**Entwurfskennung:** v1.0-pilot-draft-2026-10-29 · **Gültig ab:** [VERÖFFENTLICHUNGSDATUM]
 
 ## 1. Anbieter und Geltungsbereich
 
@@ -69,9 +69,11 @@ Die Community-Regeln gelten für sämtliche Inhalte und Funktionen. Zusätzlich 
 
 ## 8. Meldungen, Moderation und Einschränkungen
 
-Mutmassliche Rechts- oder Regelverstösse können über die vorhandene Meldefunktion oder **[ÜBERWACHTE MELDEADRESSE]** gemeldet werden. Betroffene müssen dafür keinen Account anlegen. Die Community-Regeln erläutern die nötigen Angaben und das Verfahren.
+Mutmassliche Rechts- oder Regelverstösse können über die vorhandene Meldefunktion oder **legal@fairwayd.golf** gemeldet werden. Betroffene müssen dafür keinen Account anlegen. Die Community-Regeln erläutern die nötigen Angaben und das Verfahren.
 
 Der Betreiber kann Inhalte prüfen, die Sichtbarkeit beschränken, Inhalte entfernen und Konten oder Funktionen verhältnismässig einschränken. Bei dringender Gefahr, schwerwiegenden Verstössen oder verbindlichen behördlichen Anordnungen kann eine sofortige vorläufige Massnahme erforderlich sein. Es besteht keine Zusage einer lückenlosen Vorabprüfung aller Inhalte oder einer Überwachung rund um die Uhr. Dies beseitigt keine gesetzlichen Prüf-, Schutz- oder Handlungspflichten.
+
+Ergänzend können die in Teil C Abschnitt 4a beschriebenen automatischen Inhaltsprüfungen eingesetzt werden, sobald diese aktiviert und vorab transparent angekündigt wurden. Automatische Signale sind keine verbindliche rechtliche Beurteilung und führen nicht allein zu einer automatischen Kontosperre. Nutzer können eine Zurückweisung unter Angabe der angezeigten Referenz über legal@fairwayd.golf zur menschlichen Überprüfung vorlegen.
 
 Soweit rechtlich zulässig und ohne den Schutz Betroffener oder Ermittlungen zu gefährden, werden Gründe und Möglichkeiten einer Überprüfung mitgeteilt. Die Identität meldender Personen wird anderen Nutzern nicht routinemässig offengelegt. Gesetzlich erforderliche Offenlegungen bleiben vorbehalten.
 
@@ -103,7 +105,9 @@ Der betroffene Nutzer wird angemessen informiert und erhält, soweit zumutbar, G
 
 ## 13. Beendigung und Löschung
 
-Nutzer können ihr Konto über die angebotene Kontolöschung oder eine Anfrage an **[KONTAKT]** beenden. Vorher sind wichtige eigene Unterlagen zu sichern. Folgen für gemeinsam verwaltete Trips und Einträge werden nach der tatsächlich implementierten Löschlogik erläutert: **[GENAUE FOLGEN FÜR GETEILTE TRIPS, DOKUMENTE, KOSTEN UND HOCHGELADENE DATEIEN ERGÄNZEN]**.
+Nutzer können ihr Konto über die angebotene Kontolöschung oder eine Anfrage an **legal@fairwayd.golf** beenden. Vorher sind wichtige eigene Unterlagen zu sichern. Die Kontolöschung entfernt nach der aktuellen Datenstruktur auch die vom Kontoinhaber erstellten Trips einschliesslich ihrer Einträge, Kosten und Dokumentzuordnungen; dies betrifft den Zugriff anderer Mitglieder. Auch eigene Reiseeinträge und hochgeladene Dokumentdatensätze in Trips anderer Organisatoren sowie eigene Posts und Kommentare werden entfernt. Die Kontolöschung überträgt die Organisation eines Trips nicht automatisch an andere Mitglieder. Wichtige gemeinsame Unterlagen und Absprachen sind deshalb vorher zu sichern bzw. neu zu organisieren. Ein blosses Verlassen eines Trips ist von der Löschung des gesamten Kontos zu unterscheiden.
+
+Die Entfernung von Datenbankeinträgen und die Bereinigung hochgeladener Dateien sind getrennte technische Vorgänge. Eine sofortige und ausnahmslos vollständige Entfernung aller Dateikopien wird nicht zugesichert. **[VOR VERÖFFENTLICHUNG: DATEIBEREINIGUNG, RESTDATEN UND BACKUPFRISTEN VERIFIZIEREN; DATENSCHUTZERKLÄRUNG ABSCHNITT 7 ABGLEICHEN.]**
 
 Der Betreiber kann die Nutzung aus sachlichem Grund beenden, insbesondere bei erheblichen oder wiederholten Verstössen. Massnahmen sollen zur Schwere, Wiederholung und Gefährdung passen. Für gesetzlich erforderliche Aufbewahrungen oder die Abwehr von Ansprüchen notwendige Daten dürfen zweckgebunden weiter aufbewahrt werden; Näheres beschreibt die Datenschutzerklärung.
 
@@ -111,7 +115,7 @@ Der Betreiber kann die Nutzung aus sachlichem Grund beenden, insbesondere bei er
 
 Neue Fassungen werden mit Versionsnummer und Gültigkeitsdatum bereitgestellt. Wesentliche Änderungen werden angemessen angekündigt und, soweit erforderlich, ausdrücklich vereinbart. Blosse Weiternutzung gilt nicht pauschal als Einwilligung in jede beliebige Änderung oder Datenbearbeitung. Bereits entstandene Ansprüche werden nicht rückwirkend entzogen.
 
-Es gilt schweizerisches Recht unter Vorbehalt zwingend anwendbarer Vorschriften. Gerichtsstände richten sich nach den anwendbaren gesetzlichen Regeln; zwingende Verbrauchergerichtsstände bleiben erhalten. Eine ergänzende Gerichtsstandsvereinbarung für zulässige Fälle ist erst nach Bestätigung von Betreiber und Sitz einzufügen. Die Unwirksamkeit einer Bestimmung beseitigt nicht automatisch die übrigen Bedingungen; eine unwirksame Klausel wird nicht pauschal auf das gerade noch zulässige Maximum reduziert.
+Es gilt schweizerisches Recht unter Vorbehalt zwingend anwendbarer Vorschriften. Gerichtsstände richten sich nach den anwendbaren gesetzlichen Regeln; zwingende Verbrauchergerichtsstände bleiben erhalten. Die Unwirksamkeit einer Bestimmung beseitigt nicht automatisch die übrigen Bedingungen; eine unwirksame Klausel wird nicht pauschal auf das gerade noch zulässige Maximum reduziert.
 
 ---
 
@@ -160,13 +164,15 @@ Bewertungen sollen eigene, nachvollziehbare Erfahrungen wiedergeben. Persönlich
 
 ## 5. Inhalte melden
 
-Nutze die Meldefunktion am betreffenden Inhalt oder schreibe an **[ÖFFENTLICH ERREICHBARE MELDEADRESSE]**. Nenne möglichst den Link bzw. die Inhaltskennung, den Grund und die betroffenen Rechte; bei Bedarf eine sichere Kontaktmöglichkeit. Urheberrechtsmeldungen sollten das geschützte Werk und die beanstandete Nutzung so konkret wie möglich bezeichnen. Eine fehlende rechtliche Fachformulierung ist kein Grund, einen nachvollziehbaren Hinweis zu ignorieren.
+Nutze die Meldefunktion am betreffenden Inhalt oder schreibe an **legal@fairwayd.golf**. Nenne möglichst den Link bzw. die Inhaltskennung, den Grund und die betroffenen Rechte; bei Bedarf eine sichere Kontaktmöglichkeit. Urheberrechtsmeldungen sollten das geschützte Werk und die beanstandete Nutzung so konkret wie möglich bezeichnen. Eine fehlende rechtliche Fachformulierung ist kein Grund, einen nachvollziehbaren Hinweis zu ignorieren.
 
 Verbotene Aufnahmen nicht zur Beweissicherung erneut posten, teilen oder unaufgefordert per E-Mail verbreiten. Bei vermuteter sexueller Ausbeutung von Kindern möglichst nur Fundstelle und sachliche Angaben übermitteln. Bei akuter Gefahr zusätzlich die zuständigen Notfall- oder Strafverfolgungsstellen kontaktieren; Fairwayd ist kein Notfalldienst.
 
 ## 6. Prüfung, Massnahmen und Rückfragen
 
-Meldungen werden nach Art und Dringlichkeit geprüft. Je nach Ergebnis kommen eine Rückfrage, Korrekturaufforderung, Entfernung, vorläufige Einschränkung, Verwarnung oder vorübergehende bzw. dauerhafte Kontosperre in Betracht. Schwere Verstösse können eine sofortige Massnahme ohne vorherige Verwarnung rechtfertigen. Nutzer dürfen auf eine Massnahme an **[KONTAKT]** antworten und eine Überprüfung verlangen. Hierfür wird keine bereits vorhandene automatisierte Einspruchsfunktion behauptet.
+Meldungen werden nach Art und Dringlichkeit geprüft. Je nach Ergebnis kommen eine Rückfrage, Korrekturaufforderung, Entfernung, vorläufige Einschränkung, Verwarnung oder vorübergehende bzw. dauerhafte Kontosperre in Betracht. Schwere Verstösse können eine sofortige Massnahme ohne vorherige Verwarnung rechtfertigen. Nutzer dürfen auf eine Massnahme an **legal@fairwayd.golf** antworten und eine Überprüfung verlangen. Hierfür wird keine bereits vorhandene automatisierte Einspruchsfunktion behauptet.
+
+Bei einer automatischen Inhaltszurückweisung kann die angezeigte Referenz an legal@fairwayd.golf übermittelt und die eigene Sicht erläutert werden. Eine Freigabe eines gewöhnlichen Prüffalls veröffentlicht den Inhalt nicht automatisch: Die ursprüngliche Person muss denselben Inhalt innerhalb der angezeigten Freigabefrist erneut einreichen. Eine Ablehnung kann zur Überprüfung vorgelegt werden; ein Anspruch auf Freigabe rechtswidriger oder regelwidriger Inhalte besteht nicht. Inhalte mit Hinweisen auf sexuelle Ausbeutung Minderjähriger werden nicht im gewöhnlichen Freigabeverfahren erneut angezeigt oder freigeschaltet. Rückfragen und ein gesondertes erforderliches rechtliches Verfahren bleiben möglich; hierfür keine mutmasslich illegalen Bilder erneut übermitteln.
 
 Massnahmen sollen nachvollziehbar und verhältnismässig sein. Der Betreiber kann notwendige Angaben für die Bearbeitung, Rechtsdurchsetzung oder gesetzliche Pflichten sichern und bei entsprechender Rechtsgrundlage mit zuständigen Behörden kooperieren. Das ist keine pauschale Erlaubnis zur Weitergabe sämtlicher Nutzerdaten.
 
@@ -174,7 +180,7 @@ Massnahmen sollen nachvollziehbar und verhältnismässig sein. Der Betreiber kan
 
 # Teil C – Datenschutzerklärung
 
-**Version:** [VERSION] · **Stand:** [DATUM]
+**Entwurfskennung:** v1.0-pilot-draft-2026-10-29 · **Stand:** 29. Oktober 2026
 
 > Diese Fassung ist erst nach Ergänzung der folgenden tatsächlichen Angaben veröffentlichungsfähig. Insbesondere Dienstleister, Länder und Fristen dürfen nicht als bestätigt behandelt werden.
 
@@ -188,6 +194,8 @@ Verantwortlich für die hier beschriebenen Bearbeitungen ist **beeZONE, Beda Chr
 |---|---|
 | Name, E-Mail, Nutzerkennung, Passwort-Hash bei Passwortkonten, externe Anmeldekennung, Verifikationsstatus | Konto, Anmeldung, Kontosicherheit und Wiederherstellung |
 | AGB-Version und Annahmezeitpunkt | Nachweis vereinbarter Bedingungen |
+| Kontaktanfragen: Absenderadresse, Nachricht, freiwillige Angaben und allfällige Anhänge | Beantwortung allgemeiner, rechtlicher und datenschutzbezogener Anliegen |
+| Bei aktivierter Inhaltsprüfung: eingereichte Texte/Bilder, Prüfkategorien, Inhaltsprüfwerte, Referenz und Bearbeitungsstatus | Vorabprüfung, Zurückhaltung auffälliger Inhalte und menschliche Überprüfung; Einzelheiten in Abschnitt 4a |
 | Profilbild, Handle und freiwillige Profilfelder, etwa Handicap und Home Club | Darstellung des Profils entsprechend den angebotenen Sichtbarkeitseinstellungen |
 | Posts, Bilder, Kommentare, Likes, Bewertungen, Follows und Meldungen | Social-Funktionen, Austausch, Moderation und Missbrauchsabwehr |
 | Trip-Mitglieder und Rollen, Termine, Reiseplan, Kosten, Dokumente und Sichtbarkeiten | Gemeinsame Reiseplanung und berechtigter Zugriff |
@@ -211,11 +219,29 @@ Für freigegebene Inhalte sind Kopien oder Screenshots durch Empfänger technisc
 
 Geschützte Trip-Dokumente werden gemäss den dafür implementierten Zugriffsrechten bereitgestellt. **[PRIVATE PROD-ABLAGE UND ABSCHLUSS DER ALTDATEI-BEREINIGUNG BESTÄTIGEN.]** Berechtigte Administrationszugriffe werden auf den erforderlichen Zweck beschränkt.
 
+## 4a. Automatische Inhaltsprüfung – vorbereitete Funktion
+
+**Status dieser Entwurfsfassung:** Die Funktion ist vorbereitet, aber ihre Aktivierung und der produktive Einsatz sind noch nicht bestätigt. Vor einer Aktivierung wird der Hinweis auf den tatsächlichen Zustand aktualisiert; Vertragspartner, Länder und erforderliche Garantien sind vorher zu ergänzen. Während die Funktion ausgeschaltet ist, werden über diese Funktion keine Inhalte an OpenAI übermittelt.
+
+Bei Aktivierung prüft Fairwayd neu eingereichte oder geänderte Post- und Kommentartexte, bearbeitete Profiltexte und Destinationstipps sowie Texte neuer Kursvorschläge. Neue Postbilder, hochgeladene Profilbilder, Trip-Titelbilder und Bilder von Kursvorschlägen werden vor ihrer öffentlichen Speicherung geprüft. Zweck ist die Erkennung bestimmter schädlicher Inhaltskategorien, etwa sexueller Inhalte, Gewalt, Hass oder Selbstverletzungsaufforderungen. Die Prüfung ist keine verlässliche Erkennung sämtlicher verbotener Kategorien oder aller rechtswidrigen Inhalte.
+
+Dazu wird der betreffende Text bzw. das Bild an die Moderation API von OpenAI übermittelt. Fairwayd fügt dem Prüfinhalt keine Fairwayd-Nutzerkennung und keine Konto-E-Mail hinzu. Namen, Gesichter, Orte oder andere Angaben, die im eingereichten Inhalt selbst enthalten sind, können trotzdem Personendaten darstellen. Eine anonyme Verarbeitung wird deshalb nicht behauptet. Die internen Prüffälle sind dem einreichenden Konto zugeordnet.
+
+Trip-Dokumente, private Trip-Notizen und Finanzdaten werden von dieser Inhaltsprüfung nicht an OpenAI übertragen. Bestehende Inhalte und externe Profilbild-URLs aus der Google-Anmeldung werden nicht nachträglich über diese Funktion geprüft. Die Community-Regeln gelten auch für nicht automatisch geprüfte Inhalte.
+
+Als auffällig eingestufte Inhalte werden zurückgehalten. Gewöhnliche Prüffälle können berechtigte Administratoren in einer geschützten Prüfablage beurteilen. Nicht beanstandete Inhalte erzeugen keinen zusätzlichen dauerhaften Inhalts-Prüfdatensatz in dieser Prüfablage; ihre normale Speicherung für die verwendete Fairwayd-Funktion bleibt davon unberührt. Bei einer technischen Störung wird der betroffene neue oder geänderte Inhalt nicht freigegeben; eine spätere erneute Einreichung bleibt möglich. Eine Klassifizierung führt nicht automatisch zu einer Kontosperre.
+
+Fehleinstufungen sind möglich. Betroffene können unter Angabe der Referenz an legal@fairwayd.golf eine menschliche Überprüfung verlangen und ihre Sicht erläutern. Eine gewöhnliche Freigabe gilt nur für den unveränderten Inhalt, dieselbe Funktion und das ursprüngliche Konto und ist 24 Stunden gültig. Sie veröffentlicht nichts selbstständig. Bei besonderen Kinderschutzsignalen wird keine Inhaltskopie in der gewöhnlichen Prüfablage gespeichert und keine normale Admin-Freigabe angeboten. Ein Inhaltsprüfwert kann eine erneute Einreichung desselben markierten Inhalts während der befristeten Aufbewahrung verhindern. Dieses Verfahren ist kein spezialisiertes System zur vollständigen Erkennung von Missbrauchsdarstellungen.
+
+Aufbewahrung in Fairwayd: Offene Prüffälle und besondere Sperrnachweise laufen nach sieben Tagen ab. Bei einer gewöhnlichen Freigabe oder Ablehnung werden Prüftext und Prüfbild aus dem aktiven Prüffall entfernt; dessen begrenzter Nachweis läuft nach weiteren 24 Stunden ab. Abgelaufene Prüffälle sind nicht mehr zur Ansicht oder Freigabe zugänglich. Ihre technische Bereinigung erfolgt bei aktivem Prüfdienst beim Start und stündlich; bei einer Unterbrechung oder Deaktivierung kann die physische Löschung später erfolgen. Datenbank-Backups haben gesonderte Fristen, die vor Veröffentlichung einzutragen sind. Notwendige abweichende Sicherungen für konkrete gesetzliche Verfahren bedürfen eines gesonderten, begründeten Ablaufs.
+
+Für den vorgesehenen Endpunkt `/v1/moderations` nennt die am 29.10.2026 geprüfte OpenAI-Dokumentation keine Speicherung von Anwendungszustand oder Missbrauchsprotokoll-Inhalten und keine Nutzung der API-Inhalte zum Modelltraining. Dies ersetzt keine Prüfung des tatsächlich abgeschlossenen Vertrags, der Kontoeinstellungen und allfälliger gesetzlicher oder dienstspezifischer Ausnahmen. **[VOR AKTIVIERUNG: OPENAI-VERTRAGSPARTNER, EMPFÄNGERSTAATEN, GARANTIEN, GELTENDE DATENREGELN UND DEAKTIVIERTE FREIWILLIGE TRAININGSFREIGABEN BESTÄTIGEN.]**
+
 ## 5. Anmeldedienste, Karten und externe Links
 
-Bei Google-Anmeldung werden die zur Einrichtung oder Zuordnung des Kontos erforderlichen Identitätsangaben verarbeitet. Fairwayd erhält dadurch nicht dein Google-Passwort. Die jeweiligen externen Dienste bearbeiten Daten auch in eigener Verantwortung; deren Informationen sind zusätzlich relevant. **[TATSÄCHLICH AKTIVE PROVIDER UND ANGEFORDERTE BERECHTIGUNGEN AUFLISTEN; UNGENUTZTE APPLE-/ANDERE CODEPFADE NICHT ALS AKTIVE DIENSTE DARSTELLEN.]**
+Bei Google-Anmeldung werden die zur Einrichtung oder Zuordnung des Kontos erforderlichen Identitätsangaben verarbeitet. Fairwayd erhält dadurch nicht dein Google-Passwort. Die im aktuellen Google-Anmeldeablauf angeforderten Berechtigungen sind `openid`, `email` und `profile`; dabei werden insbesondere die externe Nutzerkennung, E-Mail sowie gegebenenfalls Name und Profilbild für die Kontozuordnung verarbeitet. Ein Zugriff auf Gmail-Nachrichten oder Google-Kalender wird durch diese Berechtigungen nicht erteilt. Die jeweiligen externen Dienste bearbeiten Daten auch in eigener Verantwortung; deren Informationen sind zusätzlich relevant. Weitere Anmeldedienste werden hier erst nach tatsächlicher Aktivierung aufgeführt.
 
-Beim Laden externer Karten können technische Verbindungsdaten, insbesondere IP-Adresse und aufgerufene Kartenausschnitte, an die betreffenden Anbieter übermittelt werden. Im Code sind unter anderem Esri/ArcGIS- und OpenStreetMap-Karten vorgesehen; **[PROD-KONFIGURATION UND GENAUE DIENSTE BESTÄTIGEN]**. Beim bewussten Öffnen externer Kartendienste oder Anbieter-Websites gelten deren Datenschutzinformationen. Externe Wechselkursabfragen dienen Währungsumrechnungen; die tatsächlich übermittelten Parameter sind im Dienstleisterverzeichnis zu dokumentieren.
+Beim Laden externer Karten können technische Verbindungsdaten, insbesondere IP-Adresse und aufgerufene Kartenausschnitte, an die betreffenden Anbieter übermittelt werden. Die aktuelle Umsetzung lädt OpenStreetMap-Kartenkacheln von `tile.openstreetmap.org` und Satelliten-/Beschriftungskacheln von Esri unter `server.arcgisonline.com`. Je nach gewählter Ansicht gehen Verbindungsdaten und der angeforderte Kartenausschnitt an den jeweiligen Dienst. **[PROD-KONFIGURATION, KONKRETE BETREIBER UND EMPFÄNGERSTAATEN BESTÄTIGEN.]** Beim bewussten Öffnen externer Kartendienste oder Anbieter-Websites gelten deren Datenschutzinformationen. Für Referenzwechselkurse ruft die Fairwayd-API `api.frankfurter.dev/v2` mit dem gewünschten Währungspaar auf. An diesen Endpunkt werden dabei keine Trip-Titel, Nutzerkennungen, Dokumente oder individuellen Kostenbeträge übermittelt; der Dienst sieht die technische Anfrage des Fairwayd-Servers. Die konkreten Betreiber- und Länderangaben sind im Dienstleisterverzeichnis zu ergänzen.
 
 ## 6. Dienstleister, Empfänger und Ausland
 
@@ -228,9 +254,13 @@ Die technische Prüfung zeigt folgende für den Betrieb vorgesehene Dienste. Vor
 | Datenbank | Neon | wie vorstehend; konkrete Prod-Region |
 | Bilder/Dateien | Cloudflare R2 | wie vorstehend; öffentliche/private Ablage, Zugriffsländer |
 | E-Mail-Zustellung | Resend | wie vorstehend; Zustell-/Protokolldaten |
-| Anmeldung | Google, weitere nur wenn aktiv | Vertragspartner, Datenarten, Länder, eigene Verantwortlichkeit |
+| Anmeldung | Google Identity Services | externe Nutzerkennung, E-Mail, gegebenenfalls Name/Bild; Vertragspartner und Länder bestätigen |
+| Automatische Inhaltsprüfung, erst nach Aktivierung | OpenAI Moderation API | Text/Bild sowie technische Anfragedaten; Vertragspartner, Länder und Garantien vor Aktivierung bestätigen |
+| Eingehende Kontaktmails | Porkbun-Weiterleitung → Google Gmail | Absender, Empfänger, Nachricht und Anhänge; Vertragsrollen, Staaten, Weiterleitungs-/Speicherfristen prüfen; Consumer-Gmail nicht als Workspace-Auftragsbearbeitung ausgeben |
 | Karten | tatsächlich aktive Esri/OSM-Dienste | konkrete Anbieter, Länder und Bedingungen |
 | Wechselkurse | Frankfurter | Endpunkt/Betreiber, übermittelte Parameter, Länder |
+
+Kontaktmails an legal@fairwayd.golf und privacy@fairwayd.golf werden über den bei Porkbun eingerichteten Weiterleitungsdienst an das zentrale Gmail-Postfach fairwayd.legal@gmail.com zugestellt und dort bearbeitet. Dies umfasst den Nachrichteninhalt, Absender-/Empfängerdaten und beigefügte Anhänge. Bitte nur für das Anliegen nötige Angaben übermitteln; keine Passwörter oder unaufgefordert vollständige Reise- und Ausweisdokumente senden. Gmail ist hier ein gesonderter Kontakt-Maildienst und nicht der Anbieter der automatischen Fairwayd-Benachrichtigungen.
 
 Weitere Empfänger können berechtigte Inhaltsadressaten sowie zuständige Behörden oder professionelle Berater sein, soweit eine rechtliche Grundlage und ein erforderlicher Zweck vorliegen. Eine allgemeine Weitergabe an beliebige Dritte ist nicht vorgesehen.
 
@@ -248,10 +278,12 @@ Personendaten werden zweckgebunden und nicht unbegrenzt aufbewahrt. Für eine tr
 |---|---|
 | Aktives Konto und selbst verwaltete Inhalte | Dauer des Kontos bzw. bis zur Inhaltslöschung, vorbehaltlich konkret begründeter Ausnahmen |
 | Konto-/Inhaltslöschung | [ZEIT BIS LÖSCHUNG IM AKTIVSYSTEM UND IN DATEISPEICHERN] |
-| Geteilte Trips und zugehörige Kosten/Dokumente | [TATSÄCHLICHE LOGIK BEI AUSTRITT, KONTOLÖSCHUNG UND ORGANISATORLÖSCHUNG] |
-| Login-/Verifikationsdaten | [GÜLTIGKEIT UND ANSCHLIESSENDE LÖSCHFRIST] |
+| Geteilte Trips und zugehörige Kosten/Dokumente | Bei Kontolöschung des Erstellers werden dessen Trips in der aktiven Datenbank mit abhängigen Daten entfernt. Eigene Einträge und Dokumentdatensätze können auch in fremden Trips entfallen. Kein automatischer Organisatorenwechsel; Datei-/Backupbereinigung noch zu verifizieren. |
+| Login-/Verifikationsdaten | E-Mail-Verifikation, Passwort-Reset und Magic-Link: derzeit 15 Minuten verwendbar; Ablauf ist keine physische Löschung. Anschliessende Datensatzbereinigung noch festzulegen und umzusetzen. |
 | Technische Sicherheits-/Zugriffsprotokolle | [DAUER BEI JEDEM RELEVANTEN DIENST] |
-| Melde-/Moderationsnachweise | [DAUER, ZWECK UND ANSPRÜCHE-/VERFAHRENSBEZOGENE AUSNAHMEN] |
+| Automatische Moderationsprüffälle | Bei Aktivierung: sieben Tage für offene/gesperrte Fälle; gewöhnliche Entscheidung entfernt den Prüfinhalt sofort aus dem aktiven Fall, übriger Fallnachweis 24 Stunden ab Entscheidung; technische Bereinigung und Backups siehe Abschnitt 4a. |
+| Manuelle Inhaltsmeldungen | [EIGENE FRIST UND BEGRÜNDETE VERFAHRENSAUSNAHMEN FESTLEGEN; NICHT MIT AUTOMATISCHEN PRÜFFÄLLEN GLEICHSETZEN] |
+| Kontaktanfragen in Gmail | [FRIST FÜR ABGESCHLOSSENE ANFRAGEN UND KONKRETE AUSNAHMEN FESTLEGEN; POSTFACH, PAPIERKORB UND SICHERUNG BERÜCKSICHTIGEN] |
 | E-Mail-Outbox/Zustellprotokolle | [APP- UND PROVIDERFRISTEN] |
 | Backups | [ZYKLUS, MAXIMALE NACHLAUFZEIT, UMGANG MIT WIEDERHERSTELLUNG] |
 
@@ -263,11 +295,31 @@ Der Betreiber setzt angemessene technische und organisatorische Massnahmen zum S
 
 Betroffene können nach Massgabe des anwendbaren Rechts insbesondere Auskunft, Berichtigung und Löschung verlangen sowie gegebenenfalls eine Bearbeitung einschränken lassen, widersprechen oder Datenherausgabe/-übertragung verlangen. Eine erforderliche Einwilligung kann für die Zukunft widerrufen werden. Einschränkungen und Ausnahmen werden begründet; zur Vermeidung unberechtigter Offenlegung kann eine angemessene Identitätsprüfung nötig sein. Es wird kein pauschaler Ausweisscan für jede Anfrage verlangt.
 
-Anfragen sind an **[DATENSCHUTZKONTAKT]** zu richten. Eine Beschwerde bei der zuständigen Datenschutzbehörde, insbesondere dem EDÖB in der Schweiz und gegebenenfalls zuständigen ausländischen Aufsichtsbehörden, bleibt möglich. Anwendbare Fristen und Voraussetzungen werden eingehalten.
+Anfragen sind an **privacy@fairwayd.golf** zu richten. Eine Beschwerde bei der zuständigen Datenschutzbehörde, insbesondere dem EDÖB in der Schweiz und gegebenenfalls zuständigen ausländischen Aufsichtsbehörden, bleibt möglich. Anwendbare Fristen und Voraussetzungen werden eingehalten.
 
 ## 9. Änderungen
 
 Die aktuelle Erklärung ist mit Stand und Versionskennung erreichbar. Wesentliche Änderungen werden angemessen mitgeteilt. Neue Zwecke oder zusätzliche Dienste werden vor deren Einführung beurteilt und transparent erläutert; eine erforderliche Einwilligung wird gesondert eingeholt. Frühere Fassungen werden für den notwendigen Nachweis dokumentiert.
+
+---
+
+# Teil D – Anbieterangaben / Impressum (Entwurf)
+
+**Fairwayd** ist ein Angebot von:
+
+beeZONE, Beda Christener
+
+Einzelunternehmen
+
+Hombergerstr. 14, 4422 Arisdorf, Schweiz
+
+UID: CHE-310.823.737
+
+Allgemeine und rechtliche Anfragen sowie Inhaltsmeldungen: legal@fairwayd.golf
+
+Datenschutzanfragen: privacy@fairwayd.golf
+
+Die Anbieterangaben sind in der App auch ohne Anmeldung zugänglich bereitzustellen. Die Veröffentlichung dieser Entwurfsdatei allein implementiert noch keine entsprechende App-Seite.
 
 ---
 
@@ -282,4 +334,28 @@ Die aktuelle Erklärung ist mit Stand und Versionskennung erreichbar. Wesentlich
 - EU Digital Services Act, insbesondere Anwendungsbereich Art. 2/3: https://eur-lex.europa.eu/eli/reg/2022/2065/oj
 - BAKOM, Stand KomPG vom 14.10.2026: Gesetzesvorhaben für sehr grosse Plattformen, keine pauschale Darstellung als bereits geltende Fairwayd-Spezialpflicht. https://www.bakom.admin.ch/de/newnsb/NMn5s24l8NjQ
 
+- OpenAI, Moderation API und Datenkontrollen, geprüft am 29.10.2026: https://developers.openai.com/api/docs/guides/moderation und https://developers.openai.com/api/docs/guides/your-data
+- Google, Datenschutzerklärung für das verwendete Gmail-Konto: https://policies.google.com/privacy?hl=de
+- Porkbun, tatsächliche Weiterleitungsfunktion: https://kb.porkbun.com/article/10-how-to-set-up-email-forwarding-service
+
 **Redaktionelle Schlussprüfung:** Betreiber/Alter/Geschäftsmodell bestätigen; Datenfluss-/Vertragsprüfung abschliessen; Kontaktwege testen; Löschlogik testen; Kennzeichnung und Rechte bei Kursbildern prüfen; notwendige Sprachfassungen erstellen; klare Zustimmung zu neuer AGB-Fassung umsetzen; Moderationsablauf tatsächlich betreiben. Schweizer juristische Prüfung der finalen Fassung, bei entsprechendem Nutzerkreis zusätzlich Prüfung einschlägiger ausländischer Vorschriften.
+
+
+## Arbeitsstand 29.10.2026 – interne Freigabeliste
+
+Dieser Abschnitt ist redaktionell und wird nicht als Vertragstext veröffentlicht.
+
+**Ergänzt und anhand des Codes abgeglichen:** Betreiber und getestete Kontakte; 18 verbotene Inhaltskategorien; automatisches Zurückhalten und menschliche Überprüfung; Prüfablage mit Ablaufregeln; Abgrenzung ungeprüfter Trip-Dokumente und historischer Medien; Kontakt-Mailfluss über Porkbun/Gmail; Google-Anmeldeberechtigungen; Karten-Endpunkte; ausschliessliche Währungspaar-Abfrage; separate Anbieterangaben.
+
+**Vor der Endfassung noch zu klären:**
+
+1. Geschäftsmodell: kostenlose Pilotnutzung ohne eigenen Reiseverkauf, verbindliche Buchungsvermittlung, Zahlungsabwicklung oder Versicherungsvermittlung bestätigen. Zielgruppe/Wohnsitzländer und spätere Zielmärkte bestimmen; ein Urlaub im Ausland ist von einer gezielten Vermarktung dort zu unterscheiden.
+2. Tatsächliche Prod-Konfiguration und Verträge: pro Dienst Vertragspartner, Empfängerstaaten, Unterauftragnehmer und Übermittlungsgrundlage dokumentieren. Consumer-Gmail für rechtliche/Datenschutzanfragen gesondert auf Eignung und Vertragsrollen prüfen; eine getestete Zustellung belegt keine abgeschlossene Datenschutzprüfung.
+3. Verbindliche Löschfristen und Umsetzung: manuelle Meldungen, eingehende Kontaktmails, Benachrichtigungs-Outbox, abgelaufene Anmeldecodes, Zugriffslogs und Backups. Automatische Moderationsfälle haben einen eigenen Ablauf und ersetzen diese Fristen nicht.
+4. Kontolöschung vor Prod Ende-zu-Ende prüfen: Erstellerkonto mit gemeinsamem Trip, Mitgliedskonto mit Dokumenten in fremden Trips, verbleibende Aktivitäts-/Supporteinträge und alle Dateispeicher. Im geprüften Code sammelt `UsersService.deleteAccount` Avatar, Postbilder und Dateien eigener Trips; Dateien hochgeladener Dokumente in fremden Trips sind darin nicht ausdrücklich gesammelt. Fehler bei der Dateilöschung werden als Anzahl zurückgegeben; eine automatische Wiederholung ist in diesem Ablauf nicht ersichtlich. Kein vollständiges Löschversprechen vor Klärung.
+5. Altersregel und Annahme umsetzen: `TermsGate` sendet noch `v1`, die Annahme-API nimmt eine übergebene Versionskennung entgegen. Für die neue Fassung braucht es eine serverseitig festgelegte aktuelle Version, einen unveränderlichen Textnachweis und die erneute Annahme bestehender Nutzer. AGB-Zustimmung, Kenntnisnahme der Datenschutzhinweise und gesonderte freiwillige Einwilligungen sprachlich und technisch trennen. Altersbestätigung ab 18 für den Pilot erforderlich; keine Ausweissammlung allein aus diesem Entwurf ableiten.
+6. Öffentliche App-Seiten: AGB, Community-Regeln, Datenschutz und Anbieterangaben ohne Anmeldung erreichbar einbauen, Meldung an legal@fairwayd.golf ermöglichen, konsistente englische Fassung für die bestehende englische Oberfläche erstellen. Anschliessend juristische Schlussprüfung und Datum/Version festlegen.
+
+**Aktivierungsstand:** Nur Textentwurf aktualisiert. Keine Änderung an Prod, keine Veröffentlichung der neuen Rechtstexte und keine Aktivierung der externen Moderation durch diese Überarbeitung. Die Vorabinformation zur Inhaltsprüfung muss vor dem ersten tatsächlichen Datentransfer bereitstehen.
+
+**Technische Nachweise der Prüfung:** `apps/api/src/moderation/moderation.service.ts`, `apps/api/docs/content-moderation.md`, `apps/api/src/users/users.service.ts` (`deleteAccount`), `apps/api/prisma/schema.prisma` (Löschbeziehungen), `apps/api/src/auth/auth.controller.ts` (Google-Scopes), `apps/api/src/auth/auth.service.ts` (Code-Gültigkeiten), `apps/api/src/fx/fx.service.ts`, `apps/web/src/components/CoursesMap.tsx`, `apps/web/src/pages/TripDetailPage.tsx`, `apps/web/src/onboarding/TermsGate.tsx`. Prüfbasis: Moderationscode aus PR 62 / Stage-Merge 1089d380a45afb4f93161e116b08098e7c83149c; keine Behauptung einer bereits vorhandenen Prod-Konfiguration.
