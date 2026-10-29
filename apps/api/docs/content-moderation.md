@@ -1,8 +1,8 @@
-# Automatic content moderation (activation pending)
+# Automatic content moderation — Stage enabled
 
-Stage feature code, disabled by default. No live moderation provider credential has been configured or called. Existing post/comment/profile/report behaviour remains unchanged while disabled. Production is excluded.
+Stage activation was confirmed on 29 October 2026 after the operator configured a dedicated provider key and completed deployment. Clean uploads, held submissions and admin decisions were tested by the operator. The code remains disabled by default in unconfigured environments. Production is excluded; this record does not certify provider contracts, countries or production readiness.
 
-## Activation prerequisites
+## Requirements for a new environment (not a claim that Stage is inactive)
 
 1. Review the OpenAI Moderation API account/terms, processor arrangement, country/retention settings and update the public privacy notice before transferring user uploads. A ChatGPT subscription is not a server API credential. Do not paste keys into chat or commit them.
 2. Apply/rehearse the additive ContentModerationCase Prisma migration in an isolated copy first; do not substitute neondb for fairwayd_stage. SQL rehearsed on `moderation-rehearsal-20261028` (`br-crimson-sun-aguiy64v`), project `billowing-breeze-32238900`; parent Stage unchanged.
@@ -29,3 +29,8 @@ POST /posts validates the full submission, checks all parts and returns 202/PEND
 One unique pending digest prevents duplicate submissions. Approval uses a database claim, token and five-minute recovery lease; a transaction creates one post and its decision notification, clears quarantine payloads and completes linked signal records without granting a general future upload approval. Upload failures clean the newly uploaded objects and restore only the matching lease. A process crash during R2 upload can leave unreferenced objects; periodic storage reconciliation remains an operational follow-up. Account deletion cascades drafts. Expiry cleanup runs at startup/hourly and respects active publication leases.
 
 Emails contain generic status text and protected links, never submitted content, classifications or image attachments. Admin membership and pending state are checked again at mail delivery. Email failures retry through the existing leased outbox; they never undo a publication decision. Old legal v1 acceptance/version records remain untouched; only the current test-draft descriptions are updated.
+
+
+## Legal preparation checkpoint (29 October 2026, evening)
+
+The reader-facing DE/FR/IT/EN draft now describes enabled Stage checks, whole-post publication on approval, the separate legacy resubmission path, review emails/preferences and public-only course-image previews. See `docs/legal/v1-finalisierung-20261029.md` for unresolved account/provider, deletion, retention and acceptance work. No binding-version or acceptance-flow change is included.
