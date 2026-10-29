@@ -8,6 +8,7 @@ import { useSearchParams } from "react-router-dom";
 type EmailPreferences = {
   emailTripNotifications: boolean;
   emailFollowNotifications: boolean;
+  emailModerationNotifications: boolean;
 };
 
 type AccountPrivacy = "PUBLIC" | "PRIVATE";
@@ -499,6 +500,7 @@ export default function PrivacySecurityPage() {
               "Trip memberships",
               "When someone adds you to or removes you from a trip.",
             ],
+            ["emailModerationNotifications", "Content reviews", "Decisions about your posts and review requests if you are an admin."],
             [
               "emailFollowNotifications",
               "Follow activity",

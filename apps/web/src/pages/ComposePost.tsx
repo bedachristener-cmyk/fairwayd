@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { ApiError, friendlyApiErrorMessage } from "../api/client";
+import { reviewCopy } from "../utils/contentReview";
 import { useAuth } from "../auth/AuthContext";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
+import { API_BASE } from "../api/base";
 
 function useQuery() {
   const { search } = useLocation();
@@ -74,9 +76,16 @@ export default function ComposePost(props: Props) {
         }),
       });
 
+      const result = await res.json().catch(() => null);
       if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(`HTTP ${res.status} ${res.statusText} ${text}`.trim());
+        if (result?.code === 'CONTENT_REVIEW_REQUIRED') throw new Error(reviewCopy().legacyPending);
+        if (result?.code === 'CONTENT_REJECTED') throw new Error(reviewCopy().rejected);
+        throw new ApiError(typeof result?.message === 'string' ? result.message : 'Failed to post.', res.status, result);
+      }
+      if (res.status === 202 && result?.status === 'PENDING_REVIEW') {
+        setContent('');
+        setMsg(`${reviewCopy().title}. ${reviewCopy().pending} ${reviewCopy().reference}: ${result.reviewId}`);
+        return;
       }
 
       setContent("");
@@ -92,7 +101,7 @@ export default function ComposePost(props: Props) {
       setMsg("Posted!");
       nav("/feed");
     } catch (e: any) {
-      setMsg(e?.message ?? "Failed to post.");
+      setMsg(friendlyApiErrorMessage(e, "Failed to post."));
     } finally {
       setBusy(false);
     }
@@ -295,7 +304,7 @@ export default function ComposePost(props: Props) {
         }}
       >
         {msg ? (
-          <div
+          <div role="status"
             style={{
               fontSize: 13,
               color: msg === "Posted!" ? "var(--green)" : "var(--sub)",

@@ -6,7 +6,7 @@ const png = Buffer.from([137,80,78,71,13,10,26,10,0,0,0,0]);
 function setup() {
   const table = { findUnique: jest.fn().mockResolvedValue(null), count: jest.fn().mockResolvedValue(0), upsert: jest.fn().mockResolvedValue({ id: 'case-1' }), findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn(), updateMany: jest.fn().mockResolvedValue({ count: 1 }), deleteMany: jest.fn() };
   const notifications = { create: jest.fn() };
-  const prisma = { contentModerationCase: table, $transaction: jest.fn(async (fn: any) => fn({ contentModerationCase: table, notification: notifications })) };
+  const prisma = { pendingPost: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn().mockResolvedValue(null) }, contentModerationCase: table, $transaction: jest.fn(async (fn: any) => fn({ contentModerationCase: table, notification: notifications })) };
   return { table, prisma, service: new ModerationService(prisma as any) };
 }
 const originalFetch = global.fetch;

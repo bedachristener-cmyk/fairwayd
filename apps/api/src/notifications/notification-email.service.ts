@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../auth/mail.service';
+import { isLegacyAdmin } from '../auth/admin.guard';
 import { notificationWebUrl } from './activity-email';
 
 const followTypes = [
@@ -80,9 +81,11 @@ export class NotificationEmailService implements OnModuleInit, OnModuleDestroy {
               handle: true,
               emailTripNotifications: true,
               emailFollowNotifications: true,
+              emailModerationNotifications: true, adminRole: true, id: true,
             },
           });
-          const enabled =
+          const moderationType = ['post_review_requested', 'post_review_approved', 'post_review_rejected', 'content_moderation_decided'].includes(row.type);
+          const enabled = moderationType ? recipient?.emailModerationNotifications :
             ['trip_member_added', 'trip_member_removed'].includes(row.type)
               ? recipient?.emailTripNotifications
               : followTypes.includes(row.type)
@@ -92,7 +95,7 @@ export class NotificationEmailService implements OnModuleInit, OnModuleDestroy {
             !recipient?.email ||
             !recipient.emailVerifiedAt ||
             !enabled ||
-            row.actorUserId === row.userId
+            (!moderationType && row.actorUserId === row.userId)
           ) {
             await this.prisma.notification.update({
               where: { id: row.id },
@@ -135,6 +138,16 @@ export class NotificationEmailService implements OnModuleInit, OnModuleDestroy {
             body = `${actorName} added you to “${trip.title}”. Open the trip to see your itinerary and travel plans.`;
           } else if (row.type === 'trip_member_removed') {
             link = '/trips';
+          } else if (moderationType) {
+            if (row.type === 'post_review_requested') {
+              const draftId = row.link?.match(/^\/admin\/moderation#([^/?#]+)$/)?.[1];
+              const draft = draftId ? await this.prisma.pendingPost.findFirst({ where: { id: draftId, state: 'PENDING', expiresAt: { gt: new Date() } }, select: { id: true } }) : null;
+              if (!recipient || !(recipient.adminRole === 'ADMIN' || (recipient.adminRole === null && isLegacyAdmin(recipient))) || !draft) {
+                await this.prisma.notification.update({ where: { id: row.id }, data: { emailPending: false } });
+                continue;
+              }
+            }
+            // No submitted text, image or classification is included in email.
           } else {
             // A withdrawn request or removed connection should not trigger a delayed mail.
             const incoming = row.type !== 'follow_request_accepted';

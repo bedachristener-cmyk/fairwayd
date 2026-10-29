@@ -19,6 +19,10 @@ function setup(type = 'trip_member_added') {
     emailVerifiedAt: new Date(),
     emailTripNotifications: true,
     emailFollowNotifications: true,
+    emailModerationNotifications: true,
+    adminRole: 'ADMIN',
+    id: 'recipient',
+    handle: 'recipient',
   };
   const prisma = {
     notification: {
@@ -38,6 +42,7 @@ function setup(type = 'trip_member_added') {
         ),
       update: jest.fn().mockResolvedValue({}),
     },
+    pendingPost: { findFirst: jest.fn().mockResolvedValue({ id: 'draft' }) },
     trip: {
       findUnique: jest
         .fn()
@@ -154,6 +159,30 @@ describe('Notification emails', () => {
     await trip.service.deliverPending();
     expect(follow.mail.sendActivityNotification).not.toHaveBeenCalled();
     expect(trip.mail.sendActivityNotification).not.toHaveBeenCalled();
+  });
+
+  it.each(['post_review_approved', 'post_review_rejected', 'content_moderation_decided'])('delivers %s under the moderation preference, even for a self-review', async type => {
+    const { service, mail, row, prisma } = setup(type);
+    row.actorUserId = row.userId;
+    row.body = 'Review complete. No uploaded content in this email.';
+    row.link = '/feed?postId=published';
+    await service.deliverPending();
+    expect(mail.sendActivityNotification).toHaveBeenCalledWith(expect.objectContaining({ body: row.body, link: row.link }));
+    expect(prisma.follow.findUnique).not.toHaveBeenCalled();
+  });
+  it('respects moderation opt-out and revoked admin access at delivery', async () => {
+    const a = setup('post_review_approved'); a.recipient.emailModerationNotifications = false;
+    await a.service.deliverPending(); expect(a.mail.sendActivityNotification).not.toHaveBeenCalled();
+    const b = setup('post_review_requested'); b.row.link = '/admin/moderation#draft'; b.recipient.adminRole = 'USER';
+    await b.service.deliverPending(); expect(b.mail.sendActivityNotification).not.toHaveBeenCalled();
+    const c = setup('post_review_requested'); c.row.link = '/admin/moderation#draft'; c.prisma.pendingPost.findFirst.mockResolvedValue(null);
+    await c.service.deliverPending(); expect(c.mail.sendActivityNotification).not.toHaveBeenCalled();
+  });
+  it('emails current admins a protected review link without content or image attachments', async () => {
+    const { service, mail, row } = setup('post_review_requested'); row.link = '/admin/moderation#draft';
+    await service.deliverPending();
+    expect(mail.sendActivityNotification).toHaveBeenCalledWith(expect.objectContaining({ link: '/admin/moderation#draft' }));
+    expect(mail.sendActivityNotification.mock.calls[0][0]).not.toHaveProperty('attachments');
   });
 
   it('requires a verified email and skips self-notifications', async () => {

@@ -1,3 +1,6 @@
+import { PendingPostsService } from './pending-posts.service';
+import { Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { Optional } from '@nestjs/common';
 import { ModerationService, requireImageCheck, requireTextCheck, imageMime } from '../moderation/moderation.service';
 import {
@@ -64,7 +67,7 @@ function safeImageExt(original: string, mimeType?: string) {
 
 @Controller('posts')
 export class PostsController {
-  constructor(private readonly posts: PostsService, @Optional() private readonly moderation?: ModerationService) {}
+  constructor(private readonly posts: PostsService, @Optional() private readonly moderation?: ModerationService, @Optional() private readonly pendingPosts?: PendingPostsService) {}
 
   @UseGuards(OptionalJwtAuthGuard)
   @Get('feed')
@@ -232,6 +235,7 @@ export class PostsController {
       images?: Express.Multer.File[];
       image?: Express.Multer.File[];
     },
+    @Res({ passthrough: true }) response?: Response,
   ) {
     const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
 
@@ -242,6 +246,12 @@ export class PostsController {
 
     if (uploadedImages.length > 5) {
       throw new BadRequestException('Maximum 5 images per post');
+    }
+
+    if (this.pendingPosts) {
+      const result = await this.pendingPosts.submit(userId, body, uploadedImages);
+      if ('status' in result && result.status === 'PENDING_REVIEW') response?.status(202);
+      return result;
     }
 
     await requireTextCheck(this.moderation, userId, 'POST_TEXT', body?.content || '');

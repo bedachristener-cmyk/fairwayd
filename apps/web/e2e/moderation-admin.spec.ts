@@ -8,6 +8,7 @@ for (const width of [390,1280]) {
       const path=new URL(route.request().url()).pathname;
       const json=(body:unknown)=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});
       if(path.endsWith('/users/me'))return json({id:'admin',handle:'admin',name:'Admin',avatarUrl:'/logo.png',termsAcceptedAt:'2026-01-01'});
+      if(path==='/api/safety/admin/pending-posts')return json([]);
       if(path==='/api/safety/admin/moderation/status')return json({enabled:true,configured:true});
       if(path==='/api/safety/admin/moderation')return json([{id:'case-image',userId:'user',scope:'POST_IMAGE',status,categories:['violence'],mimeType:'image/png',expiresAt:'2026-11-01'},{id:'case-blocked',userId:'user',scope:'POST_IMAGE',status:'BLOCKED',categories:['sexual/minors'],expiresAt:'2026-11-01'}]);
       if(path==='/api/safety/admin/moderation/case-image/image'){
