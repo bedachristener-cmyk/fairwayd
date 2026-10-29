@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { defaultLegalLanguage, LEGAL_UI } from "../legal/ui";
 import {
   CalendarDays,
   MapPinned,
@@ -310,6 +311,11 @@ export default function LandingPage() {
           </div>
         </section>
       </div>
+
+      <footer style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "12px 24px", padding: "24px 18px", fontSize: 14 }}>
+        <Link to={`/terms?lang=${defaultLegalLanguage()}`} style={{ color: "var(--text)" }}>{LEGAL_UI[defaultLegalLanguage()].terms}</Link>
+        <Link to={`/privacy?lang=${defaultLegalLanguage()}`} style={{ color: "var(--text)" }}>{LEGAL_UI[defaultLegalLanguage()].privacy}</Link>
+      </footer>
 
       {showLoginHint ? (
         <div className="fw-landing__toast" role="status">

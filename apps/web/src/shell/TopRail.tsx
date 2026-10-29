@@ -40,6 +40,7 @@ import {
 } from "../theme/theme";
 import { fileUrl } from "../api/fileUrl";
 import { t } from "../i18n/strings";
+import { defaultLegalLanguage, LEGAL_UI } from "../legal/ui";
 import { fetchNotificationUnreadCount } from "../api/notifications";
 
 function initialsFromHandle(handle: string) {
@@ -96,6 +97,8 @@ type MainMenuGroup = {
 
 export default function TopRail() {
   const nav = useNavigate();
+  const legalLanguage = defaultLegalLanguage();
+  const legalCopy = LEGAL_UI[legalLanguage];
   const location = useLocation();
   const auth = useAuth() as any;
   const { me } = useMe(true);
@@ -711,6 +714,20 @@ export default function TopRail() {
       isActive: location.pathname === "/help",
     },
     {
+      key: "legal-terms",
+      label: legalCopy.terms,
+      icon: <ClipboardList size={18} strokeWidth={2.2} />,
+      action: () => navigateFromMenu(`/terms?lang=${legalLanguage}`),
+      isActive: location.pathname === "/terms",
+    },
+    {
+      key: "legal-privacy",
+      label: legalCopy.privacy,
+      icon: <Shield size={18} strokeWidth={2.2} />,
+      action: () => navigateFromMenu(`/privacy?lang=${legalLanguage}`),
+      isActive: location.pathname === "/privacy",
+    },
+    {
       key: "logout",
       label: t("logout"),
       subtitle: t("sign_out_fairwayd"),
@@ -750,7 +767,7 @@ export default function TopRail() {
     {
       key: "support",
       label: t("support"),
-      items: ["help", "feedback"]
+      items: ["help", "legal-terms", "legal-privacy", "feedback"]
         .map((key) => mainMenuItemByKey.get(key))
         .filter((item): item is MainMenuItem => Boolean(item)),
     },
