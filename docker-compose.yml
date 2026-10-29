@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: fairwayd-postgres
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: fairwayd
+    ports:
+      - "5432:5432"
+    volumes:
+      - fairwayd_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d fairwayd"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  fairwayd_pg:

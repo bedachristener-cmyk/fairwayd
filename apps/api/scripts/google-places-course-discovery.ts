@@ -1,0 +1,456 @@
+import 'dotenv/config';
+import fs from 'fs';
+import path from 'path';
+import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import {
+  buildDiscoveryGrid,
+  classifyDiscoveredCourse,
+  courseDistanceKm,
+  nearestCourse,
+  type CourseDiscoveryPoint,
+} from '../src/courses/course-completeness-review';
+import {
+  courseDiscoveryCountryConfig,
+  supportedCourseDiscoveryCountries,
+} from '../src/courses/course-discovery-country';
+
+const connectionString =
+  process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
+const googleApiKey =
+  process.env.GOOGLE_PLACES_REVIEW_API_KEY ||
+  process.env.GOOGLE_MAPS_API_KEY;
+
+if (!connectionString) {
+  console.error(
+    'NEON_DATABASE_URL or DATABASE_URL is missing. Check apps/api/.env',
+  );
+  process.exit(1);
+}
+
+if (!googleApiKey) {
+  console.error(
+    'GOOGLE_PLACES_REVIEW_API_KEY or GOOGLE_MAPS_API_KEY is missing. Check apps/api/.env',
+  );
+  process.exit(1);
+}
+
+const adapter = new PrismaPg({ connectionString });
+const prisma = new PrismaClient({ adapter, log: ['error'] });
+const MAX_RESULTS_PER_CELL = 20;
+const MAX_GOOGLE_REQUEST_ATTEMPTS = 6;
+const GOOGLE_REQUEST_DELAY_MS = 300;
+const GOOGLE_RETRY_BASE_DELAY_MS = 2_000;
+const GOOGLE_RETRY_MAX_DELAY_MS = 30_000;
+const RETRYABLE_GOOGLE_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
+
+function sleep(milliseconds: number) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+type AddressComponent = {
+  longText?: string;
+  shortText?: string;
+  types?: string[];
+};
+
+type GooglePlace = {
+  id?: string;
+  displayName?: { text?: string };
+  formattedAddress?: string;
+  googleMapsUri?: string;
+  businessStatus?: string;
+  primaryType?: string;
+  types?: string[];
+  movedPlaceId?: string;
+  addressComponents?: AddressComponent[];
+  location?: {
+    latitude?: number;
+    longitude?: number;
+  };
+};
+
+type ExistingCourse = CourseDiscoveryPoint & {
+  city: string | null;
+  region: string | null;
+};
+
+function csvCell(value: unknown): string {
+  const text = String(value ?? '');
+  if (/[",\r\n]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
+
+function placeAddressComponent(
+  place: GooglePlace,
+  types: string[],
+  preferShortText = false,
+): string {
+  for (const type of types) {
+    const component = place.addressComponents?.find((item) =>
+      item.types?.includes(type),
+    );
+    const value = preferShortText ? component?.shortText : component?.longText;
+    if (value) return String(value).trim();
+  }
+  return '';
+}
+
+function placeCountryCode(place: GooglePlace): string {
+  return placeAddressComponent(place, ['country'], true).toUpperCase();
+}
+
+function placeCity(place: GooglePlace): string {
+  return placeAddressComponent(place, [
+    'locality',
+    'postal_town',
+    'administrative_area_level_2',
+    'sublocality_level_1',
+  ]);
+}
+
+function placeRegion(place: GooglePlace): string {
+  return placeAddressComponent(place, ['administrative_area_level_1']);
+}
+
+function placePostalCode(place: GooglePlace): string {
+  return placeAddressComponent(place, ['postal_code']);
+}
+
+function validPlace(place: GooglePlace): place is GooglePlace & {
+  id: string;
+  location: { latitude: number; longitude: number };
+} {
+  return (
+    Boolean(place.id) &&
+    Number.isFinite(place.location?.latitude) &&
+    Number.isFinite(place.location?.longitude)
+  );
+}
+
+async function nearbySearch(
+  center: { lat: number; lon: number },
+  country: string,
+  searchRadiusMeters: number,
+) {
+  for (let attempt = 1; attempt <= MAX_GOOGLE_REQUEST_ATTEMPTS; attempt++) {
+    const response = await fetch(
+      'https://places.googleapis.com/v1/places:searchNearby',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': googleApiKey as string,
+          'X-Goog-FieldMask':
+            'places.id,places.displayName,places.formattedAddress,places.addressComponents,places.location,places.googleMapsUri,places.businessStatus,places.primaryType,places.types,places.movedPlaceId',
+        },
+        body: JSON.stringify({
+          includedTypes: ['golf_course'],
+          maxResultCount: MAX_RESULTS_PER_CELL,
+          rankPreference: 'DISTANCE',
+          languageCode: 'en',
+          regionCode: country,
+          locationRestriction: {
+            circle: {
+              center: {
+                latitude: center.lat,
+                longitude: center.lon,
+              },
+              radius: searchRadiusMeters,
+            },
+          },
+        }),
+      },
+    );
+
+    if (response.ok) {
+      const body = (await response.json()) as { places?: GooglePlace[] };
+      return Array.isArray(body.places) ? body.places : [];
+    }
+
+    let detail = response.statusText || 'request rejected';
+    try {
+      const body = (await response.json()) as {
+        error?: { message?: string; status?: string };
+      };
+      detail =
+        [body.error?.status, body.error?.message].filter(Boolean).join(': ') ||
+        detail;
+    } catch {
+      // Keep the HTTP status text when Google did not return JSON.
+    }
+
+    const message = `Google Places request failed: ${response.status} ${detail}`;
+    const retryable = RETRYABLE_GOOGLE_STATUS_CODES.has(response.status);
+    if (!retryable || attempt === MAX_GOOGLE_REQUEST_ATTEMPTS) {
+      throw new Error(message);
+    }
+
+    const retryAfterSeconds = Number(response.headers.get('retry-after'));
+    const delayMilliseconds = Number.isFinite(retryAfterSeconds)
+      ? Math.max(retryAfterSeconds * 1_000, GOOGLE_RETRY_BASE_DELAY_MS)
+      : Math.min(
+          GOOGLE_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1),
+          GOOGLE_RETRY_MAX_DELAY_MS,
+        );
+
+    console.warn(
+      `${message}; retry ${attempt + 1}/${MAX_GOOGLE_REQUEST_ATTEMPTS} in ${Math.round(delayMilliseconds / 1_000)}s`,
+    );
+    await sleep(delayMilliseconds);
+  }
+
+  throw new Error('Google Places request failed after retries');
+}
+
+async function main() {
+  const country = String(process.argv[2] ?? '')
+    .trim()
+    .toUpperCase();
+  const dryRun = process.argv.includes('--dry-run');
+  const confirmed = process.argv.includes('--confirm-google-places-requests');
+  const config = courseDiscoveryCountryConfig(country);
+
+  if (!config || !dryRun || !confirmed) {
+    console.error(
+      'Usage: npx ts-node scripts/google-places-course-discovery.ts <countryCode> --dry-run --confirm-google-places-requests',
+    );
+    console.error(
+      `Supported countries: ${supportedCourseDiscoveryCountries().join(', ')}`,
+    );
+    process.exit(1);
+  }
+
+  const centers = config.areas.flatMap((area) =>
+    buildDiscoveryGrid(area, config.latStep, config.lonStep),
+  );
+  console.log(
+    `Read-only discovery: country=${country} requests=${centers.length} radius_km=${config.searchRadiusMeters / 1000}`,
+  );
+
+  const courses = (await prisma.course.findMany({
+    where: { country, active: true },
+    orderBy: [{ name: 'asc' }, { city: 'asc' }],
+    select: {
+      id: true,
+      name: true,
+      city: true,
+      region: true,
+      lat: true,
+      lon: true,
+    },
+  })) as ExistingCourse[];
+
+  const placesById = new Map<string, GooglePlace>();
+  const saturatedCells: string[] = [];
+  let discardedOutsideCountry = 0;
+
+  for (let index = 0; index < centers.length; index++) {
+    const center = centers[index];
+    const places = await nearbySearch(
+      center,
+      country,
+      config.searchRadiusMeters,
+    );
+
+    if (places.length === MAX_RESULTS_PER_CELL) {
+      saturatedCells.push(`${center.lat},${center.lon}`);
+    }
+
+    for (const place of places) {
+      if (!validPlace(place)) continue;
+      if (placeCountryCode(place) !== country) {
+        discardedOutsideCountry++;
+        continue;
+      }
+      placesById.set(place.id, place);
+    }
+
+    if ((index + 1) % 10 === 0 || index + 1 === centers.length) {
+      console.log(
+        `Queried ${index + 1}/${centers.length} cells; unique_${country}_places=${placesById.size}`,
+      );
+    }
+
+    if (index + 1 < centers.length) {
+      await sleep(GOOGLE_REQUEST_DELAY_MS);
+    }
+  }
+
+  const outputPath = path.resolve(
+    `course-audits/${country.toLowerCase()}-google-places-discovery.csv`,
+  );
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+
+  const header = [
+    'recordType',
+    'status',
+    'country',
+    'name',
+    'city',
+    'region',
+    'postalCode',
+    'holes',
+    'website',
+    'placeId',
+    'googleName',
+    'googleBusinessStatus',
+    'googlePrimaryType',
+    'googleTypes',
+    'movedPlaceId',
+    'formattedAddress',
+    'googleLat',
+    'googleLon',
+    'googleMapsUri',
+    'nearestCourseId',
+    'nearestCourseName',
+    'nearestCourseCity',
+    'nearestDistanceKm',
+    'reviewDecision',
+    'reviewNotes',
+  ];
+  const rows = [header.join(',')];
+  const matchedCourseIds = new Set<string>();
+  const statusCounts = {
+    MATCHED: 0,
+    REVIEW_NEARBY: 0,
+    POSSIBLE_MISSING: 0,
+    DATABASE_ONLY: 0,
+  };
+
+  const places = [...placesById.values()].sort((a, b) =>
+    String(a.displayName?.text ?? '').localeCompare(
+      String(b.displayName?.text ?? ''),
+    ),
+  );
+
+  for (const place of places) {
+    if (!validPlace(place)) continue;
+    const match = nearestCourse(
+      {
+        lat: place.location.latitude,
+        lon: place.location.longitude,
+      },
+      courses,
+    );
+    const status = match
+      ? classifyDiscoveredCourse(match.distanceKm)
+      : 'POSSIBLE_MISSING';
+
+    statusCounts[status]++;
+    if (match && status === 'MATCHED') matchedCourseIds.add(match.course.id);
+
+    const course = match
+      ? courses.find((item) => item.id === match.course.id)
+      : undefined;
+    rows.push(
+      [
+        'GOOGLE',
+        status,
+        country,
+        '',
+        placeCity(place),
+        placeRegion(place),
+        placePostalCode(place),
+        '',
+        '',
+        place.id,
+        place.displayName?.text,
+        place.businessStatus,
+        place.primaryType,
+        place.types?.join('|'),
+        place.movedPlaceId,
+        place.formattedAddress,
+        place.location.latitude,
+        place.location.longitude,
+        place.googleMapsUri,
+        course?.id,
+        course?.name,
+        course?.city,
+        match?.distanceKm.toFixed(2),
+        '',
+        '',
+      ]
+        .map(csvCell)
+        .join(','),
+    );
+  }
+
+  for (const course of courses) {
+    if (matchedCourseIds.has(course.id)) continue;
+
+    const closestGoogleDistance = places.reduce<number | null>(
+      (closest, place) => {
+        if (!validPlace(place)) return closest;
+        const distance = courseDistanceKm(course, {
+          lat: place.location.latitude,
+          lon: place.location.longitude,
+        });
+        return closest === null || distance < closest ? distance : closest;
+      },
+      null,
+    );
+
+    statusCounts.DATABASE_ONLY++;
+    rows.push(
+      [
+        'DATABASE',
+        'DATABASE_ONLY',
+        country,
+        course.name,
+        course.city,
+        course.region,
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        course.id,
+        course.name,
+        course.city,
+        closestGoogleDistance === null
+          ? ''
+          : closestGoogleDistance.toFixed(2),
+        '',
+        '',
+      ]
+        .map(csvCell)
+        .join(','),
+    );
+  }
+
+  fs.writeFileSync(outputPath, `${rows.join('\n')}\n`, 'utf-8');
+
+  console.log(
+    `Summary: database=${courses.length} google_unique=${places.length} matched=${statusCounts.MATCHED} review_nearby=${statusCounts.REVIEW_NEARBY} possible_missing=${statusCounts.POSSIBLE_MISSING} database_only=${statusCounts.DATABASE_ONLY}`,
+  );
+  console.log(
+    `Coverage: requests=${centers.length} saturated_cells=${saturatedCells.length} discarded_non_${country}=${discardedOutsideCountry}`,
+  );
+  if (saturatedCells.length > 0) {
+    console.warn(
+      `WARNING: ${saturatedCells.length} cell(s) returned the 20-result maximum; review coverage before treating the report as complete.`,
+    );
+  }
+  console.log(`Output: ${outputPath}`);
+  console.log('Database changes: 0');
+}
+
+main()
+  .catch((error) => {
+    console.error(error?.message ?? error);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect().catch(() => {});
+  });

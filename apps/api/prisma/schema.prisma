@@ -1,0 +1,1065 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                             String                  @id @default(cuid())
+  email                          String?                 @unique
+  password                       String?
+  handle                         String?                 @unique
+  name                           String?
+  avatarUrl                      String?
+  privacy                        AccountPrivacy          @default(PRIVATE)
+  adminRole                      AdminRole?
+  createdAt                      DateTime                @default(now())
+  updatedAt                      DateTime                @updatedAt
+  emailVerifiedAt                DateTime?
+  termsAcceptedAt                DateTime?
+  termsVersion                   String?
+  privacyAcceptedAt              DateTime?
+  privacyVersion                 String?
+  bio                            String?
+  handicap                       Float?
+  homeGolfClub                   String?
+  golfSlogan                     String?
+  favoriteGolfDestination        String?
+  bioPrivacy                     FieldPrivacy            @default(PUBLIC)
+  handicapPrivacy                FieldPrivacy            @default(PUBLIC)
+  homeGolfClubPrivacy            FieldPrivacy            @default(PUBLIC)
+  golfSloganPrivacy              FieldPrivacy            @default(PUBLIC)
+  favoriteGolfDestinationPrivacy FieldPrivacy            @default(PUBLIC)
+  emailTripNotifications         Boolean                 @default(true)
+  emailFollowNotifications       Boolean                 @default(true)
+  emailModerationNotifications   Boolean                 @default(true)
+  pendingPosts                   PendingPost[]
+  preferredCurrency              String?
+  accounts                       AuthAccount[]
+  comments                       Comment[]
+  commentLikes                   CommentLike[]
+  courseFollows                  CourseFollow[]
+  courseRatings                  CourseRating[]
+  courseSubmissions              CourseSubmission[]
+  destinationFollows             DestinationFollow[]
+  destinationTipHelpfulMarks     DestinationTipHelpful[]
+  destinationTips                DestinationTip[]
+  feedbacks                      Feedback[]
+  following                      Follow[]                @relation("following")
+  followers                      Follow[]                @relation("followers")
+  likes                          Like[]
+  notifications                  Notification[]
+  posts                          Post[]
+  postCollections                PostCollection[]
+  reviews                        Review[]
+  tripActivities                 TripActivity[]
+  createdTrips                   Trip[]                  @relation("TripCreator")
+  createdTripInvites             TripInvite[]
+  createdTripItems               TripItem[]              @relation("TripItemCreator")
+  uploadedTripDocuments          TripDocument[]
+  tripMemberships                TripMember[]
+  emailVerificationCodes         EmailVerificationCode[]
+  passwordResetCodes             PasswordResetCode[]
+  blockedUsers                   UserBlock[]              @relation("UserBlocker")
+  blockedBy                      UserBlock[]              @relation("UserBlocked")
+  contentReports                 ContentReport[]
+  moderationCases                ContentModerationCase[]
+}
+
+model UserBlock {
+  id        String   @id @default(cuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+  blocker   User     @relation("UserBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("UserBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId, createdAt])
+  @@index([blockedId])
+}
+
+model ContentReport {
+  id         String              @id @default(cuid())
+  reporterId String
+  targetType ReportTargetType
+  targetId   String?
+  targetUrl  String?
+  reason     ReportReason
+  details    String?
+  status     ReportStatus        @default(OPEN)
+  createdAt  DateTime            @default(now())
+  reviewedAt DateTime?
+  reporter   User                @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([reporterId, createdAt])
+  @@index([status, createdAt])
+  @@index([targetType, targetId])
+}
+
+model AuthAccount {
+  id             String       @id @default(cuid())
+  userId         String
+  provider       AuthProvider
+  providerUserId String
+  email          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+}
+
+model EmailLoginToken {
+  id        String    @id @default(cuid())
+  email     String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+}
+
+model EmailVerificationCode {
+  id        String    @id @default(cuid())
+  userId    String
+  codeHash  String
+  expiresAt DateTime
+  usedAt    DateTime?
+  attempts  Int       @default(0)
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+}
+
+model PasswordResetCode {
+  id        String    @id @default(cuid())
+  userId    String
+  codeHash  String
+  expiresAt DateTime
+  usedAt    DateTime?
+  attempts  Int       @default(0)
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+}
+
+model Follow {
+  id          String       @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime     @default(now())
+  decidedAt   DateTime?
+  status      FollowStatus @default(PENDING)
+  follower    User         @relation("following", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User         @relation("followers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followingId])
+  @@index([followingId, status])
+}
+
+model Destination {
+  id          String              @id @default(cuid())
+  code        String              @unique
+  name        String
+  slug        String              @unique
+  description String?
+  coverImage  String?
+  isActive    Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  followers   DestinationFollow[]
+  tips        DestinationTip[]
+
+  @@index([code])
+  @@index([slug])
+  @@index([isActive])
+}
+
+model DestinationTip {
+  id            String                  @id @default(cuid())
+  destinationId String
+  userId        String
+  text          String
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  destination   Destination             @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+  helpfulMarks  DestinationTipHelpful[]
+  user          User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([destinationId])
+  @@index([destinationId, createdAt])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model DestinationTipHelpful {
+  id        String         @id @default(cuid())
+  tipId     String
+  userId    String
+  createdAt DateTime       @default(now())
+  tip       DestinationTip @relation(fields: [tipId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tipId, userId])
+  @@index([tipId])
+  @@index([userId])
+}
+
+model Notification {
+  actorUserId String?
+  emailPending Boolean @default(false)
+  emailAttempts Int @default(0)
+  emailNextAttemptAt DateTime @default(now())
+  emailSentAt DateTime?
+  id        String    @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String?
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+  @@index([emailPending, emailNextAttemptAt])
+}
+
+model Course {
+  id          String                    @id @default(cuid())
+  name        String
+  country     String
+  region      String?
+  city        String?
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+  lat         Float
+  lon         Float
+  postalCode  String?
+  active      Boolean                   @default(true)
+  description String?
+  holes       Int?
+  location    Unsupported("geography")?
+  osmId       String?
+  par         Int?
+  phone       String?
+  source      String                    @default("csv")
+  verified    Boolean                   @default(false)
+  website     String?
+  access      CourseAccess?
+  followers   CourseFollow[]
+  ratings     CourseRating[]
+  posts       Post[]
+  coverImageId String?
+  coverImage PostImage? @relation("CourseCoverImage", fields: [coverImageId], references: [id], onDelete: SetNull)
+  reviews     Review[]
+  tripItems   TripItem[]
+  // Linked services extend this existing course; never duplicate its location.
+  serviceOfferings     GolfServiceOffering[]
+  serviceProviderLinks GolfServiceVenueProvider[]
+
+  @@unique([country, name, lat, lon], name: "course_unique_import_key")
+  @@index([country])
+  @@index([country, region])
+  @@index([city])
+  @@index([access])
+  @@index([holes])
+  @@index([location], type: Gist)
+}
+
+model CourseSubmission {
+  id                String                  @id @default(cuid())
+  name              String
+  country           String
+  city              String?
+  region            String?
+  website           String?
+  lat               Float?
+  lon               Float?
+  holes             Int?
+  par               Int?
+  notes             String?
+  imageUrl          String?
+  status            CourseSubmissionStatus  @default(PENDING)
+  submittedByUserId String?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  submittedBy       User?                   @relation(fields: [submittedByUserId], references: [id], onDelete: SetNull)
+  images            CourseSubmissionImage[]
+
+  @@index([status])
+  @@index([country])
+  @@index([submittedByUserId])
+}
+
+model CourseSubmissionImage {
+  id                 String           @id @default(cuid())
+  courseSubmissionId String
+  url                String
+  path               String
+  originalName       String?
+  mimeType           String
+  size               Int
+  createdAt          DateTime         @default(now())
+  courseSubmission   CourseSubmission @relation(fields: [courseSubmissionId], references: [id], onDelete: Cascade)
+
+  @@index([courseSubmissionId])
+}
+
+model CourseRating {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+  courseId  String
+  overall   Float
+  condition Float?
+  layout    Float?
+  scenery   Float?
+  value     Float?
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+}
+
+model Post {
+  id         String      @id @default(cuid())
+  userId     String
+  courseId   String
+  content    String
+  visibility Visibility  @default(FOLLOWERS)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  lat        Float?
+  lon        Float?
+  comments   Comment[]
+  likes      Like[]
+  course     Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  images     PostImage[]
+  collectionItems PostCollectionItem[]
+
+  @@index([courseId, createdAt])
+  @@index([lat, lon])
+}
+
+model PostCollection {
+  id        String               @id @default(cuid())
+  userId    String
+  name      String
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     PostCollectionItem[]
+
+  @@unique([userId, name])
+  @@index([userId, updatedAt])
+}
+
+model PostCollectionItem {
+  id           String         @id @default(cuid())
+  collectionId String
+  postId       String
+  createdAt    DateTime       @default(now())
+  collection   PostCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  post         Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, postId])
+  @@index([postId])
+  @@index([collectionId, createdAt])
+}
+
+model PostImage {
+  id     String @id @default(cuid())
+  postId String
+  url    String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  coverForCourses Course[] @relation("CourseCoverImage")
+
+  @@index([postId])
+}
+
+model Comment {
+  id        String        @id @default(cuid())
+  postId    String
+  userId    String
+  content   String
+  createdAt DateTime      @default(now())
+  parentId  String?
+  parent    Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[]     @relation("CommentReplies")
+  post      Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes     CommentLike[]
+
+  @@index([postId, createdAt])
+  @@index([parentId])
+}
+
+model CommentLike {
+  id        String   @id @default(cuid())
+  commentId String
+  userId    String
+  createdAt DateTime @default(now())
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+  @@index([userId])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+}
+
+model CourseFollow {
+  id        String   @id @default(cuid())
+  userId    String
+  courseId  String
+  createdAt DateTime @default(now())
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([courseId])
+}
+
+model DestinationFollow {
+  id            String      @id @default(cuid())
+  userId        String
+  destinationId String
+  createdAt     DateTime    @default(now())
+  destination   Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, destinationId])
+  @@index([destinationId])
+}
+
+model Review {
+  id           String   @id @default(cuid())
+  userId       String
+  courseId     String
+  overall      Int
+  maintenance  Int?
+  layout       Int?
+  value        Int?
+  organization Int?
+  scenery      Int?
+  text         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  course       Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([courseId])
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  message   String
+  url       String?
+  userId    String?
+  createdAt DateTime @default(now())
+  category  String   @default("other")
+  device    String?
+  userAgent String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model Trip {
+  id            String         @id @default(cuid())
+  description   String?
+  visibility    TripVisibility @default(PRIVATE)
+  createdById   String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  title         String
+  destination   String?
+  baseCurrency  String         @default("CHF")
+  coverImageUrl String?
+  activities    TripActivity[]
+  createdBy     User           @relation("TripCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  documents     TripDocument[]
+  invites       TripInvite[]
+  items         TripItem[]
+  members       TripMember[]
+
+  @@index([createdById])
+  @@index([visibility])
+}
+
+model TripInvite {
+  id              String    @id @default(cuid())
+  tripId          String
+  token           String    @unique
+  createdByUserId String
+  createdAt       DateTime  @default(now())
+  revokedAt       DateTime?
+  expiresAt       DateTime?
+  createdBy       User      @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+  trip            Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@index([createdByUserId])
+  @@index([revokedAt])
+}
+
+model TripDocument {
+  id                String                         @id @default(cuid())
+  tripId            String
+  title             String
+  note              String?
+  category          TripDocumentCategory           @default(GENERAL)
+  visibility        TripDocumentVisibility         @default(SHARED)
+  fileUrl           String
+  fileName          String
+  mimeType          String
+  sizeBytes         Int
+  uploadedByUserId  String
+  createdAt         DateTime                       @default(now())
+  updatedAt         DateTime                       @updatedAt
+  trip              Trip                           @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  uploadedBy        User                           @relation(fields: [uploadedByUserId], references: [id], onDelete: Cascade)
+  itemLinks         TripItemDocument[]
+  visibilityMembers TripDocumentVisibilityMember[]
+
+  @@index([tripId])
+  @@index([uploadedByUserId])
+  @@index([category])
+  @@index([visibility])
+}
+
+model TripActivity {
+  id          String           @id @default(cuid())
+  tripId      String
+  actorUserId String?
+  actorName   String?
+  type        TripActivityType
+  message     String
+  metadata    Json?
+  createdAt   DateTime         @default(now())
+  actorUser   User?            @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  trip        Trip             @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId, createdAt])
+  @@index([actorUserId])
+  @@index([type])
+}
+
+model TripMember {
+  id                           String                         @id @default(cuid())
+  tripId                       String
+  userId                       String?
+  displayName                  String?
+  isGuest                      Boolean                        @default(false)
+  role                         TripRole                       @default(MEMBER)
+  createdAt                    DateTime                       @default(now())
+  updatedAt                    DateTime                       @updatedAt
+  itemParticipations           TripItemParticipant[]
+  itemCostParticipations       TripItemCostParticipant[]
+  itemVisibilitySelections     TripItemVisibilityMember[]
+  documentVisibilitySelections TripDocumentVisibilityMember[]
+  paidItemCosts                TripItemCost[]                 @relation("TripItemCostPayer")
+  paidItems                    TripItem[]                     @relation("TripItemPayer")
+  trip                         Trip                           @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user                         User?                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, userId])
+  @@index([userId])
+}
+
+model TripItem {
+  id                     String                     @id @default(cuid())
+  tripId                 String
+  courseId               String?
+  type                   TripItemType               @default(COURSE)
+  title                  String?
+  notes                  String?
+  startsAt               DateTime?
+  sortOrder              Int                        @default(0)
+  createdAt              DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
+  address                String?
+  amount                 Float?
+  baseAmount             Float?
+  bookingRef             String?
+  caddyFee               Float?
+  cartFee                Float?
+  currency               String?
+  date                   DateTime?
+  directPrice            Float?
+  endDate                DateTime?
+  endTime                String?
+  costMode               TripItemCostMode           @default(TOTAL)
+  expenseType            TripItemExpenseType        @default(SHARED)
+  exchangeRate           Float?
+  departureFromHotelTime String?
+  greenFee               Float?
+  includeCaddyFeeInSplit Boolean                    @default(true)
+  includeCartFeeInSplit  Boolean                    @default(true)
+  includeGreenFeeInSplit Boolean                    @default(true)
+  locationName           String?
+  paidByMemberId         String?
+  provider               String?
+  providerPrice          Float?
+  returnToHotel          String?
+  roundDurationMinutes   Int?
+  startTime              String?
+  createdByUserId        String
+  visibility             TripItemVisibility         @default(GROUP)
+  course                 Course?                    @relation(fields: [courseId], references: [id])
+  createdBy              User                       @relation("TripItemCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  paidByMember           TripMember?                @relation("TripItemPayer", fields: [paidByMemberId], references: [id])
+  participants           TripItemParticipant[]
+  costs                  TripItemCost[]
+  trip                   Trip                       @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  documentLinks          TripItemDocument[]
+  visibilityMembers      TripItemVisibilityMember[]
+
+  @@index([tripId])
+  @@index([courseId])
+  @@index([createdByUserId])
+  @@index([paidByMemberId])
+  @@index([visibility])
+  @@index([tripId, sortOrder])
+}
+
+model TripItemCost {
+  id             String                    @id @default(cuid())
+  tripItemId     String
+  label          String?
+  amount         Float?
+  currency       String?
+  exchangeRate   Float?
+  baseAmount     Float?
+  costMode       TripItemCostMode          @default(TOTAL)
+  paymentMode    TripItemPaymentMode       @default(PAID_BY_ONE)
+  paidByMemberId String?
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+  tripItem       TripItem                  @relation(fields: [tripItemId], references: [id], onDelete: Cascade)
+  paidByMember   TripMember?               @relation("TripItemCostPayer", fields: [paidByMemberId], references: [id])
+  participants   TripItemCostParticipant[]
+
+  @@index([tripItemId])
+  @@index([paidByMemberId])
+}
+
+model TripItemCostParticipant {
+  id           String       @id @default(cuid())
+  costId       String
+  tripMemberId String
+  createdAt    DateTime     @default(now())
+  cost         TripItemCost @relation(fields: [costId], references: [id], onDelete: Cascade)
+  tripMember   TripMember   @relation(fields: [tripMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([costId, tripMemberId])
+  @@index([tripMemberId])
+}
+
+model TripItemDocument {
+  id             String       @id @default(cuid())
+  tripItemId     String
+  tripDocumentId String
+  createdAt      DateTime     @default(now())
+  tripItem       TripItem     @relation(fields: [tripItemId], references: [id], onDelete: Cascade)
+  tripDocument   TripDocument @relation(fields: [tripDocumentId], references: [id], onDelete: Cascade)
+
+  @@unique([tripItemId, tripDocumentId])
+  @@index([tripDocumentId])
+}
+
+model TripItemVisibilityMember {
+  id           String     @id @default(cuid())
+  tripItemId   String
+  tripMemberId String
+  createdAt    DateTime   @default(now())
+  tripItem     TripItem   @relation(fields: [tripItemId], references: [id], onDelete: Cascade)
+  tripMember   TripMember @relation(fields: [tripMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([tripItemId, tripMemberId])
+  @@index([tripMemberId])
+}
+
+model TripDocumentVisibilityMember {
+  id             String       @id @default(cuid())
+  tripDocumentId String
+  tripMemberId   String
+  createdAt      DateTime     @default(now())
+  tripDocument   TripDocument @relation(fields: [tripDocumentId], references: [id], onDelete: Cascade)
+  tripMember     TripMember   @relation(fields: [tripMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([tripDocumentId, tripMemberId])
+  @@index([tripMemberId])
+}
+
+model TripItemParticipant {
+  id           String     @id @default(cuid())
+  tripItemId   String
+  tripMemberId String
+  createdAt    DateTime   @default(now())
+  tripItem     TripItem   @relation(fields: [tripItemId], references: [id], onDelete: Cascade)
+  tripMember   TripMember @relation(fields: [tripMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([tripItemId, tripMemberId])
+  @@index([tripMemberId])
+}
+
+
+/// Golf Near Me: physical location, independent of golf Course records.
+/// Only VERIFIED venues with a verifiedAt value should be published.
+model GolfServiceVenue {
+  id             String                     @id @default(cuid())
+  name           String
+  country        String
+  region         String?
+  city           String?
+  addressLine    String?
+  postalCode     String?
+  lat            Float?
+  lon            Float?
+  website        String?
+  phone          String?
+  /// Google Place ID is an identifier only; do not persist Google Places content here.
+  googlePlaceId  String?                    @unique
+  osmRef         String?                    @unique
+  status         GolfServiceStatus          @default(DRAFT)
+  sourceKind     GolfServiceSourceKind?
+  sourceUrl      String?
+  verifiedAt     DateTime?
+  reviewNotes    String?
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+  offerings      GolfServiceOffering[]
+  venueProviders GolfServiceVenueProvider[]
+
+  @@index([country, status])
+  @@index([country, region])
+  @@index([city])
+  @@index([lat, lon])
+}
+
+/// One venue can expose several independent golf service categories.
+/// unitCount represents physical units (e.g. two simulators), when verified.
+model GolfServiceOffering {
+  id                String               @id @default(cuid())
+  // Exactly one physical owner; enforced by the migration's XOR CHECK constraint.
+  venueId           String?
+  courseId          String?
+  category          GolfServiceCategory
+  status            GolfServiceStatus     @default(DRAFT)
+  label             String?
+  description       String?
+  unitCount         Int?
+  availableToPublic Boolean?
+  bookingUrl        String?
+  sourceKind        GolfServiceSourceKind?
+  sourceUrl         String?
+  verifiedAt        DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  venue             GolfServiceVenue?    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  course            Course?              @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([venueId, category])
+  @@unique([courseId, category])
+  @@index([category, status])
+}
+
+/// A golf professional or service operator is not automatically another venue.
+model GolfServiceProvider {
+  id           String                     @id @default(cuid())
+  name         String
+  kind         GolfServiceProviderKind     @default(UNKNOWN)
+  website      String?
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+  venueLinks   GolfServiceVenueProvider[]
+}
+
+/// Link multiple instructors/operators to a single venue, or one pro to many venues.
+model GolfServiceVenueProvider {
+  id          String                  @id @default(cuid())
+  // Applies both to independent venues and providers working at a golf course.
+  venueId     String?
+  courseId    String?
+  providerId  String
+  role        GolfServiceProviderRole
+  status      GolfServiceStatus       @default(DRAFT)
+  sourceKind  GolfServiceSourceKind?
+  sourceUrl   String?
+  verifiedAt  DateTime?
+  createdAt   DateTime                @default(now())
+  venue       GolfServiceVenue?       @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  course      Course?                 @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  provider    GolfServiceProvider     @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([venueId, providerId, role])
+  @@unique([courseId, providerId, role])
+  @@index([providerId])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model spatial_ref_sys {
+  srid      Int     @id
+  auth_name String? @db.VarChar(256)
+  auth_srid Int?
+  srtext    String? @db.VarChar(2048)
+  proj4text String? @db.VarChar(2048)
+}
+
+enum ReportTargetType {
+  POST
+  COMMENT
+  PROFILE
+  OTHER
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  HATE
+  MISINFORMATION
+  INAPPROPRIATE
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWED
+  DISMISSED
+}
+
+enum AccountPrivacy {
+  PRIVATE
+  PUBLIC
+}
+
+enum Visibility {
+  FOLLOWERS
+  PUBLIC
+  PRIVATE
+}
+
+enum FieldPrivacy {
+  PUBLIC
+  FOLLOWERS
+  PRIVATE
+}
+
+enum AuthProvider {
+  GOOGLE
+  APPLE
+  FACEBOOK
+}
+
+enum CourseAccess {
+  PUBLIC
+  PRIVATE
+  RESORT
+  SEMI_PRIVATE
+  MUNICIPAL
+}
+
+enum FollowStatus {
+  PENDING
+  ACCEPTED
+}
+
+enum CourseSubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TripVisibility {
+  PRIVATE
+  SHARED
+  PUBLIC
+}
+
+enum TripRole {
+  OWNER
+  EDITOR
+  VIEWER
+  ADMIN
+  MEMBER
+}
+
+enum TripDocumentCategory {
+  FLIGHT
+  HOTEL
+  GOLF
+  TRANSFER
+  VISA
+  GENERAL
+}
+
+enum TripDocumentVisibility {
+  SHARED
+  SELECTED
+  PRIVATE
+}
+
+enum TripItemVisibility {
+  PRIVATE
+  SELECTED
+  GROUP
+}
+
+enum TripItemExpenseType {
+  PERSONAL
+  SHARED
+}
+
+enum TripItemCostMode {
+  PER_PERSON
+  TOTAL
+}
+
+enum TripItemPaymentMode {
+  PAID_BY_ONE
+  EACH_PAYS_OWN
+}
+
+enum TripActivityType {
+  DOCUMENT_UPLOADED
+  DOCUMENT_DELETED
+  ITEM_CREATED
+  ITEM_UPDATED
+  ITEM_DELETED
+  MEMBER_ADDED
+  INVITE_CREATED
+  TRIP_UPDATED
+}
+
+enum TripItemType {
+  COURSE
+  NOTE
+  golf_round
+  hotel
+  transfer
+  car_rental
+  flight
+  restaurant
+  free_day
+  note
+}
+
+enum GolfServiceStatus {
+  DRAFT
+  VERIFIED
+  HIDDEN
+}
+
+enum GolfServiceCategory {
+  SIMULATOR
+  SHOP
+  RANGE
+  ACADEMY
+  FITTING
+}
+
+enum GolfServiceSourceKind {
+  OFFICIAL_WEBSITE
+  USER_REPORT
+  OPENSTREETMAP
+  INDEPENDENT_RESEARCH
+}
+
+enum GolfServiceProviderKind {
+  UNKNOWN
+  PERSON
+  ORGANIZATION
+}
+
+enum GolfServiceProviderRole {
+  GOLF_PRO
+  FITTER
+  OPERATOR
+}
+
+// Null preserves legacy Railway admin allowlist until a role is explicitly assigned.
+enum AdminRole {
+  USER
+  ADMIN
+}
+
+model ContentModerationCase {
+  id String @id @default(cuid())
+  userId String
+  scope String
+  digest String
+  blockedFingerprint String?
+  status String @default("PENDING")
+  categories String[]
+  text String?
+  bytes Bytes?
+  mimeType String?
+  reviewerId String?
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  decidedAt DateTime?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, scope, digest])
+  @@index([blockedFingerprint])
+  @@index([expiresAt])
+  @@index([status, createdAt])
+}
+
+// Quarantined new posts never enter Post/feed queries until an admin publishes.
+model PendingPost {
+  id String @id @default(cuid())
+  userId String
+  courseId String
+  content String
+  visibility Visibility
+  state String @default("PENDING")
+  dedupKey String? @unique
+  reviewCaseIds String[]
+  categories String[]
+  postId String?
+  reviewerId String?
+  publishToken String?
+  leaseUntil DateTime?
+  createdAt DateTime @default(now())
+  decidedAt DateTime?
+  expiresAt DateTime
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  images PendingPostImage[]
+  @@index([state, createdAt])
+  @@index([expiresAt])
+}
+
+model PendingPostImage {
+  id String @id @default(cuid())
+  pendingPostId String
+  position Int
+  mimeType String
+  bytes Bytes
+  pendingPost PendingPost @relation(fields: [pendingPostId], references: [id], onDelete: Cascade)
+  @@unique([pendingPostId, position])
+}

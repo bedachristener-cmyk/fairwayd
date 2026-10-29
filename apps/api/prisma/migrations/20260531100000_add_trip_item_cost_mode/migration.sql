@@ -1,0 +1,4 @@
+CREATE TYPE "TripItemCostMode" AS ENUM ('PER_PERSON', 'TOTAL');
+
+ALTER TABLE "TripItem"
+  ADD COLUMN "costMode" "TripItemCostMode" NOT NULL DEFAULT 'TOTAL';

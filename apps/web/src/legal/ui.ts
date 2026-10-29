@@ -1,0 +1,20 @@
+import { getLang } from "../i18n/strings";
+export type LegalLanguage = "de" | "fr" | "it" | "en";
+export type LegalKind = "terms" | "privacy";
+export const LEGAL_LANGUAGES: { code: LegalLanguage; name: string }[] = [
+  { code: "de", name: "Deutsch" }, { code: "fr", name: "Français" },
+  { code: "it", name: "Italiano" }, { code: "en", name: "English" },
+];
+export function isLegalLanguage(value: unknown): value is LegalLanguage {
+  return value === "de" || value === "fr" || value === "it" || value === "en";
+}
+export function defaultLegalLanguage(): LegalLanguage {
+  const value = getLang();
+  return isLegalLanguage(value) ? value : "en";
+}
+export const LEGAL_UI = {
+  de: { terms: "AGB & Community-Regeln", privacy: "Datenschutzerklärung", back: "Zur App", language: "Sprache", current: "Bisherige Fassung v1", draft: "Neuer Entwurf", contents: "Inhaltsverzeichnis", print: "Drucken / als PDF sichern", loading: "Text wird geladen…", error: "Der Text konnte nicht geladen werden.", retry: "Erneut versuchen", version: "Stand", contact: "Kontakt", draftNotice: "Testfassung für den geschlossenen Pilotbetrieb. Vor der endgültigen Freigabe sind die offenen Angaben zu Dienstleistern, Ländern, Löschfristen und Funktionen abzuschliessen. Das Lesen ist keine Zustimmung.", currentNotice: "Archivierte Fassung v1. Sie bleibt als Nachweis bisheriger Zustimmungen verfügbar. Das Öffnen dieser Seite ändert keine gespeicherte Zustimmung.", translation: "Die Übersetzungen des Entwurfs müssen vor Inkrafttreten abschliessend sprachlich und rechtlich geprüft werden." },
+  fr: { terms: "Conditions & règles communautaires", privacy: "Protection des données", back: "Retour à l’app", language: "Langue", current: "Version antérieure v1", draft: "Nouveau projet", contents: "Sommaire", print: "Imprimer / enregistrer en PDF", loading: "Chargement du texte…", error: "Impossible de charger le texte.", retry: "Réessayer", version: "Mise à jour", contact: "Contact", draftNotice: "Version de test pour le pilote fermé. Les informations ouvertes sur les prestataires, pays, délais et fonctions doivent être finalisées avant validation définitive. La lecture ne vaut pas acceptation.", currentNotice: "Version v1 archivée, conservée comme preuve des acceptations antérieures. Ouvrir cette page ne modifie aucune acceptation enregistrée.", translation: "Les traductions du projet nécessitent une vérification linguistique et juridique finale avant leur entrée en vigueur." },
+  it: { terms: "Condizioni e regole della comunità", privacy: "Protezione dei dati", back: "Torna all’app", language: "Lingua", current: "Versione precedente v1", draft: "Nuova bozza", contents: "Indice", print: "Stampa / salva come PDF", loading: "Caricamento del testo…", error: "Impossibile caricare il testo.", retry: "Riprova", version: "Aggiornamento", contact: "Contatto", draftNotice: "Versione di test per il progetto pilota chiuso. Le informazioni aperte su fornitori, paesi, termini e funzioni vanno completate prima dell’approvazione definitiva. La lettura non vale come accettazione.", currentNotice: "Versione v1 archiviata, conservata come prova delle accettazioni precedenti. Aprire questa pagina non modifica alcuna accettazione registrata.", translation: "Le traduzioni della bozza richiedono una verifica linguistica e giuridica finale prima dell’entrata in vigore." },
+  en: { terms: "Terms & community rules", privacy: "Privacy policy", back: "Back to app", language: "Language", current: "Previous version v1", draft: "New draft", contents: "Contents", print: "Print / save as PDF", loading: "Loading text…", error: "The text could not be loaded.", retry: "Try again", version: "Updated", contact: "Contact", draftNotice: "Test version for the closed pilot. Outstanding provider, country, retention and feature details must be completed before final approval. Reading does not constitute acceptance.", currentNotice: "Archived version v1, retained as evidence of previous acceptances. Opening this page does not change any recorded acceptance.", translation: "Draft translations require final language and legal review before they take effect." },
+} as const;

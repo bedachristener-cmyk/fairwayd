@@ -1,0 +1,990 @@
+import { Optional } from '@nestjs/common';
+import { ModerationService, requireTextCheck } from '../moderation/moderation.service';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import {
+  AccountPrivacy,
+  FieldPrivacy,
+  FollowStatus,
+  Prisma,
+  Visibility,
+  AdminRole,
+} from '@prisma/client';
+import { isLegacyAdmin } from '../auth/admin.guard';
+import { NotificationsService } from '../notifications/notifications.service';
+import { normalizeSupportedCurrency } from '../currency';
+import { deleteStoredUpload } from '../storage/r2.service';
+
+const MIN_HANDLE_LENGTH = 3;
+const PROFILE_TEXT_LIMIT = 240;
+
+function normalizeHandle(input: string) {
+  return (input ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 20);
+}
+
+function isHandleUniqueConflict(error: unknown) {
+  if (
+    !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+    error.code !== 'P2002'
+  ) {
+    return false;
+  }
+
+  const target = error.meta?.target;
+  return Array.isArray(target) ? target.includes('handle') : true;
+}
+
+function cleanProfileText(input: string | null | undefined, limit = PROFILE_TEXT_LIMIT) {
+  if (typeof input !== 'string') return input ?? undefined;
+  const value = input.trim();
+  return value ? value.slice(0, limit) : null;
+}
+
+function cleanHandicap(input: unknown) {
+  if (input === null || input === '' || typeof input === 'undefined') {
+    return null;
+  }
+
+  const value = Number(input);
+  if (!Number.isFinite(value)) {
+    throw new BadRequestException('Invalid handicap');
+  }
+
+  return Math.max(-10, Math.min(54, value));
+}
+
+function cleanFieldPrivacy(input: unknown) {
+  if (input === 'PUBLIC' || input === 'FOLLOWERS' || input === 'PRIVATE') {
+    return input as FieldPrivacy;
+  }
+
+  return undefined;
+}
+
+function cleanAccountPrivacy(input: unknown) {
+  if (typeof input === 'undefined') return undefined;
+  if (input === 'PUBLIC' || input === 'PRIVATE') {
+    return input as AccountPrivacy;
+  }
+
+  throw new BadRequestException('Invalid account privacy');
+}
+
+const userProfileSelect = {
+  id: true,
+  email: true,
+  handle: true,
+  name: true,
+  avatarUrl: true,
+  privacy: true,
+  bio: true,
+  handicap: true,
+  homeGolfClub: true,
+  golfSlogan: true,
+  favoriteGolfDestination: true,
+  bioPrivacy: true,
+  handicapPrivacy: true,
+  homeGolfClubPrivacy: true,
+  golfSloganPrivacy: true,
+  favoriteGolfDestinationPrivacy: true,
+  preferredCurrency: true,
+  termsAcceptedAt: true,
+  termsVersion: true,
+  privacyAcceptedAt: true,
+  privacyVersion: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.UserSelect;
+
+@Injectable()
+export class UsersService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+    @Optional() private readonly moderation?: ModerationService,
+  ) {}
+
+  // =========================================================
+  // Me + profile basics
+  // =========================================================
+
+  async getMe(userId: string) {
+    const me = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        ...userProfileSelect,
+        password: true,
+      },
+    });
+
+    if (!me) throw new NotFoundException('User not found');
+    const { password, ...safeMe } = me;
+    return {
+      ...safeMe,
+      hasPasswordLogin: !!password,
+    };
+  }
+
+  async acceptTerms(userId: string, termsVersion: string) {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        termsAcceptedAt: new Date(),
+        termsVersion,
+        privacyAcceptedAt: new Date(),
+        privacyVersion: 'v1',
+      },
+      select: {
+        ...userProfileSelect,
+        password: true,
+      },
+    });
+
+    const { password, ...safeUser } = user;
+    return {
+      ...safeUser,
+      hasPasswordLogin: !!password,
+    };
+  }
+
+  async updateProfile(
+    userId: string,
+    params: {
+      handle: string;
+      name?: string | null;
+      bio?: string | null;
+      handicap?: unknown;
+      homeGolfClub?: string | null;
+      golfSlogan?: string | null;
+      favoriteGolfDestination?: string | null;
+      privacy?: unknown;
+      bioPrivacy?: unknown;
+      handicapPrivacy?: unknown;
+      homeGolfClubPrivacy?: unknown;
+      golfSloganPrivacy?: unknown;
+      favoriteGolfDestinationPrivacy?: unknown;
+    },
+  ) {
+    await requireTextCheck(this.moderation, userId, 'PROFILE_TEXT', [params.handle, params.name, params.bio, params.homeGolfClub, params.golfSlogan, params.favoriteGolfDestination].filter(v => typeof v === 'string').join('\n'));
+    const safeHandle = normalizeHandle(params.handle);
+    const accountPrivacy = cleanAccountPrivacy(params.privacy);
+
+    if (!safeHandle || safeHandle.length < MIN_HANDLE_LENGTH) {
+      throw new BadRequestException('Handle must be at least 3 characters');
+    }
+
+    try {
+      const data: Prisma.UserUpdateInput = {
+        handle: safeHandle,
+        name:
+          typeof params.name === 'string'
+            ? params.name.trim()
+            : (params.name ?? undefined),
+        bio: cleanProfileText(params.bio),
+        handicap: cleanHandicap(params.handicap),
+        homeGolfClub: cleanProfileText(params.homeGolfClub, 120),
+        golfSlogan: cleanProfileText(params.golfSlogan, 140),
+        favoriteGolfDestination: cleanProfileText(
+          params.favoriteGolfDestination,
+          120,
+        ),
+        bioPrivacy: cleanFieldPrivacy(params.bioPrivacy),
+        handicapPrivacy: cleanFieldPrivacy(params.handicapPrivacy),
+        homeGolfClubPrivacy: cleanFieldPrivacy(params.homeGolfClubPrivacy),
+        golfSloganPrivacy: cleanFieldPrivacy(params.golfSloganPrivacy),
+        favoriteGolfDestinationPrivacy: cleanFieldPrivacy(
+          params.favoriteGolfDestinationPrivacy,
+        ),
+      };
+
+      if (accountPrivacy) {
+        data.privacy = accountPrivacy;
+      }
+
+      return await this.prisma.user.update({
+        where: { id: userId },
+        data,
+        select: userProfileSelect,
+      });
+    } catch (e) {
+      if (isHandleUniqueConflict(e)) {
+        throw new ConflictException('Handle is already taken');
+      }
+      throw e;
+    }
+  }
+
+  async isHandleAvailable(handle: string, currentUserId?: string | null) {
+    const safeHandle = normalizeHandle(handle);
+
+    if (!safeHandle || safeHandle.length < MIN_HANDLE_LENGTH) {
+      throw new BadRequestException('Handle must be at least 3 characters');
+    }
+
+    const existing = await this.prisma.user.findUnique({
+      where: { handle: safeHandle },
+      select: { id: true },
+    });
+
+    return {
+      available: !existing || existing.id === currentUserId,
+    };
+  }
+
+  async setAvatar(userId: string, avatarUrl: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { avatarUrl },
+      select: userProfileSelect,
+    });
+  }
+
+  async updatePrivacy(userId: string, privacy: unknown) {
+    const value = cleanAccountPrivacy(privacy);
+    if (!value) throw new BadRequestException('Missing account privacy');
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { privacy: value },
+      select: userProfileSelect,
+    });
+  }
+
+  async deleteAccount(userId: string, confirmation: unknown) {
+    if (confirmation !== 'DELETE') {
+      throw new BadRequestException('Type DELETE to confirm account deletion');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        avatarUrl: true,
+        posts: { select: { images: { select: { url: true } } } },
+        createdTrips: {
+          select: {
+            coverImageUrl: true,
+            documents: { select: { fileUrl: true } },
+          },
+        },
+      },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const media = new Set<string>();
+    if (user.avatarUrl) media.add(user.avatarUrl);
+    for (const post of user.posts) {
+      for (const image of post.images) media.add(image.url);
+    }
+    for (const trip of user.createdTrips) {
+      if (trip.coverImageUrl) media.add(trip.coverImageUrl);
+      for (const document of trip.documents) media.add(document.fileUrl);
+    }
+
+    await this.prisma.user.delete({ where: { id: userId } });
+
+    const cleanup = await Promise.allSettled(
+      [...media].map((url) => deleteStoredUpload(url)),
+    );
+
+    return {
+      ok: true,
+      mediaCleanupFailures: cleanup.filter((result) => result.status === 'rejected')
+        .length,
+    };
+  }
+
+  async updatePreferredCurrency(userId: string, preferredCurrency: unknown) {
+    let currency: string;
+    try {
+      currency = normalizeSupportedCurrency(preferredCurrency);
+    } catch {
+      throw new BadRequestException('Unsupported preferred currency');
+    }
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { preferredCurrency: currency },
+      select: userProfileSelect,
+    });
+  }
+
+  // =========================================================
+  // User search
+  // =========================================================
+
+  async isAdmin(userId: string | undefined): Promise<boolean> {
+    if (!userId) return false;
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, handle: true, adminRole: true },
+    });
+    return !!user && (user.adminRole === AdminRole.ADMIN ||
+      (user.adminRole === null && isLegacyAdmin(user)));
+  }
+
+  async setAdminRole(actingId: string, targetId: string, role: unknown) {
+    if (role !== 'ADMIN' && role !== 'USER') {
+      throw new BadRequestException('Role must be ADMIN or USER');
+    }
+    if (actingId === targetId && role === 'USER') {
+      throw new BadRequestException('You cannot remove your own admin access');
+    }
+    const target = await this.prisma.user.findUnique({
+      where: { id: targetId }, select: { id: true },
+    });
+    if (!target) throw new NotFoundException('User not found');
+    const updated = await this.prisma.user.update({
+      where: { id: targetId },
+      data: { adminRole: role as AdminRole },
+      select: { id: true, adminRole: true },
+    });
+    return { id: updated.id, role: updated.adminRole };
+  }
+
+  async listAdminUsers(q: string, page?: string) {
+    const query = (q || '').trim().slice(0, 100);
+    const pageNumber = Math.max(1, Math.min(10000, Number.parseInt(page || '1', 10) || 1));
+    const where: Prisma.UserWhereInput = query
+      ? {
+          OR: [
+            { name: { contains: query, mode: 'insensitive' } },
+            { handle: { contains: query, mode: 'insensitive' } },
+            { email: { contains: query, mode: 'insensitive' } },
+          ],
+        }
+      : {};
+    const [total, items] = await this.prisma.$transaction([
+      this.prisma.user.count({ where }),
+      this.prisma.user.findMany({
+        where,
+        select: {
+          id: true, name: true, handle: true, email: true,
+          createdAt: true, emailVerifiedAt: true, adminRole: true,
+        },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        skip: (pageNumber - 1) * 25,
+        take: 25,
+      }),
+    ]);
+    return { total, page: pageNumber, pageSize: 25, items: items.map(user => ({
+      id: user.id, name: user.name, handle: user.handle, email: user.email,
+      createdAt: user.createdAt, emailVerifiedAt: user.emailVerifiedAt,
+      role: user.adminRole === AdminRole.ADMIN ||
+        (user.adminRole === null && isLegacyAdmin(user)) ? "ADMIN" : "USER",
+    })) };
+  }
+
+  async searchUsers(q: string, viewerUserId?: string) {
+    const query = q.trim();
+
+    if (!query || query.length < 2) {
+      return [];
+    }
+
+    const items = await this.prisma.user.findMany({
+      where: {
+        AND: [
+          { handle: { not: null } },
+          viewerUserId
+            ? {
+                NOT: {
+                  OR: [
+                    { blockedBy: { some: { blockerId: viewerUserId } } },
+                    { blockedUsers: { some: { blockedId: viewerUserId } } },
+                  ],
+                },
+              }
+            : {},
+        ],
+        OR: [
+          {
+            handle: {
+              contains: query,
+              mode: 'insensitive',
+            },
+          },
+          {
+            name: {
+              contains: query,
+              mode: 'insensitive',
+            },
+          },
+          {
+            email: {
+              contains: query,
+              mode: 'insensitive',
+            },
+          },
+        ],
+      },
+      select: {
+        id: true,
+        handle: true,
+        name: true,
+        avatarUrl: true,
+      },
+      orderBy: [{ name: 'asc' }, { handle: 'asc' }],
+      take: 20,
+    });
+
+    return items;
+  }
+
+  // =========================================================
+  // Profile + posts by handle
+  // =========================================================
+
+  async getByHandle(viewerUserId: string, handle: string) {
+    const safeHandle = normalizeHandle(handle);
+
+    if (!safeHandle) throw new NotFoundException('User not found');
+
+    const user = await this.prisma.user.findUnique({
+      where: { handle: safeHandle },
+      select: {
+        id: true,
+        handle: true,
+        name: true,
+        avatarUrl: true,
+        privacy: true,
+        bio: true,
+        handicap: true,
+        homeGolfClub: true,
+        golfSlogan: true,
+        favoriteGolfDestination: true,
+        bioPrivacy: true,
+        handicapPrivacy: true,
+        homeGolfClubPrivacy: true,
+        golfSloganPrivacy: true,
+        favoriteGolfDestinationPrivacy: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) throw new NotFoundException('User not found');
+
+    if (
+      viewerUserId !== user.id &&
+      (await this.prisma.userBlock.findFirst({
+        where: {
+          OR: [
+            { blockerId: viewerUserId, blockedId: user.id },
+            { blockerId: user.id, blockedId: viewerUserId },
+          ],
+        },
+        select: { id: true },
+      }))
+    ) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isSelf = viewerUserId === user.id;
+    const isAcceptedFollower = isSelf
+      ? false
+      : !!(await this.prisma.follow.findFirst({
+          where: {
+            followerId: viewerUserId,
+            followingId: user.id,
+            status: FollowStatus.ACCEPTED,
+          },
+          select: { id: true },
+        }));
+
+    const canViewField = (privacy: FieldPrivacy) =>
+      isSelf ||
+      privacy === FieldPrivacy.PUBLIC ||
+      (privacy === FieldPrivacy.FOLLOWERS && isAcceptedFollower);
+
+    return {
+      ...user,
+      bio: canViewField(user.bioPrivacy) ? user.bio : null,
+      handicap: canViewField(user.handicapPrivacy) ? user.handicap : null,
+      homeGolfClub: canViewField(user.homeGolfClubPrivacy)
+        ? user.homeGolfClub
+        : null,
+      golfSlogan: canViewField(user.golfSloganPrivacy)
+        ? user.golfSlogan
+        : null,
+      favoriteGolfDestination: canViewField(
+        user.favoriteGolfDestinationPrivacy,
+      )
+        ? user.favoriteGolfDestination
+        : null,
+    };
+  }
+
+  async findById(id: string) {
+    return this.prisma.user.findUnique({ where: { id } });
+  }
+
+  async getPostsByHandle(viewerUserId: string, handle: string) {
+    const safeHandle = normalizeHandle(handle);
+
+    if (!safeHandle) throw new NotFoundException('User not found');
+
+    const profileUser = await this.prisma.user.findUnique({
+      where: { handle: safeHandle },
+      select: {
+        id: true,
+        handle: true,
+        name: true,
+        avatarUrl: true,
+      },
+    });
+
+    if (!profileUser) throw new NotFoundException('User not found');
+
+    if (
+      viewerUserId !== profileUser.id &&
+      (await this.prisma.userBlock.findFirst({
+        where: {
+          OR: [
+            { blockerId: viewerUserId, blockedId: profileUser.id },
+            { blockerId: profileUser.id, blockedId: viewerUserId },
+          ],
+        },
+        select: { id: true },
+      }))
+    ) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isSelf = viewerUserId === profileUser.id;
+    const isAcceptedFollower = isSelf
+      ? false
+      : !!(await this.prisma.follow.findFirst({
+          where: {
+            followerId: viewerUserId,
+            followingId: profileUser.id,
+            status: FollowStatus.ACCEPTED,
+          },
+          select: { id: true },
+        }));
+
+    return this.prisma.post.findMany({
+      where: {
+        userId: profileUser.id,
+        ...(isSelf
+          ? {}
+          : {
+              visibility: {
+                in: isAcceptedFollower
+                  ? [Visibility.PUBLIC, Visibility.FOLLOWERS]
+                  : [Visibility.PUBLIC],
+              },
+            }),
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        content: true,
+        createdAt: true,
+        visibility: true,
+        course: {
+          select: {
+            id: true,
+            name: true,
+            lat: true,
+            lon: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            handle: true,
+            avatarUrl: true,
+          },
+        },
+        images: {
+          select: {
+            id: true,
+            url: true,
+          },
+        },
+        likes: {
+          select: {
+            userId: true,
+          },
+        },
+        _count: {
+          select: {
+            likes: true,
+            comments: true,
+          },
+        },
+      },
+    });
+  }
+
+  async listFollowingUsers(userId: string) {
+    const rows = await this.prisma.follow.findMany({
+      where: {
+        followerId: userId,
+        status: 'ACCEPTED',
+      },
+      include: {
+        following: {
+          select: {
+            id: true,
+            handle: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return rows;
+  }
+
+  async listFollowingUsersByHandle(handle: string) {
+    const safeHandle = normalizeHandle(handle);
+
+    if (!safeHandle) throw new NotFoundException('User not found');
+
+    const user = await this.prisma.user.findUnique({
+      where: { handle: safeHandle },
+      select: { id: true },
+    });
+
+    if (!user) throw new NotFoundException('User not found');
+
+    return this.listFollowingUsers(user.id);
+  }
+
+  async listFollowedCoursesByHandle(handle: string) {
+    const safeHandle = normalizeHandle(handle);
+
+    if (!safeHandle) throw new NotFoundException('User not found');
+
+    const user = await this.prisma.user.findUnique({
+      where: { handle: safeHandle },
+      select: { id: true },
+    });
+
+    if (!user) throw new NotFoundException('User not found');
+
+    const rows = await this.prisma.courseFollow.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        course: {
+          select: {
+            id: true,
+            name: true,
+            lat: true,
+            lon: true,
+            city: true,
+            country: true,
+            region: true,
+            postalCode: true,
+            website: true,
+            holes: true,
+            access: true,
+          },
+        },
+      },
+    });
+
+    return rows.map((r) => r.course);
+  }
+
+  async listFollowerUsers(userId: string) {
+    const rows = await this.prisma.follow.findMany({
+      where: {
+        followingId: userId,
+        status: 'ACCEPTED',
+      },
+      include: {
+        follower: {
+          select: {
+            id: true,
+            handle: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return rows;
+  }
+
+  async listFollowerUsersByHandle(handle: string) {
+    const safeHandle = normalizeHandle(handle);
+
+    if (!safeHandle) throw new NotFoundException('User not found');
+
+    const user = await this.prisma.user.findUnique({
+      where: { handle: safeHandle },
+      select: { id: true },
+    });
+
+    if (!user) throw new NotFoundException('User not found');
+
+    return this.listFollowerUsers(user.id);
+  }
+
+  // =========================================================
+  // Follow (Instagram-style: PUBLIC => ACCEPTED, PRIVATE => PENDING)
+  // =========================================================
+
+  private async mustGetUserPrivacy(userId: string) {
+    const u = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        privacy: true,
+        handle: true,
+        name: true,
+        avatarUrl: true,
+      },
+    });
+    if (!u) throw new NotFoundException('User not found');
+    return u;
+  }
+
+  async followUser(meId: string, targetUserId: string) {
+    if (!meId || !targetUserId)
+      throw new BadRequestException('Missing user id');
+    if (meId === targetUserId)
+      throw new BadRequestException('Cannot follow yourself');
+
+    const target = await this.mustGetUserPrivacy(targetUserId);
+
+    const blocked = await this.prisma.userBlock.findFirst({
+      where: {
+        OR: [
+          { blockerId: meId, blockedId: targetUserId },
+          { blockerId: targetUserId, blockedId: meId },
+        ],
+      },
+      select: { id: true },
+    });
+    if (blocked) throw new BadRequestException('This user is unavailable');
+
+    const desiredStatus =
+      target.privacy === AccountPrivacy.PUBLIC
+        ? FollowStatus.ACCEPTED
+        : FollowStatus.PENDING;
+
+    const existing = await this.prisma.follow.findUnique({
+      where: {
+        followerId_followingId: { followerId: meId, followingId: targetUserId },
+      },
+      select: { status: true },
+    });
+
+    const row = await this.prisma.follow.upsert({
+      where: {
+        followerId_followingId: { followerId: meId, followingId: targetUserId },
+      },
+      update: {
+        status: desiredStatus,
+        decidedAt: desiredStatus === FollowStatus.ACCEPTED ? new Date() : null,
+      },
+      create: {
+        followerId: meId,
+        followingId: targetUserId,
+        status: desiredStatus,
+        decidedAt: desiredStatus === FollowStatus.ACCEPTED ? new Date() : null,
+      },
+      select: { status: true },
+    });
+
+    if (!existing && row.status === FollowStatus.PENDING) {
+      const requester = await this.prisma.user.findUnique({
+        where: { id: meId },
+        select: { name: true, handle: true },
+      });
+      const requesterName =
+        requester?.name?.trim() || (requester?.handle ? `@${requester.handle}` : 'Someone');
+      await this.notifications.createNotification({
+        userId: targetUserId,
+        actorUserId: meId,
+        type: 'follow_request',
+        title: 'New follow request',
+        body: `${requesterName} wants to connect with you.`,
+        link: '/follow-requests',
+      });
+    }
+
+    if (!existing && row.status === FollowStatus.ACCEPTED) {
+      await this.notifications.createNotification({
+        userId: targetUserId,
+        actorUserId: meId,
+        type: 'new_follower',
+        title: 'New follower',
+        body: 'Someone started following you.',
+        link: '/profile',
+      });
+    }
+
+    return { status: row.status };
+  }
+
+  async unfollowUser(meId: string, targetUserId: string) {
+    if (!meId || !targetUserId)
+      throw new BadRequestException('Missing user id');
+    if (meId === targetUserId)
+      throw new BadRequestException('Cannot unfollow yourself');
+
+    await this.prisma.follow.deleteMany({
+      where: { followerId: meId, followingId: targetUserId },
+    });
+  }
+
+  async getFollowStatus(meId: string, targetUserId: string) {
+    const row = await this.prisma.follow.findUnique({
+      where: {
+        followerId_followingId: { followerId: meId, followingId: targetUserId },
+      },
+      select: { status: true },
+    });
+
+    if (!row) return 'NONE';
+    if (row.status === FollowStatus.PENDING) return 'PENDING';
+    if (row.status === FollowStatus.ACCEPTED) return 'ACCEPTED';
+    return 'NONE';
+  }
+
+  // =========================================================
+  // Follow requests (for the current user)
+  // =========================================================
+
+  async listMyFollowRequests(meId: string) {
+    const rows = await this.prisma.follow.findMany({
+      where: { followingId: meId, status: FollowStatus.PENDING },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        follower: {
+          select: {
+            id: true,
+            handle: true,
+            name: true,
+            avatarUrl: true,
+            privacy: true,
+            bio: true,
+            handicap: true,
+            homeGolfClub: true,
+            golfSlogan: true,
+            favoriteGolfDestination: true,
+            bioPrivacy: true,
+            handicapPrivacy: true,
+            homeGolfClubPrivacy: true,
+            golfSloganPrivacy: true,
+            favoriteGolfDestinationPrivacy: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    return rows.map((r) => ({
+      followerId: r.followerId,
+      createdAt: r.createdAt,
+
+      followerHandle: r.follower?.handle ?? null,
+      followerName: r.follower?.name ?? null,
+      followerAvatarUrl: r.follower?.avatarUrl ?? null,
+      bio: r.follower?.bioPrivacy === FieldPrivacy.PUBLIC ? r.follower.bio : null,
+      handicap:
+        r.follower?.handicapPrivacy === FieldPrivacy.PUBLIC
+          ? r.follower.handicap
+          : null,
+      homeGolfClub:
+        r.follower?.homeGolfClubPrivacy === FieldPrivacy.PUBLIC
+          ? r.follower.homeGolfClub
+          : null,
+      golfSlogan:
+        r.follower?.golfSloganPrivacy === FieldPrivacy.PUBLIC
+          ? r.follower.golfSlogan
+          : null,
+      favoriteGolfDestination:
+        r.follower?.favoriteGolfDestinationPrivacy === FieldPrivacy.PUBLIC
+          ? r.follower.favoriteGolfDestination
+          : null,
+    }));
+  }
+
+  async listMySentFollowRequests(meId: string) {
+    const rows = await this.prisma.follow.findMany({
+      where: { followerId: meId, status: FollowStatus.PENDING },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        following: {
+          select: {
+            id: true,
+            handle: true,
+            name: true,
+            avatarUrl: true,
+            privacy: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    return rows.map((r) => ({
+      followingId: r.followingId,
+      createdAt: r.createdAt,
+
+      followingHandle: r.following?.handle ?? null,
+      followingName: r.following?.name ?? null,
+      followingAvatarUrl: r.following?.avatarUrl ?? null,
+    }));
+  }
+
+  async acceptFollowRequest(meId: string, followerId: string) {
+    const res = await this.prisma.follow.updateMany({
+      where: {
+        followingId: meId,
+        followerId,
+        status: FollowStatus.PENDING,
+      },
+      data: {
+        status: FollowStatus.ACCEPTED,
+        decidedAt: new Date(),
+      },
+    });
+
+    const changed = res.count > 0;
+
+    if (changed) {
+      await this.notifications.createNotification({
+        userId: followerId,
+        actorUserId: meId,
+        type: 'follow_request_accepted',
+        title: 'Follow request accepted',
+        body: 'Your follow request was accepted.',
+        link: '/profile',
+      });
+    }
+
+    return changed;
+  }
+
+  async rejectFollowRequest(meId: string, followerId: string) {
+    const res = await this.prisma.follow.deleteMany({
+      where: {
+        followingId: meId,
+        followerId,
+        status: FollowStatus.PENDING,
+      },
+    });
+
+    return res.count > 0;
+  }
+}

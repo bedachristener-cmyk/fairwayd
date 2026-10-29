@@ -1,0 +1,2946 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import ReactCrop, { type Crop, type PixelCrop } from "react-image-crop";
+import "react-image-crop/dist/ReactCrop.css";
+import { API_BASE } from "../api/base";
+import {
+  apiGet,
+  ApiError,
+  friendlyApiErrorMessage,
+} from "../api/client";
+import { useAuth } from "../auth/AuthContext";
+import { useMe } from "../auth/useMe";
+import CourseDropdown, { type CourseLite } from "../components/CourseDropdown";
+import PostCard from "../components/PostCard";
+import PostCollectionPicker, {
+  type PostCollectionSummary,
+} from "../components/PostCollectionPicker";
+import CommentModal from "../components/CommentModal";
+import BackToTopButton from "../components/BackToTopButton";
+import { FeedCardsSkeleton } from "../components/PolishStates";
+import { useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { useSelectedCourse } from "../state/SelectedCourseContext";
+import { useCourseCoverImages } from "../hooks/useCourseCoverImages";
+import { getCroppedImageFile } from "../utils/cropImage";
+import {
+  getRatingSummary,
+  getMyRating,
+  type RatingSummary,
+  type MyRating,
+} from "../api/ratings";
+import { fileUrl } from "../api/fileUrl";
+import { t } from "../i18n/strings";
+import { reviewCopy } from "../utils/contentReview";
+
+type PostImage = { id: string; url: string };
+type NetworkGolfer = { id: string; handle: string; name?: string | null; avatarUrl?: string | null };
+
+type Post = {
+  id: string;
+  content: string;
+  createdAt: string;
+  visibility?: "PUBLIC" | "FOLLOWERS" | "PRIVATE";
+  course: {
+    id: string;
+    name: string;
+    lat: number;
+    lon: number;
+    country?: string | null;
+  };
+  user: {
+    id: string;
+    handle: string;
+    name?: string | null;
+    avatarUrl?: string | null;
+  };
+  images?: PostImage[];
+  likes?: { userId: string }[];
+  comments?: unknown[];
+  _count?: {
+    likes?: number;
+    comments?: number;
+  };
+};
+
+type Course = {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  holes?: number | null;
+  website?: string | null;
+  isPrivate?: boolean | null;
+  private?: boolean | null;
+  visibility?: string | null;
+  access?: string | null;
+  city?: string | null;
+  region?: string | null;
+  country?: string | null;
+};
+
+type CourseRatingMap = Record<string, RatingSummary | null>;
+
+type FeedFilter =
+  | "following"
+  | "courses"
+  | "destinations"
+  | "trending"
+  | "mine"
+  | "saved";
+type PostVisibilityFilter = "ALL" | "PUBLIC" | "FOLLOWERS" | "PRIVATE";
+const MAX_POST_IMAGES = 5;
+const SUPPORTED_POST_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+const SUPPORTED_POST_IMAGE_EXTENSIONS = new Set([
+  "jpg",
+  "jpeg",
+  "png",
+  "webp",
+]);
+const VISIBILITY_OPTIONS: {
+  value: "PUBLIC" | "FOLLOWERS" | "PRIVATE";
+  labelKey: "visibility_public" | "visibility_followers" | "visibility_private";
+}[] = [
+  { value: "PUBLIC", labelKey: "visibility_public" },
+  { value: "FOLLOWERS", labelKey: "visibility_followers" },
+  { value: "PRIVATE", labelKey: "visibility_private" },
+];
+
+function isSupportedPostImageFile(file: File) {
+  const type = file.type.trim().toLowerCase();
+  const ext = file.name.split(".").pop()?.trim().toLowerCase() ?? "";
+  return (
+    SUPPORTED_POST_IMAGE_TYPES.has(type) ||
+    SUPPORTED_POST_IMAGE_EXTENSIONS.has(ext)
+  );
+}
+
+const FEED_FILTERS: {
+  value: FeedFilter;
+  icon: string;
+  labelKey:
+    | "following"
+    | "golf_courses"
+    | "travel"
+    | "trending"
+    | "my_posts"
+    | "saved_posts";
+}[] = [
+  { value: "following", icon: "👥", labelKey: "following" },
+  { value: "mine", icon: "👤", labelKey: "my_posts" },
+  { value: "saved", icon: "🔖", labelKey: "saved_posts" },
+  { value: "courses", icon: "⛳", labelKey: "golf_courses" },
+  { value: "destinations", icon: "🌍", labelKey: "travel" },
+  { value: "trending", icon: "🔥", labelKey: "trending" },
+];
+
+const POST_VISIBILITY_FILTERS: {
+  value: PostVisibilityFilter;
+  labelKey:
+    | "all"
+    | "visibility_public"
+    | "visibility_followers"
+    | "visibility_private";
+}[] = [
+  { value: "ALL", labelKey: "all" },
+  { value: "PRIVATE", labelKey: "visibility_private" },
+  { value: "FOLLOWERS", labelKey: "visibility_followers" },
+  { value: "PUBLIC", labelKey: "visibility_public" },
+];
+
+async function resizeImage(file: File): Promise<File> {
+  const img = document.createElement("img");
+  const reader = new FileReader();
+
+  const dataUrl: string = await new Promise((resolve) => {
+    reader.onload = () => resolve(reader.result as string);
+    reader.readAsDataURL(file);
+  });
+
+  img.src = dataUrl;
+  await new Promise((resolve) => (img.onload = resolve));
+
+  const canvas = document.createElement("canvas");
+
+  const MAX_WIDTH = 1600;
+  const scale = Math.min(1, MAX_WIDTH / img.width);
+
+  canvas.width = img.width * scale;
+  canvas.height = img.height * scale;
+
+  const ctx = canvas.getContext("2d");
+  ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  const blob: Blob = await new Promise((resolve) =>
+    canvas.toBlob((b) => resolve(b!), "image/jpeg", 0.8),
+  );
+
+  return new File([blob], file.name, { type: "image/jpeg" });
+}
+
+function Card({
+  title,
+  children,
+  className,
+}: {
+  title?: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const isMobile = window.innerWidth <= 980;
+
+  return (
+    <div
+      className={className}
+      style={{
+        background: "var(--bg)",
+        borderRadius: isMobile ? 0 : 16,
+        border: "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
+        padding: isMobile ? "0 0 12px" : 12,
+        color: "var(--text)",
+        width: "100%",
+        maxWidth: "100%",
+        minWidth: 0,
+        boxSizing: "border-box",
+        overflowX: "hidden",
+      }}
+    >
+      {title ? (
+        <div
+          style={{
+            fontWeight: 900,
+            marginBottom: 10,
+            padding: isMobile ? 12 : 0,
+          }}
+        >
+          {title}
+        </div>
+      ) : null}
+      <div
+        style={{
+          padding: isMobile ? 0 : 0,
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
+          boxSizing: "border-box",
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function NewUserFeedWelcomeCard({
+  onDiscoverNearby,
+  onSearchCourses,
+  onExploreMap,
+  onCompleteProfile,
+  isMobile,
+}: {
+  onDiscoverNearby: () => void;
+  onSearchCourses: () => void;
+  onExploreMap: () => void;
+  onCompleteProfile: () => void;
+  isMobile: boolean;
+}) {
+  const primaryButtonStyle: React.CSSProperties = {
+    minHeight: 44,
+    borderRadius: 999,
+    border: "1px solid var(--text)",
+    background: "var(--text)",
+    color: "var(--bg)",
+    fontSize: 14,
+    fontWeight: 900,
+    cursor: "pointer",
+    padding: "11px 16px",
+  };
+
+  const secondaryButtonStyle: React.CSSProperties = {
+    minHeight: 44,
+    borderRadius: 999,
+    border: "1px solid var(--border)",
+    background: "var(--bg)",
+    color: "var(--text)",
+    fontSize: 14,
+    fontWeight: 850,
+    cursor: "pointer",
+    padding: "11px 16px",
+  };
+
+  return (
+    <div
+      style={{
+        margin: isMobile ? "0 12px" : 0,
+        padding: isMobile ? 18 : 22,
+        borderRadius: isMobile ? 20 : 24,
+        border: "1px solid color-mix(in srgb, var(--border) 76%, transparent)",
+        background:
+          "linear-gradient(145deg, color-mix(in srgb, var(--card) 96%, var(--bg) 4%), var(--card))",
+        color: "var(--text)",
+        boxShadow: "0 14px 34px rgba(0,0,0,0.07)",
+        display: "grid",
+        gap: 14,
+      }}
+    >
+      <div style={{ display: "grid", gap: 7 }}>
+        <div style={{ fontSize: isMobile ? 20 : 22, fontWeight: 950 }}>
+          {t("feed_welcome_title")}
+        </div>
+        <div
+          style={{
+            color: "var(--sub)",
+            fontSize: 14,
+            lineHeight: 1.45,
+            maxWidth: 520,
+          }}
+        >
+          {t("feed_welcome_empty_reason")}
+        </div>
+        <div
+          style={{
+            color: "var(--sub)",
+            fontSize: 14,
+            lineHeight: 1.45,
+            maxWidth: 520,
+          }}
+        >
+          {t("feed_welcome_start")}
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: isMobile ? "1fr" : "repeat(4, max-content)",
+          gap: 10,
+          alignItems: "center",
+        }}
+      >
+        <button
+          type="button"
+          onClick={onDiscoverNearby}
+          style={primaryButtonStyle}
+        >
+          {t("discover_nearby_courses")}
+        </button>
+        <button
+          type="button"
+          onClick={onSearchCourses}
+          style={secondaryButtonStyle}
+        >
+          {t("search_courses_action")}
+        </button>
+        <button
+          type="button"
+          onClick={onExploreMap}
+          style={secondaryButtonStyle}
+        >
+          {t("explore_map")}
+        </button>
+        <button
+          type="button"
+          onClick={onCompleteProfile}
+          style={secondaryButtonStyle}
+        >
+          {t("complete_profile")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function FeedPage() {
+  const isMobile = window.innerWidth <= 980;
+  const location = useLocation();
+  const { selectedCourse, setSelectedCourse, clearSelectedCourse } =
+    useSelectedCourse();
+
+  const { token, user, loading, logout, isAuthenticated } = useAuth();
+  const { me } = useMe(true);
+
+  const handle =
+    me?.handle ||
+    user?.handle ||
+    localStorage.getItem("fairwayd_handle") ||
+    "me";
+
+  const searchParams = useMemo(
+    () => new URLSearchParams(location.search),
+    [location.search],
+  );
+
+  const focusCourse = (location.state as any)?.focusCourse ?? null;
+  const focusPostIdFromState = (location.state as any)?.focusPostId ?? null;
+  const openCommentFromState = (location.state as any)?.openComment ?? false;
+
+  const focusPostIdFromQuery = searchParams.get("postId");
+  const openCommentFromQuery = searchParams.get("comment") === "1";
+
+  const focusPostId = focusPostIdFromState ?? focusPostIdFromQuery;
+  const openComment = openCommentFromState || openCommentFromQuery;
+
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [feedFilter, setFeedFilter] = useState<FeedFilter>("following");
+  const [collections, setCollections] = useState<PostCollectionSummary[]>([]);
+  const [selectedCollectionId, setSelectedCollectionId] = useState<
+    string | null
+  >(null);
+  const [savedPosts, setSavedPosts] = useState<Post[]>([]);
+  const [savedPostIds, setSavedPostIds] = useState<string[]>([]);
+  const [savedPostsLoading, setSavedPostsLoading] = useState(false);
+  const [collectionPickerPostId, setCollectionPickerPostId] = useState<
+    string | null
+  >(null);
+  const [postVisibilityFilter, setPostVisibilityFilter] =
+    useState<PostVisibilityFilter>("ALL");
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [courseRatings, setCourseRatings] = useState<CourseRatingMap>({});
+  const [myRatings, setMyRatings] = useState<Record<string, MyRating | null>>(
+    {},
+  );
+  const [activeRatingCourseId, setActiveRatingCourseId] = useState<
+    string | null
+  >(null);
+  const [ratingDraft, setRatingDraft] = useState(4);
+  const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(
+    null,
+  );
+
+  const [followedCourseIds, setFollowedCourseIds] = useState<string[]>([]);
+  const [followedUserIds, setFollowedUserIds] = useState<string[]>([]);
+  const [networkGolfers, setNetworkGolfers] = useState<NetworkGolfer[]>([]);
+  const featuredGolfers = useMemo(() => {
+    const counts = new Map<string, { count: number; latest: number }>();
+    for (const post of posts) {
+      if (!post.user?.id) continue;
+      const previous = counts.get(post.user.id) ?? { count: 0, latest: 0 };
+      const timestamp = Date.parse(post.createdAt);
+      counts.set(post.user.id, { count: previous.count + 1, latest: Math.max(previous.latest, Number.isFinite(timestamp) ? timestamp : 0) });
+    }
+    return networkGolfers.map((golfer, index) => ({ golfer, index, activity: counts.get(golfer.id) }))
+      .sort((a, b) => (b.activity?.count ?? 0) - (a.activity?.count ?? 0) || (b.activity?.latest ?? 0) - (a.activity?.latest ?? 0) || a.index - b.index)
+      .slice(0, 8);
+  }, [networkGolfers, posts]);
+  const [courseFollowBusyId, setCourseFollowBusyId] = useState<string | null>(
+    null,
+  );
+  const [followedDestinationCodes, setFollowedDestinationCodes] = useState<
+    string[]
+  >([]);
+
+  const [draft, setDraft] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+  const [visibility, setVisibility] = useState<
+    "PUBLIC" | "FOLLOWERS" | "PRIVATE"
+  >("PUBLIC");
+
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorImageSrc, setEditorImageSrc] = useState<string | null>(null);
+  const [editorFileName, setEditorFileName] = useState("image.jpg");
+  const [crop, setCrop] = useState<Crop>({
+    unit: "%",
+    x: 10,
+    y: 10,
+    width: 80,
+    height: 80,
+  });
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop | null>(null);
+  const [rotation, setRotation] = useState(0);
+  const [applyingEdit, setApplyingEdit] = useState(false);
+
+  const [err, setErr] = useState<string | null>(null);
+  const [reviewNotice, setReviewNotice] = useState("");
+  const [feedLoading, setFeedLoading] = useState(true);
+  const [posting, setPosting] = useState(false);
+  const [composerHint, setComposerHint] = useState<string | null>(null);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [composerCourseCovers] = useCourseCoverImages(composerOpen && selectedCourse?.id ? [selectedCourse.id] : []);
+
+  const draftRef = useRef<HTMLTextAreaElement | null>(null);
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const editorImageRef = useRef<HTMLImageElement | null>(null);
+  const postElementRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const nav = useNavigate();
+
+  const resetEditorState = useCallback(() => {
+    setEditorOpen(false);
+    setEditorImageSrc(null);
+    setEditorFileName("image.jpg");
+    setCrop({
+      unit: "%",
+      x: 10,
+      y: 10,
+      width: 80,
+      height: 80,
+    });
+    setCompletedCrop(null);
+    setRotation(0);
+    setApplyingEdit(false);
+  }, []);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  const openEditorForFile = useCallback(async (picked: File) => {
+    if (!isSupportedPostImageFile(picked)) {
+      throw new Error(t("unsupported_image_format"));
+    }
+
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error(t("failed_read_image_file")));
+
+      reader.readAsDataURL(picked);
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve();
+      image.onerror = () =>
+        reject(new Error(t("image_could_not_load")));
+      image.src = dataUrl;
+    });
+
+    setEditorFileName(picked.name || "image.jpg");
+    setEditorImageSrc(dataUrl);
+    setCrop({
+      unit: "%",
+      x: 10,
+      y: 10,
+      width: 80,
+      height: 80,
+    });
+    setCompletedCrop(null);
+    setRotation(0);
+    setEditorOpen(true);
+  }, []);
+
+  useEffect(() => {
+    const run = async () => {
+      try {
+        const r = await fetch(`${API_BASE}/courses`);
+        if (!r.ok) return;
+        const d = await r.json();
+        setCourses(Array.isArray(d) ? d : []);
+      } catch {
+        setCourses([]);
+      }
+    };
+    run();
+  }, []);
+
+  useEffect(() => {
+    const urls = files.map((picked) => URL.createObjectURL(picked));
+    setPreviews(urls);
+
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [files]);
+
+  useEffect(() => {
+    if (!editorOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [editorOpen]);
+
+  useEffect(() => {
+    if (!editorOpen || !editorImageSrc) return;
+
+    console.debug("Post image editor imageUrl", {
+      scheme: editorImageSrc.split(":", 1)[0],
+      length: editorImageSrc.length,
+      preview: editorImageSrc.slice(0, 96),
+    });
+  }, [editorImageSrc, editorOpen]);
+
+  useEffect(() => {
+    if (!composerOpen || !isMobile) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [composerOpen, isMobile]);
+
+  const loadFeed = useCallback(async () => {
+    if (!token) {
+      setFeedLoading(false);
+      return;
+    }
+
+    try {
+      setFeedLoading(true);
+      setErr(null);
+
+      const res = await fetch(`${API_BASE}/posts/feed?take=100`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        logout();
+        return;
+      }
+
+      if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        throw new Error(`HTTP ${res.status} ${res.statusText} ${t}`.trim());
+      }
+
+      const data = await res.json();
+      const items = Array.isArray(data?.items) ? data.items : [];
+
+      setPosts(
+        items.map((post: any) => ({
+          ...post,
+          likes: Array.isArray(post?.likes) ? post.likes : [],
+          comments: Array.isArray(post?.comments) ? post.comments : [],
+          _count: {
+            likes:
+              typeof post?._count?.likes === "number"
+                ? post._count.likes
+                : Array.isArray(post?.likes)
+                  ? post.likes.length
+                  : 0,
+            comments:
+              typeof post?._count?.comments === "number"
+                ? post._count.comments
+                : Array.isArray(post?.comments)
+                  ? post.comments.length
+                  : 0,
+          },
+        })),
+      );
+    } catch (e: any) {
+      setErr(friendlyApiErrorMessage(e, t("failed_load_feed")));
+    } finally {
+      setFeedLoading(false);
+    }
+  }, [token, logout]);
+
+  const loadCollections = useCallback(async () => {
+    if (!token) {
+      setCollections([]);
+      setSelectedCollectionId(null);
+      return;
+    }
+
+    try {
+      const data = await apiGet<{ items: PostCollectionSummary[] }>(
+        "/post-collections",
+        { token },
+      );
+      const items = Array.isArray(data.items) ? data.items : [];
+      setCollections(items);
+      setSelectedCollectionId((current) => {
+        if (current && items.some((item) => item.id === current)) {
+          return current;
+        }
+        return items[0]?.id ?? null;
+      });
+    } catch (reason) {
+      console.error("Failed to load post collections", reason);
+      setCollections([]);
+      setSelectedCollectionId(null);
+    }
+  }, [token]);
+
+  const loadSavedMemberships = useCallback(async () => {
+    if (!token) {
+      setSavedPostIds([]);
+      return;
+    }
+
+    try {
+      const data = await apiGet<{ postIds: string[] }>(
+        "/post-collections/memberships",
+        { token },
+      );
+      setSavedPostIds(Array.isArray(data.postIds) ? data.postIds : []);
+    } catch (reason) {
+      console.error("Failed to load saved post memberships", reason);
+      setSavedPostIds([]);
+    }
+  }, [token]);
+
+  const loadSavedPosts = useCallback(
+    async (collectionId: string) => {
+      if (!token) return;
+      setSavedPostsLoading(true);
+      try {
+        const data = await apiGet<{ items: Post[] }>(
+          `/post-collections/${collectionId}/posts`,
+          { token },
+        );
+        setSavedPosts(Array.isArray(data.items) ? data.items : []);
+      } catch (reason) {
+        console.error("Failed to load saved posts", reason);
+        setSavedPosts([]);
+      } finally {
+        setSavedPostsLoading(false);
+      }
+    },
+    [token],
+  );
+
+  const refreshSavedPostState = useCallback(async () => {
+    await Promise.all([loadCollections(), loadSavedMemberships()]);
+    if (selectedCollectionId) {
+      await loadSavedPosts(selectedCollectionId);
+    }
+  }, [
+    loadCollections,
+    loadSavedMemberships,
+    loadSavedPosts,
+    selectedCollectionId,
+  ]);
+
+  const loadFollowedCourses = useCallback(async () => {
+    if (!token) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/courses/me/following`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        logout();
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(`Failed to load followed courses: ${res.status}`);
+      }
+
+      const data = await res.json();
+      const items = Array.isArray(data?.items) ? data.items : [];
+
+      setFollowedCourseIds(
+        items
+          .map((course: { id?: string }) => course.id)
+          .filter(
+            (id: string | undefined): id is string =>
+              typeof id === "string" && id.length > 0,
+          ),
+      );
+    } catch (err) {
+      console.error("Failed to load followed courses", err);
+      setFollowedCourseIds([]);
+    }
+  }, [token, logout]);
+
+  const loadFollowedUsers = useCallback(async () => {
+    if (!token) {
+      setFollowedUserIds([]);
+      setNetworkGolfers([]);
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/users/me/following`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        logout();
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(`Failed to load followed users: ${res.status}`);
+      }
+
+      const data = await res.json();
+      const items = Array.isArray(data?.items) ? data.items : [];
+
+      setNetworkGolfers(items.flatMap((row: any): NetworkGolfer[] => {
+        const person = row?.following;
+        return typeof person?.id === "string" && typeof person?.handle === "string"
+          ? [{ id: person.id, handle: person.handle, name: person.name, avatarUrl: person.avatarUrl }]
+          : [];
+      }));
+      setFollowedUserIds(
+        items
+          .map((row: any) => row?.following?.id ?? row?.followingId)
+          .filter(
+            (id: unknown): id is string =>
+              typeof id === "string" && id.length > 0,
+          ),
+      );
+    } catch (err) {
+      console.error("Failed to load followed users", err);
+      setFollowedUserIds([]);
+      setNetworkGolfers([]);
+    }
+  }, [token, logout]);
+
+  const loadFollowedDestinations = useCallback(async () => {
+    if (!token) {
+      setFollowedDestinationCodes([]);
+      return;
+    }
+
+    try {
+      const destinationsRes = await fetch(`${API_BASE}/destinations`);
+
+      if (!destinationsRes.ok) {
+        throw new Error(
+          `Failed to load destinations: ${destinationsRes.status}`,
+        );
+      }
+
+      const destinationsData = await destinationsRes.json();
+      const destinations = Array.isArray(destinationsData?.items)
+        ? destinationsData.items
+        : [];
+
+      const results = await Promise.all(
+        destinations.map(
+          async (destination: {
+            code?: string | null;
+            slug?: string | null;
+          }) => {
+            const slug = destination.slug?.trim();
+            const code = destination.code?.trim().toUpperCase();
+
+            if (!slug || !code) return null;
+
+            try {
+              const res = await fetch(
+                `${API_BASE}/destinations/${slug}/follow-status`,
+                {
+                  headers: { Authorization: `Bearer ${token}` },
+                },
+              );
+
+              if (res.status === 401 || res.status === 403) {
+                logout();
+                return null;
+              }
+
+              if (!res.ok) return null;
+
+              const json = await res.json();
+              return json?.following ? code : null;
+            } catch {
+              return null;
+            }
+          },
+        ),
+      );
+
+      setFollowedDestinationCodes(
+        results.filter(
+          (code): code is string => typeof code === "string" && code.length > 0,
+        ),
+      );
+    } catch (err) {
+      console.error("Failed to load followed destinations", err);
+      setFollowedDestinationCodes([]);
+    }
+  }, [token, logout]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!token) return;
+    loadFeed();
+  }, [loading, token, loadFeed]);
+
+  useEffect(() => {
+    if (loading) return;
+    loadCollections();
+    loadSavedMemberships();
+  }, [loading, loadCollections, loadSavedMemberships]);
+
+  useEffect(() => {
+    if (feedFilter !== "saved") return;
+    if (!selectedCollectionId) {
+      setSavedPosts([]);
+      return;
+    }
+    loadSavedPosts(selectedCollectionId);
+  }, [feedFilter, loadSavedPosts, selectedCollectionId]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!token) return;
+    loadFollowedCourses();
+  }, [loading, token, loadFollowedCourses]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!token) return;
+    loadFollowedUsers();
+  }, [loading, token, loadFollowedUsers]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!token) return;
+    loadFollowedDestinations();
+  }, [loading, token, loadFollowedDestinations]);
+
+  useEffect(() => {
+    if (!selectedCourse) return;
+    setComposerHint(null);
+  }, [selectedCourse]);
+
+  useEffect(() => {
+    if (!focusCourse) return;
+
+    setSelectedCourse({
+      id: focusCourse.id,
+      name: focusCourse.name,
+      lat: Number(focusCourse.lat ?? 0),
+      lon: Number(focusCourse.lon ?? 0),
+    });
+  }, [focusCourse, setSelectedCourse]);
+
+  useEffect(() => {
+    if (!openComment) return;
+    if (!focusPostId) return;
+
+    setActiveCommentPostId(focusPostId);
+  }, [openComment, focusPostId]);
+
+  useEffect(() => {
+    const uniqueCourseIds = Array.from(
+      new Set(
+        posts
+          .map((post) => post.course?.id)
+          .filter(
+            (courseId): courseId is string =>
+              typeof courseId === "string" && courseId.length > 0,
+          ),
+      ),
+    );
+
+    if (uniqueCourseIds.length === 0) {
+      setCourseRatings({});
+      setMyRatings({});
+      return;
+    }
+
+    let cancelled = false;
+
+    const emptySummary: RatingSummary = {
+      overall: 0,
+      count: 0,
+      breakdown: {
+        condition: 0,
+        layout: 0,
+        scenery: 0,
+        value: 0,
+      },
+    };
+
+    const run = async () => {
+      try {
+        const nextCourseRatings: Record<string, RatingSummary | null> = {};
+        const nextMyRatings: Record<string, MyRating | null> = {};
+
+        await Promise.all(uniqueCourseIds.map(async (courseId) => {
+          try {
+            const summary = await getRatingSummary(courseId);
+            nextCourseRatings[courseId] = summary ?? emptySummary;
+          } catch (err) {
+            console.error("Rating summary failed for course", courseId, err);
+            nextCourseRatings[courseId] = emptySummary;
+          }
+
+          try {
+            nextMyRatings[courseId] = token
+              ? await getMyRating(courseId, token)
+              : null;
+          } catch (err) {
+            console.error("My rating failed for course", courseId, err);
+            nextMyRatings[courseId] = null;
+          }
+          if (!cancelled) {
+            setCourseRatings((previous) => ({ ...previous, [courseId]: nextCourseRatings[courseId] }));
+            setMyRatings((previous) => ({ ...previous, [courseId]: nextMyRatings[courseId] }));
+          }
+        }));
+
+        if (cancelled) return;
+
+        setCourseRatings(nextCourseRatings);
+        setMyRatings(nextMyRatings);
+      } catch (err) {
+        console.error("Failed to load feed ratings", err);
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [posts, token]);
+
+  const coursesLite: CourseLite[] = useMemo(
+    () => courses.map((c) => ({ id: c.id, name: c.name })),
+    [courses],
+  );
+
+  const selectedCourseId = selectedCourse?.id ?? null;
+  const selectedCourseFull =
+    courses.find((course) => course.id === selectedCourseId) ?? null;
+
+  const selectedName = selectedCourseFull?.name ?? selectedCourse?.name;
+  const selectedLat = selectedCourseFull?.lat ?? selectedCourse?.lat;
+  const selectedLon = selectedCourseFull?.lon ?? selectedCourse?.lon;
+
+  const supportsDirectCamera =
+    typeof navigator !== "undefined" &&
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  const selectedIsComplete =
+    Boolean(selectedCourse?.id) &&
+    typeof selectedName === "string" &&
+    selectedName.trim().length > 0 &&
+    typeof selectedLat === "number" &&
+    typeof selectedLon === "number";
+
+  const handleComposerImageChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const picked = Array.from(e.target.files ?? []);
+    e.target.value = "";
+
+    if (picked.length === 0) return;
+
+    const supported = picked.filter(isSupportedPostImageFile);
+    const hasUnsupportedFiles = supported.length !== picked.length;
+    if (supported.length !== picked.length) {
+      setErr(t("unsupported_image_format"));
+    } else {
+      setErr(null);
+    }
+
+    if (supported.length === 0) return;
+
+    setFiles((current) => [...current, ...supported].slice(0, MAX_POST_IMAGES));
+    if (!hasUnsupportedFiles) setErr(null);
+
+    if (supported.length === 1) {
+      try {
+        await openEditorForFile(supported[0]);
+      } catch (err: any) {
+        console.error("Open image editor failed", err);
+        setErr(err?.message ?? t("failed_open_image_editor"));
+      }
+    }
+  };
+
+  const applyImageEdits = useCallback(async () => {
+    if (!editorImageSrc || !completedCrop || !editorImageRef.current) return;
+
+    try {
+      setApplyingEdit(true);
+
+      const img = editorImageRef.current;
+      const rect = img.getBoundingClientRect();
+
+      if (!rect.width || !rect.height) {
+        throw new Error("Image size could not be determined");
+      }
+
+      const scaleX = img.naturalWidth / rect.width;
+      const scaleY = img.naturalHeight / rect.height;
+
+      const editedFile = await getCroppedImageFile(
+        editorImageSrc,
+        {
+          x: Math.round(completedCrop.x * scaleX),
+          y: Math.round(completedCrop.y * scaleY),
+          width: Math.round(completedCrop.width * scaleX),
+          height: Math.round(completedCrop.height * scaleY),
+        },
+        rotation,
+        editorFileName || "image.jpg",
+      );
+
+      setFiles((current) =>
+        current.length > 0 ? [editedFile, ...current.slice(1)] : [editedFile],
+      );
+      setErr(null);
+      resetEditorState();
+    } catch (e: any) {
+      console.error("Apply image edits failed", e);
+      setErr(e?.message ?? t("failed_edit_image"));
+    } finally {
+      setApplyingEdit(false);
+    }
+  }, [
+    editorImageSrc,
+    completedCrop,
+    rotation,
+    editorFileName,
+    resetEditorState,
+  ]);
+
+  const openGalleryPicker = () => {
+    if (posting) return;
+    setComposerHint(null);
+    galleryInputRef.current?.click();
+  };
+
+  const openCameraPicker = () => {
+    if (posting) return;
+    setComposerHint(null);
+    cameraInputRef.current?.click();
+  };
+
+  const handleToggleCourseFollow = useCallback(
+    async (courseId: string) => {
+      if (!token) return;
+      if (courseFollowBusyId) return;
+
+      const currentlyFollowed = followedCourseIds.includes(courseId);
+
+      try {
+        setCourseFollowBusyId(courseId);
+
+        setFollowedCourseIds((prev) =>
+          currentlyFollowed
+            ? prev.filter((id: string) => id !== courseId)
+            : prev.includes(courseId)
+              ? prev
+              : [...prev, courseId],
+        );
+
+        const res = await fetch(`${API_BASE}/courses/${courseId}/follow`, {
+          method: currentlyFollowed ? "DELETE" : "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          logout();
+          throw new Error("Unauthorized");
+        }
+
+        if (!res.ok) {
+          throw new Error(`Course follow request failed: ${res.status}`);
+        }
+      } catch (err) {
+        setFollowedCourseIds((prev) =>
+          currentlyFollowed
+            ? prev.includes(courseId)
+              ? prev
+              : [...prev, courseId]
+            : prev.filter((id: string) => id !== courseId),
+        );
+        console.error("Course follow toggle failed", err);
+      } finally {
+        setCourseFollowBusyId(null);
+      }
+    },
+    [token, logout, courseFollowBusyId, followedCourseIds],
+  );
+  const submitPost = async () => {
+    if (!selectedCourse) {
+      setErr(t("composer_choose_course_first"));
+      alert(t("composer_choose_course_first"));
+      return;
+    }
+
+    if (!selectedIsComplete) {
+      setErr(
+        "Selected course is missing details (name/coordinates). Please re-select the course.",
+      );
+      alert(t("selected_course_missing_details"));
+      return;
+    }
+
+    const text = draft.trim();
+    if (!text && files.length === 0) {
+      setErr(t("composer_write_or_add_image"));
+      alert(t("composer_write_or_add_image"));
+      return;
+    }
+
+    if (!token) {
+      setErr(t("missing_auth_token_login_again"));
+      alert(t("missing_auth_token_login_again"));
+      return;
+    }
+
+    setPosting(true);
+    setErr(null);
+
+    setReviewNotice("");
+
+    try {
+      const fd = new FormData();
+      fd.append("courseId", selectedCourse.id);
+      fd.append("content", text);
+      fd.append("visibility", visibility);
+      for (const picked of files.slice(0, MAX_POST_IMAGES)) {
+        const resized = await resizeImage(picked);
+        fd.append("images", resized);
+      }
+
+      const res = await fetch(`${API_BASE}/posts`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        logout();
+        throw new Error("Unauthorized. Please login again.");
+      }
+
+      const result = await res.json().catch(() => null);
+      if (!res.ok) {
+        if (result?.code === 'CONTENT_REVIEW_REQUIRED') throw new Error(reviewCopy().legacyPending);
+        if (result?.code === 'CONTENT_REJECTED') throw new Error(reviewCopy().rejected);
+        throw new ApiError(typeof result?.message === 'string' ? result.message : t("failed_to_post"), res.status, result);
+      }
+      const pending = res.status === 202 && result?.status === 'PENDING_REVIEW';
+      if (pending) setReviewNotice(`${reviewCopy().pending} ${reviewCopy().reference}: ${result.reviewId}`);
+      else if (!result?.id) throw new Error(t("failed_to_post"));
+
+      setDraft("");
+      setFiles([]);
+      resetEditorState();
+      setComposerOpen(false);
+
+      if (!pending) setPosts(prev => [result as Post, ...prev]);
+    } catch (e: unknown) {
+      setErr(friendlyApiErrorMessage(e, t("failed_to_post")));
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  const myUserId = me?.id || user?.id || "";
+
+  const filteredPosts = useMemo(() => {
+    if (feedFilter === "saved") {
+      return savedPosts;
+    }
+
+    if (feedFilter === "mine") {
+      const myPosts = posts.filter(
+        (post) =>
+          post.user.id === "me" ||
+          (!!myUserId && post.user.id === myUserId),
+      );
+
+      if (postVisibilityFilter === "ALL") return myPosts;
+
+      return myPosts.filter(
+        (post) => post.visibility === postVisibilityFilter,
+      );
+    }
+
+    if (feedFilter === "following") {
+      return posts.filter(
+        (post) =>
+          post.user.id === "me" ||
+          (!!myUserId && post.user.id === myUserId) ||
+          followedUserIds.includes(post.user.id),
+      );
+    }
+
+    if (feedFilter === "courses") {
+      return posts.filter((post) => followedCourseIds.includes(post.course.id));
+    }
+
+    if (feedFilter === "destinations") {
+      return posts.filter((post) => {
+        const country = post.course.country?.trim().toUpperCase();
+        return country ? followedDestinationCodes.includes(country) : false;
+      });
+    }
+
+    return [...posts].sort((a, b) => {
+      const aScore =
+        (a._count?.likes ?? a.likes?.length ?? 0) +
+        (a._count?.comments ?? a.comments?.length ?? 0);
+      const bScore =
+        (b._count?.likes ?? b.likes?.length ?? 0) +
+        (b._count?.comments ?? b.comments?.length ?? 0);
+
+      return bScore - aScore;
+    });
+  }, [
+    feedFilter,
+    followedCourseIds,
+    followedDestinationCodes,
+    followedUserIds,
+    myUserId,
+    postVisibilityFilter,
+    posts,
+    savedPosts,
+  ]);
+
+  const visiblePostsLoading =
+    feedFilter === "saved" ? savedPostsLoading : feedLoading;
+
+  useEffect(() => {
+    if (!focusPostId) return;
+    if (feedLoading) return;
+    if (!filteredPosts.some((post) => post.id === focusPostId)) return;
+
+    let cancelled = false;
+    let frame = 0;
+    let stableFrames = 0;
+    let lastTop: number | null = null;
+    let lastHeight: number | null = null;
+    const frameIds: number[] = [];
+    const topOffset = isMobile ? 82 : 88;
+    const bottomOffset = isMobile ? 104 : 32;
+
+    const scrollToTarget = (behavior: ScrollBehavior) => {
+      const target = postElementRefs.current[focusPostId];
+      if (!target) return;
+
+      const rect = target.getBoundingClientRect();
+      const nextTop = Math.max(0, window.scrollY + rect.top - topOffset);
+      window.scrollTo({ top: nextTop, left: 0, behavior });
+    };
+
+    const isTargetPositioned = (rect: DOMRect) => {
+      const visibleBottom = window.innerHeight - bottomOffset;
+      return rect.top >= topOffset && rect.top <= visibleBottom - 120;
+    };
+
+    const scheduleAfterLayout = (behavior: ScrollBehavior) => {
+      const firstFrame = window.requestAnimationFrame(() => {
+        const secondFrame = window.requestAnimationFrame(() => {
+          if (!cancelled) scrollToTarget(behavior);
+        });
+        frameIds.push(secondFrame);
+      });
+      frameIds.push(firstFrame);
+    };
+
+    const monitorPosition = () => {
+      if (cancelled) return;
+
+      const target = postElementRefs.current[focusPostId];
+      if (!target) return;
+
+      frame += 1;
+      const rect = target.getBoundingClientRect();
+      const topDelta =
+        lastTop == null ? Number.POSITIVE_INFINITY : Math.abs(rect.top - lastTop);
+      const heightDelta =
+        lastHeight == null
+          ? Number.POSITIVE_INFINITY
+          : Math.abs(rect.height - lastHeight);
+
+      stableFrames = topDelta < 1 && heightDelta < 1 ? stableFrames + 1 : 0;
+      lastTop = rect.top;
+      lastHeight = rect.height;
+
+      if (frame === 1 || (stableFrames >= 3 && !isTargetPositioned(rect))) {
+        scrollToTarget(frame === 1 ? "smooth" : "auto");
+        stableFrames = 0;
+      }
+
+      if (frame < 120 && stableFrames < 10) {
+        const nextFrame = window.requestAnimationFrame(monitorPosition);
+        frameIds.push(nextFrame);
+      }
+    };
+
+    scheduleAfterLayout("smooth");
+    const monitorFrame = window.requestAnimationFrame(monitorPosition);
+    frameIds.push(monitorFrame);
+
+    const pendingImages = Array.from(
+      document.querySelectorAll<HTMLImageElement>(".fw-feed-stream img"),
+    ).filter((image) => !image.complete);
+
+    const handleImageSettled = () => {
+      scheduleAfterLayout("auto");
+    };
+
+    pendingImages.forEach((image) => {
+      image.addEventListener("load", handleImageSettled, { once: true });
+      image.addEventListener("error", handleImageSettled, { once: true });
+    });
+
+    return () => {
+      cancelled = true;
+      frameIds.forEach((frameId) => window.cancelAnimationFrame(frameId));
+      pendingImages.forEach((image) => {
+        image.removeEventListener("load", handleImageSettled);
+        image.removeEventListener("error", handleImageSettled);
+      });
+    };
+  }, [feedLoading, filteredPosts, focusPostId, isMobile]);
+
+  const activeCommentPost =
+    posts.find((p) => p.id === activeCommentPostId) ?? null;
+
+  const rawComposerAvatarUrl =
+    me?.avatarUrl || user?.avatarUrl || (user as any)?.me?.avatarUrl || "";
+  const composerAvatarUrl = rawComposerAvatarUrl
+    ? fileUrl(rawComposerAvatarUrl)
+    : "";
+  const avatarLabel = (
+    me?.name ||
+    user?.name ||
+    me?.handle ||
+    user?.handle ||
+    handle ||
+    "M"
+  )
+    .slice(0, 1)
+    .toUpperCase();
+
+  const composerBoxStyle: React.CSSProperties = {
+    position: composerOpen && isMobile ? "fixed" : undefined,
+    inset: composerOpen && isMobile ? 0 : undefined,
+    zIndex: composerOpen && isMobile ? 2200 : undefined,
+    padding:
+      composerOpen && isMobile
+        ? "12px 14px calc(14px + env(safe-area-inset-bottom, 0px))"
+        : isMobile
+          ? 10
+          : 12,
+    borderRadius: composerOpen && isMobile ? 0 : isMobile ? 22 : 24,
+    background:
+      composerOpen && isMobile
+        ? "color-mix(in srgb, var(--card) 97%, var(--bg))"
+        : "var(--card)",
+    border: "1px solid color-mix(in srgb, var(--border) 62%, transparent)",
+    borderWidth: composerOpen && isMobile ? 0 : 1,
+    width: "100%",
+    height: composerOpen && isMobile ? "100dvh" : undefined,
+    maxWidth: "100%",
+    minWidth: 0,
+    boxSizing: "border-box",
+    overflowX: "hidden",
+    overflowY: composerOpen && isMobile ? "auto" : undefined,
+    boxShadow: "none",
+  };
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          display: "grid",
+          gap: 12,
+          paddingBottom: isMobile
+            ? "calc(64px + env(safe-area-inset-bottom, 0px))"
+            : 0,
+        }}
+      >
+        <FeedCardsSkeleton count={2} />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div
+        style={{
+          display: "grid",
+          gap: 12,
+          paddingBottom: isMobile
+            ? "calc(64px + env(safe-area-inset-bottom, 0px))"
+            : 0,
+        }}
+      >
+        <Card>
+          <div style={{ color: "var(--sub)", fontSize: 13 }}>
+            {t("feed_relogin_required")}
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div
+        className="fw-page"
+        style={{
+          background: "var(--bg)",
+          zIndex: composerOpen && isMobile ? 2200 : undefined,
+        }}
+      >
+        <div
+          className="fw-page-shell fw-feed-page-shell"
+          style={{
+            display: "grid",
+            gap: 12,
+            background: "var(--bg)",
+            borderInlineColor: "transparent",
+            width: "100%",
+            maxWidth: "100%",
+            minWidth: 0,
+            boxSizing: "border-box",
+            overflowX: "hidden",
+            zIndex: composerOpen && isMobile ? 2200 : undefined,
+          }}
+        >
+          <div className="fw-feed-desktop">
+            <header className="fw-feed-desktop-header">
+              <div>
+                <div className="fw-feed-desktop-kicker">
+                  {t("latest_activity")}
+                </div>
+                <h1>{t("feed")}</h1>
+                <p>Golf moments from courses, friends and destinations.</p>
+              </div>
+            </header>
+
+            {reviewNotice && <div role="status" style={{ padding: 16, borderRadius: 12, background: "var(--card)", border: "1px solid #b69050", lineHeight: 1.6 }}><strong>{reviewCopy().title}</strong><p style={{ margin: "6px 0 0" }}>{reviewNotice}</p></div>}
+            {err && (
+              <div
+                className="fw-feed-error"
+                style={{
+                  padding: 10,
+                  borderRadius: 12,
+                  background: "rgba(255,0,0,.08)",
+                  border: "1px solid var(--border)",
+                  fontSize: 13,
+                }}
+              >
+                <strong>{t("error")}:</strong> {err}
+              </div>
+            )}
+
+            <Card className="fw-feed-frame">
+          <div
+            className="fw-feed-composer-sticky"
+            style={{
+              position: "sticky",
+              top: 12,
+              zIndex: composerOpen && isMobile ? 2200 : 20,
+              paddingBottom: 12,
+              width: "100%",
+              maxWidth: "100%",
+              minWidth: 0,
+              boxSizing: "border-box",
+              overflowX: "hidden",
+            }}
+          >
+            <div className="fw-feed-composer" style={composerBoxStyle}>
+              {!composerOpen ? (
+              <button
+                className="fw-feed-composer-trigger"
+                type="button"
+                onClick={() => {
+                  setComposerOpen(true);
+                }}
+                style={{
+                  width: "100%",
+                  maxWidth: "100%",
+                  minWidth: 0,
+                  boxSizing: "border-box",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: 0,
+                  border: "none",
+                  background: "transparent",
+                  color: "var(--text)",
+                  textAlign: "left",
+                  cursor: "pointer",
+                }}
+              >
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    minWidth: 36,
+                    borderRadius: "50%",
+                    border: "1px solid var(--border)",
+                    background: "var(--muted)",
+                    color: "var(--text)",
+                    display: "grid",
+                    placeItems: "center",
+                    fontSize: 13,
+                    fontWeight: 900,
+                    overflow: "hidden",
+                    flexShrink: 0,
+                  }}
+                >
+                  {composerAvatarUrl ? (
+                    <img
+                      src={composerAvatarUrl}
+                      alt="avatar"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        display: "block",
+                      }}
+                    />
+                  ) : (
+                    avatarLabel
+                  )}
+                </div>
+
+                <div
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    borderRadius: 999,
+                    border: "1px solid var(--border)",
+                    background: "var(--bg)",
+                    color: "var(--sub)",
+                    padding: isMobile ? "10px 13px" : "11px 15px",
+                    fontSize: isMobile ? 14 : 15,
+                    fontWeight: 700,
+                    lineHeight: 1.2,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {t("whats_your_golf_moment")}
+                </div>
+              </button>
+              ) : null}
+
+              {composerOpen ? (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    marginTop: 12,
+                    paddingTop: composerOpen && isMobile ? 2 : 0,
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 850,
+                        color: "var(--text)",
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {t("create_post")}
+                    </div>
+
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setComposerOpen(false)}
+                    disabled={posting}
+                    style={{
+                      minWidth: 38,
+                      minHeight: 38,
+                      borderRadius: 999,
+                      border:
+                        "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+                      background: "var(--card)",
+                      color: "var(--text)",
+                      fontSize: 18,
+                      lineHeight: 1,
+                      cursor: posting ? "default" : "pointer",
+                      opacity: posting ? 0.6 : 1,
+                    }}
+                    aria-label={t("close_composer")}
+                  >
+                    x
+                  </button>
+                </div>
+              ) : null}
+
+              {composerOpen ? (
+                <div
+                  style={{
+                    marginTop: 10,
+                    width: "100%",
+                    maxWidth: "100%",
+                    minWidth: 0,
+                    boxSizing: "border-box",
+                    overflowX: "visible",
+                  }}
+                >
+                  <div className="fw-composer-author">
+                    <span className="fw-composer-avatar">
+                      {composerAvatarUrl ? <img src={composerAvatarUrl} alt="" /> : avatarLabel}
+                    </span>
+                    <div className="fw-composer-identity">
+                      <strong>{me?.name || user?.name || me?.handle || user?.handle || handle}</strong>
+                      {(me?.handle || user?.handle || handle) ? <span>@{me?.handle || user?.handle || handle}</span> : null}
+                    </div>
+                    <label className="fw-composer-visibility">
+                      <span className="fw-composer-sr-only">{t("post_visibility")}</span>
+                      <select value={visibility} onChange={(event) => setVisibility(event.target.value as typeof visibility)} disabled={posting}>
+                        {VISIBILITY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{t(option.labelKey)}</option>)}
+                      </select>
+                    </label>
+                  </div>
+                  <textarea
+                    ref={draftRef}
+                    className="fw-composer-text"
+                    value={draft}
+                    onChange={(event) => {
+                      setDraft(event.target.value);
+                      if (err) setErr(null);
+                      if (composerHint) setComposerHint(null);
+                    }}
+                    placeholder={t("composer_moment_placeholder")}
+                    aria-label={t("composer_moment_placeholder")}
+                    rows={3}
+                    disabled={posting}
+                  />
+                  <div className="fw-composer-course">
+                    <CourseDropdown
+                      courses={coursesLite}
+                      selectedCourseId={selectedCourse?.id ?? null}
+                      tileWhenSelected
+                      selectedImageUrl={selectedCourse?.id && composerCourseCovers[selectedCourse.id]?.image ? fileUrl(composerCourseCovers[selectedCourse.id]!.image!.url) : null}
+                      onSelect={(id) => {
+                        const course = courses.find((item) => item.id === id);
+                        if (course) { setSelectedCourse(course); setComposerHint(null); }
+                      }}
+                      onClear={() => { clearSelectedCourse(); setComposerHint(null); }}
+                      placeholder={t("course_choose")}
+                    />
+                    {!selectedCourse ? <div className="fw-composer-course-hint">{composerHint ?? t("composer_pick_course_before_posting")}</div> : null}
+                  </div>
+                  <div
+                    className="fw-composer-actions"
+                    style={{
+                      display: "flex",
+                      gap: 10,
+                      alignItems: "center",
+                      marginTop: 8,
+                      padding: "10px 0 0",
+                      flexWrap: "wrap",
+                      rowGap: 10,
+                      justifyContent: "space-between",
+                      borderTop:
+                        "1px solid color-mix(in srgb, var(--border) 48%, transparent)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <input
+                        ref={galleryInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                        multiple
+                        onChange={handleComposerImageChange}
+                        disabled={posting}
+                        style={{ display: "none" }}
+                      />
+
+                      <input
+                        ref={cameraInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                        capture="environment"
+                        onChange={handleComposerImageChange}
+                        disabled={posting}
+                        style={{ display: "none" }}
+                      />
+
+                      {supportsDirectCamera ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={openCameraPicker}
+                            disabled={posting}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 8,
+                              padding: "8px 12px",
+                              borderRadius: 999,
+                              border:
+                                "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
+                              background:
+                                "color-mix(in srgb, var(--muted) 78%, transparent)",
+                              color: posting ? "var(--sub)" : "var(--text)",
+                              fontWeight: 800,
+                              fontSize: 12,
+                              cursor: posting ? "default" : "pointer",
+                              opacity: posting ? 0.6 : 1,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            📸 {t("camera")}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={openGalleryPicker}
+                            disabled={posting}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 8,
+                              padding: "8px 12px",
+                              borderRadius: 999,
+                              border:
+                                "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
+                              background:
+                                "color-mix(in srgb, var(--muted) 78%, transparent)",
+                              color: posting ? "var(--sub)" : "var(--text)",
+                              fontWeight: 800,
+                              fontSize: 12,
+                              cursor: posting ? "default" : "pointer",
+                              opacity: posting ? 0.6 : 1,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            🖼️ {t("gallery")}
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={openGalleryPicker}
+                          disabled={posting}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 8,
+                            padding: "8px 12px",
+                            borderRadius: 999,
+                            border:
+                              "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
+                            background:
+                              "color-mix(in srgb, var(--muted) 78%, transparent)",
+                            color: posting ? "var(--sub)" : "var(--text)",
+                            fontWeight: 800,
+                            fontSize: 12,
+                            cursor: posting ? "default" : "pointer",
+                            opacity: posting ? 0.6 : 1,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          📷 {t("add_image")}
+                        </button>
+                      )}
+                    </div>
+
+                    {files.length > 0 ? (
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 10,
+                          minWidth: 0,
+                          maxWidth: isMobile ? "100%" : 360,
+                          padding: "10px 12px",
+                          borderRadius: 18,
+                          background:
+                            "color-mix(in srgb, var(--muted) 72%, transparent)",
+                          border:
+                            "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            minWidth: 0,
+                            gap: 2,
+                            flex: 1,
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 800,
+                              color: "var(--text)",
+                            }}
+                          >
+                            {t("image_ready_count")}
+                          </span>
+
+                          <span
+                            style={{
+                              fontSize: 12,
+                              color: "var(--sub)",
+                              minWidth: 0,
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                            title={files
+                              .map((picked) => picked.name)
+                              .join(", ")}
+                          >
+                            {files.length === 1
+                              ? files[0].name
+                              : `${files.length} / ${MAX_POST_IMAGES} images`}
+                          </span>
+                        </div>
+
+                        {files.length === 1 ? (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const [firstFile] = files;
+                              if (!firstFile) return;
+
+                              try {
+                                await openEditorForFile(firstFile);
+                                setErr(null);
+                              } catch (err: any) {
+                                console.error("Re-open editor failed", err);
+                                setErr(
+                                  err?.message ??
+                                    t("failed_reopen_image_editor"),
+                                );
+                              }
+                            }}
+                            disabled={posting}
+                            style={{
+                              border:
+                                "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
+                              background: "transparent",
+                              color: posting ? "var(--sub)" : "var(--text)",
+                              fontSize: 12,
+                              fontWeight: 800,
+                              cursor: posting ? "default" : "pointer",
+                              padding: "8px 10px",
+                              borderRadius: 999,
+                              whiteSpace: "nowrap",
+                              opacity: posting ? 0.6 : 1,
+                            }}
+                          >
+                            {t("edit")}
+                          </button>
+                        ) : null}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFiles([]);
+                            resetEditorState();
+                          }}
+                          disabled={posting}
+                          style={{
+                            border:
+                              "1px solid color-mix(in srgb, var(--border) 58%, transparent)",
+                            background: "transparent",
+                            color: posting ? "var(--sub)" : "var(--text)",
+                            fontSize: 12,
+                            fontWeight: 800,
+                            cursor: posting ? "default" : "pointer",
+                            padding: "8px 10px",
+                            borderRadius: 999,
+                            whiteSpace: "nowrap",
+                            opacity: posting ? 0.6 : 1,
+                          }}
+                        >
+                          {t("remove")}
+                        </button>
+                      </div>
+                    ) : null}
+
+                    <div
+                      style={{
+                        marginLeft: "auto",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        flexWrap: "wrap",
+                        justifyContent: "flex-end",
+                      }}
+                    >
+                      {selectedCourse &&
+                        !draft.trim() &&
+                        files.length === 0 && (
+                          <span
+                            style={{
+                              fontSize: 12,
+                              color: "var(--sub)",
+                              fontWeight: 700,
+                            }}
+                          >
+                            {t("composer_write_or_add_image")}
+                          </span>
+                        )}
+
+                      {selectedCourse && files.length > 0 && !draft.trim() && (
+                        <span
+                          style={{
+                            fontSize: 12,
+                            color: "var(--sub)",
+                          }}
+                        >
+                          {t("composer_image_ready_to_post")}
+                        </span>
+                      )}
+
+                      <button
+                        onClick={submitPost}
+                        disabled={
+                          posting ||
+                          !selectedCourse ||
+                          (!draft.trim() && files.length === 0)
+                        }
+                        style={{
+                          padding: "10px 16px",
+                          borderRadius: 999,
+                          border:
+                            "1px solid color-mix(in srgb, var(--green) 72%, var(--border))",
+                          background: "var(--green)",
+                          color: "white",
+                          fontWeight: 850,
+                          cursor:
+                            posting ||
+                            !selectedCourse ||
+                            (!draft.trim() && files.length === 0)
+                              ? "default"
+                              : "pointer",
+                          opacity:
+                            posting ||
+                            !selectedCourse ||
+                            (!draft.trim() && files.length === 0)
+                              ? 0.5
+                              : 1,
+                          boxShadow:
+                            posting ||
+                            !selectedCourse ||
+                            (!draft.trim() && files.length === 0)
+                              ? "none"
+                              : "0 10px 24px color-mix(in srgb, var(--green) 22%, transparent)",
+                        }}
+                        type="button"
+                      >
+                        {posting
+                          ? t("posting")
+                          : files.length > 0 && !draft.trim()
+                            ? t("post_image")
+                            : t("post")}
+                      </button>
+                    </div>
+                  </div>
+
+                  {previews.length > 0 && (
+                    <div
+                      style={{
+                        marginTop: 12,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 10,
+                        width: "100%",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 800,
+                          color: "var(--sub)",
+                        }}
+                      >
+                        {t("image_preview")}
+                      </div>
+
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: isMobile
+                            ? "repeat(3, minmax(0, 1fr))"
+                            : "repeat(5, minmax(0, 96px))",
+                          gap: 8,
+                        }}
+                      >
+                        {previews.map((previewUrl, index) => (
+                          <div
+                            key={previewUrl}
+                            style={{
+                              position: "relative",
+                              aspectRatio: "1 / 1",
+                              borderRadius: 12,
+                              overflow: "hidden",
+                              border: "1px solid var(--border)",
+                              background: "var(--bg)",
+                            }}
+                          >
+                            <img
+                              src={previewUrl}
+                              alt="preview"
+                              style={{
+                                display: "block",
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                background: "var(--card)",
+                              }}
+                            />
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setFiles((current) =>
+                                  current.filter((_, i) => i !== index),
+                                )
+                              }
+                              disabled={posting}
+                              aria-label={t("remove_image")}
+                              style={{
+                                position: "absolute",
+                                top: 5,
+                                right: 5,
+                                width: 24,
+                                height: 24,
+                                borderRadius: 999,
+                                border: "1px solid rgba(255,255,255,0.5)",
+                                background: "rgba(0,0,0,0.58)",
+                                color: "#fff",
+                                fontSize: 16,
+                                fontWeight: 900,
+                                lineHeight: 1,
+                                cursor: posting ? "default" : "pointer",
+                                display: "grid",
+                                placeItems: "center",
+                                opacity: posting ? 0.6 : 1,
+                              }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {editorOpen &&
+                    editorImageSrc &&
+                    createPortal(
+                      <div
+                        style={{
+                          position: "fixed",
+                          inset: 0,
+                          zIndex: 2147483647,
+                          background: "rgba(0,0,0,0.82)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            background: "var(--card)",
+                            color: "var(--text)",
+                            display: "grid",
+                            gridTemplateRows: "auto minmax(0, 1fr) auto",
+                          }}
+                        >
+                          <div
+                            style={{
+                              padding: isMobile
+                                ? "12px 14px 10px"
+                                : "14px 16px 10px",
+                              borderBottom: "1px solid var(--border)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              gap: 12,
+                              background: "var(--card)",
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontWeight: 900, fontSize: 16 }}>
+                                {t("edit_image")}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  color: "var(--sub)",
+                                  marginTop: 4,
+                                }}
+                              >
+                                {t("edit_image_help")}
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (applyingEdit) return;
+                                resetEditorState();
+                              }}
+                              disabled={applyingEdit}
+                              style={{
+                                border: "1px solid var(--border)",
+                                background: "var(--bg)",
+                                color: "var(--text)",
+                                borderRadius: 999,
+                                padding: "8px 12px",
+                                fontWeight: 700,
+                                cursor: applyingEdit ? "default" : "pointer",
+                                opacity: applyingEdit ? 0.6 : 1,
+                              }}
+                            >
+                              {t("close")}
+                            </button>
+                          </div>
+
+                          <div
+                            style={{
+                              minHeight: 0,
+                              overflow: "auto",
+                              background: "#111",
+                              padding: isMobile ? 10 : 20,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <div
+                              style={{
+                                maxWidth: "100%",
+                                width: "100%",
+                                display: "flex",
+                                justifyContent: "center",
+                              }}
+                            >
+                              <ReactCrop
+                                crop={crop}
+                                onChange={(nextCrop) => setCrop(nextCrop)}
+                                onComplete={(pixelCrop) =>
+                                  setCompletedCrop(pixelCrop)
+                                }
+                              >
+                                <img
+                                  ref={editorImageRef}
+                                  src={editorImageSrc}
+                                  alt={t("edit_preview_alt")}
+                                  onLoad={(event) => {
+                                    const image = event.currentTarget;
+                                    console.debug("Post image editor loaded", {
+                                      naturalWidth: image.naturalWidth,
+                                      naturalHeight: image.naturalHeight,
+                                      renderedWidth: image.getBoundingClientRect().width,
+                                      renderedHeight: image.getBoundingClientRect().height,
+                                    });
+                                  }}
+                                  onError={() => {
+                                    console.error("Post image editor failed to load", {
+                                      imageUrl: editorImageSrc.slice(0, 96),
+                                      length: editorImageSrc.length,
+                                    });
+                                    setErr(t("image_failed_to_load"));
+                                  }}
+                                  style={{
+                                    display: "block",
+                                    maxWidth: "100%",
+                                    maxHeight: isMobile ? "44dvh" : "60vh",
+                                    objectFit: "contain",
+                                    transform: `rotate(${rotation}deg)`,
+                                    transformOrigin: "center center",
+                                  }}
+                                />
+                              </ReactCrop>
+                            </div>
+                          </div>
+
+                          <div
+                            style={{
+                              padding: isMobile
+                                ? "10px 12px calc(10px + env(safe-area-inset-bottom, 0px))"
+                                : 16,
+                              borderTop: "1px solid var(--border)",
+                              background: "var(--card)",
+                              display: "grid",
+                              gap: 10,
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns: isMobile
+                                  ? "1fr 1fr"
+                                  : "auto auto",
+                                gap: 10,
+                              }}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => setRotation((prev) => prev - 90)}
+                                disabled={applyingEdit}
+                                style={{
+                                  padding: "11px 12px",
+                                  borderRadius: 999,
+                                  border: "1px solid var(--border)",
+                                  background: "var(--bg)",
+                                  color: "var(--text)",
+                                  fontWeight: 700,
+                                  cursor: applyingEdit ? "default" : "pointer",
+                                  opacity: applyingEdit ? 0.6 : 1,
+                                  width: "100%",
+                                }}
+                              >
+                                ↺ {t("rotate_minus_90")}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setRotation((prev) => prev + 90)}
+                                disabled={applyingEdit}
+                                style={{
+                                  padding: "11px 12px",
+                                  borderRadius: 999,
+                                  border: "1px solid var(--border)",
+                                  background: "var(--bg)",
+                                  color: "var(--text)",
+                                  fontWeight: 700,
+                                  cursor: applyingEdit ? "default" : "pointer",
+                                  opacity: applyingEdit ? 0.6 : 1,
+                                  width: "100%",
+                                }}
+                              >
+                                ↻ {t("rotate_plus_90")}
+                              </button>
+                            </div>
+
+                            <div
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns: "1fr 1fr",
+                                gap: 10,
+                              }}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (applyingEdit) return;
+                                  resetEditorState();
+                                }}
+                                disabled={applyingEdit}
+                                style={{
+                                  padding: "12px 14px",
+                                  borderRadius: 999,
+                                  border: "1px solid var(--border)",
+                                  background: "var(--bg)",
+                                  color: "var(--text)",
+                                  fontWeight: 700,
+                                  cursor: applyingEdit ? "default" : "pointer",
+                                  opacity: applyingEdit ? 0.6 : 1,
+                                  width: "100%",
+                                }}
+                              >
+                                {t("cancel")}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={applyImageEdits}
+                                disabled={applyingEdit || !completedCrop}
+                                style={{
+                                  padding: "12px 14px",
+                                  borderRadius: 999,
+                                  border: "1px solid var(--border)",
+                                  background: "var(--text)",
+                                  color: "var(--bg)",
+                                  fontWeight: 800,
+                                  cursor:
+                                    applyingEdit || !completedCrop
+                                      ? "default"
+                                      : "pointer",
+                                  opacity:
+                                    applyingEdit || !completedCrop ? 0.5 : 1,
+                                  width: "100%",
+                                }}
+                              >
+                                {applyingEdit ? t("applying") : t("apply")}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>,
+                      document.body,
+                    )}
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div
+            className="fw-feed-stream"
+            style={{
+              display: "grid",
+              gap: isMobile ? 16 : 14,
+              width: "100%",
+              maxWidth: "100%",
+              minWidth: 0,
+              boxSizing: "border-box",
+              overflowX: "hidden",
+              paddingBottom: isMobile
+                ? "calc(96px + env(safe-area-inset-bottom, 0px))"
+                : 0,
+            }}
+          >
+            <div
+              className="fw-feed-filters"
+              aria-label={t("feed_filters")}
+              style={{
+                display: "flex",
+                gap: isMobile ? 7 : 10,
+                overflowX: "auto",
+                maxWidth: "100%",
+                minWidth: 0,
+                boxSizing: "border-box",
+                padding: isMobile ? "2px 12px 4px" : "0 0 2px",
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
+                WebkitOverflowScrolling: "touch",
+              }}
+            >
+              {FEED_FILTERS.map((filter) => {
+                const active = feedFilter === filter.value;
+
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setFeedFilter(filter.value)}
+                    style={{
+                      flex: "0 0 auto",
+                      borderRadius: 999,
+                      border: active
+                        ? "1px solid var(--accent-strong)"
+                        : "1px solid var(--border)",
+                      background: active ? "var(--accent)" : "var(--card)",
+                      color: active ? "#f8fbf6" : "var(--text)",
+                      fontSize: isMobile ? 12 : 13,
+                      fontWeight: 800,
+                      padding: isMobile ? "8px 11px" : "10px 16px",
+                      lineHeight: 1,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {filter.icon} {t(filter.labelKey)}
+                  </button>
+                );
+              })}
+            </div>
+
+            {feedFilter === "following" && featuredGolfers.length > 0 ? (
+              <section className="fw-feed-community" aria-labelledby="feed-community-title">
+                <div className="fw-feed-community__heading">
+                  <span id="feed-community-title">YOUR COMMUNITY</span>
+                  <button type="button" onClick={() => nav("/friends")}>View all</button>
+                </div>
+                <div className="fw-feed-community__people">
+                  {featuredGolfers.map(({ golfer }) => (
+                    <button key={golfer.id} type="button" className="fw-feed-community__person"
+                      onClick={() => nav(`/u/${encodeURIComponent(golfer.handle)}`)}>
+                      <span className="fw-feed-community__avatar">
+                        {golfer.avatarUrl ? <img className="fw-avatar-img" src={fileUrl(golfer.avatarUrl)} alt="" loading="lazy" /> : (golfer.name || golfer.handle).slice(0, 1).toUpperCase()}
+                      </span>
+                      <span className="fw-feed-community__name">{golfer.name || golfer.handle}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {feedFilter === "saved" && collections.length > 0 ? (
+              <div
+                aria-label={t("saved_posts")}
+                style={{
+                  display: "flex",
+                  gap: 11,
+                  overflowX: "auto",
+                  padding: isMobile ? "2px 12px 6px" : "2px 0 7px",
+                  scrollbarWidth: "none",
+                  scrollSnapType: "x proximity",
+                }}
+              >
+                {collections.map((collection, index) => {
+                  const active = selectedCollectionId === collection.id;
+                  const cover = collection.coverImageUrl
+                    ? fileUrl(collection.coverImageUrl)
+                    : null;
+                  return (
+                    <button
+                      key={collection.id}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => setSelectedCollectionId(collection.id)}
+                      style={{
+                        position: "relative",
+                        flex: isMobile ? "0 0 148px" : "0 0 172px",
+                        aspectRatio: "1.42 / 1",
+                        overflow: "hidden",
+                        scrollSnapAlign: "start",
+                        borderRadius: 18,
+                        border: active
+                          ? "2px solid var(--accent-strong)"
+                          : "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
+                        background: cover
+                          ? `url("${cover}") center / cover no-repeat`
+                          : index % 3 === 0
+                            ? "linear-gradient(145deg, #315b48, #152d25)"
+                            : index % 3 === 1
+                              ? "linear-gradient(145deg, #496274, #202e39)"
+                              : "linear-gradient(145deg, #725c44, #33281e)",
+                        color: "#fff",
+                        padding: 0,
+                        cursor: "pointer",
+                        textAlign: "left",
+                        boxShadow: active
+                          ? "0 9px 24px color-mix(in srgb, var(--accent) 24%, transparent)"
+                          : "0 7px 18px rgba(0,0,0,.10)",
+                        transform: active ? "translateY(-1px)" : "none",
+                        transition:
+                          "transform .16s ease, border-color .16s ease, box-shadow .16s ease",
+                      }}
+                    >
+                      <span
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          background:
+                            "linear-gradient(180deg, rgba(0,0,0,.02) 20%, rgba(0,0,0,.78) 100%)",
+                        }}
+                      />
+                      {active ? (
+                        <span
+                          style={{
+                            position: "absolute",
+                            top: 9,
+                            right: 9,
+                            width: 25,
+                            height: 25,
+                            borderRadius: 999,
+                            display: "grid",
+                            placeItems: "center",
+                            background: "var(--accent-strong)",
+                            border: "1px solid rgba(255,255,255,.9)",
+                            color: "#fff",
+                            fontSize: 13,
+                            fontWeight: 950,
+                          }}
+                        >
+                          ✓
+                        </span>
+                      ) : null}
+                      <span
+                        style={{
+                          position: "absolute",
+                          left: 12,
+                          right: 12,
+                          bottom: 10,
+                          display: "grid",
+                          gap: 3,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 900,
+                            lineHeight: 1.15,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            textShadow: "0 1px 4px rgba(0,0,0,.4)",
+                          }}
+                        >
+                          {collection.name}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: "rgba(255,255,255,.78)",
+                          }}
+                        >
+                          {collection.postCount}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {feedFilter === "mine" ? (
+              <div
+                className="fw-post-visibility-filters"
+                aria-label={t("post_visibility_filter")}
+                style={{
+                  display: "flex",
+                  gap: 7,
+                  overflowX: "auto",
+                  maxWidth: "100%",
+                  minWidth: 0,
+                  boxSizing: "border-box",
+                  padding: isMobile ? "0 12px 3px" : "0 0 2px",
+                  scrollbarWidth: "none",
+                  msOverflowStyle: "none",
+                  WebkitOverflowScrolling: "touch",
+                }}
+              >
+                {POST_VISIBILITY_FILTERS.map((filter) => {
+                  const active = postVisibilityFilter === filter.value;
+
+                  return (
+                    <button
+                      key={filter.value}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => setPostVisibilityFilter(filter.value)}
+                      style={{
+                        flex: "0 0 auto",
+                        borderRadius: 999,
+                        border: active
+                          ? "1px solid var(--accent-strong)"
+                          : "1px solid var(--border)",
+                        background: active
+                          ? "color-mix(in srgb, var(--accent) 18%, var(--card))"
+                          : "var(--card)",
+                        color: "var(--text)",
+                        fontSize: 12,
+                        fontWeight: 750,
+                        padding: "8px 12px",
+                        lineHeight: 1,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {t(filter.labelKey)}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {visiblePostsLoading && filteredPosts.length === 0 ? (
+              <FeedCardsSkeleton count={2} />
+            ) : null}
+
+            {feedFilter !== "saved" && !feedLoading && posts.length === 0 ? (
+              <NewUserFeedWelcomeCard
+                isMobile={isMobile}
+                onDiscoverNearby={() => nav("/map?nearby=true")}
+                onSearchCourses={() => nav("/map?search=courses")}
+                onExploreMap={() => nav("/map")}
+                onCompleteProfile={() => nav("/profile")}
+              />
+            ) : null}
+
+            {feedFilter !== "saved" &&
+            !feedLoading &&
+            posts.length > 0 &&
+            filteredPosts.length === 0 ? (
+              <div
+                style={{
+                  margin: isMobile ? "0 12px" : 0,
+                  padding: "20px 16px",
+                  borderRadius: 18,
+                  border: "1px solid var(--border)",
+                  background: "var(--card)",
+                  color: "var(--sub)",
+                  textAlign: "center",
+                  fontSize: 14,
+                }}
+              >
+                {t("no_posts_match_filter")}
+              </div>
+            ) : null}
+
+            {feedFilter === "saved" &&
+            !savedPostsLoading &&
+            filteredPosts.length === 0 ? (
+              <div
+                style={{
+                  margin: isMobile ? "0 12px" : 0,
+                  padding: "22px 16px",
+                  borderRadius: 18,
+                  border: "1px solid var(--border)",
+                  background: "var(--card)",
+                  color: "var(--sub)",
+                  textAlign: "center",
+                  fontSize: 14,
+                }}
+              >
+                {collections.length === 0
+                  ? t("no_collections_yet")
+                  : t("saved_posts_empty")}
+              </div>
+            ) : null}
+
+            {!visiblePostsLoading && filteredPosts.map((p) => {
+              const lat = Number(p.course.lat);
+              const lon = Number(p.course.lon);
+              const canSelectCourse =
+                Number.isFinite(lat) && Number.isFinite(lon);
+              const isCourseFollowed = followedCourseIds.includes(p.course.id);
+              const isCourseFollowBusy = courseFollowBusyId === p.course.id;
+
+              return (
+                <div
+                  key={p.id}
+                  ref={(node) => {
+                    postElementRefs.current[p.id] = node;
+                  }}
+                  style={{
+                    width: "100%",
+                    maxWidth: "100%",
+                    minWidth: 0,
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <PostCard
+                    post={p}
+                    isMobile={isMobile}
+                    isCommentTarget={activeCommentPostId === p.id}
+                    onCommentClick={(postId) => setActiveCommentPostId(postId)}
+                    onOpenPost={(postId) => setActiveCommentPostId(postId)}
+                    onSaveClick={
+                      token
+                        ? (postId) => setCollectionPickerPostId(postId)
+                        : undefined
+                    }
+                    saved={savedPostIds.includes(p.id)}
+                    onSelectCourse={
+                      canSelectCourse
+                        ? () => {
+                            nav(`/courses/${p.course.id}`);
+                          }
+                        : undefined
+                    }
+                    courseFollowed={isCourseFollowed}
+                    courseFollowBusy={isCourseFollowBusy}
+                    courseRating={
+                      courseRatings[p.course.id]
+                        ? {
+                            overall: courseRatings[p.course.id]!.overall,
+                            count: courseRatings[p.course.id]!.count,
+                          }
+                        : null
+                    }
+                    courseRatingLoading={!(p.course.id in courseRatings)}
+                    myRating={myRatings[p.course.id] ?? null}
+                    onPostDeleted={(postId) => {
+                      setPosts((prev) =>
+                        prev.filter((item) => item.id !== postId),
+                      );
+                    }}
+                    onCourseFollowToggle={handleToggleCourseFollow}
+                    onPostUpdated={(updatedPost) => {
+                      setPosts((prev) =>
+                        prev.map((item) =>
+                          item.id === updatedPost.id
+                            ? {
+                                ...item,
+                                ...updatedPost,
+                              }
+                            : item,
+                        ),
+                      );
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      <BackToTopButton />
+
+      {collectionPickerPostId && token ? (
+        <PostCollectionPicker
+          token={token}
+          postId={collectionPickerPostId}
+          onClose={() => setCollectionPickerPostId(null)}
+          onChanged={refreshSavedPostState}
+        />
+      ) : null}
+
+      {activeCommentPost ? (
+        <CommentModal
+          post={activeCommentPost}
+          isMobile={isMobile}
+          onClose={() => setActiveCommentPostId(null)}
+          onCommentCreated={(postId) => {
+            setPosts((prev) =>
+              prev.map((item) =>
+                item.id === postId
+                  ? {
+                      ...item,
+                      _count: {
+                        ...item._count,
+                        comments:
+                          (item._count?.comments ??
+                            item.comments?.length ??
+                            0) + 1,
+                      },
+                    }
+                  : item,
+              ),
+            );
+          }}
+        />
+      ) : null}
+
+      {activeRatingCourseId ? (
+        <div
+          onClick={() => setActiveRatingCourseId(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 200,
+            background: "rgba(0,0,0,0.35)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "min(520px, 100%)",
+              padding: 18,
+              borderRadius: 18,
+              border: "1px solid var(--border)",
+              background: "var(--card)",
+              color: "var(--text)",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.28)",
+              display: "grid",
+              gap: 14,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 900 }}>
+                  {t("rate_this_course")}
+                </div>
+                <div
+                  style={{
+                    marginTop: 4,
+                    fontSize: 13,
+                    color: "var(--sub)",
+                  }}
+                >
+                  {t("selected_course_id")}: {activeRatingCourseId}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setActiveRatingCourseId(null)}
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: 999,
+                    border: "1px solid var(--border)",
+                    background: "var(--bg)",
+                    color: "var(--text)",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  {t("close")}
+                </button>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gap: 14,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  flexWrap: "wrap",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 14,
+                    color: "var(--sub)",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {t("set_overall_rating")}
+                </div>
+
+                <div
+                  style={{
+                    fontSize: 28,
+                    fontWeight: 900,
+                    color: "var(--text)",
+                    lineHeight: 1,
+                    minWidth: 52,
+                    textAlign: "right",
+                  }}
+                >
+                  {ratingDraft.toFixed(1)}
+                </div>
+              </div>
+
+              <input
+                type="range"
+                min={1}
+                max={5}
+                step={0.2}
+                value={ratingDraft}
+                onChange={(e) => setRatingDraft(Number(e.target.value))}
+                style={{
+                  width: "100%",
+                  margin: 0,
+                  cursor: "pointer",
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}

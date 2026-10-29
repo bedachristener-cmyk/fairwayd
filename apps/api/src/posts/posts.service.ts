@@ -1,0 +1,947 @@
+import { Optional } from '@nestjs/common';
+import { ModerationService, requireTextCheck } from '../moderation/moderation.service';
+import {
+  BadRequestException,
+  ConflictException,
+  UnauthorizedException,
+  Injectable,
+} from '@nestjs/common';
+import { Prisma, Visibility } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { deleteStoredUpload } from '../storage/r2.service';
+import { NotificationsService } from '../notifications/notifications.service';
+
+type CreatePostBody = {
+  courseId: string;
+  content: string;
+  visibility?: 'PUBLIC' | 'FOLLOWERS' | 'PRIVATE';
+};
+
+type UpdatePostBody = {
+  retainedImageIds?: unknown;
+  expectedUpdatedAt?: string;
+  content?: string;
+  visibility?: 'PUBLIC' | 'FOLLOWERS' | 'PRIVATE';
+  courseId?: string;
+};
+
+@Injectable()
+export class PostsService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+    @Optional() private readonly moderation?: ModerationService,
+  ) {}
+
+  private async blockedUserIds(userId?: string) {
+    if (!userId) return [];
+    const rows = await this.prisma.userBlock.findMany({
+      where: { OR: [{ blockerId: userId }, { blockedId: userId }] },
+      select: { blockerId: true, blockedId: true },
+    });
+    return rows.map((row) =>
+      row.blockerId === userId ? row.blockedId : row.blockerId,
+    );
+  }
+
+  private async assertInteractionAllowed(userId: string, targetUserId: string) {
+    if (userId === targetUserId) return;
+    const blocked = await this.prisma.userBlock.findFirst({
+      where: {
+        OR: [
+          { blockerId: userId, blockedId: targetUserId },
+          { blockerId: targetUserId, blockedId: userId },
+        ],
+      },
+      select: { id: true },
+    });
+    if (blocked) throw new BadRequestException('This interaction is unavailable');
+  }
+
+  /**
+   * Public feed (only PUBLIC posts)
+   * - newest first
+   * - includes course + user (basic fields) + images
+   * - supports cursor pagination
+   */
+  async getPublicFeed(params?: {
+    take?: number;
+    cursor?: string;
+    userId?: string;
+  }) {
+    const take = Math.max(1, Math.min(100, params?.take ?? 50));
+    const cursor = params?.cursor?.trim();
+    const userId = params?.userId?.trim();
+
+    let followedDestinationCodes: string[] = [];
+
+    if (userId) {
+      const followedDestinations = await this.prisma.destinationFollow.findMany(
+        {
+          where: { userId },
+          select: {
+            destination: {
+              select: {
+                code: true,
+              },
+            },
+          },
+        },
+      );
+
+      followedDestinationCodes = followedDestinations
+        .map((d) => d.destination?.code)
+        .filter((code): code is string => !!code);
+    }
+
+    const blockedUserIds = await this.blockedUserIds(userId);
+    let followingUserIds = new Set<string>();
+    let followingCourseIds = new Set<string>();
+    let followingDestinationCodesSet = new Set<string>();
+
+    if (userId) {
+      const follows = await this.prisma.follow.findMany({
+        where: {
+          followerId: userId,
+          status: 'ACCEPTED',
+        },
+        select: {
+          followingId: true,
+        },
+      });
+
+      followingUserIds = new Set(follows.map((f) => f.followingId));
+
+      const courseFollows = await this.prisma.courseFollow.findMany({
+        where: {
+          userId,
+        },
+        select: {
+          courseId: true,
+        },
+      });
+
+      followingCourseIds = new Set(courseFollows.map((c) => c.courseId));
+      followingDestinationCodesSet = new Set(followedDestinationCodes);
+    }
+
+    const query: Prisma.PostFindManyArgs = {
+      where: {
+        AND: [
+          userId ? { NOT: { userId: { in: blockedUserIds } } } : {},
+          userId
+            ? {
+                OR: [
+              // Eigene Posts -> alle Sichtbarkeiten
+              {
+                userId,
+              },
+
+              // Gefolgte User -> nur PUBLIC
+              {
+                user: {
+                  followers: {
+                    some: {
+                      followerId: userId,
+                      status: 'ACCEPTED',
+                    },
+                  },
+                },
+                visibility: Visibility.PUBLIC,
+              },
+
+              // Gefolgte User -> nur FOLLOWERS
+              {
+                user: {
+                  followers: {
+                    some: {
+                      followerId: userId,
+                      status: 'ACCEPTED',
+                    },
+                  },
+                },
+                visibility: Visibility.FOLLOWERS,
+              },
+
+              // Gefolgte Courses -> nur PUBLIC
+              {
+                course: {
+                  followers: {
+                    some: {
+                      userId,
+                    },
+                  },
+                },
+                visibility: Visibility.PUBLIC,
+              },
+
+              // Gefolgte Destinations -> nur PUBLIC
+              {
+                visibility: Visibility.PUBLIC,
+                course: {
+                  country: {
+                    in: followedDestinationCodes,
+                  },
+                },
+              },
+                ],
+              }
+            : { visibility: Visibility.PUBLIC },
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+      take,
+      include: {
+        course: true,
+        user: {
+          select: {
+            id: true,
+            handle: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+        images: true,
+        likes: {
+          select: {
+            userId: true,
+          },
+        },
+        _count: {
+          select: {
+            comments: true,
+          },
+        },
+      },
+    };
+
+    if (cursor) {
+      query.cursor = { id: cursor };
+      query.skip = 1;
+    }
+
+    const rawItems = await this.prisma.post.findMany(query);
+
+    const items = rawItems.filter((p: any) => {
+      // eigene Posts -> immer erlaubt
+      if (p.userId === userId) {
+        return true;
+      }
+
+      // ohne Login -> nur PUBLIC
+      if (!userId) {
+        return p.visibility === Visibility.PUBLIC;
+      }
+
+      const followsAuthor = followingUserIds.has(p.userId);
+      const followsCourse = followingCourseIds.has(p.courseId);
+      const followsDestination =
+        !!p.course?.country &&
+        followingDestinationCodesSet.has(p.course.country);
+
+      // fremde PRIVATE Posts -> NIE erlaubt
+      if (p.visibility === Visibility.PRIVATE) {
+        return false;
+      }
+
+      // fremde FOLLOWERS Posts -> nur wenn Autor gefolgt
+      if (p.visibility === Visibility.FOLLOWERS) {
+        return followsAuthor;
+      }
+
+      // PUBLIC Posts
+      if (p.visibility === Visibility.PUBLIC) {
+        return followsAuthor || followsCourse || followsDestination;
+      }
+
+      return false;
+    });
+
+    const nextCursor =
+      items.length === take ? items[items.length - 1]?.id : null;
+
+    const enrichedItems = items.map((p: any) => {
+      const isSelf = p.userId === userId;
+      const isFriend = followingUserIds.has(p.userId);
+      const isCourse = followingCourseIds.has(p.courseId);
+      const isDestination =
+        !!p.course?.country &&
+        followingDestinationCodesSet.has(p.course.country);
+
+      return {
+        ...p,
+        feedContext: {
+          isSelf,
+          isFriend,
+          isCourse,
+          isDestination,
+        },
+      };
+    });
+
+    return { items: enrichedItems, nextCursor, take };
+  }
+
+  /**
+   * Public posts for a specific course
+   * - returns SAME shape as feed: { items, nextCursor, take }
+   * - supports cursor pagination
+   */
+  async getPostsByCourse(params: {
+    courseId: string;
+    take?: number;
+    cursor?: string;
+    userId?: string;
+  }) {
+    const courseId = params?.courseId?.trim();
+    const take = Math.max(1, Math.min(100, params?.take ?? 50));
+    const cursor = params?.cursor?.trim();
+    const userId = params?.userId?.trim();
+
+    if (!courseId) {
+      throw new BadRequestException('Missing courseId');
+    }
+
+    const blockedUserIds = await this.blockedUserIds(userId);
+    const query: Prisma.PostFindManyArgs = {
+      where: {
+        AND: [
+          { courseId },
+          userId ? { NOT: { userId: { in: blockedUserIds } } } : {},
+          userId
+            ? {
+                OR: [
+              { visibility: Visibility.PUBLIC },
+              {
+                userId,
+                visibility: Visibility.PRIVATE,
+              },
+              {
+                userId,
+                visibility: Visibility.FOLLOWERS,
+              },
+              {
+                visibility: Visibility.FOLLOWERS,
+                user: {
+                  followers: {
+                    some: {
+                      followerId: userId,
+                      status: 'ACCEPTED',
+                    },
+                  },
+                },
+              },
+                ],
+              }
+            : { visibility: Visibility.PUBLIC },
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+      take,
+      include: {
+        course: true,
+        user: {
+          select: {
+            id: true,
+            handle: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+        images: true,
+        _count: {
+          select: {
+            likes: true,
+            comments: true,
+          },
+        },
+      },
+    };
+
+    if (cursor) {
+      query.cursor = { id: cursor };
+      query.skip = 1;
+    }
+
+    const items = await this.prisma.post.findMany(query);
+    const nextCursor =
+      items.length === take ? items[items.length - 1]?.id : null;
+
+    return { items, nextCursor, take };
+  }
+
+  /**
+   * Posts for the current user
+   */
+  async getMyPosts(userId: string, take = 50) {
+    const t = Math.max(1, Math.min(100, take));
+
+    if (!userId?.trim()) {
+      throw new BadRequestException('Missing userId');
+    }
+
+    return this.prisma.post.findMany({
+      where: { userId: userId.trim() },
+      orderBy: { createdAt: 'desc' },
+      take: t,
+      include: {
+        course: true,
+        images: true,
+      },
+    });
+  }
+
+  /**
+   * Create a post (auth required)
+   * - supports optional imageUrls -> creates PostImage rows
+   */
+  async createPost(
+    userId: string,
+    body: CreatePostBody,
+    imageUrls: string[] = [],
+    textChecked = false,
+  ) {
+    const uid = userId?.trim();
+    const courseId = body?.courseId?.trim();
+    const content = body?.content?.trim();
+    const validImageUrls = imageUrls.filter((url) => url.trim().length > 0);
+
+    if (!uid) throw new BadRequestException('Missing userId');
+    if (!courseId) throw new BadRequestException('Missing courseId');
+    if (!content && validImageUrls.length === 0) {
+      throw new BadRequestException('Missing content');
+    }
+
+    if (!textChecked) await requireTextCheck(this.moderation, uid, 'POST_TEXT', content || '');
+
+    const visibility =
+      body?.visibility === 'PRIVATE'
+        ? Visibility.PRIVATE
+        : body?.visibility === 'FOLLOWERS'
+          ? Visibility.FOLLOWERS
+          : Visibility.PUBLIC;
+
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+      select: { id: true },
+    });
+
+    if (!course) {
+      throw new BadRequestException(`Unknown courseId ${courseId}`);
+    }
+
+    try {
+      return await this.prisma.post.create({
+        data: {
+          userId: uid,
+          courseId,
+          content: content ?? '',
+          visibility,
+          images: validImageUrls.length
+            ? {
+                create: validImageUrls.map((url) => ({ url })),
+              }
+            : undefined,
+        },
+        include: {
+          course: true,
+          user: {
+            select: {
+              id: true,
+              handle: true,
+              name: true,
+              avatarUrl: true,
+            },
+          },
+          images: true,
+        },
+      });
+    } catch (e: any) {
+      throw new BadRequestException(e?.message ?? 'Failed to create post');
+    }
+  }
+
+  async preparePostImages(postId: string, userId: string, retainedImageIds?: unknown, newCount = 0) {
+    const pid = postId?.trim(); const uid = userId?.trim();
+    if (!pid) throw new BadRequestException('Missing postId');
+    if (!uid) throw new BadRequestException('Missing userId');
+    const post = await this.prisma.post.findUnique({ where: { id: pid }, select: { id: true, userId: true, content: true, updatedAt: true, images: { select: { id: true, url: true } } } });
+    if (!post) throw new BadRequestException('Post not found');
+    if (post.userId !== uid) throw new UnauthorizedException('You can only edit your own posts');
+    let kept: unknown = retainedImageIds;
+    if (typeof kept === 'string') { try { kept = JSON.parse(kept); } catch { throw new BadRequestException('Invalid retainedImageIds'); } }
+    const ids = kept === undefined ? post.images.map(image => image.id) : kept;
+    if (!Array.isArray(ids) || ids.some(id => typeof id !== 'string') || new Set(ids).size !== ids.length) throw new BadRequestException('Invalid retainedImageIds');
+    if (ids.some(id => !post.images.some(image => image.id === id))) throw new BadRequestException('An image does not belong to this post. Reload and try again.');
+    if (ids.length + newCount > 5) throw new BadRequestException('Maximum 5 images per post');
+    return { post, keptIds: ids as string[] };
+  }
+
+  async updatePost(postId: string, userId: string, body: UpdatePostBody, media?: { urls: string[]; expectedUpdatedAt: Date; textChecked: boolean }) {
+    const pid = postId?.trim(); const uid = userId?.trim();
+    const { post, keptIds } = await this.preparePostImages(pid, uid, body?.retainedImageIds, media?.urls.length ?? 0);
+    if (media && post.updatedAt.getTime() !== media.expectedUpdatedAt.getTime()) throw new ConflictException('The post changed. Reload and try again.');
+    const finalContent = typeof body?.content === 'string' ? body.content.trim() : post.content;
+    if (!finalContent && keptIds.length + (media?.urls.length ?? 0) === 0) throw new BadRequestException('A post needs text or at least one image');
+    const data: Prisma.PostUpdateInput = {};
+
+    if (typeof body?.content === 'string') {
+      const trimmedContent = body.content.trim();
+      if (!media?.textChecked) await requireTextCheck(this.moderation, uid, 'POST_TEXT', trimmedContent);
+      data.content = trimmedContent;
+    }
+
+    if (typeof body?.visibility === 'string') {
+      data.visibility =
+        body.visibility === 'PRIVATE'
+          ? Visibility.PRIVATE
+          : body.visibility === 'FOLLOWERS'
+            ? Visibility.FOLLOWERS
+            : Visibility.PUBLIC;
+    }
+
+    if (typeof body?.courseId === 'string') {
+      const courseId = body.courseId.trim();
+      if (!courseId) throw new BadRequestException('Missing courseId');
+
+      const course = await this.prisma.course.findUnique({
+        where: { id: courseId },
+        select: { id: true },
+      });
+      if (!course) {
+        throw new BadRequestException(`Unknown courseId ${courseId}`);
+      }
+      data.course = { connect: { id: courseId } };
+    }
+
+    const editingImages = body?.retainedImageIds !== undefined || Boolean(media?.urls.length);
+    if (editingImages) data.images = { deleteMany: { id: { notIn: keptIds } }, create: (media?.urls ?? []).map(url => ({ url })) };
+    if (Object.keys(data).length === 0) {
+      throw new BadRequestException('Nothing to update');
+    }
+
+    let updated;
+    try { updated = await this.prisma.post.update({
+      where: { id: pid, userId: uid, updatedAt: media?.expectedUpdatedAt ?? post.updatedAt },
+      data,
+      include: {
+        course: true,
+        user: {
+          select: {
+            id: true,
+            handle: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+        images: true,
+        likes: {
+          select: {
+            userId: true,
+          },
+        },
+        _count: {
+          select: {
+            comments: true,
+          },
+        },
+      },
+    }); } catch (error) {
+      if ((error as { code?: string })?.code === 'P2025') throw new ConflictException('The post changed. Reload and try again.');
+      throw error;
+    }
+    let mediaCleanupFailures = 0;
+    if (editingImages) {
+      const results = await Promise.allSettled(post.images.filter(image => !keptIds.includes(image.id)).map(async image => {
+        // Preserve a shared file if another supported feature still references it.
+        const refs = await Promise.all([
+          this.prisma.postImage.count({ where: { url: image.url } }),
+          this.prisma.trip.count({ where: { coverImageUrl: image.url } }),
+          this.prisma.user.count({ where: { avatarUrl: image.url } }),
+          this.prisma.courseSubmissionImage.count({ where: { url: image.url } }),
+        ]);
+        if (refs.every(count => count === 0)) await deleteStoredUpload(image.url);
+      }));
+      mediaCleanupFailures = results.filter(result => result.status === 'rejected').length;
+    }
+    return { ...updated, mediaCleanupFailures };
+  }
+
+
+  async deletePost(postId: string, userId: string) {
+    const pid = postId?.trim();
+    const uid = userId?.trim();
+
+    if (!pid) throw new BadRequestException('Missing postId');
+    if (!uid) throw new BadRequestException('Missing userId');
+
+    const post = await this.prisma.post.findUnique({
+      where: { id: pid },
+      select: { id: true, userId: true },
+    });
+
+    if (!post) {
+      throw new BadRequestException(`Unknown postId ${pid}`);
+    }
+
+    if (post.userId !== uid) {
+      throw new UnauthorizedException('You can only delete your own posts');
+    }
+
+    await this.prisma.post.delete({
+      where: { id: pid },
+    });
+
+    return { ok: true, id: pid };
+  }
+
+  async likePost(postId: string, userId: string) {
+    const pid = postId?.trim();
+    const uid = userId?.trim();
+
+    if (!pid) throw new BadRequestException('Missing postId');
+    if (!uid) throw new BadRequestException('Missing userId');
+
+    const post = await this.prisma.post.findUnique({
+      where: { id: pid },
+      select: { id: true, userId: true },
+    });
+
+    if (!post) {
+      throw new BadRequestException(`Unknown postId ${pid}`);
+    }
+
+    await this.assertInteractionAllowed(uid, post.userId);
+
+    const existingLike = await this.prisma.like.findUnique({
+      where: {
+        postId_userId: {
+          postId: pid,
+          userId: uid,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (existingLike) {
+      return { ok: true };
+    }
+
+    try {
+      await this.prisma.like.create({
+        data: {
+          postId: pid,
+          userId: uid,
+        },
+      });
+    } catch (e: any) {
+      if (e?.code === 'P2002') {
+        return { ok: true };
+      }
+
+      throw new BadRequestException(e?.message ?? 'Failed to like post');
+    }
+
+    if (post.userId !== uid) {
+      await this.notifications.createNotification({
+        userId: post.userId,
+        type: 'post_like',
+        title: 'New like',
+        body: 'Someone liked your post.',
+        link: `/feed?postId=${encodeURIComponent(pid)}`,
+      });
+    }
+
+    return { ok: true };
+  }
+
+  async unlikePost(postId: string, userId: string) {
+    const pid = postId?.trim();
+    const uid = userId?.trim();
+
+    if (!pid) throw new BadRequestException('Missing postId');
+    if (!uid) throw new BadRequestException('Missing userId');
+
+    await this.prisma.like.deleteMany({
+      where: {
+        postId: pid,
+        userId: uid,
+      },
+    });
+
+    return { ok: true };
+  }
+  async toggleCommentLike(commentId: string, userId: string) {
+    const cid = commentId?.trim();
+    const uid = userId?.trim();
+
+    if (!cid) {
+      throw new BadRequestException('Missing commentId');
+    }
+
+    if (!uid) {
+      throw new UnauthorizedException('Missing userId');
+    }
+
+    const comment = await this.prisma.comment.findUnique({
+      where: { id: cid },
+      select: { id: true, userId: true },
+    });
+
+    if (!comment) {
+      throw new BadRequestException(`Unknown commentId ${cid}`);
+    }
+
+    await this.assertInteractionAllowed(uid, comment.userId);
+
+    const existing = await this.prisma.commentLike.findUnique({
+      where: {
+        commentId_userId: {
+          commentId: cid,
+          userId: uid,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (existing) {
+      await this.prisma.commentLike.delete({
+        where: {
+          commentId_userId: {
+            commentId: cid,
+            userId: uid,
+          },
+        },
+      });
+
+      return { liked: false };
+    }
+
+    await this.prisma.commentLike.create({
+      data: {
+        commentId: cid,
+        userId: uid,
+      },
+    });
+
+    return { liked: true };
+  }
+
+  async getComments(postId: string, userId?: string) {
+    const pid = postId?.trim();
+
+    if (!pid) {
+      throw new BadRequestException('Missing postId');
+    }
+
+    const post = await this.prisma.post.findUnique({
+      where: { id: pid },
+      select: { id: true },
+    });
+
+    if (!post) {
+      throw new BadRequestException(`Unknown postId ${pid}`);
+    }
+
+    const blockedUserIds = await this.blockedUserIds(userId);
+    const comments = await this.prisma.comment.findMany({
+      where: {
+        postId: pid,
+        ...(blockedUserIds.length
+          ? { userId: { notIn: blockedUserIds } }
+          : {}),
+      },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            handle: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+        likes: {
+          select: {
+            userId: true,
+          },
+        },
+        _count: {
+          select: {
+            likes: true,
+          },
+        },
+      },
+    });
+
+    const byId = new Map<
+      string,
+      (typeof comments)[number] & { replies: any[] }
+    >();
+
+    for (const comment of comments) {
+      const likedByMe =
+        !!userId && comment.likes.some((l) => l.userId === userId);
+
+      byId.set(comment.id, {
+        id: comment.id,
+        postId: comment.postId,
+        userId: comment.userId,
+        parentId: comment.parentId,
+        content: comment.content,
+        createdAt: comment.createdAt,
+        user: comment.user,
+        _count: comment._count,
+        likedByMe,
+        canEdit: !!userId && comment.userId === userId,
+        replies: [],
+      } as any); // 👈 DAS HINZUFÜGEN
+    }
+    const roots: Array<(typeof comments)[number] & { replies: any[] }> = [];
+
+    for (const comment of comments) {
+      const node = byId.get(comment.id)!;
+
+      if (comment.parentId) {
+        const parent = byId.get(comment.parentId);
+        if (parent) {
+          parent.replies.push(node);
+        } else {
+          roots.push(node);
+        }
+      } else {
+        roots.push(node);
+      }
+    }
+
+    return roots;
+  }
+
+  async updateComment(commentId: string, userId: string, content: string) {
+    const cid = commentId?.trim();
+    const uid = userId?.trim();
+    const text = content?.trim();
+
+    if (!cid) throw new BadRequestException('Missing commentId');
+    if (!uid) throw new BadRequestException('Missing userId');
+    if (!text) throw new BadRequestException('Comment cannot be empty');
+
+    const comment = await this.prisma.comment.findUnique({
+      where: { id: cid },
+      select: { id: true, userId: true },
+    });
+
+    if (!comment) {
+      throw new BadRequestException(`Unknown commentId ${cid}`);
+    }
+    if (comment.userId !== uid) {
+      throw new UnauthorizedException('You can only edit your own comments');
+    }
+
+    await requireTextCheck(this.moderation, uid, 'COMMENT_TEXT', text);
+    return this.prisma.comment.update({
+      where: { id: cid },
+      data: { content: text },
+      include: {
+        user: {
+          select: {
+            id: true,
+            handle: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+        likes: { select: { userId: true } },
+        _count: { select: { likes: true } },
+      },
+    });
+  }
+
+  async createComment(
+    postId: string,
+    userId: string,
+    content: string,
+    parentId?: string,
+  ) {
+    const pid = postId?.trim();
+    const uid = userId?.trim();
+    const text = content?.trim();
+    const parent = parentId?.trim();
+
+    if (!pid) throw new BadRequestException('Missing postId');
+    if (!uid) throw new BadRequestException('Missing userId');
+    if (!text) throw new BadRequestException('Missing content');
+
+    const post = await this.prisma.post.findUnique({
+      where: { id: pid },
+      select: { id: true, userId: true },
+    });
+
+    if (!post) {
+      throw new BadRequestException(`Unknown postId ${pid}`);
+    }
+
+    await this.assertInteractionAllowed(uid, post.userId);
+
+    let parentComment: { id: string; postId: string; userId: string } | null =
+      null;
+
+    if (parent) {
+      parentComment = await this.prisma.comment.findUnique({
+        where: { id: parent },
+        select: { id: true, postId: true, userId: true },
+      });
+
+      if (!parentComment) {
+        throw new BadRequestException(`Unknown parentId ${parent}`);
+      }
+
+      if (parentComment.postId !== pid) {
+        throw new BadRequestException('Parent comment belongs to another post');
+      }
+      await this.assertInteractionAllowed(uid, parentComment.userId);
+    }
+
+    await requireTextCheck(this.moderation, uid, 'COMMENT_TEXT', text);
+    const comment = await this.prisma.comment.create({
+      data: {
+        postId: pid,
+        userId: uid,
+        content: text,
+        parentId: parent || null,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            handle: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    });
+
+    if (!parent && post.userId !== uid) {
+      await this.notifications.createNotification({
+        userId: post.userId,
+        type: 'post_comment',
+        title: 'New comment',
+        body: 'Someone commented on your post.',
+        link: `/feed?postId=${encodeURIComponent(pid)}`,
+      });
+    }
+
+    if (parentComment && parentComment.userId !== uid) {
+      await this.notifications.createNotification({
+        userId: parentComment.userId,
+        type: 'comment_reply',
+        title: 'New reply',
+        body: 'Someone replied to your comment.',
+        link: `/feed?postId=${encodeURIComponent(pid)}`,
+      });
+    }
+
+    return comment;
+  }
+}

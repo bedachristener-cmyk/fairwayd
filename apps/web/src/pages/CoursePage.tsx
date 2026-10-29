@@ -1,0 +1,1939 @@
+import { useAdminStatus } from "../auth/useAdminStatus";
+import { useCourseCoverImages } from "../hooks/useCourseCoverImages";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { API_BASE } from "../api/base";
+import { fileUrl } from "../api/fileUrl";
+import { useAuth } from "../auth/AuthContext";
+import CourseRatingSummary from "../components/CourseRatingSummary";
+import PostCard from "../components/PostCard";
+import CommentModal from "../components/CommentModal";
+import { getMonetizationLinksForCourse } from "../data/monetization";
+import { useSelectedCourse } from "../state/SelectedCourseContext";
+import { t } from "../i18n/strings";
+import { courseBackNavigation } from "../utils/courseBackNavigation";
+import { resolveCourseHeroImage } from "../utils/courseHeroImage";
+import {
+  saveRating,
+  getMyRating,
+  getRatingSummary,
+  type RatingSummary,
+  type MyRating,
+} from "../api/ratings";
+
+type Post = {
+  id: string;
+  content: string;
+  createdAt: string;
+  visibility?: "PUBLIC" | "FOLLOWERS" | "PRIVATE";
+  course: {
+    id: string;
+    name: string;
+    lat: number;
+    lon: number;
+  };
+  user: {
+    id: string;
+    handle: string;
+  };
+  images?: { id: string; url: string }[];
+  comments?: unknown[];
+  _count?: { likes?: number; comments?: number };
+};
+
+type Course = {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  city?: string | null;
+  region?: string | null;
+  country?: string | null;
+  website?: string | null;
+  holes?: number | null;
+  par?: number | null;
+  access?: string | null;
+  description?: string | null;
+  phone?: string | null;
+  postalCode?: string | null;
+  verified?: boolean | null;
+};
+
+type DraftRating = {
+  overall: number;
+  condition: number;
+  layout: number;
+  scenery: number;
+  value: number;
+};
+
+type DesktopSection = "posts" | "reviews" | "photos" | "about";
+
+function clampRating(value: number) {
+  return Math.min(5, Math.max(1, value));
+}
+
+function roundToStep(value: number, step = 0.2) {
+  return Math.round(value / step) * step;
+}
+
+function formatRatingValue(value: number) {
+  return value.toFixed(1);
+}
+
+function getStarFillPercent(starIndex: number, value: number) {
+  const fill = Math.max(0, Math.min(1, value - starIndex));
+  return fill * 100;
+}
+
+function StarRatingPreview({ value }: { value: number }) {
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 2,
+        lineHeight: 1,
+      }}
+    >
+      {Array.from({ length: 5 }).map((_, index) => {
+        const fillPercent = getStarFillPercent(index, value);
+
+        return (
+          <span
+            key={index}
+            style={{
+              position: "relative",
+              display: "inline-block",
+              width: 18,
+              height: 18,
+              fontSize: 18,
+              lineHeight: "18px",
+            }}
+          >
+            <span
+              style={{
+                color: "var(--muted)",
+              }}
+            >
+              ★
+            </span>
+
+            <span
+              style={{
+                position: "absolute",
+                left: 0,
+                top: 0,
+                width: `${fillPercent}%`,
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                color: "var(--green)",
+              }}
+            >
+              ★
+            </span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function RatingSliderRow({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (next: number) => void;
+}) {
+  const fillPercent = ((value - 1) / 4) * 100;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        padding: "12px 0",
+        borderTop: "1px solid var(--border)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <div
+          style={{
+            fontSize: 14,
+            fontWeight: 800,
+            color: "var(--text)",
+          }}
+        >
+          {label}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            flexWrap: "wrap",
+          }}
+        >
+          <StarRatingPreview value={value} />
+          <div
+            style={{
+              minWidth: 34,
+              textAlign: "right",
+              fontSize: 14,
+              fontWeight: 800,
+              color: "var(--text)",
+            }}
+          >
+            {formatRatingValue(value)}
+          </div>
+        </div>
+      </div>
+
+      <div
+        style={{
+          position: "relative",
+          height: 28,
+          display: "flex",
+          alignItems: "center",
+        }}
+      >
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            height: 8,
+            borderRadius: 999,
+            background: "var(--muted)",
+            border: "1px solid var(--border)",
+            overflow: "hidden",
+            pointerEvents: "none",
+          }}
+        >
+          <div
+            style={{
+              width: `${fillPercent}%`,
+              height: "100%",
+              background: "var(--text)",
+              opacity: 0.18,
+            }}
+          />
+        </div>
+
+        <input
+          type="range"
+          min={1}
+          max={5}
+          step={0.2}
+          value={value}
+          onChange={(e) =>
+            onChange(clampRating(roundToStep(Number(e.target.value), 0.2)))
+          }
+          style={{
+            width: "100%",
+            margin: 0,
+            position: "relative",
+            zIndex: 1,
+            appearance: "none",
+            WebkitAppearance: "none",
+            background: "transparent",
+            cursor: "pointer",
+            height: 28,
+          }}
+        />
+
+        <style>
+          {`
+            input[type="range"]::-webkit-slider-runnable-track {
+              height: 8px;
+              background: transparent;
+              border: none;
+              border-radius: 999px;
+            }
+
+            input[type="range"]::-webkit-slider-thumb {
+              -webkit-appearance: none;
+              appearance: none;
+              width: 18px;
+              height: 18px;
+              margin-top: -5px;
+              border-radius: 999px;
+              background: var(--card);
+              border: 2px solid var(--text);
+              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+            }
+
+            input[type="range"]::-moz-range-track {
+              height: 8px;
+              background: transparent;
+              border: none;
+              border-radius: 999px;
+            }
+
+            input[type="range"]::-moz-range-thumb {
+              width: 18px;
+              height: 18px;
+              border-radius: 999px;
+              background: var(--card);
+              border: 2px solid var(--text);
+              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+            }
+          `}
+        </style>
+      </div>
+    </div>
+  );
+}
+
+function normalizeWebsite(url?: string | null) {
+  if (!url) return null;
+
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+
+  return `https://${trimmed}`;
+}
+
+function formatAccessLabel(access?: string | null) {
+  if (!access) return null;
+
+  return access
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function createDefaultDraftRating(): DraftRating {
+  return {
+    overall: 4.0,
+    condition: 4.0,
+    layout: 4.0,
+    scenery: 4.0,
+    value: 4.0,
+  };
+}
+
+function mapMyRatingToDraft(data: MyRating): DraftRating {
+  return {
+    overall: data.overall,
+    condition: data.condition ?? data.overall,
+    layout: data.layout ?? data.overall,
+    scenery: data.scenery ?? data.overall,
+    value: data.value ?? data.overall,
+  };
+}
+
+export default function CoursePage() {
+  const { courseId } = useParams<{ courseId: string }>();
+  const nav = useNavigate();
+  const location = useLocation();
+  const { token } = useAuth();
+  const isAdmin = useAdminStatus();
+  const [courseCovers, setCourseCovers] = useCourseCoverImages(courseId ? [courseId] : []);
+  const [coverPickerOpen, setCoverPickerOpen] = useState(false);
+  const [coverBusy, setCoverBusy] = useState(false);
+  const [coverError, setCoverError] = useState("");
+  const { setSelectedCourse } = useSelectedCourse();
+
+  const isMobile = window.innerWidth <= 980;
+  const ratingSectionRef = useRef<HTMLElement | null>(null);
+  const ratingPanelRef = useRef<HTMLElement | null>(null);
+
+  const secondaryBtnStyle = {
+    padding: "10px 14px",
+    borderRadius: 999,
+    border: "1px solid var(--border)",
+    background: "transparent",
+    color: "var(--text)",
+    fontWeight: 800,
+    cursor: "pointer",
+  } as const;
+  const [course, setCourse] = useState<Course | null>(null);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [following, setFollowing] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
+  const [showRatingPanel, setShowRatingPanel] = useState(false);
+  const [showDetailedRatings, setShowDetailedRatings] = useState(false);
+  const [ratingSaved, setRatingSaved] = useState(false);
+  const [ratingSummary, setRatingSummary] = useState<RatingSummary | null>(
+    null,
+  );
+  const [myRating, setMyRating] = useState<MyRating | null>(null);
+  const [desktopSection, setDesktopSection] =
+    useState<DesktopSection>("posts");
+  const [draftRating, setDraftRating] = useState<DraftRating>(
+    createDefaultDraftRating(),
+  );
+
+  const monetizationLinks = getMonetizationLinksForCourse(course?.id);
+
+  // temporary usage to avoid TS unused error (monetization prepared for later)
+  void monetizationLinks;
+
+  // Load course + posts
+  useEffect(() => {
+    if (!courseId) return;
+
+    const run = async () => {
+      try {
+        setLoading(true);
+
+        // ✅ Course IMMER laden (ohne Token)
+        const cRes = await fetch(`${API_BASE}/courses/${courseId}`);
+        if (cRes.ok) {
+          const c = await cRes.json();
+          setCourse(c);
+        }
+
+        // ✅ Follow nur wenn eingeloggt
+        if (token) {
+          const fRes = await fetch(
+            `${API_BASE}/courses/${courseId}/following`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            },
+          );
+
+          if (fRes.ok) {
+            const f = await fRes.json();
+            setFollowing(!!f?.following);
+          }
+        }
+
+        // ✅ Posts (optional public später)
+
+        const pRes = await fetch(`${API_BASE}/posts/course/${courseId}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+
+        if (pRes.ok) {
+          const data = await pRes.json();
+
+          const nextPosts = Array.isArray(data)
+            ? data
+            : Array.isArray(data?.items)
+              ? data.items
+              : Array.isArray(data?.posts)
+                ? data.posts
+                : [];
+
+          setPosts(nextPosts);
+        }
+      } catch (err) {
+        console.error("Course page load failed", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    run();
+  }, [courseId, token]);
+
+  useEffect(() => {
+    if (!course?.id) return;
+
+    setSelectedCourse({
+      id: course.id,
+      name: course.name,
+      lat: course.lat,
+      lon: course.lon,
+      city: course.city,
+      country: course.country,
+      website: course.website,
+      holes: course.holes,
+      access: course.access,
+    });
+  }, [course, setSelectedCourse]);
+
+  useEffect(() => {
+    if (!course?.id) return;
+
+    getRatingSummary(course.id)
+      .then((data) => {
+        setRatingSummary(data);
+      })
+      .catch(() => {
+        setRatingSummary(null);
+      });
+  }, [course?.id]);
+
+  useEffect(() => {
+    if (!course?.id || !token) {
+      setMyRating(null);
+      setDraftRating(createDefaultDraftRating());
+      setShowDetailedRatings(false);
+      return;
+    }
+
+    getMyRating(course.id, token)
+      .then((data) => {
+        if (!data) {
+          setMyRating(null);
+          setDraftRating(createDefaultDraftRating());
+          setShowDetailedRatings(false);
+          return;
+        }
+
+        setMyRating(data);
+
+        const nextDraft = mapMyRatingToDraft(data);
+        setDraftRating(nextDraft);
+
+        const hasDetailedRatings =
+          data.condition != null ||
+          data.layout != null ||
+          data.scenery != null ||
+          data.value != null;
+
+        setShowDetailedRatings(hasDetailedRatings);
+      })
+      .catch(() => {
+        setMyRating(null);
+        setDraftRating(createDefaultDraftRating());
+        setShowDetailedRatings(false);
+      });
+  }, [course?.id, token]);
+
+  useEffect(() => {
+    if (!ratingSaved) return;
+
+    const timer = window.setTimeout(() => {
+      setRatingSaved(false);
+    }, 1800);
+
+    return () => window.clearTimeout(timer);
+  }, [ratingSaved]);
+
+  const draftAverage = useMemo(() => {
+    if (showDetailedRatings) {
+      const average =
+        (draftRating.condition +
+          draftRating.layout +
+          draftRating.scenery +
+          draftRating.value) /
+        4;
+
+      return roundToStep(average, 0.2);
+    }
+
+    return roundToStep(draftRating.overall, 0.2);
+  }, [draftRating, showDetailedRatings]);
+
+  useEffect(() => {
+    const state = location.state as
+      | { openRating?: boolean; scrollToRating?: boolean }
+      | undefined;
+
+    const params = new URLSearchParams(location.search);
+
+    const shouldOpen =
+      state?.openRating === true ||
+      params.get("openRating") === "1" ||
+      params.get("openRating") === "true";
+
+    const shouldScroll =
+      state?.scrollToRating === true ||
+      params.get("scrollToRating") === "1" ||
+      params.get("scrollToRating") === "true";
+
+    if (!course || !token || !shouldOpen) return;
+
+    if (myRating) {
+      const nextDraft = mapMyRatingToDraft(myRating);
+      setDraftRating(nextDraft);
+
+      const hasDetailedRatings =
+        myRating.condition != null ||
+        myRating.layout != null ||
+        myRating.scenery != null ||
+        myRating.value != null;
+
+      setShowDetailedRatings(hasDetailedRatings);
+    } else {
+      setDraftRating(createDefaultDraftRating());
+      setShowDetailedRatings(false);
+    }
+
+    setShowRatingPanel(true);
+
+    if (shouldScroll) {
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    }
+
+    nav(location.pathname, { replace: true });
+  }, [
+    course,
+    token,
+    myRating,
+    location.pathname,
+    location.search,
+    location.state,
+    nav,
+  ]);
+
+  const handleFollowToggle = async () => {
+    if (!courseId || !token || followBusy) return;
+
+    try {
+      setFollowBusy(true);
+
+      const res = await fetch(`${API_BASE}/courses/${courseId}/follow`, {
+        method: following ? "DELETE" : "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        throw new Error(`Follow toggle failed: ${res.status}`);
+      }
+
+      setFollowing((prev) => !prev);
+    } catch (err) {
+      console.error("Course follow toggle failed", err);
+    } finally {
+      setFollowBusy(false);
+    }
+  };
+
+  const handleRatingClick = () => {
+    if (!token) {
+      nav("/");
+      return;
+    }
+
+    setShowRatingPanel((prev) => {
+      const next = !prev;
+
+      if (next) {
+        if (myRating) {
+          const nextDraft = mapMyRatingToDraft(myRating);
+          setDraftRating(nextDraft);
+
+          const hasDetailedRatings =
+            myRating.condition != null ||
+            myRating.layout != null ||
+            myRating.scenery != null ||
+            myRating.value != null;
+
+          setShowDetailedRatings(hasDetailedRatings);
+        } else {
+          setDraftRating(createDefaultDraftRating());
+          setShowDetailedRatings(false);
+        }
+      }
+
+      return next;
+    });
+  };
+
+  const handleSaveRating = async () => {
+    if (!course?.id || !token) return;
+
+    try {
+      await saveRating(course.id, token, {
+        overall: showDetailedRatings ? draftAverage : draftRating.overall,
+        condition: showDetailedRatings ? draftRating.condition : null,
+        layout: showDetailedRatings ? draftRating.layout : null,
+        scenery: showDetailedRatings ? draftRating.scenery : null,
+        value: showDetailedRatings ? draftRating.value : null,
+      });
+
+      const updatedSummary = await getRatingSummary(course.id);
+      setRatingSummary(updatedSummary);
+
+      const savedMyRating: MyRating = {
+        overall: showDetailedRatings ? draftAverage : draftRating.overall,
+        condition: showDetailedRatings ? draftRating.condition : null,
+        layout: showDetailedRatings ? draftRating.layout : null,
+        scenery: showDetailedRatings ? draftRating.scenery : null,
+        value: showDetailedRatings ? draftRating.value : null,
+      };
+
+      setMyRating(savedMyRating);
+      setDraftRating(mapMyRatingToDraft(savedMyRating));
+
+      setShowDetailedRatings(
+        savedMyRating.condition != null ||
+          savedMyRating.layout != null ||
+          savedMyRating.scenery != null ||
+          savedMyRating.value != null,
+      );
+      setShowRatingPanel(false);
+      setRatingSaved(true);
+    } catch (err) {
+      console.error("Save rating failed", err);
+      alert(t("failed_save_rating"));
+    }
+  };
+
+  const handleCloseRatingPanel = () => {
+    if (myRating) {
+      setDraftRating(mapMyRatingToDraft(myRating));
+
+      const hasDetailedRatings =
+        myRating.condition != null ||
+        myRating.layout != null ||
+        myRating.scenery != null ||
+        myRating.value != null;
+
+      setShowDetailedRatings(hasDetailedRatings);
+    } else {
+      setDraftRating(createDefaultDraftRating());
+      setShowDetailedRatings(false);
+    }
+
+    setShowRatingPanel(false);
+  };
+
+  if (loading) return null;
+
+  const locationLine = [course?.city, course?.region, course?.country]
+    .filter(Boolean)
+    .join(", ");
+  const websiteUrl = normalizeWebsite(course?.website);
+  const backNavigation = courseBackNavigation(location.state);
+  const directionsUrl = course
+    ? `https://www.google.com/maps/dir/?api=1&destination=${course.lat},${course.lon}`
+    : null;
+  const metadataPills = [
+    course?.holes ? `${course.holes} ${t("holes")}` : null,
+    course?.par ? `Par ${course.par}` : null,
+    formatAccessLabel(course?.access),
+  ].filter(Boolean);
+  const selectedCover = courseId ? courseCovers[courseId] : undefined;
+  const heroImage = selectedCover?.image
+    ? { url: fileUrl(selectedCover.image.url), source: "real" as const }
+    : resolveCourseHeroImage(course, posts.filter((post) => post.visibility === "PUBLIC"));
+  const publicPhotos = posts.filter((post) => post.visibility === "PUBLIC").flatMap((post) => post.images ?? []);
+  const saveCourseCover = async (imageId: string | null) => {
+    if (!token || !courseId) return;
+    setCoverBusy(true);
+    setCoverError("");
+    try {
+      const response = await fetch(`${API_BASE}/courses/${encodeURIComponent(courseId)}/cover-image`, {
+        method: "PUT", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ imageId }),
+      });
+      if (!response.ok) throw new Error("Could not save the course image.");
+      const cover = await response.json();
+      setCourseCovers((previous) => ({ ...previous, [courseId]: cover }));
+      setCoverPickerOpen(false);
+    } catch { setCoverError("Could not save the course image. Please try again."); }
+    finally { setCoverBusy(false); }
+  };
+  const coverPicker = isAdmin ? <section className="fw-course-cover-picker">
+    <button type="button" onClick={() => setCoverPickerOpen((open) => !open)}>{coverPickerOpen ? "Close image selection" : "Choose course image"}</button>
+    {coverPickerOpen ? <div>
+      <p>Choose an image from a public post. This image will appear across the app.</p>
+      <button type="button" disabled={coverBusy} onClick={() => void saveCourseCover(null)}>Use automatic selection</button>
+      {coverError ? <p role="alert">{coverError}</p> : null}
+      <div className="fw-course-cover-picker__grid">
+        {publicPhotos.map((image) => <button key={image.id} type="button" disabled={coverBusy} aria-label="Choose this course image" aria-pressed={selectedCover?.isSelected && selectedCover.image?.id === image.id} onClick={() => void saveCourseCover(image.id)}><img src={fileUrl(image.url)} alt="" /></button>)}
+      </div>
+      {publicPhotos.length === 0 ? <p>No public images available.</p> : null}
+    </div> : null}
+  </section> : null;
+  const photoImages = posts
+    .flatMap((post) =>
+      (post.images ?? []).map((image) => ({
+        id: image.id,
+        url: fileUrl(image.url),
+        postId: post.id,
+      })),
+    )
+    .filter((image) => image.url);
+  const hasAbout =
+    !!course?.description ||
+    !!locationLine ||
+    !!course?.holes ||
+    !!course?.par ||
+    !!course?.access ||
+    !!course?.website ||
+    !!course?.phone;
+  const availableDesktopTabs = [
+    { key: "posts" as const, label: t("posts"), count: posts.length, show: true },
+    {
+      key: "reviews" as const,
+      label: t("reviews"),
+      count: ratingSummary?.count ?? 0,
+      show: !!ratingSummary || !!token || !!myRating,
+    },
+    {
+      key: "photos" as const,
+      label: t("photos"),
+      count: photoImages.length,
+      show: photoImages.length > 0,
+    },
+    { key: "about" as const, label: t("about"), count: 0, show: hasAbout },
+  ].filter((tab) => tab.show);
+  const activeDesktopSection = availableDesktopTabs.some(
+    (tab) => tab.key === desktopSection,
+  )
+    ? desktopSection
+    : "posts";
+
+  const ratingPanel = showRatingPanel && !!token && (
+    <section
+      className="fw-atmosphere-card"
+      ref={ratingPanelRef}
+      style={{
+        padding: 16,
+        borderRadius: 16,
+        background: "var(--card)",
+        border: "1px solid var(--border)",
+        display: "flex",
+        flexDirection: "column",
+        gap: 2,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontSize: 16,
+              fontWeight: 800,
+              color: "var(--text)",
+            }}
+          >
+            {myRating ? t("edit_your_rating") : t("rate_this_course")}
+          </div>
+
+          <div
+            style={{
+              marginTop: 6,
+              fontSize: 14,
+              color: "var(--sub)",
+              lineHeight: 1.5,
+            }}
+          >
+            {showDetailedRatings
+              ? myRating
+                ? t("rating_help_update_detailed")
+                : t("rating_help_add_detailed")
+              : myRating
+                ? t("rating_help_adjust")
+                : t("rating_help_quick")}
+          </div>
+        </div>
+
+        <div
+          style={{
+            minWidth: 76,
+            textAlign: "right",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 26,
+              fontWeight: 900,
+              lineHeight: 1,
+              color: "var(--text)",
+            }}
+          >
+            {formatRatingValue(draftAverage)}
+          </div>
+
+          <div
+            style={{
+              marginTop: 6,
+            }}
+          >
+            <StarRatingPreview value={draftAverage} />
+          </div>
+        </div>
+      </div>
+
+      <div
+        style={{
+          marginTop: 8,
+          borderTop: "1px solid var(--border)",
+        }}
+      >
+        {!showDetailedRatings && (
+          <RatingSliderRow
+            label={t("rating_overall")}
+            value={draftRating.overall}
+            onChange={(next) =>
+              setDraftRating((prev) => ({ ...prev, overall: next }))
+            }
+          />
+        )}
+
+        <div
+          style={{
+            paddingTop: 12,
+            display: "flex",
+            justifyContent: "flex-start",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              setShowDetailedRatings((prev) => {
+                const next = !prev;
+
+                if (next) {
+                  setDraftRating((current) => ({
+                    ...current,
+                    condition: current.overall,
+                    layout: current.overall,
+                    scenery: current.overall,
+                    value: current.overall,
+                  }));
+                }
+
+                return next;
+              });
+            }}
+            style={{
+              padding: "8px 12px",
+              borderRadius: 999,
+              border: "1px solid var(--border)",
+              background: "transparent",
+              color: "var(--text)",
+              fontWeight: 700,
+              cursor: "pointer",
+              fontSize: 13,
+            }}
+          >
+            {showDetailedRatings ? t("hide_detailed_ratings") : t("add_detailed_ratings")}
+          </button>
+        </div>
+
+        {showDetailedRatings && (
+          <div
+            style={{
+              marginTop: 6,
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <RatingSliderRow
+              label={t("rating_condition")}
+              value={draftRating.condition}
+              onChange={(next) =>
+                setDraftRating((prev) => ({ ...prev, condition: next }))
+              }
+            />
+
+            <RatingSliderRow
+              label={t("rating_layout")}
+              value={draftRating.layout}
+              onChange={(next) =>
+                setDraftRating((prev) => ({ ...prev, layout: next }))
+              }
+            />
+
+            <RatingSliderRow
+              label={t("rating_scenery")}
+              value={draftRating.scenery}
+              onChange={(next) =>
+                setDraftRating((prev) => ({ ...prev, scenery: next }))
+              }
+            />
+
+            <RatingSliderRow
+              label={t("rating_value")}
+              value={draftRating.value}
+              onChange={(next) =>
+                setDraftRating((prev) => ({ ...prev, value: next }))
+              }
+            />
+          </div>
+        )}
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          flexWrap: "wrap",
+          marginTop: 14,
+        }}
+      >
+        <button
+          type="button"
+          onClick={handleSaveRating}
+          style={{
+            padding: "10px 14px",
+            borderRadius: 999,
+            border: "1px solid var(--border)",
+            background: "var(--card)",
+            color: "var(--text)",
+            fontWeight: 800,
+            cursor: "pointer",
+          }}
+        >
+          {myRating ? t("update_rating") : t("save_rating")}
+        </button>
+
+        <button type="button" onClick={handleCloseRatingPanel} style={secondaryBtnStyle}>
+          {t("close")}
+        </button>
+      </div>
+    </section>
+  );
+
+  const activeCommentPost = posts.find((post) => post.id === activeCommentPostId);
+  const commentModal = activeCommentPost ? (
+    <CommentModal
+      post={activeCommentPost}
+      isMobile={isMobile}
+      onClose={() => setActiveCommentPostId(null)}
+      onCommentCreated={(postId) => {
+        setPosts((previous) => previous.map((post) => post.id === postId
+          ? { ...post, _count: { ...post._count, comments: (post._count?.comments ?? post.comments?.length ?? 0) + 1 } }
+          : post));
+      }}
+    />
+  ) : null;
+
+  if (!isMobile) {
+    return (
+      <div className="fw-course-desktop-v2">
+        <button
+          type="button"
+          className="fw-course-desktop-back"
+          onClick={() => nav(backNavigation.to)}
+        >
+          ← {t(backNavigation.labelKey)}
+        </button>
+
+        <section className="fw-course-desktop-hero" aria-label={t("course_overview")}>
+          <img
+            className="fw-course-desktop-hero__image"
+            src={heroImage.url}
+            alt={course?.name ? `${course.name} ${t("golf_course")}` : t("golf_course")}
+          />
+          {heroImage.source === "ai-fallback" ? (
+            <span className="fw-ai-image-badge">{t("ai_generated_image")}</span>
+          ) : null}
+        </section>
+
+        <section className="fw-course-desktop-identity">
+          <div className="fw-course-desktop-identity__copy">
+            <div className="fw-course-desktop-eyebrow">{t("golf_course")}</div>
+            <h1>{course?.name ?? t("course")}</h1>
+            {locationLine ? <p>{locationLine}</p> : null}
+          </div>
+
+          <div className="fw-course-desktop-actions" aria-label={t("course_actions")}>
+            <button
+              type="button"
+              className="fw-course-desktop-action fw-course-desktop-action--soft"
+              onClick={() => {
+                if (!course) return;
+
+                nav("/feed", {
+                  state: {
+                    focusCourse: {
+                      id: course.id,
+                      name: course.name,
+                      lat: course.lat,
+                      lon: course.lon,
+                    },
+                  },
+                });
+              }}
+            >
+              {t("post_here")}
+            </button>
+
+            <button
+              type="button"
+              className={`fw-course-desktop-action ${
+                following ? "fw-course-desktop-action--active" : ""
+              }`}
+              onClick={handleFollowToggle}
+              disabled={followBusy || !token}
+            >
+              {followBusy ? t("saving") : following ? t("following") : t("follow")}
+            </button>
+
+            {websiteUrl ? (
+              <a
+                href={websiteUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="fw-course-desktop-action"
+              >
+                {t("website")}
+              </a>
+            ) : null}
+
+            {directionsUrl ? (
+              <a
+                href={directionsUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="fw-course-desktop-action fw-course-desktop-action--primary"
+              >
+                {t("directions")}
+              </a>
+            ) : null}
+          </div>
+
+          {metadataPills.length ? (
+            <div className="fw-course-desktop-meta">
+              {metadataPills.map((label) => (
+                <span key={label}>{label}</span>
+              ))}
+            </div>
+          ) : null}
+
+          {!token ? (
+            <div className="fw-course-desktop-signin">
+              <div>
+                <strong>{t("sign_in_for_course_activity")}</strong>
+                <span>{t("course_activity_signin_help")}</span>
+              </div>
+              <button type="button" onClick={() => nav("/")}>
+                {t("sign_in")}
+              </button>
+            </div>
+          ) : null}
+        </section>
+
+        {coverPicker}
+        <section ref={ratingSectionRef} className="fw-course-desktop-rating">
+          <CourseRatingSummary
+            rating={ratingSummary}
+            canRate={!!token}
+            ctaLabel={
+              showRatingPanel
+                ? t("hide_rating_form")
+                : myRating
+                  ? t("edit_your_rating")
+                  : t("rate_this_course")
+            }
+            onRateClick={handleRatingClick}
+          />
+        </section>
+
+        {ratingSaved && (
+          <div className="fw-course-desktop-status">{t("rating_saved")}</div>
+        )}
+
+        {ratingPanel}
+
+        <nav className="fw-course-desktop-tabs" aria-label={t("course_sections")}>
+          {availableDesktopTabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              className={
+                tab.key === activeDesktopSection
+                  ? "fw-course-desktop-tab fw-course-desktop-tab--active"
+                  : "fw-course-desktop-tab"
+              }
+              onClick={() => setDesktopSection(tab.key)}
+            >
+              <span>{tab.label}</span>
+              {tab.count ? <em>{tab.count}</em> : null}
+            </button>
+          ))}
+        </nav>
+
+        {activeDesktopSection === "posts" ? (
+          <section className="fw-course-desktop-posts">
+            {posts.length === 0 ? (
+              <div className="fw-course-desktop-empty">
+                <strong>
+                  {!token
+                    ? t("no_public_posts_available")
+                    : t("no_posts_for_course")}
+                </strong>
+                <span>{t("be_first_share_course")}</span>
+              </div>
+            ) : (
+              posts.map((p) => <PostCard key={p.id} post={p} isMobile={false} courseRating={ratingSummary} courseRatingLoading={!ratingSummary} myRating={myRating} onCommentClick={setActiveCommentPostId} />)
+            )}
+          </section>
+        ) : null}
+
+        {activeDesktopSection === "reviews" ? (
+          <section className="fw-course-desktop-section">
+            <CourseRatingSummary
+              rating={ratingSummary}
+              canRate={!!token}
+              ctaLabel={
+                showRatingPanel
+                  ? t("hide_rating_form")
+                  : myRating
+                    ? t("edit_your_rating")
+                    : t("rate_this_course")
+              }
+              onRateClick={handleRatingClick}
+            />
+          </section>
+        ) : null}
+
+        {activeDesktopSection === "photos" ? (
+          <section className="fw-course-desktop-photos">
+            {photoImages.map((image) => (
+              <img
+                key={image.id}
+                src={image.url}
+                alt={course?.name ? `${course.name} ${t("post_photo")}` : t("course_post")}
+              />
+            ))}
+          </section>
+        ) : null}
+
+        {activeDesktopSection === "about" ? (
+          <section className="fw-course-desktop-about">
+            {course?.description ? <p>{course.description}</p> : null}
+
+            <div className="fw-course-desktop-facts">
+              {locationLine ? (
+                <div>
+                  <span>{t("location")}</span>
+                  <strong>{locationLine}</strong>
+                </div>
+              ) : null}
+
+              {course?.holes ? (
+                <div>
+                  <span>{t("holes")}</span>
+                  <strong>{course.holes}</strong>
+                </div>
+              ) : null}
+
+              {course?.par ? (
+                <div>
+                  <span>Par</span>
+                  <strong>{course.par}</strong>
+                </div>
+              ) : null}
+
+              {formatAccessLabel(course?.access) ? (
+                <div>
+                  <span>{t("access")}</span>
+                  <strong>{formatAccessLabel(course?.access)}</strong>
+                </div>
+              ) : null}
+
+              {course?.phone ? (
+                <div>
+                  <span>{t("phone")}</span>
+                  <strong>{course.phone}</strong>
+                </div>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
+        {commentModal}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        display: "grid",
+        gap: isMobile ? 14 : 16,
+        width: "100%",
+        maxWidth: "100%",
+        minWidth: 0,
+        boxSizing: "border-box",
+        paddingBottom: isMobile
+          ? "calc(var(--fw-bottom-tabs-height, 72px) + 24px)"
+          : 0,
+      }}
+    >
+      <div
+        style={{
+          padding: isMobile ? "8px 12px 0" : 0,
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
+          boxSizing: "border-box",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => nav(backNavigation.to)}
+          style={{
+            border: "1px solid var(--border)",
+            background: "var(--card)",
+            color: "var(--text)",
+            borderRadius: 999,
+            padding: "8px 12px",
+            fontWeight: 800,
+            cursor: "pointer",
+            boxShadow: "0 8px 20px rgba(0,0,0,0.10)",
+          }}
+        >
+          ← {t(backNavigation.labelKey)}
+        </button>
+      </div>
+
+      {/* ===== HEADER ===== */}
+      <div
+        className="fw-atmosphere-card"
+        style={{
+          margin: isMobile ? "0 12px" : 0,
+          padding: isMobile ? 16 : 22,
+          width: isMobile ? "calc(100% - 24px)" : undefined,
+          maxWidth: "100%",
+          minWidth: 0,
+          boxSizing: "border-box",
+          borderRadius: 26,
+          background:
+            "linear-gradient(135deg, color-mix(in srgb, var(--green) 10%, var(--card)), var(--card) 46%, color-mix(in srgb, var(--bg) 18%, var(--card)))",
+          border: "1px solid var(--border)",
+          boxShadow: "0 18px 42px rgba(0,0,0,0.16)",
+          display: "grid",
+          gap: 16,
+          overflow: "hidden",
+        }}
+      >
+        <div className="fw-course-mobile-hero">
+          <img
+            src={heroImage.url}
+            alt={course?.name ? `${course.name} ${t("golf_course")}` : t("golf_course")}
+          />
+          {heroImage.source === "ai-fallback" ? (
+            <span className="fw-ai-image-badge">{t("ai_generated_image")}</span>
+          ) : null}
+        </div>
+        {coverPicker}
+        <div style={{ display: "grid", gap: 8 }}>
+          <div
+            style={{
+              fontSize: isMobile ? 22 : 31,
+              fontWeight: 880,
+              lineHeight: 1.14,
+              letterSpacing: "-0.025em",
+              color: "var(--text)",
+            }}
+          >
+            {course?.name ?? t("course")}
+          </div>
+
+          {locationLine ? (
+            <div
+              style={{
+                fontSize: 14,
+                lineHeight: 1.4,
+                color: "var(--sub)",
+              }}
+            >
+              {locationLine}
+            </div>
+          ) : null}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            flexWrap: "wrap",
+            marginTop: -2,
+            width: "100%",
+            boxSizing: "border-box",
+            minWidth: 0,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              flexWrap: "wrap",
+              flex: "0 1 auto",
+              minWidth: 0,
+            }}
+          >
+            {metadataPills.map((label) => (
+              <span
+                key={label}
+                className="fw-pill fw-pill--meta fw-pill--info"
+                style={{
+                  textTransform:
+                    label === course?.access?.replaceAll("_", " ")
+                      ? "capitalize"
+                      : undefined,
+                }}
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            className="fw-pill fw-pill--soft-cta"
+            onClick={() => {
+              if (!course) return;
+
+              nav("/feed", {
+                state: {
+                  focusCourse: {
+                    id: course.id,
+                    name: course.name,
+                    lat: course.lat,
+                    lon: course.lon,
+                  },
+                },
+              });
+            }}
+            style={{
+              cursor: "pointer",
+              flex: "0 0 auto",
+              maxWidth: "100%",
+            }}
+          >
+            {t("post_here")}
+          </button>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap",
+            marginTop: 2,
+          }}
+        >
+          <button
+            type="button"
+            className={`fw-pill ${
+              following ? "fw-pill--active" : "fw-pill--action"
+            }`}
+            onClick={async () => {
+              if (!courseId || !token || followBusy) return;
+
+              try {
+                setFollowBusy(true);
+
+                const res = await fetch(
+                  `${API_BASE}/courses/${courseId}/follow`,
+                  {
+                    method: following ? "DELETE" : "POST",
+                    headers: { Authorization: `Bearer ${token}` },
+                  },
+                );
+
+                if (!res.ok) {
+                  throw new Error(`Follow toggle failed: ${res.status}`);
+                }
+
+                setFollowing((prev) => !prev);
+              } catch (err) {
+                console.error("Course follow toggle failed", err);
+              } finally {
+                setFollowBusy(false);
+              }
+            }}
+            disabled={followBusy}
+            style={{
+              cursor: followBusy ? "default" : "pointer",
+              opacity: followBusy ? 0.72 : 1,
+            }}
+          >
+            {followBusy ? t("saving") : following ? `✓ ${t("following")}` : t("follow")}
+          </button>
+
+          {websiteUrl ? (
+            <a
+              href={websiteUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="fw-pill fw-pill--action"
+              style={{
+                textDecoration: "none",
+              }}
+            >
+              {t("website")}
+            </a>
+          ) : null}
+
+          {directionsUrl ? (
+            <a
+              href={directionsUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="fw-pill fw-pill--cta"
+              style={{
+                textDecoration: "none",
+              }}
+            >
+              {t("directions")}
+            </a>
+          ) : null}
+
+        </div>
+
+        {!token ? (
+          <div
+            style={{
+              padding: "12px 14px",
+              borderRadius: 18,
+              border: "1px solid var(--border)",
+              background: "var(--muted)",
+              display: "grid",
+              gap: 8,
+              boxSizing: "border-box",
+            }}
+          >
+            <div style={{ fontSize: 14, fontWeight: 900, color: "var(--text)" }}>
+              {t("sign_in_unlock_course")}
+            </div>
+
+            <div
+              style={{
+                fontSize: 13,
+                color: "var(--sub)",
+                lineHeight: 1.45,
+              }}
+            >
+              {t("course_unlock_signin_help")}
+            </div>
+
+            <button
+              onClick={() => nav("/")}
+              style={{
+                minHeight: 38,
+                padding: "0 14px",
+                borderRadius: 999,
+                border: "1px solid var(--border)",
+                background: "var(--card)",
+                color: "var(--text)",
+                fontWeight: 850,
+                cursor: "pointer",
+                width: "fit-content",
+              }}
+            >
+              {t("sign_in")}
+            </button>
+          </div>
+        ) : null}
+      </div>
+
+      <section
+        ref={ratingSectionRef}
+        style={{
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
+          boxSizing: "border-box",
+        }}
+      >
+        <CourseRatingSummary
+          rating={ratingSummary}
+          canRate={!!token}
+          ctaLabel={
+            showRatingPanel
+              ? t("hide_rating_form")
+              : myRating
+                ? t("edit_your_rating")
+                : t("rate_this_course")
+          }
+          onRateClick={() => {
+            if (!token) {
+              nav("/");
+              return;
+            }
+
+            setShowRatingPanel((prev) => {
+              const next = !prev;
+
+              if (next) {
+                if (myRating) {
+                  const nextDraft = mapMyRatingToDraft(myRating);
+                  setDraftRating(nextDraft);
+
+                  const hasDetailedRatings =
+                    myRating.condition != null ||
+                    myRating.layout != null ||
+                    myRating.scenery != null ||
+                    myRating.value != null;
+
+                  setShowDetailedRatings(hasDetailedRatings);
+                } else {
+                  setDraftRating(createDefaultDraftRating());
+                  setShowDetailedRatings(false);
+                }
+              }
+
+              return next;
+            });
+          }}
+        />
+      </section>
+
+      {ratingSaved && (
+        <div
+          style={{
+            marginTop: -2,
+            padding: "10px 12px",
+            borderRadius: 12,
+            border: "1px solid var(--border)",
+            background: "var(--card)",
+            color: "var(--text)",
+            fontSize: 13,
+            fontWeight: 700,
+          }}
+        >
+          ✓ {t("rating_saved")}
+        </div>
+      )}
+
+      {showRatingPanel && !!token && (
+        <section
+          className="fw-atmosphere-card"
+          ref={ratingPanelRef}
+          style={{
+            padding: 16,
+            width: "100%",
+            maxWidth: "100%",
+            minWidth: 0,
+            boxSizing: "border-box",
+            borderRadius: 16,
+            background: "var(--card)",
+            border: "1px solid var(--border)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: 16,
+                  fontWeight: 800,
+                  color: "var(--text)",
+                }}
+              >
+                {myRating ? t("edit_your_rating") : t("rate_this_course")}
+              </div>
+
+              <div
+                style={{
+                  marginTop: 6,
+                  fontSize: 14,
+                  color: "var(--sub)",
+                  lineHeight: 1.5,
+                }}
+              >
+                {showDetailedRatings
+                  ? myRating
+                    ? t("rating_help_update_detailed")
+                    : t("rating_help_add_detailed")
+                  : myRating
+                    ? t("rating_help_adjust")
+                    : t("rating_help_quick")}
+              </div>
+            </div>
+
+            <div
+              style={{
+                minWidth: 76,
+                textAlign: "right",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 26,
+                  fontWeight: 900,
+                  lineHeight: 1,
+                  color: "var(--text)",
+                }}
+              >
+                {formatRatingValue(draftAverage)}
+              </div>
+
+              <div
+                style={{
+                  marginTop: 6,
+                }}
+              >
+                <StarRatingPreview value={draftAverage} />
+              </div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              marginTop: 8,
+              borderTop: "1px solid var(--border)",
+            }}
+          >
+            {!showDetailedRatings && (
+              <RatingSliderRow
+                label={t("rating_overall")}
+                value={draftRating.overall}
+                onChange={(next) =>
+                  setDraftRating((prev) => ({ ...prev, overall: next }))
+                }
+              />
+            )}
+
+            <div
+              style={{
+                paddingTop: 12,
+                display: "flex",
+                justifyContent: "flex-start",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDetailedRatings((prev) => {
+                    const next = !prev;
+
+                    if (next) {
+                      setDraftRating((current) => ({
+                        ...current,
+                        condition: current.overall,
+                        layout: current.overall,
+                        scenery: current.overall,
+                        value: current.overall,
+                      }));
+                    }
+
+                    return next;
+                  });
+                }}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: 999,
+                  border: "1px solid var(--border)",
+                  background: "transparent",
+                  color: "var(--text)",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontSize: 13,
+                }}
+              >
+                {showDetailedRatings
+                  ? t("hide_detailed_ratings")
+                  : t("add_detailed_ratings")}
+              </button>
+            </div>
+
+            {showDetailedRatings && (
+              <div
+                style={{
+                  marginTop: 6,
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <RatingSliderRow
+                  label={t("rating_condition")}
+                  value={draftRating.condition}
+                  onChange={(next) =>
+                    setDraftRating((prev) => ({ ...prev, condition: next }))
+                  }
+                />
+
+                <RatingSliderRow
+                  label={t("rating_layout")}
+                  value={draftRating.layout}
+                  onChange={(next) =>
+                    setDraftRating((prev) => ({ ...prev, layout: next }))
+                  }
+                />
+
+                <RatingSliderRow
+                  label={t("rating_scenery")}
+                  value={draftRating.scenery}
+                  onChange={(next) =>
+                    setDraftRating((prev) => ({ ...prev, scenery: next }))
+                  }
+                />
+
+                <RatingSliderRow
+                  label={t("rating_value")}
+                  value={draftRating.value}
+                  onChange={(next) =>
+                    setDraftRating((prev) => ({ ...prev, value: next }))
+                  }
+                />
+              </div>
+            )}
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              gap: 10,
+              flexWrap: "wrap",
+              marginTop: 14,
+            }}
+          >
+            <button
+              type="button"
+              onClick={async () => {
+                if (!course?.id || !token) return;
+
+                try {
+                  await saveRating(course.id, token, {
+                    overall: showDetailedRatings
+                      ? draftAverage
+                      : draftRating.overall,
+                    condition: showDetailedRatings
+                      ? draftRating.condition
+                      : null,
+                    layout: showDetailedRatings ? draftRating.layout : null,
+                    scenery: showDetailedRatings ? draftRating.scenery : null,
+                    value: showDetailedRatings ? draftRating.value : null,
+                  });
+
+                  const updatedSummary = await getRatingSummary(course.id);
+                  setRatingSummary(updatedSummary);
+
+                  const savedMyRating: MyRating = {
+                    overall: showDetailedRatings
+                      ? draftAverage
+                      : draftRating.overall,
+                    condition: showDetailedRatings
+                      ? draftRating.condition
+                      : null,
+                    layout: showDetailedRatings ? draftRating.layout : null,
+                    scenery: showDetailedRatings ? draftRating.scenery : null,
+                    value: showDetailedRatings ? draftRating.value : null,
+                  };
+
+                  setMyRating(savedMyRating);
+                  setDraftRating(mapMyRatingToDraft(savedMyRating));
+
+                  setShowDetailedRatings(
+                    savedMyRating.condition != null ||
+                      savedMyRating.layout != null ||
+                      savedMyRating.scenery != null ||
+                      savedMyRating.value != null,
+                  );
+                  setShowRatingPanel(false);
+                  setRatingSaved(true);
+                } catch (err) {
+                  console.error("Save rating failed", err);
+                  alert(t("failed_save_rating"));
+                }
+              }}
+              style={{
+                padding: "10px 14px",
+                borderRadius: 999,
+                border: "1px solid var(--border)",
+                background: "var(--card)",
+                color: "var(--text)",
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              {myRating ? t("update_rating") : t("save_rating")}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (myRating) {
+                  setDraftRating(mapMyRatingToDraft(myRating));
+
+                  const hasDetailedRatings =
+                    myRating.condition != null ||
+                    myRating.layout != null ||
+                    myRating.scenery != null ||
+                    myRating.value != null;
+
+                  setShowDetailedRatings(hasDetailedRatings);
+                } else {
+                  setDraftRating(createDefaultDraftRating());
+                  setShowDetailedRatings(false);
+                }
+
+                setShowRatingPanel(false);
+              }}
+              style={secondaryBtnStyle}
+            >
+              {t("close")}
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* ===== POSTS ===== */}
+      <div
+        style={{
+          display: "grid",
+          gap: 10,
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
+          boxSizing: "border-box",
+        }}
+      >
+        {posts.length === 0 ? (
+          <div
+            style={{
+              color: "var(--sub)",
+              fontSize: 13,
+              padding: 16,
+              border: "1px solid var(--border)",
+              borderRadius: 14,
+              background: "var(--card)",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{ fontSize: 18, marginBottom: 8, color: "var(--text)" }}
+            >
+              {!token
+                ? t("no_public_posts_available")
+                : t("no_posts_for_course")}
+            </div>
+
+            <div style={{ opacity: 0.85, lineHeight: 1.5 }}>
+              {t("be_first_share_course")}
+            </div>
+          </div>
+        ) : (
+          posts.map((p) => <PostCard key={p.id} post={p} isMobile={isMobile} courseRating={ratingSummary} courseRatingLoading={!ratingSummary} myRating={myRating} onCommentClick={setActiveCommentPostId} />)
+        )}
+      </div>
+      {commentModal}
+    </div>
+  );
+}

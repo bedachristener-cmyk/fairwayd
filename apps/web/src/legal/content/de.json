@@ -1,0 +1,291 @@
+{
+  "current": {
+    "terms": [
+      {
+        "title": "Über Fairwayd",
+        "paragraphs": [
+          "Fairwayd ist eine Golfreise- und Social-Planungsplattform, um Plätze zu finden, Golfaktivitäten zu verfolgen, Reisen zu planen und Golfinhalte mit anderen Nutzern zu teilen."
+        ]
+      },
+      {
+        "title": "Dein Konto",
+        "paragraphs": [
+          "Du bist für die Sicherheit deines Kontos und die darüber ausgeführten Aktivitäten verantwortlich. Verwende richtige Registrierungsangaben und teile deinen Kontozugang nicht mit anderen."
+        ]
+      },
+      {
+        "title": "Zulässige Nutzung",
+        "paragraphs": [
+          "Missbrauche Fairwayd nicht, störe den Dienst nicht, lies ihn nicht in grossem Umfang automatisiert aus, täusche keine fremde Identität vor und veröffentliche keine rechtswidrigen Inhalte oder Belästigungen. Wir können Inhalte entfernen oder Konten einschränken, die dem Dienst oder der Community schaden."
+        ]
+      },
+      {
+        "title": "Nutzerinhalte",
+        "paragraphs": [
+          "Du bleibst für hochgeladene Posts, Bilder, Bewertungen, Reisedaten und andere Inhalte verantwortlich. Lade nur Inhalte hoch, die du teilen darfst. Durch die Veröffentlichung erlaubst du Fairwayd, sie als Teil des Dienstes anzuzeigen."
+        ]
+      },
+      {
+        "title": "Richtigkeit der Informationen",
+        "paragraphs": [
+          "Angaben zu Golfplätzen, Reisen, Orten, Preisen und Verfügbarkeiten können unvollständig, veraltet oder von Nutzern erstellt sein. Fairwayd garantiert die Richtigkeit von Reise- oder Golfplatzinformationen nicht. Bestätige wichtige Angaben immer direkt beim Platz, Veranstaltungsort, Anbieter oder Reiseveranstalter."
+        ]
+      },
+      {
+        "title": "Haftung",
+        "paragraphs": [
+          "Fairwayd wird im vorhandenen Zustand zur Planung und sozialen Nutzung bereitgestellt. Soweit gesetzlich zulässig, haftet Fairwayd nicht für mittelbare Verluste, Reiseunterbrechungen, unrichtige Golfplatzinformationen, Nutzerinhalte oder Entscheidungen auf Grundlage von App-Informationen."
+        ]
+      },
+      {
+        "title": "Kontakt",
+        "paragraphs": [
+          "Für rechtliche Fragen oder Kontoanliegen: legal@fairwayd.golf."
+        ]
+      }
+    ],
+    "privacy": [
+      {
+        "title": "Was Fairwayd ist",
+        "paragraphs": [
+          "Fairwayd ist eine Plattform für Golfreisen und soziale Planung. Wir verwenden die nötigen Daten für Konten, Profile, die Suche nach Golfplätzen, Posts, Reiseplanung und zugehörige Servicenachrichten."
+        ]
+      },
+      {
+        "title": "Kontodaten",
+        "paragraphs": [
+          "Wir erfassen Angaben wie Name, E-Mail-Adresse, Passwort-Hash bei Passwortkonten, Login-Anbieterdaten bei OAuth-Konten, den E-Mail-Verifikationsstatus und Nachweise der Annahme rechtlicher Bedingungen."
+        ]
+      },
+      {
+        "title": "Profil- und Social-Daten",
+        "paragraphs": [
+          "Abhängig von den verwendeten Funktionen kann Fairwayd Handle, Avatar, Profilfelder, Follow-Beziehungen, Benachrichtigungen, Likes, Kommentare, Posts, Bewertungen sowie Kurs- und Destinations-Follows speichern."
+        ]
+      },
+      {
+        "title": "Reise-, Golfplatz- und Bilddaten",
+        "paragraphs": [
+          "Bei Planung und Veröffentlichung können Reisedaten, Reiseeinträge, Dokumente, Platzbewertungen, Platzvorschläge, hochgeladene Bilder und die zur Anzeige und Verwaltung nötigen Metadaten gespeichert werden."
+        ]
+      },
+      {
+        "title": "E-Mail-Nutzung",
+        "paragraphs": [
+          "Wir verwenden E-Mails für Anmeldung, Kontoverifikation, Sicherheit und Servicenachrichten. Derzeit verwenden wir E-Mails nicht für Marketingkampagnen."
+        ]
+      },
+      {
+        "title": "Cookies und lokaler Speicher",
+        "paragraphs": [
+          "Fairwayd nutzt notwendigen Browserspeicher wie localStorage, Sitzungsspeicher und vergleichbare Verfahren für Anmeldung, Sitzungseinstellungen und den App-Betrieb. Derzeit verwenden wir keine Marketing- oder Tracking-Cookies."
+        ]
+      },
+      {
+        "title": "Teilen und Sichtbarkeit",
+        "paragraphs": [
+          "Veröffentlichte oder geteilte Inhalte können abhängig von Privatsphäre-Einstellungen und Funktionsweise anderen Nutzern angezeigt werden. Private Reise- und Kontodaten dienen der Bereitstellung des Dienstes und sind nicht zur öffentlichen Anzeige bestimmt, ausser du teilst sie entsprechend."
+        ]
+      },
+      {
+        "title": "Kontakt",
+        "paragraphs": [
+          "Für Datenschutzfragen oder Kontoanfragen: privacy@fairwayd.golf."
+        ]
+      }
+    ]
+  },
+  "draft": {
+    "terms": [
+      {
+        "title": "1. Anbieter und Geltungsbereich",
+        "paragraphs": [
+          "Fairwayd ist ein Angebot von beeZONE, Beda Christener, Einzelunternehmen, Hombergerstr. 14, 4422 Arisdorf, Schweiz, UID CHE-310.823.737. Kontakt: legal@fairwayd.golf. Diese Bedingungen betreffen Website, App und zugehörige Dienste. Die nachfolgenden Community-Regeln gehören dazu. Zwingendes Recht bleibt vorbehalten."
+        ]
+      },
+      {
+        "title": "2. Angebot und Kosten",
+        "paragraphs": [
+          "Fairwayd ermöglicht Golfplatzsuche, soziale Kontakte, Beiträge und Reiseplanung mit Terminen, Dokumenten und Kostenübersichten. Die Nutzung ist derzeit für alle kostenlos. Separat gebuchte Leistungen und Erstattungen zwischen Reisenden sind nicht eingeschlossen.",
+          "Eine optionale werbefreie Bezahlversion ist eine spätere Möglichkeit, noch kein aktives Angebot. Eine Zahlungspflicht setzt eine ausdrückliche Bestellung mit Angaben zu Preis, Leistung, Laufzeit und Kündigung voraus. Bestehende Konten werden durch Weiternutzung oder geänderte AGB nicht automatisch kostenpflichtig. Eine dauerhaft kostenlose Verfügbarkeit aller Funktionen wird nicht zugesichert."
+        ]
+      },
+      {
+        "title": "3. Pilot und Konto",
+        "paragraphs": [
+          "Diese geplante Pilotfassung richtet sich an die eingeladene Reisegruppe mit Wohnsitz in der Schweiz und sieht ein Mindestalter von 18 Jahren vor. Die technische Altersbestätigung ist vor Inkrafttreten noch umzusetzen. Eine spätere Öffnung ab 16 Jahren ist nicht Bestandteil dieser Fassung.",
+          "Registrierungsangaben müssen richtig sein. Pseudonyme sind erlaubt, Identitätstäuschung nicht. Schütze deine Zugangsdaten und melde vermuteten Missbrauch. Bei Google-Anmeldung gelten zusätzlich die Regeln des Anmeldedienstes. Ein Kontozugriff allein beweist nicht unwiderlegbar eine persönliche Verantwortlichkeit für jeden Vorgang."
+        ]
+      },
+      {
+        "title": "4. Reiseplanung und vorgestreckte Kosten",
+        "paragraphs": [
+          "Fairwayd vermittelt im Pilot keine verbindlichen Buchungen. Der Organisator kann unabhängig von Fairwayd Greenfees oder andere Leistungen buchen und Kosten vorstrecken. Die App dokumentiert Auslagen und Aufteilungen, führt aber Buchung, Zahlung oder Rückzahlung dadurch nicht selbst aus.",
+          "Erstattungsansprüche, Fälligkeit, Storno und Rückzahlung richten sich nach den Absprachen der Beteiligten und dem anwendbaren Recht. Ein App-Betrag allein bestätigt weder eine anerkannte Forderung noch eine Zahlung. Prüfe Belege und Vereinbarungen. Diese Beschreibung beurteilt die eigene rechtliche Rolle eines Organisators nicht abschliessend."
+        ]
+      },
+      {
+        "title": "5. Reiseinformationen, Dokumente und Rollen",
+        "paragraphs": [
+          "Organisatoren und Mitglieder prüfen Buchungen, Einreisebestimmungen, Visa, Versicherungen und gesundheitliche Voraussetzungen bei den zuständigen Anbietern oder Behörden. Preise, Wechselkurse und Aufteilungen sind Planungshilfen, keine Zahlungsabwicklung oder Fachberatung. Angaben können fehlen, veralten oder gerundet sein.",
+          "Andere Personen dürfen nur mit Berechtigung eingetragen werden. Zuschauer erhalten den freigegebenen Reiseplan, aber keine Trip-Kosten oder Dokumente; sie benötigen einen Fairwayd-Account. Organisatoren verwalten Rollen und Sichtbarkeit verantwortungsvoll. Sichere wichtige Unterlagen zusätzlich ausserhalb der App."
+        ]
+      },
+      {
+        "title": "6. Verantwortung und Rechte an Inhalten",
+        "paragraphs": [
+          "Du bist für die Rechtmässigkeit deiner Beiträge, Bilder, Kommentare, Bewertungen, Profile, Links und Dokumente verantwortlich und benötigst die erforderlichen Urheber-, Bild-, Persönlichkeits- und Datenschutzrechte. Prüfe die Sichtbarkeit vor dem Teilen. Auch private Gruppen unterliegen diesen Regeln.",
+          "Deine Rechte bleiben bei dir. Du räumst nur die nicht ausschliesslichen, unentgeltlichen und für Speicherung, technische Verarbeitung, Sicherung und Anzeige erforderlichen Nutzungsrechte ein. Die Lizenz folgt der vereinbarten Sichtbarkeit und erlaubt keine beliebige Weitervermarktung oder externe Werbung mit Personenbildern. Die Auswahl öffentlicher Kursbilder ist vor Einführung separat abzugleichen. Nach Löschung endet die aktive Nutzung, vorbehaltlich begründeter gesetzlicher Aufbewahrung, Ansprüche und begrenzter Backupzyklen; fremde Kopien sind gesondert zu beurteilen."
+        ]
+      },
+      {
+        "title": "7. Community: verbotene Inhalte",
+        "paragraphs": [
+          "Die Regeln gelten für sämtliche Funktionen, auch private Trips, Links und KI-generierte oder manipulierte Inhalte. Unzulässig sind insbesondere:",
+          "1. Sexuelle Ausbeutung oder Sexualisierung Minderjähriger, Kontaktanbahnung und entsprechende Links, auch fiktive oder KI-generierte Darstellungen.",
+          "2. Pornografie, explizite Sexualdarstellungen und sexuelle Dienstleistungen; gewöhnliche nicht sexualisierte Sport- und Badebilder sind nicht allein wegen Badebekleidung verboten.",
+          "3. Intime Aufnahmen ohne Berechtigung, Voyeurismus, sexuelle Erpressung und intime Deepfakes.",
+          "4. Extreme, verherrlichte Gewalt, Folter, Verstümmelung und vergleichbare Schockbilder.",
+          "5. Förderung oder Verherrlichung von Tierquälerei.",
+          "6. Terrorpropaganda, gewalttätiger Extremismus, Rekrutierung und Gewaltaufrufe.",
+          "7. Hass, Entmenschlichung und Diskriminierung aufgrund etwa von Herkunft, Religion, Geschlecht, Orientierung oder Behinderung.",
+          "8. Drohungen, Mobbing, Nachstellung und unerwünschte sexuelle Belästigung.",
+          "9. Verleumdung, bewusst falsche Anschuldigungen, Identitätstäuschung und Persönlichkeitsverletzungen; sachliche Erfahrungsberichte bleiben erlaubt.",
+          "10. Doxxing und unberechtigte Veröffentlichung privater Adressen, Ausweise, Zahlungsdaten, Zugangsdaten, Chats oder genauer Aufenthaltsorte anderer.",
+          "11. Verletzung von Urheber-, Bild- oder Markenrechten; ein entferntes Wasserzeichen ersetzt keine Lizenz.",
+          "12. Betrug, Phishing, Schadsoftware, gefälschte Buchungen oder Zahlungsaufforderungen.",
+          "13. Illegale Geschäfte und konkrete Förderung schädigender Straftaten, etwa rechtswidriger Waffen- oder Drogenhandel.",
+          "14. Verherrlichung oder Anleitung von Selbstverletzung und gefährlicher Nachahmung; unterstützende hilfesuchende Gespräche sind nicht deshalb verboten.",
+          "15. Gefährliche Falschinformationen, insbesondere erfundene sicherheitsrelevante Reise- oder Gesundheitsangaben.",
+          "16. Irreführende KI- und Bildmanipulationen, täuschende Imitation realer Personen und erfundene Ereignisse, Platzbedingungen oder Leistungen. KI-Bilder sind kenntlich zu machen, wenn sonst ein falscher Eindruck realer Gegebenheiten entsteht.",
+          "17. Spam, unerlaubte Massenwerbung, künstliche Interaktionen, gekaufte Likes, erfundene Bewertungen und nicht offengelegte wirtschaftliche Interessen.",
+          "18. Umgehen von Sperren oder Zugriffsschutz, erneutes Einstellen entfernter rechtswidriger Inhalte und Missbrauch von Meldungen.",
+          "Die Liste ist nicht abschliessend. Kontext und Rechte Betroffener zählen; eine kritische Meinung allein ist kein Verstoss. Verboten sind ausserdem unbefugte Zugriffe, Betriebsstörungen und unerlaubte Massenabfragen. Zulässige Sicherheitsprüfungen bleiben vorbehalten."
+        ]
+      },
+      {
+        "title": "8. Personenbilder und Bewertungen",
+        "paragraphs": [
+          "Die Teilnahme an einer Reise oder Golfrunde ist keine pauschale Erlaubnis zur Bildveröffentlichung. Für erkennbare Personen müssen die nötigen Berechtigungen vorliegen; im Zweifel Zustimmung einholen. Bei Kindern gelten zusätzliche Schutzinteressen und gegebenenfalls die Zustimmung der gesetzlichen Vertretung. Keine intimen oder entwürdigenden Kinderbilder teilen.",
+          "Prüfe Namen, Buchungsnummern und Standortangaben vor Veröffentlichung. Respektiere berechtigte Einwände. Bewertungen sollen nachvollziehbare eigene Erfahrungen wiedergeben; Tatsachen dürfen nicht erfunden werden. Geld, Geschenke und relevante Beziehungen bei Empfehlungen offenlegen. Gewerbliche Werbung setzt eine zugelassene Form voraus."
+        ]
+      },
+      {
+        "title": "9. Meldung und Überprüfung",
+        "paragraphs": [
+          "Nutze die Meldefunktion oder legal@fairwayd.golf, auch ohne Account. Nenne Fundstelle, Inhalt oder Referenz und Grund, bei Urheberrechtsmeldungen möglichst das Werk und die beanstandete Nutzung. Leite mutmasslich illegale Bilder nicht erneut weiter. Bei akuter Gefahr kontaktiere zusätzlich die zuständigen Notfall- oder Strafverfolgungsstellen. Fairwayd ist kein Notfalldienst.",
+          "Der Betreiber prüft nach Art und Dringlichkeit. Mögliche Massnahmen sind Rückfragen, Korrektur, Entfernung, Verwarnung oder verhältnismässige Einschränkung/Sperre. Schwere Fälle können sofortiges Handeln erfordern. Soweit zulässig, werden Gründe und Überprüfungsmöglichkeiten mitgeteilt. Rückfragen und die eigene Sicht können an legal@fairwayd.golf gerichtet werden. Meldende werden nicht routinemässig offengelegt; gesetzliche Pflichten bleiben bestehen."
+        ]
+      },
+      {
+        "title": "10. Automatische Prüfung: implementiert, derzeit deaktiviert",
+        "paragraphs": [
+          "Die automatische Prüfung neuer Texte und Bilder ist technisch implementiert, derzeit jedoch nicht aktiviert. Die Datenschutzerklärung beschreibt den vorgesehenen Datenfluss und die Aufbewahrung. Nach Aktivierung hält die Prüfung auffällige neue Inhalte vor der Veröffentlichung zurück. Die Erkennung kann sich irren und ist keine verbindliche rechtliche Beurteilung. Ein Prüfsignal allein sperrt kein Konto automatisch.",
+          "Bei neuen Beiträgen wartet die vollständige Einreichung geschützt auf die Prüfung. Eine Freigabe veröffentlicht sie automatisch mit der gewählten Sichtbarkeit; eine Ablehnung lässt sie unveröffentlicht. Die Person erhält eine In-App-Benachrichtigung und bei aktivierter Einstellung eine E-Mail. Das folgende Verfahren mit erneuter Einreichung gilt nur für ältere Prüffälle und andere geprüfte Funktionen. Bei aktivierter Prüfung kann ein Admin gewöhnliche beanstandete Inhalte ansehen und prüfen, ob ein Fehlalarm vorliegt, beispielsweise bei einem harmlosen Foto. Gibt der Admin den Inhalt frei, muss die Person, die ihn eingereicht hat, denselben unveränderten Inhalt innerhalb von 24 Stunden erneut senden. Die Freigabe veröffentlicht ihn nicht automatisch. Bei Hinweisen auf sexuelle Ausbeutung Minderjähriger gibt es dagegen keine normale Bildvorschau oder Admin-Freigabe; solche Fälle benötigen einen gesonderten rechtlichen Umgang. Rückfragen bleiben möglich, ohne mutmasslich illegale Bilder erneut zu übermitteln. Die automatische Prüfung ergänzt Meldungen und menschliche Moderation und erkennt nicht jeden Verstoss."
+        ]
+      },
+      {
+        "title": "11. Verfügbarkeit und externe Informationen",
+        "paragraphs": [
+          "Der Betreiber bemüht sich um einen sicheren und zuverlässigen Betrieb. Eine ununterbrochene Verfügbarkeit oder Fehlerfreiheit wird weder während noch nach dem Pilotbetrieb garantiert. Unterbrechungen können insbesondere durch Wartung, technische Störungen oder Ausfälle eingesetzter Dienstleister entstehen. Planbare wesentliche Einschränkungen werden soweit möglich vorher angekündigt. Sichere wichtige eigene Unterlagen zusätzlich ausserhalb von Fairwayd. Zwingende gesetzliche Pflichten und die Haftungsregelungen dieser Bedingungen bleiben unberührt.",
+          "Nutzerbeiträge geben die Sicht ihrer Verfasser wieder. Links, Anbieterangaben, Karten und KI-Illustrationen sind keine Garantie für Richtigkeit, Leistung oder tatsächlichen Zustand. Eigene gesetzliche Prüf- und Handlungspflichten bleiben unberührt."
+        ]
+      },
+      {
+        "title": "12. Haftung und schuldhafte Verstösse",
+        "paragraphs": [
+          "Es gelten die gesetzlichen Haftungsregeln. Haftung für Absicht, grobe Fahrlässigkeit und andere zwingend nicht ausschliessbare Haftung, insbesondere gegebenenfalls Personenschäden, wird nicht ausgeschlossen. Soweit zulässig, wird die Haftung für leicht fahrlässig verursachte, mittelbare oder Folgeschäden sowie entgangenen Gewinn ausgeschlossen. Die Reichweite richtet sich nach dem anwendbaren Recht.",
+          "Für fremde Inhalte besteht keine Haftung allein wegen ihrer Zugänglichkeit; eigene Pflichtverletzungen oder gesetzliche Mitverantwortung bleiben möglich. Bei schuldhaften Nutzerverstössen können kausal verursachte erforderliche und angemessene Kosten im zulässigen Umfang ersetzt verlangt werden; eigene Verantwortungsanteile zählen. Es gibt keine pauschale verschuldensunabhängige Freistellung. Betroffene erhalten angemessen Gelegenheit zur Stellungnahme."
+        ]
+      },
+      {
+        "title": "13. Beendigung und Kontolöschung",
+        "paragraphs": [
+          "Kontolöschung ist über die angebotene Funktion oder legal@fairwayd.golf möglich. Nach der aktuellen Datenstruktur entfernt sie auch vom Kontoinhaber erstellte Trips samt abhängigen Einträgen, Kosten und Dokumentzuordnungen. Eigene Einträge und Dokumentdatensätze können auch in fremden Trips entfallen. Es gibt keine automatische Übertragung der Organisation. Sichere wichtige gemeinsame Unterlagen vorher.",
+          "Dateibereinigung ist ein eigener Vorgang; vollständige Bereinigung, Restdaten und Backupfristen sind vor Veröffentlichung noch zu verifizieren. Eine sofortige Entfernung aller Kopien wird nicht versprochen. Der Betreiber kann bei sachlichem Grund, insbesondere erheblichen oder wiederholten Verstössen, verhältnismässig kündigen oder sperren. Erforderliche gesetzliche Aufbewahrung und Anspruchssicherung bleiben vorbehalten."
+        ]
+      },
+      {
+        "title": "14. Änderungen und Recht",
+        "paragraphs": [
+          "Wesentliche Änderungen werden mit Version und Gültigkeitsdatum angekündigt und soweit erforderlich ausdrücklich vereinbart. Weiternutzung gilt nicht pauschal als Zustimmung zu beliebigen Änderungen. Bereits entstandene Ansprüche werden nicht rückwirkend entzogen.",
+          "Es gilt Schweizer Recht unter Vorbehalt zwingender anderer Vorschriften. Gerichtsstände richten sich nach den gesetzlichen Regeln; zwingende Verbrauchergerichtsstände bleiben erhalten. Eine unwirksame Klausel beseitigt nicht automatisch die übrigen Bedingungen."
+        ]
+      }
+    ],
+    "privacy": [
+      {
+        "title": "1. Verantwortlicher und Kontakt",
+        "paragraphs": [
+          "Verantwortlich ist beeZONE, Beda Christener, Einzelunternehmen, Hombergerstr. 14, 4422 Arisdorf, Schweiz, UID CHE-310.823.737. Datenschutzanfragen: privacy@fairwayd.golf. Weitere erforderliche Vertretungen sind vor einer entsprechenden internationalen Ausrichtung zu prüfen. Diese Fassung ist ein Entwurf; offene Empfänger-, Länder- und Fristangaben müssen vor Inkrafttreten ergänzt werden."
+        ]
+      },
+      {
+        "title": "2. Daten und Zwecke",
+        "paragraphs": [
+          "Fairwayd bearbeitet Konto- und Anmeldedaten, E-Mail-Verifikation und Passwort-Hashes bei Passwortkonten, AGB-Annahmezeitpunkt und Version, Profilangaben, Bilder, Beiträge, Kommentare, Bewertungen, Likes, Follows und Meldungen. Sie dienen Konto, Social-Funktionen, Sicherheit und Moderation.",
+          "Trips umfassen Mitglieder, Rollen, Termine, Reiseeinträge, Kosten, Dokumente und Sichtbarkeit. Dazu kommen Benachrichtigungseinstellungen, Zustelldaten und erforderliche technische Verbindungs-/Betriebsdaten. Bei freigegebenem Standort werden Standortdaten für Angebote in der Nähe verwendet; genaue Speicherung ist vor Veröffentlichung abzugleichen. Daten anderer Personen können von berechtigten Nutzern stammen. Kontaktanfragen enthalten Absender, Nachricht und freiwillige Anhänge."
+        ]
+      },
+      {
+        "title": "3. Rechtsrahmen und Wahlmöglichkeiten",
+        "paragraphs": [
+          "Es gilt insbesondere Schweizer Datenschutzrecht. Eine mögliche Anwendung der DSGVO und die konkrete Zuordnung ihrer Rechtsgrundlagen sind vor einer entsprechenden Ausrichtung zu bestätigen. Pflichtangaben ermöglichen Konto und Sicherheit; freiwillige Profil- und Standortangaben sind nicht allein zur Kontoerstellung nötig. Datenschutzhinweise sind keine pauschale Einwilligung. Wo eine Einwilligung erforderlich ist, wird sie gesondert eingeholt."
+        ]
+      },
+      {
+        "title": "4. Sichtbarkeit und Dokumente",
+        "paragraphs": [
+          "Sichtbarkeit hängt von Funktion und Einstellung ab. Organisatoren haben die vorgesehenen Verwaltungsrechte; Zuschauer benötigen einen Account und erhalten den freigegebenen Reiseplan ohne Trip-Kosten und Dokumente. Empfänger können Screenshots und Kopien erstellen. Private Ansichten garantieren keine absolute Geheimhaltung.",
+          "Öffentliche Bilder können über direkte URLs abrufbar sein; die Übereinstimmung mit der Social-Sichtbarkeit ist noch zu prüfen. Geschützte Trip-Dokumente werden nach den implementierten Rechten bereitgestellt; private Prod-Ablage und Altdateibereinigung sind noch zu bestätigen. Notwendige Adminzugriffe sind zweckgebunden."
+        ]
+      },
+      {
+        "title": "5. Automatische Inhaltsprüfung: derzeit deaktiviert",
+        "paragraphs": [
+          "Die technisch implementierte Funktion ist derzeit deaktiviert und übermittelt keine Inhalte an OpenAI. Vor Aktivierung werden Dienstleisterangaben und dieser Hinweis aktualisiert. Bei Aktivierung werden neue/geänderte Post- und Kommentartexte, bearbeitete Profiltexte, Destinationstipps und Kursvorschlagstexte sowie neue Postbilder, hochgeladene Avatare, Trip-Titelbilder und Kursvorschlagsbilder vor Freigabe geprüft.",
+          "Der betreffende Text bzw. die Bilddatei geht an die OpenAI Moderation API. Fairwayd fügt keine Konto-E-Mail oder Nutzerkennung hinzu; der Inhalt kann aber Namen, Gesichter und andere Personendaten enthalten und ist deshalb nicht zwingend anonym. Trip-Dokumente, private Trip-Notizen und Finanzdaten werden nicht übermittelt. Alte Inhalte und externe OAuth-Profilbilder werden nicht nachträglich geprüft.",
+          "Auffällige Inhalte werden zurückgehalten und gewöhnliche Fälle nur berechtigten Admins zur Prüfung gezeigt. Unauffällige Inhalte erzeugen keine zusätzliche dauerhafte Inhaltskopie in der Prüfablage. Technische Fehler verhindern die betroffene neue Veröffentlichung. Fehleinstufungen können unter Angabe der Referenz über legal@fairwayd.golf menschlich überprüft werden. Keine automatische Kontosperre allein aufgrund eines Prüfsignals.",
+          "Bei neuen Beiträgen wartet die vollständige Einreichung geschützt auf die Prüfung. Eine Freigabe veröffentlicht sie automatisch mit der gewählten Sichtbarkeit; eine Ablehnung lässt sie unveröffentlicht. Die Person erhält eine In-App-Benachrichtigung und bei aktivierter Einstellung eine E-Mail. Das folgende Verfahren mit erneuter Einreichung gilt nur für ältere Prüffälle und andere geprüfte Funktionen. Eine gewöhnliche Freigabe gilt für denselben unveränderten Inhalt, dieselbe Funktion und dasselbe Konto während 24 Stunden und verlangt erneute Einreichung. Besondere Kinderschutzsignale speichern in der gewöhnlichen Prüfablage keine Inhaltskopie und haben keine normale Admin-Freigabe; ein befristeter Inhaltsprüfwert kann Wiederholung verhindern. Das ist keine vollständige Erkennung von Missbrauchsdarstellungen.",
+          "Vollständige wartende Beiträge samt Bildern bleiben bei laufendem Dienst höchstens sieben Tage in der geschützten Prüfablage. Eine Entscheidung entfernt Text und Bilder aus dem privaten Entwurf; bei Freigabe werden sie Teil des veröffentlichten Beitrags mit der gewählten Sichtbarkeit. Übrige Entscheidungsmetadaten laufen nach 24 Stunden ab. Offene und gesperrte Prüffälle laufen nach sieben Tagen ab. Eine gewöhnliche Entscheidung entfernt Prüftext/Bild aus dem aktiven Fall, übrige Nachweise laufen 24 Stunden später ab. Abgelaufene Fälle sind nicht ansehbar/freigebbar. Bereinigung läuft bei aktivem Dienst beim Start und stündlich; bei Unterbrechung kann die physische Löschung später erfolgen. Backups sind separat zu regeln. Providervertrag, Länder, Garantien und konkrete Datenregeln sind vor Aktivierung noch zu bestätigen."
+        ]
+      },
+      {
+        "title": "6. Anmeldung, Karten und Wechselkurse",
+        "paragraphs": [
+          "Google-Anmeldung verwendet openid, email und profile für Identität, E-Mail und gegebenenfalls Name/Bild. Fairwayd erhält kein Google-Passwort und durch diese Berechtigungen keinen Zugriff auf Gmail oder Kalender. Google verarbeitet Daten daneben nach eigenen Regeln.",
+          "Karten laden Kacheln von OpenStreetMap und Esri/ArcGIS; dabei werden Verbindungsdaten und angeforderte Kartenausschnitte übermittelt. Anbieter und Länder sind vor Veröffentlichung zu konkretisieren. Beim Öffnen externer Links gelten deren Datenschutzinformationen. Wechselkursabfragen an Frankfurter übermitteln das Währungspaar vom Fairwayd-Server, nicht individuelle Kosten, Trip-Titel, Nutzerkennungen oder Dokumente."
+        ]
+      },
+      {
+        "title": "7. Dienstleister und Ausland",
+        "paragraphs": [
+          "Vorgesehen sind Vercel für Website, Railway für API, Neon für Datenbank, Cloudflare R2 für Dateien, Resend für Servicemails, Google für Anmeldung, OpenStreetMap/Esri für Karten, Frankfurter für Wechselkurse und nach Aktivierung OpenAI für Moderation. Genaue Vertragspartner, Empfängerstaaten, Unterauftragnehmer und Übermittlungsgarantien sind noch zu bestätigen; allein eine Datenbankregion belegt keine ausschliessliche Verarbeitung in diesem Staat.",
+          "Mails an legal@fairwayd.golf und privacy@fairwayd.golf werden über Porkbun an fairwayd.legal@gmail.com weitergeleitet und dort bearbeitet. Dies betrifft Nachricht, Adressdaten und Anhänge. Dieser Gmail-Dienst ist von Resend-Servicemails getrennt; Vertragsrollen, Eignung, Länder und Aufbewahrung werden noch geprüft. Bitte keine Passwörter oder unnötigen Ausweisdokumente senden. Weitere berechtigte Empfänger können Inhaltsadressaten, Behörden oder Berater bei entsprechendem Zweck und rechtlicher Grundlage sein."
+        ]
+      },
+      {
+        "title": "8. Browserdaten und E-Mails",
+        "paragraphs": [
+          "Fairwayd verwendet Browser-/Gerätespeicher für Anmeldung, Einstellungen und PWA-Funktionen; Reiseansichten können lokal zwischengespeichert werden. Auf gemeinsamen Geräten abmelden und erforderlichenfalls Website-Daten entfernen. Eine vollständige Cache-Löschung beim Abmelden ist noch zu prüfen.",
+          "Aktivitätsmails zu Trip-Mitgliedschaften und Follow-Vorgängen lassen sich unter Privacy & Security getrennt steuern. Notwendige Login-, Verifikations-, Passwort- und Sicherheitsnachrichten sind davon unabhängig. Derzeit wird keine pauschale Einwilligung in Werbung eingeholt. Vor Einführung von Werbung oder Tracking sind Information und gegebenenfalls Einwilligung gesondert zu regeln; aktive Provider-Analytics sind vor Veröffentlichung zu prüfen."
+        ]
+      },
+      {
+        "title": "9. Aufbewahrung und Löschung",
+        "paragraphs": [
+          "Aktive Konten und Inhalte bleiben für den jeweiligen Zweck bzw. bis zur Löschung gespeichert, vorbehaltlich begründeter Ausnahmen. Bei Kontolöschung des Erstellers entfallen seine Trips und abhängige Daten in der aktiven Datenbank. Eigene Einträge/Dokumentdatensätze können auch in fremden Trips entfallen; keine automatische Organisatorenübertragung. Vollständige Dateibereinigung und Backup-Nachlauf sind noch zu verifizieren.",
+          "Verifikations-, Passwort-Reset- und Magic-Link-Codes sind derzeit 15 Minuten verwendbar; Ablauf bedeutet nicht physische Löschung. Konkrete Bereinigungsfristen für diese Datensätze, technische Logs, manuelle Meldungen, Kontaktmails, E-Mail-Outbox und Backups sind noch festzulegen. Automatische Prüffälle haben die unter Abschnitt 5 beschriebenen separaten Regeln. Gesetzliche Aufbewahrung und konkrete Anspruchssicherung sind auf nötige Daten, Zweck und Dauer zu beschränken."
+        ]
+      },
+      {
+        "title": "10. Sicherheit, Rechte und Änderungen",
+        "paragraphs": [
+          "Angemessene technische und organisatorische Schutzmassnahmen sollen Daten sichern; absolute Sicherheit wird nicht versprochen. Relevante Datenschutzverletzungen werden nach den geltenden Anforderungen beurteilt und soweit vorgeschrieben gemeldet.",
+          "Du kannst nach anwendbarem Recht insbesondere Auskunft, Berichtigung, Löschung und gegebenenfalls Einschränkung, Widerspruch oder Datenherausgabe/-übertragung verlangen; notwendige Einwilligungen können für die Zukunft widerrufen werden. Eine angemessene Identitätsprüfung ist möglich, kein pauschaler Ausweisscan bei jeder Anfrage. Kontakt: privacy@fairwayd.golf. Beschwerden beim EDÖB bzw. einer zuständigen ausländischen Behörde bleiben möglich.",
+          "Wesentliche Änderungen werden mitgeteilt. Neue Zwecke/Dienste sind vor Einführung zu beurteilen und transparent zu erläutern. Eine nötige Einwilligung wird separat eingeholt; Fassungen werden für den Nachweis dokumentiert."
+        ]
+      }
+    ]
+  }
+}
