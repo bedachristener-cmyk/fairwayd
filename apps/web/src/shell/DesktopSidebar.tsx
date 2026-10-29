@@ -23,6 +23,7 @@ import { useAuth } from "../auth/AuthContext";
 import { useAdminStatus } from "../auth/useAdminStatus";
 import { useMe } from "../auth/useMe";
 import { t } from "../i18n/strings";
+import { defaultLegalLanguage, LEGAL_UI } from "../legal/ui";
 import logo from "../assets/logo.png";
 
 type NavItem = {
@@ -134,6 +135,8 @@ function SidebarImage({
 }
 
 export default function DesktopSidebar() {
+  const legalLanguage = defaultLegalLanguage();
+  const legalCopy = LEGAL_UI[legalLanguage];
   const nav = useNavigate();
   const loc = useLocation();
   const { isAuthenticated, token } = useAuth();
@@ -313,6 +316,20 @@ export default function DesktopSidebar() {
           label: t("help_faq"),
           icon: <HelpCircle size={18} strokeWidth={2.2} />,
           isActive: activeStartsWith("/help"),
+        },
+        {
+          key: "legal-terms",
+          path: `/terms?lang=${legalLanguage}`,
+          label: legalCopy.terms,
+          icon: <ClipboardList size={18} strokeWidth={2.2} />,
+          isActive: activeExact("/terms"),
+        },
+        {
+          key: "legal-privacy",
+          path: `/privacy?lang=${legalLanguage}`,
+          label: legalCopy.privacy,
+          icon: <Shield size={18} strokeWidth={2.2} />,
+          isActive: activeExact("/privacy"),
         },
         {
           key: "feedback",

@@ -1,0 +1,291 @@
+{
+  "current": {
+    "terms": [
+      {
+        "title": "Informazioni su Fairwayd",
+        "paragraphs": [
+          "Fairwayd è una piattaforma sociale per pianificare viaggi di golf, trovare campi, seguire attività golfistiche, organizzare viaggi e condividere contenuti con altri utenti."
+        ]
+      },
+      {
+        "title": "Il tuo account",
+        "paragraphs": [
+          "Sei responsabile della sicurezza del tuo account e delle attività svolte tramite esso. Usa dati di registrazione corretti e non condividere l’accesso con altre persone."
+        ]
+      },
+      {
+        "title": "Uso consentito",
+        "paragraphs": [
+          "Non abusare di Fairwayd, non interferire con il servizio, non estrarre dati automaticamente su larga scala, non impersonare altri e non pubblicare contenuti illeciti o molestie. Possiamo rimuovere contenuti o limitare account che danneggiano il servizio o la comunità."
+        ]
+      },
+      {
+        "title": "Contenuti degli utenti",
+        "paragraphs": [
+          "Resti responsabile di post, immagini, recensioni, dati di viaggio e altri contenuti caricati. Carica solo contenuti che hai il diritto di condividere. Pubblicandoli, autorizzi Fairwayd a mostrarli nell’ambito del servizio."
+        ]
+      },
+      {
+        "title": "Esattezza delle informazioni",
+        "paragraphs": [
+          "Le informazioni su campi, viaggi, luoghi, prezzi e disponibilità possono essere incomplete, obsolete o fornite dagli utenti. Fairwayd non ne garantisce l’esattezza. Verifica sempre le informazioni importanti direttamente con il campo, la struttura, il fornitore o l’operatore di viaggio."
+        ]
+      },
+      {
+        "title": "Responsabilità",
+        "paragraphs": [
+          "Fairwayd viene fornito nello stato in cui si trova per la pianificazione e l’uso sociale. Nei limiti consentiti dalla legge, Fairwayd non risponde di perdite indirette, interruzioni di viaggio, informazioni inesatte sui campi, contenuti degli utenti o decisioni basate sulle informazioni dell’app."
+        ]
+      },
+      {
+        "title": "Contatto",
+        "paragraphs": [
+          "Per questioni legali o relative all’account: legal@fairwayd.golf."
+        ]
+      }
+    ],
+    "privacy": [
+      {
+        "title": "Che cos’è Fairwayd",
+        "paragraphs": [
+          "Fairwayd è una piattaforma sociale per pianificare viaggi di golf. Utilizziamo i dati necessari per account, profili, ricerca di campi, post, viaggi e relativi messaggi di servizio."
+        ]
+      },
+      {
+        "title": "Dati dell’account",
+        "paragraphs": [
+          "Raccogliamo informazioni quali nome, indirizzo e-mail, hash della password per gli account con password, dati del fornitore di accesso OAuth, stato di verifica dell’e-mail e registrazioni dell’accettazione delle condizioni legali."
+        ]
+      },
+      {
+        "title": "Profilo e dati sociali",
+        "paragraphs": [
+          "In base alle funzioni utilizzate, Fairwayd può conservare nome utente pubblico, avatar, campi del profilo, relazioni di seguito, notifiche, Mi piace, commenti, post, recensioni e campi o destinazioni seguiti."
+        ]
+      },
+      {
+        "title": "Viaggi, campi e immagini",
+        "paragraphs": [
+          "Usando le funzioni di pianificazione o pubblicazione possiamo conservare dettagli di viaggio, itinerari, documenti, valutazioni, proposte di campi, immagini caricate e metadati necessari per mostrarli e gestirli."
+        ]
+      },
+      {
+        "title": "Uso dell’e-mail",
+        "paragraphs": [
+          "Utilizziamo l’e-mail per accesso, verifica dell’account, sicurezza e messaggi di servizio. Attualmente non la utilizziamo per campagne di marketing."
+        ]
+      },
+      {
+        "title": "Cookie e memoria locale",
+        "paragraphs": [
+          "Fairwayd utilizza la memoria indispensabile del browser, come localStorage, memoria di sessione e meccanismi simili, per mantenere l’accesso, ricordare le preferenze di sessione e far funzionare l’app. Attualmente non utilizziamo cookie di marketing o tracciamento."
+        ]
+      },
+      {
+        "title": "Condivisione e visibilità",
+        "paragraphs": [
+          "I contenuti pubblicati o condivisi possono essere visibili ad altri utenti in base alle impostazioni di riservatezza e alle funzioni usate. I dati privati di viaggio e dell’account servono a fornire il servizio e non sono destinati alla pubblicazione, salvo tua scelta di condividerli."
+        ]
+      },
+      {
+        "title": "Contatto",
+        "paragraphs": [
+          "Per domande sulla protezione dei dati o richieste relative all’account: privacy@fairwayd.golf."
+        ]
+      }
+    ]
+  },
+  "draft": {
+    "terms": [
+      {
+        "title": "1. Fornitore e ambito",
+        "paragraphs": [
+          "Fairwayd è offerto da beeZONE, Beda Christener, impresa individuale, Hombergerstr. 14, 4422 Arisdorf, Svizzera, IDI CHE-310.823.737. Contatto: legal@fairwayd.golf. Queste condizioni riguardano sito, app e servizi associati. Le regole della comunità qui sotto ne fanno parte. Restano salve le norme imperative."
+        ]
+      },
+      {
+        "title": "2. Offerta e costi",
+        "paragraphs": [
+          "Fairwayd permette di cercare campi, creare contatti, pubblicare e pianificare viaggi con orari, documenti e costi. Attualmente l’uso è gratuito per tutti. Prestazioni prenotate separatamente e rimborsi tra viaggiatori non sono inclusi.",
+          "Una versione facoltativa a pagamento senza pubblicità è una possibilità futura, non un’offerta attiva. Un obbligo di pagamento richiede un ordine espresso con prezzo, prestazioni, durata e disdetta. Uso continuato o condizioni modificate non rendono automaticamente un account a pagamento. Non si garantisce che tutte le funzioni restino gratuite per sempre."
+        ]
+      },
+      {
+        "title": "3. Progetto pilota e account",
+        "paragraphs": [
+          "Questa bozza pilota si rivolge al gruppo di viaggio invitato residente in Svizzera e prevede un’età minima di 18 anni. La conferma tecnica dell’età deve ancora essere attuata prima dell’entrata in vigore. Un’apertura futura dai 16 anni non fa parte di questa versione.",
+          "I dati di registrazione devono essere corretti. Gli pseudonimi sono ammessi, l’usurpazione d’identità no. Proteggi gli accessi e segnala sospetti abusi. Per l’accesso Google valgono anche le sue regole. Un accesso all’account non prova in modo inconfutabile la responsabilità personale per ogni operazione."
+        ]
+      },
+      {
+        "title": "4. Prenotazioni e anticipi",
+        "paragraphs": [
+          "Nel progetto pilota Fairwayd non intermedia prenotazioni vincolanti. Un organizzatore può prenotare greenfee o altre prestazioni e anticipare costi indipendentemente da Fairwayd. L’app documenta spese e ripartizioni, senza eseguire essa stessa prenotazioni, pagamenti o rimborsi.",
+          "Crediti di rimborso, scadenze, annullamenti e restituzioni dipendono dagli accordi fra partecipanti e dal diritto applicabile. Un importo nell’app non conferma da solo né un debito riconosciuto né un pagamento. Verifica giustificativi e accordi. Questa descrizione non determina definitivamente il ruolo giuridico dell’organizzatore."
+        ]
+      },
+      {
+        "title": "5. Informazioni di viaggio, documenti e ruoli",
+        "paragraphs": [
+          "Organizzatori e membri verificano prenotazioni, requisiti d’ingresso, visti, assicurazioni e condizioni sanitarie presso fornitori o autorità competenti. Prezzi, cambi e ripartizioni sono aiuti alla pianificazione, non pagamenti o consulenze specialistiche. I dati possono mancare, essere obsoleti o arrotondati.",
+          "I dati altrui si inseriscono solo con autorizzazione. Gli spettatori necessitano di un account Fairwayd e vedono il programma condiviso senza costi o documenti del viaggio. Gli organizzatori gestiscono responsabilmente ruoli e visibilità. Conserva i documenti importanti anche fuori dall’app."
+        ]
+      },
+      {
+        "title": "6. Responsabilità e diritti sui contenuti",
+        "paragraphs": [
+          "Rispondi della liceità di post, immagini, commenti, recensioni, profili, link e documenti e devi avere i necessari diritti d’autore, d’immagine, della personalità e di protezione dei dati. Controlla la visibilità prima di condividere. Le regole valgono anche per gruppi privati.",
+          "I tuoi diritti restano tuoi. Concedi solo diritti non esclusivi e gratuiti necessari a conservazione, elaborazione tecnica, backup e visualizzazione. La licenza segue la visibilità concordata e non permette rivendita arbitraria o pubblicità esterna con immagini di persone. La scelta di immagini pubbliche dei campi va verificata separatamente. Dopo la cancellazione termina l’uso attivo, salvi conservazione giustificata per legge, pretese e cicli limitati di backup; le copie di terzi sono distinte."
+        ]
+      },
+      {
+        "title": "7. Comunità: contenuti vietati",
+        "paragraphs": [
+          "Le regole coprono tutte le funzioni, compresi viaggi privati, link e contenuti generati o manipolati con IA. Sono in particolare vietati:",
+          "1. Sfruttamento o sessualizzazione di minori, adescamento e link corrispondenti, anche fittizi o generati con IA.",
+          "2. Pornografia, rappresentazioni sessuali esplicite e servizi sessuali; normali immagini sportive o balneari non sessualizzate non sono vietate soltanto per il costume.",
+          "3. Immagini intime non autorizzate, voyeurismo, ricatto sessuale e deepfake intimi.",
+          "4. Violenza estrema o glorificata, tortura, mutilazioni e analoghe immagini scioccanti.",
+          "5. Promozione o glorificazione della crudeltà verso animali.",
+          "6. Propaganda terroristica, estremismo violento, reclutamento e incitamenti alla violenza.",
+          "7. Odio, disumanizzazione e discriminazione per origine, religione, genere, orientamento o disabilità, fra l’altro.",
+          "8. Minacce, bullismo, stalking e molestie sessuali indesiderate.",
+          "9. Diffamazione, accuse consapevolmente false, usurpazione e lesioni della personalità; restano ammesse critiche obiettive basate su esperienze personali.",
+          "10. Divulgazione non autorizzata di indirizzi privati, documenti d’identità, dati di pagamento, accessi, chat o posizioni precise altrui.",
+          "11. Violazioni di diritto d’autore, immagine o marchi; rimuovere una filigrana non sostituisce una licenza.",
+          "12. Frode, phishing, malware, prenotazioni o richieste di pagamento false.",
+          "13. Traffici illegali e promozione concreta di reati dannosi, come commercio illecito di armi o droghe.",
+          "14. Glorificazione o istruzioni di autolesionismo e imitazioni pericolose; conversazioni di sostegno o richiesta d’aiuto non sono vietate per questo solo motivo.",
+          "15. Falsità pericolose, in particolare indicazioni inventate sulla sicurezza dei viaggi o sulla salute.",
+          "16. Manipolazioni ingannevoli con IA o di immagini, imitazione di persone reali ed eventi, condizioni dei campi o prestazioni inventati. Le immagini IA vanno segnalate se altrimenti danno un’impressione falsa della realtà.",
+          "17. Spam, pubblicità massiva non autorizzata, interazioni artificiali, Mi piace acquistati, recensioni inventate e interessi economici non dichiarati.",
+          "18. Elusione di blocchi o protezioni, ripubblicazione di contenuti illeciti rimossi e abuso delle segnalazioni.",
+          "L’elenco non è esaustivo. Contano contesto e diritti; un’opinione critica non è da sola una violazione. Sono vietati anche accessi abusivi, interruzioni e interrogazioni massive non autorizzate. Restano riservate le verifiche di sicurezza consentite."
+        ]
+      },
+      {
+        "title": "8. Immagini di persone e recensioni",
+        "paragraphs": [
+          "Partecipare a un viaggio o una partita non autorizza in generale a pubblicare foto. Per persone riconoscibili servono i necessari permessi; in caso di dubbio chiedi il consenso. Per i bambini valgono ulteriori tutele ed eventualmente il consenso del rappresentante legale. Non condividere immagini intime o degradanti di bambini.",
+          "Controlla nomi, codici di prenotazione e localizzazioni prima di pubblicare. Rispetta obiezioni fondate. Le recensioni devono riflettere esperienze personali comprensibili, senza fatti inventati. Dichiara denaro, regali e relazioni rilevanti nelle raccomandazioni. La pubblicità commerciale richiede una forma autorizzata."
+        ]
+      },
+      {
+        "title": "9. Segnalazioni e riesame",
+        "paragraphs": [
+          "Usa la segnalazione o legal@fairwayd.golf, anche senza account. Indica posizione, contenuto o riferimento e motivo; per il diritto d’autore specifica possibilmente opera e uso contestato. Non inoltrare nuovamente immagini presumibilmente illegali. In caso di pericolo immediato contatta anche i servizi d’emergenza o le autorità competenti. Fairwayd non è un servizio d’emergenza.",
+          "Il gestore valuta natura e urgenza. Può chiedere chiarimenti, correggere, rimuovere, ammonire o limitare/sospendere proporzionalmente. Casi gravi possono richiedere azioni immediate. Nei limiti consentiti comunica motivi e possibilità di riesame. Esponi il tuo punto di vista a legal@fairwayd.golf. L’identità di chi segnala non viene divulgata sistematicamente; restano gli obblighi legali."
+        ]
+      },
+      {
+        "title": "10. Controllo automatico preparato",
+        "paragraphs": [
+          "Il controllo aggiuntivo di testi e immagini è predisposto; l’attivazione non è ancora confermata. La bozza privacy descrive trasferimenti e conservazione. Una volta attivato trattiene nuovi contenuti sospetti. I segnali possono essere errati e non sono valutazioni giuridiche vincolanti. Da soli non causano una sospensione automatica dell’account.",
+          "I casi ordinari possono essere esaminati da una persona. L’approvazione richiede un nuovo invio invariato dello stesso utente entro 24 ore. I segnali speciali di tutela dei minori non hanno anteprima o normale approvazione amministrativa; restano possibili un percorso giuridico distinto e richieste di chiarimento. Il controllo non sostituisce segnalazioni o moderazione umana e non garantisce una rilevazione completa."
+        ]
+      },
+      {
+        "title": "11. Disponibilità e informazioni esterne",
+        "paragraphs": [
+          "Il gestore si impegna per un funzionamento sicuro senza promettere disponibilità continua o assenza di errori nel progetto pilota. Sono possibili manutenzione e modifiche. Limitazioni importanti saranno annunciate ove possibile. Salva separatamente i documenti importanti.",
+          "I contributi esprimono il punto di vista degli autori. Link, dati di fornitori, mappe e illustrazioni IA non garantiscono esattezza, prestazioni o stato reale. Restano gli obblighi legali propri di verifica e intervento."
+        ]
+      },
+      {
+        "title": "12. Responsabilità e violazioni colpose",
+        "paragraphs": [
+          "La responsabilità segue la legge. Non si escludono dolo, colpa grave e responsabilità inderogabili, in particolare eventuali danni alla persona. Nei limiti consentiti si esclude la responsabilità per colpa lieve, danni indiretti o conseguenti e mancato guadagno. La portata dipende dal diritto applicabile.",
+          "La sola accessibilità di contenuti altrui non crea responsabilità; restano possibili violazioni proprie e corresponsabilità legale. Una violazione colposa dell’utente può comportare rimborso dei costi necessari, ragionevoli e causali nei limiti consentiti, considerando la responsabilità propria del gestore. Non esiste un obbligo generale di indennizzo senza colpa. L’utente può ragionevolmente presentare osservazioni."
+        ]
+      },
+      {
+        "title": "13. Fine dell’uso e cancellazione",
+        "paragraphs": [
+          "Puoi cancellare l’account tramite la funzione prevista o legal@fairwayd.golf. Secondo la struttura attuale vengono rimossi anche i viaggi creati dall’utente con voci, costi e collegamenti documentali dipendenti. Voci e dati documentali propri possono scomparire anche dai viaggi altrui. Non avviene alcun trasferimento automatico dell’organizzazione. Salva prima le informazioni comuni importanti.",
+          "La pulizia dei file è separata; completezza, dati residui e termini dei backup restano da verificare prima della pubblicazione. Non si promette la rimozione immediata di ogni copia. Il gestore può interrompere l’uso o sospendere proporzionalmente per motivi oggettivi, in particolare violazioni gravi o ripetute. Restano conservazione legale e tutela necessaria di pretese."
+        ]
+      },
+      {
+        "title": "14. Modifiche e diritto",
+        "paragraphs": [
+          "Le modifiche sostanziali sono annunciate con versione e data d’effetto e concordate espressamente ove necessario. L’uso continuato non vale come consenso generale a qualsiasi modifica. Pretese già sorte non sono revocate retroattivamente.",
+          "Si applica il diritto svizzero, salve altre norme imperative. I fori sono quelli di legge, compresi quelli inderogabili dei consumatori. L’invalidità di una clausola non annulla automaticamente le altre."
+        ]
+      }
+    ],
+    "privacy": [
+      {
+        "title": "1. Titolare e contatto",
+        "paragraphs": [
+          "Il titolare è beeZONE, Beda Christener, impresa individuale, Hombergerstr. 14, 4422 Arisdorf, Svizzera, IDI CHE-310.823.737. Contatto: privacy@fairwayd.golf. Eventuali ulteriori rappresentanze vanno esaminate prima di un corrispondente orientamento internazionale. Questa è una bozza; destinatari, paesi e termini mancanti vanno completati prima dell’entrata in vigore."
+        ]
+      },
+      {
+        "title": "2. Dati e finalità",
+        "paragraphs": [
+          "Fairwayd tratta dati di account e accesso, verifica e-mail e hash delle password, data/versione delle condizioni accettate, profili, immagini, post, commenti, recensioni, Mi piace, relazioni di seguito e segnalazioni, per account, funzioni sociali, sicurezza e moderazione.",
+          "I viaggi comprendono membri, ruoli, date, itinerari, costi, documenti e visibilità, oltre a preferenze di notifica, dati di consegna e dati tecnici necessari di connessione e funzionamento. La posizione autorizzata serve per offerte vicine; la sua conservazione esatta va ancora verificata. Utenti autorizzati possono fornire dati altrui. Le richieste di contatto comprendono mittente, messaggio e allegati volontari."
+        ]
+      },
+      {
+        "title": "3. Quadro giuridico e scelte",
+        "paragraphs": [
+          "Si applica in particolare il diritto svizzero sulla protezione dei dati. L’eventuale applicazione del GDPR e le basi concrete vanno confermate prima di un orientamento corrispondente. I dati obbligatori consentono account e sicurezza; informazioni facoltative di profilo e posizione non servono per la sola creazione dell’account. L’informativa non è un consenso generale. Un consenso necessario viene raccolto separatamente."
+        ]
+      },
+      {
+        "title": "4. Visibilità e documenti",
+        "paragraphs": [
+          "La visibilità dipende da funzioni e impostazioni. Gli organizzatori hanno i diritti di gestione previsti; gli spettatori con account vedono il programma condiviso senza costi o documenti. I destinatari possono effettuare screenshot e copie. Le viste private non garantiscono segretezza assoluta.",
+          "Le immagini pubbliche possono essere accessibili tramite URL diretti; la coerenza con la visibilità sociale va verificata. I documenti protetti seguono i diritti implementati; archivio privato di produzione e pulizia dei vecchi file restano da confermare. Gli accessi amministrativi necessari sono vincolati allo scopo."
+        ]
+      },
+      {
+        "title": "5. Controllo automatico: attivazione non confermata",
+        "paragraphs": [
+          "Quando disattivata, la funzione predisposta non invia contenuti a OpenAI. Informazioni e stato saranno aggiornati prima dell’attivazione. Una volta attiva verifica prima del rilascio testi nuovi/modificati di post e commenti, profili modificati, consigli sulle destinazioni e proposte di campi, oltre a nuove foto, avatar caricati, copertine di viaggio e immagini di campi proposti.",
+          "Testo o file immagine sono inviati all’API di moderazione OpenAI senza aggiunta di identificativo Fairwayd o e-mail dell’account. Il contenuto può tuttavia comprendere nomi, volti e altri dati personali e non è necessariamente anonimo. Documenti, note private e dati finanziari dei viaggi non sono inviati. Contenuti precedenti e avatar OAuth esterni non sono verificati retroattivamente.",
+          "I contenuti sospetti sono trattenuti; solo amministratori autorizzati vedono i casi ordinari. I contenuti non segnalati non creano una copia aggiuntiva durevole nell’archivio di verifica. Un errore tecnico impedisce la nuova pubblicazione interessata. Puoi chiedere un riesame umano a legal@fairwayd.golf con il riferimento. Nessun account è sospeso automaticamente per il solo segnale.",
+          "Una normale approvazione vale 24 ore per contenuto invariato, stessa funzione e stesso account, richiedendo un nuovo invio. I segnali speciali di tutela dei minori non conservano copie nell’archivio ordinario e non consentono approvazione normale; un’impronta temporanea può impedire ripetizioni. Non è un sistema completo di rilevazione degli abusi.",
+          "I casi aperti o bloccati scadono dopo sette giorni. Una decisione ordinaria elimina testo/immagine dal caso attivo; le altre prove scadono dopo 24 ore. I casi scaduti non sono consultabili/approvabili. Il servizio attivo pulisce all’avvio e ogni ora; interruzioni possono ritardare l’eliminazione fisica. I backup hanno regole distinte. Contratto, paesi, garanzie e regole del fornitore vanno confermati prima dell’attivazione."
+        ]
+      },
+      {
+        "title": "6. Accesso, mappe e cambi",
+        "paragraphs": [
+          "L’accesso Google utilizza openid, email e profile per identità, e-mail ed eventualmente nome/immagine. Fairwayd non riceve la password Google e tali autorizzazioni non danno accesso a Gmail o calendario. Google tratta dati anche secondo le proprie regole.",
+          "Le mappe caricano tasselli OpenStreetMap ed Esri/ArcGIS con dati di connessione e aree richieste. Fornitori e paesi vanno precisati prima della pubblicazione. Per i link esterni valgono le rispettive informative. Le richieste di cambio Frankfurter trasmettono la coppia di valute dal server Fairwayd, non costi individuali, titoli di viaggio, identificativi o documenti."
+        ]
+      },
+      {
+        "title": "7. Fornitori ed estero",
+        "paragraphs": [
+          "Sono previsti Vercel per il sito, Railway per l’API, Neon per il database, Cloudflare R2 per i file, Resend per messaggi di servizio, Google per l’accesso, OpenStreetMap/Esri per mappe, Frankfurter per cambi e OpenAI dopo attivazione per moderazione. Controparti, paesi destinatari, subfornitori e garanzie restano da confermare; una regione del database non dimostra un trattamento esclusivo in quel paese.",
+          "Le e-mail a legal@fairwayd.golf e privacy@fairwayd.golf passano tramite Porkbun a fairwayd.legal@gmail.com, con messaggio, indirizzi e allegati. Gmail è distinto dalle e-mail Resend; ruoli contrattuali, idoneità, paesi e conservazione restano da verificare. Non inviare password o documenti d’identità inutili. Altri destinatari autorizzati possono essere destinatari dei contenuti, autorità o consulenti con scopo e base appropriati."
+        ]
+      },
+      {
+        "title": "8. Browser ed e-mail",
+        "paragraphs": [
+          "Fairwayd usa la memoria di browser/dispositivo per accesso, impostazioni e PWA; viste di viaggio possono essere memorizzate localmente. Su dispositivi condivisi disconnettiti e, se necessario, elimina i dati del sito. La cancellazione completa della cache alla disconnessione va ancora verificata.",
+          "Le e-mail di attività su membri dei viaggi e relazioni di seguito sono configurabili separatamente in Privacy & Security. Messaggi necessari di accesso, verifica, password e sicurezza restano indipendenti. Non si raccoglie qui un consenso pubblicitario generale. Prima di introdurre pubblicità o tracciamento, informazione ed eventuale consenso vanno organizzati separatamente; gli strumenti analitici attivi dei fornitori vanno verificati."
+        ]
+      },
+      {
+        "title": "9. Conservazione e cancellazione",
+        "paragraphs": [
+          "Account e contenuti restano per il relativo scopo o fino alla cancellazione, salve eccezioni giustificate. Cancellando l’account del creatore spariscono i suoi viaggi e dati dipendenti dal database attivo. Voci/documenti propri possono sparire anche dai viaggi altrui, senza trasferimento automatico dell’organizzatore. Pulizia completa dei file e termini dei backup vanno ancora verificati.",
+          "I codici di verifica, reset e link magici durano 15 minuti; scadenza non significa cancellazione fisica. I termini concreti per questi dati, log, segnalazioni manuali, contatti, coda e-mail e backup restano da definire. I casi automatici seguono la sezione 5. Conservazione legale e tutela di pretese concrete sono limitate a dati, finalità e durate necessari."
+        ]
+      },
+      {
+        "title": "10. Sicurezza, diritti e modifiche",
+        "paragraphs": [
+          "Misure tecniche e organizzative adeguate mirano a proteggere i dati senza garantire sicurezza assoluta. Le violazioni rilevanti sono valutate e notificate secondo i requisiti applicabili.",
+          "Secondo il diritto applicabile puoi chiedere accesso, rettifica, cancellazione ed eventualmente limitazione, opposizione o consegna/trasferimento; i consensi necessari possono essere revocati per il futuro. È possibile una verifica d’identità proporzionata, non una copia sistematica del documento. Contatto: privacy@fairwayd.golf. Restano possibili reclami all’IFPDT o all’autorità estera competente.",
+          "Le modifiche importanti sono comunicate. Nuove finalità/servizi sono valutati e spiegati prima dell’introduzione. Il consenso necessario è separato; le versioni sono documentate come prova."
+        ]
+      }
+    ]
+  }
+}
