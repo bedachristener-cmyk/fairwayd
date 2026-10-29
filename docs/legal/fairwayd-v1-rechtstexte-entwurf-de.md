@@ -80,7 +80,7 @@ Mutmassliche Rechts- oder Regelverstösse können über die vorhandene Meldefunk
 
 Der Betreiber kann Inhalte prüfen, die Sichtbarkeit beschränken, Inhalte entfernen und Konten oder Funktionen verhältnismässig einschränken. Bei dringender Gefahr, schwerwiegenden Verstössen oder verbindlichen behördlichen Anordnungen kann eine sofortige vorläufige Massnahme erforderlich sein. Es besteht keine Zusage einer lückenlosen Vorabprüfung aller Inhalte oder einer Überwachung rund um die Uhr. Dies beseitigt keine gesetzlichen Prüf-, Schutz- oder Handlungspflichten.
 
-Ergänzend können die in Teil C Abschnitt 4a beschriebenen automatischen Inhaltsprüfungen eingesetzt werden, sobald diese aktiviert und vorab transparent angekündigt wurden. Automatische Signale sind keine verbindliche rechtliche Beurteilung und führen nicht allein zu einer automatischen Kontosperre. Nutzer können eine Zurückweisung unter Angabe der angezeigten Referenz über legal@fairwayd.golf zur menschlichen Überprüfung vorlegen.
+Ergänzend sind die in Teil C Abschnitt 4a beschriebenen automatischen Inhaltsprüfungen im Stage-Testbetrieb aktiviert; diese Statusangabe bestätigt keinen separaten Prod-Betrieb. Automatische Signale sind keine verbindliche rechtliche Beurteilung und führen nicht allein zu einer automatischen Kontosperre. Nutzer können eine Zurückweisung unter Angabe der angezeigten Referenz über legal@fairwayd.golf zur menschlichen Überprüfung vorlegen.
 
 Soweit rechtlich zulässig und ohne den Schutz Betroffener oder Ermittlungen zu gefährden, werden Gründe und Möglichkeiten einer Überprüfung mitgeteilt. Die Identität meldender Personen wird anderen Nutzern nicht routinemässig offengelegt. Gesetzlich erforderliche Offenlegungen bleiben vorbehalten.
 
@@ -250,9 +250,9 @@ Beim Laden externer Karten können technische Verbindungsdaten, insbesondere IP-
 
 ## 6. Dienstleister, Empfänger und Ausland
 
-Die technische Prüfung zeigt folgende für den Betrieb vorgesehene Dienste. Vor Veröffentlichung ist die Tabelle anhand der Verträge und der Prod-Konfiguration zu vervollständigen; ein Standort einer einzelnen Datenbank beweist nicht den Standort sämtlicher Verarbeitung oder Zugriffe.
+Die technische Prüfung und der bestätigte Stage-Betrieb zeigen folgende eingesetzte Dienste. Vor Veröffentlichung ist die Tabelle anhand der Verträge und der Prod-Konfiguration zu vervollständigen; ein Standort einer einzelnen Datenbank beweist nicht den Standort sämtlicher Verarbeitung oder Zugriffe.
 
-| Funktion | Vorgesehener Dienst | Vor Veröffentlichung verbindlich eintragen |
+| Funktion | Dienst im Stage-Betrieb | Vor Veröffentlichung verbindlich eintragen |
 |---|---|---|
 | Website und Auslieferung | Vercel | Vertragspartner, Verarbeitungs-/Zugriffsländer, Unterauftragnehmer, Garantien |
 | API-Betrieb | Railway | wie vorstehend |
@@ -260,7 +260,7 @@ Die technische Prüfung zeigt folgende für den Betrieb vorgesehene Dienste. Vor
 | Bilder/Dateien | Cloudflare R2 | wie vorstehend; öffentliche/private Ablage, Zugriffsländer |
 | E-Mail-Zustellung | Resend | wie vorstehend; Zustell-/Protokolldaten |
 | Anmeldung | Google Identity Services | externe Nutzerkennung, E-Mail, gegebenenfalls Name/Bild; Vertragspartner und Länder bestätigen |
-| Automatische Inhaltsprüfung, erst nach Aktivierung | OpenAI Moderation API | Text/Bild sowie technische Anfragedaten; Vertragspartner, Länder und Garantien vor Aktivierung bestätigen |
+| Automatische Inhaltsprüfung, Stage aktiviert | OpenAI Moderation API | Text/Bild sowie technische Anfragedaten; Vertragspartner, Länder, Garantien und Konto-Datenregeln noch bestätigen; Prod separat prüfen |
 | Eingehende Kontaktmails | Porkbun-Weiterleitung → Google Gmail | Absender, Empfänger, Nachricht und Anhänge; Vertragsrollen, Staaten, Weiterleitungs-/Speicherfristen prüfen; Consumer-Gmail nicht als Workspace-Auftragsbearbeitung ausgeben |
 | Karten | tatsächlich aktive Esri/OSM-Dienste | konkrete Anbieter, Länder und Bedingungen |
 | Wechselkurse | Frankfurter | Endpunkt/Betreiber, übermittelte Parameter, Länder |
