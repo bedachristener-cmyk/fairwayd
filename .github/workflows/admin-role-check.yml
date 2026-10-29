@@ -24,7 +24,7 @@ jobs:
       - run: npm run build
         env:
           NEON_DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
-      - run: npm test -- --runInBand moderation.service.spec.ts moderation.controller.spec.ts upload-gate.spec.ts posts.service.spec.ts users.service.spec.ts trips.controller.spec.ts
+      - run: npm test -- --runInBand moderation.service.spec.ts moderation.controller.spec.ts upload-gate.spec.ts post-images.spec.ts posts.service.spec.ts budget-v3.spec.ts users.service.spec.ts trips.controller.spec.ts
   web-build:
     runs-on: ubuntu-latest
     defaults:

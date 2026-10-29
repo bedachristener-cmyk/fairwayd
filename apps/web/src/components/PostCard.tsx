@@ -18,6 +18,7 @@ function avatarSrc(url?: string | null) {
 }
 
 type PostImage = {
+  id?: string;
   url: string | null;
 };
 
@@ -44,6 +45,7 @@ type Post = {
   id: string;
   content: string;
   createdAt: string;
+  updatedAt?: string;
   visibility?: string | null;
   user: PostUser;
   course: PostCourse;
@@ -130,6 +132,20 @@ export default function PostCard({
   const [showHeart, setShowHeart] = useState(false);
   const [lastTap, setLastTap] = useState(0);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [localUpdatedAt, setLocalUpdatedAt] = useState(post.updatedAt);
+  const [localImages, setLocalImages] = useState<PostImage[]>(post.images ?? []);
+  const [retainedImageIds, setRetainedImageIds] = useState<string[]>((post.images ?? []).flatMap(image => image.id ? [image.id] : []));
+  const [newImages, setNewImages] = useState<{ file: File; url: string }[]>([]);
+  const editPreviewUrls = useRef(new Set<string>());
+  useEffect(() => {
+    const urls = editPreviewUrls.current;
+    return () => { urls.forEach(url => URL.revokeObjectURL(url)); };
+  }, []);
+  function clearNewImages() {
+    editPreviewUrls.current.forEach(url => URL.revokeObjectURL(url));
+    editPreviewUrls.current.clear(); setNewImages([]);
+  }
+
   const [lightboxImageIndex, setLightboxImageIndex] = useState<number | null>(
     null,
   );
@@ -318,7 +334,7 @@ export default function PostCard({
   };
 
   const validImages: ResolvedPostImage[] =
-    post.images?.filter(
+    localImages.filter(
       (img): img is { url: string } =>
         typeof img.url === "string" && img.url.length > 0,
     ).map((img) => ({
@@ -397,6 +413,10 @@ export default function PostCard({
 
   useEffect(() => {
     setLocalContent(post.content ?? "");
+    setLocalImages(post.images ?? []);
+    setLocalUpdatedAt(post.updatedAt);
+    setRetainedImageIds((post.images ?? []).flatMap(image => image.id ? [image.id] : []));
+    clearNewImages();
     setLocalVisibility(
       (post.visibility as "PUBLIC" | "FOLLOWERS" | "PRIVATE") ?? "PUBLIC",
     );
@@ -437,6 +457,8 @@ export default function PostCard({
     post.id,
     post.content,
     post.visibility,
+    post.images,
+    post.updatedAt,
     post.course,
     post.likes,
     post.comments,
@@ -479,9 +501,9 @@ export default function PostCard({
     if (!auth?.token) return;
 
     const trimmed = editContent.trim();
-    const currentTrimmed = (localContent ?? "").trim();
+    const keptCount = localImages.filter(image => !image.id || retainedImageIds.includes(image.id)).length;
 
-    if (!trimmed && currentTrimmed) {
+    if (!trimmed && keptCount + newImages.length === 0) {
       setEditError(t("post_content_empty"));
       return;
     }
@@ -494,31 +516,45 @@ export default function PostCard({
         content?: string;
         visibility: "PUBLIC" | "FOLLOWERS" | "PRIVATE";
         courseId: string;
+        retainedImageIds?: string[];
+        expectedUpdatedAt?: string;
       } = {
         visibility: editVisibility,
         courseId: editCourseId,
       };
 
-      if (trimmed) {
-        payload.content = trimmed;
-      }
+      payload.content = trimmed;
+      const imagesChanged = keptCount !== localImages.length || newImages.length > 0;
+      if (imagesChanged) { payload.retainedImageIds = retainedImageIds; payload.expectedUpdatedAt = localUpdatedAt; }
+      let body: BodyInit = JSON.stringify(payload);
+      const headers: Record<string, string> = { Authorization: `Bearer ${auth.token}` };
+      if (newImages.length) {
+        const form = new FormData();
+        form.set("content", trimmed); form.set("visibility", editVisibility); form.set("courseId", editCourseId);
+        form.set("retainedImageIds", JSON.stringify(retainedImageIds));
+        if (localUpdatedAt) form.set("expectedUpdatedAt", localUpdatedAt);
+        newImages.forEach(image => form.append("images", image.file));
+        body = form;
+      } else headers["Content-Type"] = "application/json";
 
       const res = await fetch(`${API_BASE}/posts/${post.id}`, {
         method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${auth.token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+        headers,
+        body,
       });
 
       if (!res.ok) {
-        throw new Error(`Failed to update post: ${res.status}`);
+        const problem = await res.json().catch(() => null);
+        throw new Error(typeof problem?.message === "string" ? problem.message : t("save_changes_failed"));
       }
 
       const updated = await res.json();
 
       setLocalContent(updated?.content ?? localContent);
+      if (Array.isArray(updated?.images)) setLocalImages(updated.images);
+      setLocalUpdatedAt(updated?.updatedAt ?? localUpdatedAt);
+      setActiveImageIndex(0); setLightboxImageIndex(null); clearNewImages();
+      if (imagesChanged) window.dispatchEvent(new Event("fairwayd:course-cover-updated"));
       setLocalVisibility(
         (updated?.visibility as "PUBLIC" | "FOLLOWERS" | "PRIVATE") ??
           editVisibility,
@@ -536,7 +572,7 @@ export default function PostCard({
       setIsEditing(false);
     } catch (err) {
       console.error("Post update failed", err);
-      setEditError(t("save_changes_failed"));
+      setEditError(err instanceof Error ? err.message : t("save_changes_failed"));
     } finally {
       setSaveBusy(false);
     }
@@ -955,6 +991,8 @@ export default function PostCard({
                           onClick={(e) => {
                             e.stopPropagation();
                             setEditContent(localContent);
+                            setRetainedImageIds(localImages.flatMap(image => image.id ? [image.id] : []));
+                            clearNewImages();
                             setEditVisibility(localVisibility);
                             setEditCourseId(post.course.id);
                             setEditCourseQuery("");
@@ -1184,6 +1222,31 @@ export default function PostCard({
               }}
             />
 
+            <fieldset disabled={saveBusy} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 12, minWidth: 0 }}>
+              <legend style={{ padding: "0 5px", fontWeight: 750 }}>{t("photos")} ({localImages.filter(image => !image.id || retainedImageIds.includes(image.id)).length + newImages.length}/5)</legend>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))", gap: 10 }}>
+                {localImages.filter(image => !image.id || retainedImageIds.includes(image.id)).map((image, index) => <div key={image.id ?? index} style={{ display: "grid", gap: 5 }}>
+                  <img src={fileUrl(image.url)} alt={`${t("photos")} ${index + 1}`} style={{ width: "100%", height: 100, objectFit: "cover", borderRadius: 8 }} />
+                  <button type="button" disabled={!image.id} aria-label={`${t("remove_image")} ${index + 1}`} onClick={() => setRetainedImageIds(ids => ids.filter(id => id !== image.id))}>{t("remove")}</button>
+                </div>)}
+                {newImages.map((image, index) => <div key={image.url} style={{ display: "grid", gap: 5 }}>
+                  <img src={image.url} alt={image.file.name} style={{ width: "100%", height: 100, objectFit: "cover", borderRadius: 8 }} />
+                  <button type="button" aria-label={`${t("remove_image")} ${image.file.name}`} onClick={() => { URL.revokeObjectURL(image.url); editPreviewUrls.current.delete(image.url); setNewImages(images => images.filter((_, i) => i !== index)); }}>{t("remove")}</button>
+                </div>)}
+              </div>
+              <label style={{ display: "grid", gap: 6, marginTop: 12, fontSize: 13 }}>{t("photos")} +
+                <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={event => {
+                  const files = Array.from(event.target.files ?? []); event.target.value = "";
+                  const retainedCount = localImages.filter(image => !image.id || retainedImageIds.includes(image.id)).length;
+                  if (retainedCount + newImages.length + files.length > 5) { setEditError("Maximum 5 images per post"); return; }
+                  if (files.some(file => file.size > 5 * 1024 * 1024 || !["image/jpeg", "image/png", "image/webp"].includes(file.type))) { setEditError("Use JPEG, PNG or WebP images up to 5 MB each."); return; }
+                  setEditError("");
+                  const added = files.map(file => { const url = URL.createObjectURL(file); editPreviewUrls.current.add(url); return { file, url }; });
+                  setNewImages(images => [...images, ...added]);
+                }} />
+              </label>
+            </fieldset>
+
             <label
               style={{
                 display: "grid",
@@ -1319,6 +1382,8 @@ export default function PostCard({
                 type="button"
                 onClick={() => {
                   setEditContent(localContent);
+                  setRetainedImageIds(localImages.flatMap(image => image.id ? [image.id] : []));
+                  clearNewImages();
                   setEditVisibility(localVisibility);
                   setEditCourseId(post.course.id);
                   setEditCourseQuery("");

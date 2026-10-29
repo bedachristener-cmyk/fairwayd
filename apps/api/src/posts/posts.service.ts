@@ -2,11 +2,13 @@ import { Optional } from '@nestjs/common';
 import { ModerationService, requireTextCheck } from '../moderation/moderation.service';
 import {
   BadRequestException,
+  ConflictException,
   UnauthorizedException,
   Injectable,
 } from '@nestjs/common';
 import { Prisma, Visibility } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { deleteStoredUpload } from '../storage/r2.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
 type CreatePostBody = {
@@ -16,6 +18,8 @@ type CreatePostBody = {
 };
 
 type UpdatePostBody = {
+  retainedImageIds?: unknown;
+  expectedUpdatedAt?: string;
   content?: string;
   visibility?: 'PUBLIC' | 'FOLLOWERS' | 'PRIVATE';
   courseId?: string;
@@ -456,31 +460,33 @@ export class PostsService {
     }
   }
 
-  async updatePost(postId: string, userId: string, body: UpdatePostBody) {
-    const pid = postId?.trim();
-    const uid = userId?.trim();
-
+  async preparePostImages(postId: string, userId: string, retainedImageIds?: unknown, newCount = 0) {
+    const pid = postId?.trim(); const uid = userId?.trim();
     if (!pid) throw new BadRequestException('Missing postId');
     if (!uid) throw new BadRequestException('Missing userId');
+    const post = await this.prisma.post.findUnique({ where: { id: pid }, select: { id: true, userId: true, content: true, updatedAt: true, images: { select: { id: true, url: true } } } });
+    if (!post) throw new BadRequestException('Post not found');
+    if (post.userId !== uid) throw new UnauthorizedException('You can only edit your own posts');
+    let kept: unknown = retainedImageIds;
+    if (typeof kept === 'string') { try { kept = JSON.parse(kept); } catch { throw new BadRequestException('Invalid retainedImageIds'); } }
+    const ids = kept === undefined ? post.images.map(image => image.id) : kept;
+    if (!Array.isArray(ids) || ids.some(id => typeof id !== 'string') || new Set(ids).size !== ids.length) throw new BadRequestException('Invalid retainedImageIds');
+    if (ids.some(id => !post.images.some(image => image.id === id))) throw new BadRequestException('An image does not belong to this post. Reload and try again.');
+    if (ids.length + newCount > 5) throw new BadRequestException('Maximum 5 images per post');
+    return { post, keptIds: ids as string[] };
+  }
 
-    const post = await this.prisma.post.findUnique({
-      where: { id: pid },
-      select: { id: true, userId: true },
-    });
-
-    if (!post) {
-      throw new BadRequestException(`Unknown postId ${pid}`);
-    }
-
-    if (post.userId !== uid) {
-      throw new UnauthorizedException('You can only edit your own posts');
-    }
-
+  async updatePost(postId: string, userId: string, body: UpdatePostBody, media?: { urls: string[]; expectedUpdatedAt: Date; textChecked: boolean }) {
+    const pid = postId?.trim(); const uid = userId?.trim();
+    const { post, keptIds } = await this.preparePostImages(pid, uid, body?.retainedImageIds, media?.urls.length ?? 0);
+    if (media && post.updatedAt.getTime() !== media.expectedUpdatedAt.getTime()) throw new ConflictException('The post changed. Reload and try again.');
+    const finalContent = typeof body?.content === 'string' ? body.content.trim() : post.content;
+    if (!finalContent && keptIds.length + (media?.urls.length ?? 0) === 0) throw new BadRequestException('A post needs text or at least one image');
     const data: Prisma.PostUpdateInput = {};
 
     if (typeof body?.content === 'string') {
       const trimmedContent = body.content.trim();
-      await requireTextCheck(this.moderation, uid, 'POST_TEXT', trimmedContent);
+      if (!media?.textChecked) await requireTextCheck(this.moderation, uid, 'POST_TEXT', trimmedContent);
       data.content = trimmedContent;
     }
 
@@ -507,20 +513,15 @@ export class PostsService {
       data.course = { connect: { id: courseId } };
     }
 
+    const editingImages = body?.retainedImageIds !== undefined || Boolean(media?.urls.length);
+    if (editingImages) data.images = { deleteMany: { id: { notIn: keptIds } }, create: (media?.urls ?? []).map(url => ({ url })) };
     if (Object.keys(data).length === 0) {
       throw new BadRequestException('Nothing to update');
     }
 
-    if (
-      Object.prototype.hasOwnProperty.call(data, 'content') &&
-      !data.content &&
-      body?.visibility === undefined
-    ) {
-      throw new BadRequestException('Content cannot be empty');
-    }
-
-    return this.prisma.post.update({
-      where: { id: pid },
+    let updated;
+    try { updated = await this.prisma.post.update({
+      where: { id: pid, userId: uid, updatedAt: media?.expectedUpdatedAt ?? post.updatedAt },
       data,
       include: {
         course: true,
@@ -544,8 +545,27 @@ export class PostsService {
           },
         },
       },
-    });
+    }); } catch (error) {
+      if ((error as { code?: string })?.code === 'P2025') throw new ConflictException('The post changed. Reload and try again.');
+      throw error;
+    }
+    let mediaCleanupFailures = 0;
+    if (editingImages) {
+      const results = await Promise.allSettled(post.images.filter(image => !keptIds.includes(image.id)).map(async image => {
+        // Preserve a shared file if another supported feature still references it.
+        const refs = await Promise.all([
+          this.prisma.postImage.count({ where: { url: image.url } }),
+          this.prisma.trip.count({ where: { coverImageUrl: image.url } }),
+          this.prisma.user.count({ where: { avatarUrl: image.url } }),
+          this.prisma.courseSubmissionImage.count({ where: { url: image.url } }),
+        ]);
+        if (refs.every(count => count === 0)) await deleteStoredUpload(image.url);
+      }));
+      mediaCleanupFailures = results.filter(result => result.status === 'rejected').length;
+    }
+    return { ...updated, mediaCleanupFailures };
   }
+
 
   async deletePost(postId: string, userId: string) {
     const pid = postId?.trim();
