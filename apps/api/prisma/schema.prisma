@@ -34,6 +34,8 @@ model User {
   favoriteGolfDestinationPrivacy FieldPrivacy            @default(PUBLIC)
   emailTripNotifications         Boolean                 @default(true)
   emailFollowNotifications       Boolean                 @default(true)
+  emailModerationNotifications   Boolean                 @default(true)
+  pendingPosts                   PendingPost[]
   preferredCurrency              String?
   accounts                       AuthAccount[]
   comments                       Comment[]
@@ -1026,4 +1028,38 @@ model ContentModerationCase {
   @@index([blockedFingerprint])
   @@index([expiresAt])
   @@index([status, createdAt])
+}
+
+// Quarantined new posts never enter Post/feed queries until an admin publishes.
+model PendingPost {
+  id String @id @default(cuid())
+  userId String
+  courseId String
+  content String
+  visibility Visibility
+  state String @default("PENDING")
+  dedupKey String? @unique
+  reviewCaseIds String[]
+  categories String[]
+  postId String?
+  reviewerId String?
+  publishToken String?
+  leaseUntil DateTime?
+  createdAt DateTime @default(now())
+  decidedAt DateTime?
+  expiresAt DateTime
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  images PendingPostImage[]
+  @@index([state, createdAt])
+  @@index([expiresAt])
+}
+
+model PendingPostImage {
+  id String @id @default(cuid())
+  pendingPostId String
+  position Int
+  mimeType String
+  bytes Bytes
+  pendingPost PendingPost @relation(fields: [pendingPostId], references: [id], onDelete: Cascade)
+  @@unique([pendingPostId, position])
 }

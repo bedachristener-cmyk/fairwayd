@@ -21,7 +21,7 @@ export class NotificationsService {
   async emailPreferences(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: this.requireUserId(userId) },
-      select: { emailTripNotifications: true, emailFollowNotifications: true },
+      select: { emailTripNotifications: true, emailFollowNotifications: true, emailModerationNotifications: true },
     });
     if (!user) throw new NotFoundException('User not found');
     return user;
@@ -31,7 +31,7 @@ export class NotificationsService {
     if (!input || typeof input !== 'object' || Array.isArray(input)) {
       throw new BadRequestException('Invalid notification settings');
     }
-    const allowed = ['emailTripNotifications', 'emailFollowNotifications'];
+    const allowed = ['emailTripNotifications', 'emailFollowNotifications', 'emailModerationNotifications'];
     const entries = Object.entries(input);
     if (
       !entries.length ||
@@ -46,7 +46,7 @@ export class NotificationsService {
     return this.prisma.user.update({
       where: { id: this.requireUserId(userId) },
       data: Object.fromEntries(entries),
-      select: { emailTripNotifications: true, emailFollowNotifications: true },
+      select: { emailTripNotifications: true, emailFollowNotifications: true, emailModerationNotifications: true },
     });
   }
 
@@ -166,7 +166,7 @@ export class NotificationsService {
               email: true,
               emailVerifiedAt: true,
               emailTripNotifications: true,
-              emailFollowNotifications: true,
+              emailFollowNotifications: true, emailModerationNotifications: true,
             },
           })
         : null;

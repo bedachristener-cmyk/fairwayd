@@ -6,6 +6,7 @@ async function setup(page: Page) {
   let settings = {
     emailTripNotifications: true,
     emailFollowNotifications: true,
+    emailModerationNotifications: true,
   };
   let failNextSave = false;
   const payloads: unknown[] = [];

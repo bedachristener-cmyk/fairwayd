@@ -399,6 +399,7 @@ export class PostsService {
     userId: string,
     body: CreatePostBody,
     imageUrls: string[] = [],
+    textChecked = false,
   ) {
     const uid = userId?.trim();
     const courseId = body?.courseId?.trim();
@@ -411,7 +412,7 @@ export class PostsService {
       throw new BadRequestException('Missing content');
     }
 
-    await requireTextCheck(this.moderation, uid, 'POST_TEXT', content || '');
+    if (!textChecked) await requireTextCheck(this.moderation, uid, 'POST_TEXT', content || '');
 
     const visibility =
       body?.visibility === 'PRIVATE'

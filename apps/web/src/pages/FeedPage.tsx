@@ -5,6 +5,7 @@ import "react-image-crop/dist/ReactCrop.css";
 import { API_BASE } from "../api/base";
 import {
   apiGet,
+  ApiError,
   friendlyApiErrorMessage,
 } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
@@ -30,6 +31,7 @@ import {
 } from "../api/ratings";
 import { fileUrl } from "../api/fileUrl";
 import { t } from "../i18n/strings";
+import { reviewCopy } from "../utils/contentReview";
 
 type PostImage = { id: string; url: string };
 type NetworkGolfer = { id: string; handle: string; name?: string | null; avatarUrl?: string | null };
@@ -453,6 +455,7 @@ export default function FeedPage() {
   const [applyingEdit, setApplyingEdit] = useState(false);
 
   const [err, setErr] = useState<string | null>(null);
+  const [reviewNotice, setReviewNotice] = useState("");
   const [feedLoading, setFeedLoading] = useState(true);
   const [posting, setPosting] = useState(false);
   const [composerHint, setComposerHint] = useState<string | null>(null);
@@ -1008,7 +1011,6 @@ export default function FeedPage() {
   const selectedLat = selectedCourseFull?.lat ?? selectedCourse?.lat;
   const selectedLon = selectedCourseFull?.lon ?? selectedCourse?.lon;
 
-  const selectedCountry = selectedCourseFull?.country ?? null;
   const supportsDirectCamera =
     typeof navigator !== "undefined" &&
     /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -1157,20 +1159,6 @@ export default function FeedPage() {
     [token, logout, courseFollowBusyId, followedCourseIds],
   );
   const submitPost = async () => {
-    console.log("submitPost clicked", {
-      selectedCourse,
-      selectedIsComplete,
-      draft,
-      files,
-      token: Boolean(token),
-      visibility,
-      selectedName,
-      selectedLat,
-      selectedLon,
-      typeLat: typeof selectedLat,
-      typeLon: typeof selectedLon,
-    });
-
     if (!selectedCourse) {
       setErr(t("composer_choose_course_first"));
       alert(t("composer_choose_course_first"));
@@ -1201,27 +1189,7 @@ export default function FeedPage() {
     setPosting(true);
     setErr(null);
 
-    const optimisticId = `optimistic-${Date.now()}`;
-    const optimistic: Post = {
-      id: optimisticId,
-      content: text,
-      createdAt: new Date().toISOString(),
-      visibility,
-      course: {
-        id: selectedCourse.id,
-        name: selectedName!,
-        lat: selectedLat!,
-        lon: selectedLon!,
-        country: selectedCountry,
-      },
-      user: { id: "me", handle },
-      images: previews.map((url, index) => ({
-        id: `preview-${index}`,
-        url,
-      })),
-    };
-
-    setPosts((prev) => [optimistic, ...prev]);
+    setReviewNotice("");
 
     try {
       const fd = new FormData();
@@ -1244,29 +1212,24 @@ export default function FeedPage() {
         throw new Error("Unauthorized. Please login again.");
       }
 
+      const result = await res.json().catch(() => null);
       if (!res.ok) {
-        const t = await res.text().catch(() => "");
-        throw new Error(`HTTP ${res.status} ${res.statusText} ${t}`.trim());
+        if (result?.code === 'CONTENT_REVIEW_REQUIRED') throw new Error(reviewCopy().legacyPending);
+        if (result?.code === 'CONTENT_REJECTED') throw new Error(reviewCopy().rejected);
+        throw new ApiError(typeof result?.message === 'string' ? result.message : t("failed_to_post"), res.status, result);
       }
-
-      const created = (await res.json()) as Post;
-      console.debug("Post upload response imageUrls", {
-        postId: created.id,
-        imageUrls: created.images?.map((image) => image.url) ?? [],
-      });
+      const pending = res.status === 202 && result?.status === 'PENDING_REVIEW';
+      if (pending) setReviewNotice(`${reviewCopy().pending} ${reviewCopy().reference}: ${result.reviewId}`);
+      else if (!result?.id) throw new Error(t("failed_to_post"));
 
       setDraft("");
       setFiles([]);
       resetEditorState();
       setComposerOpen(false);
 
-      setPosts((prev) => {
-        const rest = prev.filter((p) => p.id !== optimisticId);
-        return [created, ...rest];
-      });
-    } catch (e: any) {
-      setPosts((prev) => prev.filter((p) => p.id !== optimisticId));
-      setErr(e?.message ?? t("failed_to_post"));
+      if (!pending) setPosts(prev => [result as Post, ...prev]);
+    } catch (e: unknown) {
+      setErr(friendlyApiErrorMessage(e, t("failed_to_post")));
     } finally {
       setPosting(false);
     }
@@ -1549,6 +1512,7 @@ export default function FeedPage() {
               </div>
             </header>
 
+            {reviewNotice && <div role="status" style={{ padding: 16, borderRadius: 12, background: "var(--card)", border: "1px solid #b69050", lineHeight: 1.6 }}><strong>{reviewCopy().title}</strong><p style={{ margin: "6px 0 0" }}>{reviewNotice}</p></div>}
             {err && (
               <div
                 className="fw-feed-error"
