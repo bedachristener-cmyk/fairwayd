@@ -51,6 +51,9 @@ jobs:
           if ! grep -q '^model PendingPost {' /tmp/before-pending.prisma; then
             npx prisma db execute --file prisma/migrations/20261029180000_pending_post_review/migration.sql
           fi
+          node scripts/ci-moderation-constraints.cjs
+          npx prisma db execute --file /tmp/moderation-checks.sql
+          npx prisma db execute --file prisma/migrations/20261029190000_reviewed_case_status/migration.sql
           npm test -- --runInBand pending-posts.integration.spec.ts
   web-build:
     runs-on: ubuntu-latest

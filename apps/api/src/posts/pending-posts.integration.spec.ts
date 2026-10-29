@@ -30,6 +30,12 @@ integration('Pending-post migration and publication with PostgreSQL', () => {
     await db.$disconnect();
   });
   const image = () => ({ originalname: 'golf.png', mimetype: 'image/png', buffer: Buffer.from([137,80,78,71,13,10,26,10,0]) }) as Express.Multer.File;
+  it('keeps database status validation and the image size guard enforced', async () => {
+    await expect(db.$executeRaw`UPDATE "ContentModerationCase" SET "status" = 'INVALID_STATUS' WHERE "id" = ${signal}`).rejects.toThrow();
+    const checks = await db.$queryRaw<{ conname: string; definition: string }[]>`SELECT conname, pg_get_constraintdef(oid) AS definition FROM pg_constraint WHERE conrelid = '"ContentModerationCase"'::regclass AND contype = 'c'`;
+    expect(checks.find(c => c.conname === 'ContentModerationCase_status_check')?.definition).toContain('REVIEWED');
+    expect(checks.find(c => c.conname === 'ContentModerationCase_bytes_limit')?.definition).toContain('5242880');
+  });
   it('retains a complete private post, publishes once under concurrent approvals and preserves all fields', async () => {
     const result = await service.submit(author, { courseId: course, content: 'Private golf test', visibility: 'PRIVATE' }, [image(), image()]);
     const id = (result as { reviewId: string }).reviewId;
@@ -45,6 +51,7 @@ integration('Pending-post migration and publication with PostgreSQL', () => {
     expect(await db.post.count({ where: { userId: author } })).toBe(1);
     expect(await db.pendingPostImage.count({ where: { pendingPostId: id } })).toBe(0);
     expect(await db.notification.count({ where: { userId: author, type: 'post_review_approved', emailPending: true } })).toBe(1);
+    expect(await db.contentModerationCase.findUnique({ where: { id: signal } })).toMatchObject({ status: 'REVIEWED', text: null, bytes: null });
   });
   it('rejects atomically without a post and clears all retained images and text', async () => {
     const result = await service.submit(author, { courseId: course, content: 'Reject this test', visibility: 'FOLLOWERS' }, [image()]);
@@ -55,5 +62,6 @@ integration('Pending-post migration and publication with PostgreSQL', () => {
     expect(await db.pendingPost.findUnique({ where: { id } })).toMatchObject({ state: 'REJECTED', content: '', dedupKey: null });
     expect(await db.pendingPostImage.count({ where: { pendingPostId: id } })).toBe(0);
     expect(await db.notification.count({ where: { userId: author, type: 'post_review_rejected', emailPending: true } })).toBe(1);
+    expect(await db.contentModerationCase.findUnique({ where: { id: signal } })).toMatchObject({ status: 'REVIEWED', text: null, bytes: null });
   });
 });
