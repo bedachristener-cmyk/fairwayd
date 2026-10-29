@@ -2,6 +2,8 @@ import { BadRequestException, ConflictException, ServiceUnavailableException, Un
 import { Test } from '@nestjs/testing';
 import { AuthGuard } from '@nestjs/passport';
 import request from 'supertest';
+import { PostsController } from './posts.controller';
+import { PostsService } from './posts.service';
 import { PendingPostsService } from './pending-posts.service';
 import { PendingPostsController } from './pending-posts.controller';
 import { PrismaService } from '../prisma/prisma.service';
@@ -102,9 +104,9 @@ describe('Complete pending posts', () => {
 
 describe('Pending-post admin HTTP boundary', () => {
   let app: any;
-  const service = { list: jest.fn().mockResolvedValue([]), preview: jest.fn().mockResolvedValue({ bytes: file().buffer, mimeType: 'image/png' }), decide: jest.fn().mockResolvedValue({ ok: true }) };
+  const service = { submit: jest.fn().mockResolvedValue({ status: 'PENDING_REVIEW', reviewId: 'draft' }), list: jest.fn().mockResolvedValue([]), preview: jest.fn().mockResolvedValue({ bytes: file().buffer, mimeType: 'image/png' }), decide: jest.fn().mockResolvedValue({ ok: true }) };
   beforeAll(async () => {
-    const module = await Test.createTestingModule({ controllers: [PendingPostsController], providers: [AdminGuard, { provide: PrismaService, useValue: { user: { findUnique: async ({ where }: any) => ({ id: where.id, adminRole: where.id === 'admin' ? 'ADMIN' : 'USER' }) } } }, { provide: PendingPostsService, useValue: service }] })
+    const module = await Test.createTestingModule({ controllers: [PendingPostsController, PostsController], providers: [{ provide: PostsService, useValue: {} }, AdminGuard, { provide: PrismaService, useValue: { user: { findUnique: async ({ where }: any) => ({ id: where.id, adminRole: where.id === 'admin' ? 'ADMIN' : 'USER' }) } } }, { provide: PendingPostsService, useValue: service }] })
       .overrideGuard(AuthGuard('jwt')).useValue({ canActivate: (context: any) => { const req = context.switchToHttp().getRequest(); if (!req.headers['x-test-user']) return false; req.user = { id: req.headers['x-test-user'] }; return true; } }).compile();
     app = module.createNestApplication(); await app.init();
   });
@@ -115,6 +117,10 @@ describe('Pending-post admin HTTP boundary', () => {
     await request(app.getHttpServer()).get('/safety/admin/pending-posts/d/images/i').set(headers).expect(403);
     await request(app.getHttpServer()).patch('/safety/admin/pending-posts/d').set(headers).send({ decision: 'APPROVED' }).expect(403);
     expect(service.preview).not.toHaveBeenCalled(); expect(service.decide).not.toHaveBeenCalled();
+  });
+  it('returns a pending response rather than a fake post and takes author identity from JWT', async () => {
+    await request(app.getHttpServer()).post('/posts').set('x-test-user', 'member').send({ courseId: 'course', content: 'Text', userId: 'forged' }).expect(202).expect({ status: 'PENDING_REVIEW', reviewId: 'draft' });
+    expect(service.submit).toHaveBeenCalledWith('member', expect.objectContaining({ courseId: 'course', content: 'Text' }), []);
   });
   it('protects previews from caching and uses the authenticated reviewer identity', async () => {
     const r = await request(app.getHttpServer()).get('/safety/admin/pending-posts/d/images/i').set('x-test-user', 'admin').expect(200);

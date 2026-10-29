@@ -4,7 +4,7 @@ import { ApiError, friendlyApiErrorMessage } from "../api/client";
 import { reviewCopy } from "../utils/contentReview";
 import { useAuth } from "../auth/AuthContext";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
+import { API_BASE } from "../api/base";
 
 function useQuery() {
   const { search } = useLocation();
