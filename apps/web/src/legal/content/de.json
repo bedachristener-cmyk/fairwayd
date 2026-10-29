@@ -178,16 +178,16 @@
         ]
       },
       {
-        "title": "10. Vorbereitete automatische Prüfung",
+        "title": "10. Automatische Prüfung: implementiert, derzeit deaktiviert",
         "paragraphs": [
-          "Die zusätzliche Prüfung von Texten und Bildern ist vorbereitet; ihre Aktivierung ist noch nicht bestätigt. Der Datenschutzentwurf beschreibt Datenfluss und Aufbewahrung. Auffällige neue Inhalte werden bei Aktivierung zurückgehalten. Signale können falsch sein und stellen keine verbindliche rechtliche Beurteilung dar. Eine Kontosperre erfolgt nicht allein automatisch aufgrund eines Signals.",
-          "Gewöhnliche Fälle können Menschen prüfen. Eine Freigabe erfordert eine erneute unveränderte Einreichung durch denselben Nutzer innerhalb von 24 Stunden. Besondere Kinderschutzsignale haben keine gewöhnliche Bildvorschau oder Admin-Freigabe; eine gesonderte rechtliche Behandlung und Rückfragen bleiben möglich. Die Funktion ersetzt weder Meldungen noch manuelle Moderation und garantiert keine lückenlose Erkennung."
+          "Die automatische Prüfung neuer Texte und Bilder ist technisch implementiert, derzeit jedoch nicht aktiviert. Die Datenschutzerklärung beschreibt den vorgesehenen Datenfluss und die Aufbewahrung. Nach Aktivierung hält die Prüfung auffällige neue Inhalte vor der Veröffentlichung zurück. Die Erkennung kann sich irren und ist keine verbindliche rechtliche Beurteilung. Ein Prüfsignal allein sperrt kein Konto automatisch.",
+          "Bei aktivierter Prüfung kann ein Admin gewöhnliche beanstandete Inhalte ansehen und prüfen, ob ein Fehlalarm vorliegt, beispielsweise bei einem harmlosen Foto. Gibt der Admin den Inhalt frei, muss die Person, die ihn eingereicht hat, denselben unveränderten Inhalt innerhalb von 24 Stunden erneut senden. Die Freigabe veröffentlicht ihn nicht automatisch. Bei Hinweisen auf sexuelle Ausbeutung Minderjähriger gibt es dagegen keine normale Bildvorschau oder Admin-Freigabe; solche Fälle benötigen einen gesonderten rechtlichen Umgang. Rückfragen bleiben möglich, ohne mutmasslich illegale Bilder erneut zu übermitteln. Die automatische Prüfung ergänzt Meldungen und menschliche Moderation und erkennt nicht jeden Verstoss."
         ]
       },
       {
         "title": "11. Verfügbarkeit und externe Informationen",
         "paragraphs": [
-          "Der Betreiber bemüht sich um sicheren Betrieb, verspricht im Pilot jedoch keine dauerhafte Verfügbarkeit oder Fehlerfreiheit. Wartung und Änderungen sind möglich. Wesentliche Einschränkungen sollen soweit möglich vorher angekündigt werden. Eigene wichtige Unterlagen zusätzlich sichern.",
+          "Der Betreiber bemüht sich um einen sicheren und zuverlässigen Betrieb. Eine ununterbrochene Verfügbarkeit oder Fehlerfreiheit wird weder während noch nach dem Pilotbetrieb garantiert. Unterbrechungen können insbesondere durch Wartung, technische Störungen oder Ausfälle eingesetzter Dienstleister entstehen. Planbare wesentliche Einschränkungen werden soweit möglich vorher angekündigt. Sichere wichtige eigene Unterlagen zusätzlich ausserhalb von Fairwayd. Zwingende gesetzliche Pflichten und die Haftungsregelungen dieser Bedingungen bleiben unberührt.",
           "Nutzerbeiträge geben die Sicht ihrer Verfasser wieder. Links, Anbieterangaben, Karten und KI-Illustrationen sind keine Garantie für Richtigkeit, Leistung oder tatsächlichen Zustand. Eigene gesetzliche Prüf- und Handlungspflichten bleiben unberührt."
         ]
       },
@@ -241,9 +241,9 @@
         ]
       },
       {
-        "title": "5. Automatische Inhaltsprüfung: Aktivierung noch nicht bestätigt",
+        "title": "5. Automatische Inhaltsprüfung: derzeit deaktiviert",
         "paragraphs": [
-          "Die vorbereitete Funktion übermittelt im ausgeschalteten Zustand keine Inhalte an OpenAI. Vor Aktivierung werden Dienstleisterangaben und dieser Hinweis aktualisiert. Bei Aktivierung werden neue/geänderte Post- und Kommentartexte, bearbeitete Profiltexte, Destinationstipps und Kursvorschlagstexte sowie neue Postbilder, hochgeladene Avatare, Trip-Titelbilder und Kursvorschlagsbilder vor Freigabe geprüft.",
+          "Die technisch implementierte Funktion ist derzeit deaktiviert und übermittelt keine Inhalte an OpenAI. Vor Aktivierung werden Dienstleisterangaben und dieser Hinweis aktualisiert. Bei Aktivierung werden neue/geänderte Post- und Kommentartexte, bearbeitete Profiltexte, Destinationstipps und Kursvorschlagstexte sowie neue Postbilder, hochgeladene Avatare, Trip-Titelbilder und Kursvorschlagsbilder vor Freigabe geprüft.",
           "Der betreffende Text bzw. die Bilddatei geht an die OpenAI Moderation API. Fairwayd fügt keine Konto-E-Mail oder Nutzerkennung hinzu; der Inhalt kann aber Namen, Gesichter und andere Personendaten enthalten und ist deshalb nicht zwingend anonym. Trip-Dokumente, private Trip-Notizen und Finanzdaten werden nicht übermittelt. Alte Inhalte und externe OAuth-Profilbilder werden nicht nachträglich geprüft.",
           "Auffällige Inhalte werden zurückgehalten und gewöhnliche Fälle nur berechtigten Admins zur Prüfung gezeigt. Unauffällige Inhalte erzeugen keine zusätzliche dauerhafte Inhaltskopie in der Prüfablage. Technische Fehler verhindern die betroffene neue Veröffentlichung. Fehleinstufungen können unter Angabe der Referenz über legal@fairwayd.golf menschlich überprüft werden. Keine automatische Kontosperre allein aufgrund eines Prüfsignals.",
           "Eine gewöhnliche Freigabe gilt für denselben unveränderten Inhalt, dieselbe Funktion und dasselbe Konto während 24 Stunden und verlangt erneute Einreichung. Besondere Kinderschutzsignale speichern in der gewöhnlichen Prüfablage keine Inhaltskopie und haben keine normale Admin-Freigabe; ein befristeter Inhaltsprüfwert kann Wiederholung verhindern. Das ist keine vollständige Erkennung von Missbrauchsdarstellungen.",

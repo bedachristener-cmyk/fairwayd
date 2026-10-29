@@ -178,16 +178,16 @@
         ]
       },
       {
-        "title": "10. Prepared automatic checks",
+        "title": "10. Automatic checks: implemented, currently disabled",
         "paragraphs": [
-          "Additional text and image checking is prepared; activation is not yet confirmed. The privacy draft describes transfers and retention. Once enabled, suspicious new content is held back. Signals may be wrong and are not binding legal assessments. A signal alone does not automatically suspend an account.",
-          "Ordinary cases can be reviewed by a person. Approval requires the same user to resubmit unchanged content within 24 hours. Special child-safety signals have no ordinary image preview or normal admin approval; a separate legal process and questions remain possible. Checks do not replace reports or human moderation and do not guarantee complete detection."
+          "Automatic checking of new text and images is technically implemented but currently disabled. The privacy notice describes the intended transfers and retention. Once enabled, checks hold back flagged new content before publication. Detection can be wrong and is not a binding legal assessment. A signal alone does not automatically suspend an account.",
+          "When checks are enabled, an administrator can inspect ordinary flagged content for a false positive, such as a harmless photograph. If approved, the person who submitted it must resubmit the same unchanged content within 24 hours. Approval does not publish it automatically. Signals of sexual exploitation of minors instead have no normal image preview or admin approval; those cases need separate legal handling. Questions remain possible without resending suspected illegal images. Checks supplement reports and human moderation and do not detect every violation."
         ]
       },
       {
         "title": "11. Availability and external information",
         "paragraphs": [
-          "The provider aims for safe operation without promising continuous availability or error-free service in the pilot. Maintenance and changes may occur. Significant restrictions should be announced where possible. Back up important documents separately.",
+          "The provider aims for safe and reliable operation. Uninterrupted availability or error-free service is not guaranteed, either during or after the pilot. Interruptions may arise in particular from maintenance, technical faults or failures of service providers used. Planned significant restrictions are announced beforehand where possible. Keep important documents outside Fairwayd as well. Mandatory legal duties and the liability provisions of these terms remain unaffected.",
           "Contributions reflect their authors’ views. Links, provider information, maps and AI illustrations do not guarantee accuracy, performance or actual conditions. The provider’s own statutory duties to check and act remain unaffected."
         ]
       },
@@ -241,9 +241,9 @@
         ]
       },
       {
-        "title": "5. Automatic checks: activation not confirmed",
+        "title": "5. Automatic checks: currently disabled",
         "paragraphs": [
-          "When disabled, the prepared feature sends no content to OpenAI. Provider information and this status will be updated before activation. Once enabled, it checks new/edited post and comment text, edited profiles, destination tips and course-submission text, plus new post images, uploaded avatars, trip covers and course-submission images before release.",
+          "The technically implemented feature is currently disabled and sends no content to OpenAI. Provider information and this status will be updated before activation. Once enabled, it checks new/edited post and comment text, edited profiles, destination tips and course-submission text, plus new post images, uploaded avatars, trip covers and course-submission images before release.",
           "The relevant text or image file is sent to the OpenAI Moderation API without an added Fairwayd account identifier or email. Content can still contain names, faces and other personal data and is not necessarily anonymous. Trip documents, private trip notes and financial data are not sent. Old content and external OAuth avatars are not retrospectively scanned.",
           "Flagged content is held back; only authorised administrators view ordinary cases. Unflagged content creates no additional lasting content copy in the review store. Technical errors prevent the affected new publication. Request human review at legal@fairwayd.golf with the reference. No automatic account suspension follows solely from a signal.",
           "Ordinary approval lasts 24 hours for unchanged content, the same feature and account, requiring resubmission. Special child-safety signals retain no content copy in the ordinary review store and have no normal approval; a temporary fingerprint may prevent repetition. This is not a complete child-abuse detection system.",

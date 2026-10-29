@@ -178,16 +178,16 @@
         ]
       },
       {
-        "title": "10. Contrôle automatique préparé",
+        "title": "10. Contrôle automatique : implémenté, actuellement désactivé",
         "paragraphs": [
-          "Le contrôle supplémentaire de textes et images est préparé ; son activation n’est pas encore confirmée. Le projet de déclaration décrit transferts et conservation. Une fois activé, il retient les nouveaux contenus suspects. Les signaux peuvent être erronés et ne constituent pas une qualification juridique contraignante. Ils ne déclenchent pas seuls une suspension automatique du compte.",
-          "Les cas ordinaires peuvent être examinés par une personne. Une autorisation nécessite une nouvelle soumission inchangée par le même utilisateur dans les 24 heures. Les signaux particuliers de protection des mineurs n’offrent ni aperçu ordinaire ni autorisation administrative normale ; une procédure juridique distincte et des demandes restent possibles. Ce dispositif ne remplace pas les signalements et la modération humaine et ne garantit pas une détection exhaustive."
+          "Le contrôle automatique des nouveaux textes et images est techniquement implémenté, mais actuellement désactivé. La déclaration de protection des données décrit les transferts et la conservation prévus. Après activation, le contrôle retient les nouveaux contenus suspects avant publication. La détection peut se tromper et ne constitue pas une qualification juridique contraignante. Un signal seul ne suspend pas automatiquement un compte.",
+          "Une fois le contrôle activé, un administrateur peut examiner les contenus ordinaires signalés pour vérifier un éventuel faux positif, par exemple une photo inoffensive. En cas d’autorisation, la personne qui l’a soumis doit renvoyer le même contenu inchangé dans les 24 heures. L’autorisation ne le publie pas automatiquement. Les signaux d’exploitation sexuelle de mineurs n’offrent en revanche ni aperçu normal ni autorisation administrative ; ces cas nécessitent un traitement juridique distinct. Les demandes restent possibles sans retransmettre d’images présumées illégales. Le contrôle complète les signalements et la modération humaine et ne détecte pas toutes les violations."
         ]
       },
       {
         "title": "11. Disponibilité et informations externes",
         "paragraphs": [
-          "L’exploitant s’efforce d’assurer un fonctionnement sûr sans promettre une disponibilité permanente ou l’absence d’erreurs pendant le pilote. Maintenance et changements sont possibles. Les restrictions importantes sont annoncées si possible. Sauvegardez séparément vos documents importants.",
+          "L’exploitant s’efforce d’assurer un fonctionnement sûr et fiable. Ni une disponibilité ininterrompue ni l’absence d’erreurs ne sont garanties, pendant le pilote ou après. Des interruptions peuvent notamment résulter de maintenance, de problèmes techniques ou de pannes des prestataires utilisés. Les restrictions importantes planifiables sont annoncées à l’avance dans la mesure du possible. Conservez aussi vos documents importants en dehors de Fairwayd. Les obligations légales impératives et les clauses de responsabilité des présentes conditions demeurent réservées.",
           "Les contributions reflètent l’avis de leurs auteurs. Liens, informations de prestataires, cartes et illustrations IA ne garantissent ni exactitude, ni prestation, ni état réel. Les obligations légales propres de vérification et d’action demeurent."
         ]
       },
@@ -241,9 +241,9 @@
         ]
       },
       {
-        "title": "5. Contrôle automatique : activation non confirmée",
+        "title": "5. Contrôle automatique : actuellement désactivé",
         "paragraphs": [
-          "Désactivée, la fonction préparée ne transmet rien à OpenAI. Les informations et ce statut seront actualisés avant activation. Une fois activée, elle vérifie avant autorisation les nouveaux textes ou modifications de publications/commentaires, profils modifiés, conseils de destination et propositions de parcours, ainsi que nouvelles photos, avatars téléversés, couvertures de voyage et images de parcours proposés.",
+          "La fonction techniquement implémentée est actuellement désactivée et ne transmet aucun contenu à OpenAI. Les informations et ce statut seront actualisés avant activation. Une fois activée, elle vérifie avant autorisation les nouveaux textes ou modifications de publications/commentaires, profils modifiés, conseils de destination et propositions de parcours, ainsi que nouvelles photos, avatars téléversés, couvertures de voyage et images de parcours proposés.",
           "Le texte ou fichier image est envoyé à l’API de modération OpenAI sans ajout d’identifiant Fairwayd ou d’e-mail du compte. Le contenu peut néanmoins comporter noms, visages ou autres données personnelles et n’est donc pas nécessairement anonyme. Les documents, notes privées et données financières des voyages ne sont pas envoyés. Les anciens contenus et images OAuth externes ne sont pas vérifiés rétroactivement.",
           "Les contenus suspects sont retenus ; seuls les administrateurs autorisés voient les cas ordinaires. Les contenus non signalés ne créent pas de copie supplémentaire durable dans le dossier de contrôle. Une erreur technique empêche la nouvelle publication concernée. Vous pouvez demander un examen humain à legal@fairwayd.golf avec la référence. Aucun compte n’est suspendu automatiquement sur le seul signal.",
           "Une autorisation ordinaire vaut 24 heures pour le contenu inchangé, la même fonction et le même compte, avec nouvelle soumission. Les signaux particuliers de protection des enfants ne conservent pas de copie dans le dossier ordinaire et n’offrent pas d’autorisation normale ; une empreinte temporaire peut empêcher une répétition. Ce n’est pas un système complet de détection d’abus.",
