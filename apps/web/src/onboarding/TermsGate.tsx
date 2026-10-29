@@ -49,11 +49,11 @@ export default function TermsGate({
           </p>
           <p>
             Read the{" "}
-            <Link to="/terms" style={{ fontWeight: 800, color: "inherit" }}>
+            <Link to="/terms?version=v1" style={{ fontWeight: 800, color: "inherit" }}>
               Terms & Conditions
             </Link>{" "}
             and{" "}
-            <Link to="/privacy" style={{ fontWeight: 800, color: "inherit" }}>
+            <Link to="/privacy?version=v1" style={{ fontWeight: 800, color: "inherit" }}>
               Privacy Policy
             </Link>
             .
