@@ -39,13 +39,13 @@ for (const width of [390, 1280]) {
       await page.reload();
       await expect(page.locator("article section")).toHaveCount(10);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await page.screenshot({ path: `/tmp/legal-${language}-${width}.png`, fullPage: true });
       await page.getByRole("button", { name: copy.current, exact: true }).click();
       await expect(page.locator("article section")).toHaveCount(8);
       await page.getByRole("combobox", { name: copy.language }).selectOption(language === "en" ? "de" : "en");
       await expect(page.locator("main")).toHaveAttribute("lang", language === "en" ? "de" : "en");
       await expect(page.locator("article section")).toHaveCount(8);
       expect(consentRequests).toEqual([]);
-      await page.screenshot({ path: `/tmp/legal-${language}-${width}.png`, fullPage: true });
     });
   }
   test(`guest can reach legal texts from ${width === 390 ? "hamburger" : "desktop sidebar"}`, async ({ page }) => {

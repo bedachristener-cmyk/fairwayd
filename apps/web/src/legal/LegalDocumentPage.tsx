@@ -17,17 +17,17 @@ export default function LegalDocumentPage({ kind }: { kind: LegalKind }) {
   const version = params.get("version") === "draft" ? "draft" : "current";
   const copy = LEGAL_UI[language];
   const [loaded, setLoaded] = useState<{ language: LegalLanguage; documents: Documents } | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failure, setFailure] = useState<{ language: LegalLanguage; attempt: number } | null>(null);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let cancelled = false;
-    setFailed(false);
     loaders[language]().then(({ default: documents }) => {
-      if (!cancelled) setLoaded({ language, documents });
-    }).catch(() => { if (!cancelled) setFailed(true); });
+      if (!cancelled) { setLoaded({ language, documents }); setFailure(null); }
+    }).catch(() => { if (!cancelled) setFailure({ language, attempt }); });
     return () => { cancelled = true; };
   }, [language, attempt]);
   useEffect(() => { window.scrollTo(0, 0); }, [kind, language, version]);
+  const failed = failure?.language === language && failure.attempt === attempt;
   const sections = loaded?.language === language ? loaded.documents[version][kind] : null;
   const documentUrl = (next: LegalKind) => `/${next}?lang=${language}&version=${version === "draft" ? "draft" : "v1"}`;
   const changeParam = (key: string, value: string) => {
