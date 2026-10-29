@@ -1,7 +1,0 @@
-ALTER TABLE "TripItem" ADD COLUMN "greenFee" DOUBLE PRECISION;
-
-ALTER TABLE "TripItem" ADD COLUMN "includeGreenFeeInSplit" BOOLEAN NOT NULL DEFAULT true;
-
-ALTER TABLE "TripItem" ADD COLUMN "includeCaddyFeeInSplit" BOOLEAN NOT NULL DEFAULT true;
-
-ALTER TABLE "TripItem" ADD COLUMN "includeCartFeeInSplit" BOOLEAN NOT NULL DEFAULT true;

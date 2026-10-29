@@ -1,1 +1,0 @@
-ALTER TABLE "TripItem" ADD COLUMN "endDate" TIMESTAMP(3);

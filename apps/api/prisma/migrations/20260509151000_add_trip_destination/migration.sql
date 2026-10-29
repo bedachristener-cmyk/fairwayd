@@ -1,1 +1,0 @@
-ALTER TABLE "Trip" ADD COLUMN IF NOT EXISTS "destination" TEXT;
