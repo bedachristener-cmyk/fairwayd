@@ -10,6 +10,7 @@ import {
   ChevronRight,
   ClipboardList,
   Globe,
+  Flag,
   HelpCircle,
   Home,
   MapPinPlus,
@@ -645,6 +646,8 @@ export default function TopRail() {
             isActive:
               location.pathname === "/feedback-admin" ||
               location.pathname === "/admin/users" ||
+              location.pathname === "/admin/reports" ||
+              location.pathname === "/admin/moderation" ||
               location.pathname === "/admin/course-submissions" ||
               location.pathname === "/admin/course-submissions/history",
             children: [
@@ -655,6 +658,16 @@ export default function TopRail() {
                 icon: <Users size={18} strokeWidth={2.2} />,
                 action: () => navigateFromMenu("/admin/users"),
                 isActive: location.pathname === "/admin/users",
+              },
+              {
+                key: "admin-content-reports",
+                label: "Content Reports",
+                subtitle: "Reports and automatic content checks",
+                icon: <Flag size={18} strokeWidth={2.2} />,
+                action: () => navigateFromMenu("/admin/reports"),
+                isActive:
+                  location.pathname === "/admin/reports" ||
+                  location.pathname === "/admin/moderation",
               },
               {
                 key: "feedback-admin",
