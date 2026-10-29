@@ -86,7 +86,7 @@ Soweit rechtlich zulässig und ohne den Schutz Betroffener oder Ermittlungen zu 
 
 ## 9. Verfügbarkeit und Änderungen des Dienstes
 
-Der Betreiber bemüht sich um einen sicheren und zuverlässigen Betrieb. Im Pilot können Wartungen, Fehler und Funktionsänderungen auftreten. Es wird keine bestimmte dauerhafte Verfügbarkeit, Vollständigkeit oder Kompatibilität mit jedem Gerät zugesichert, sofern dies nicht ausdrücklich vereinbart ist. Gesetzliche Rechte bleiben bestehen.
+Der Betreiber bemüht sich um einen sicheren und zuverlässigen Betrieb. Während und nach dem Pilotbetrieb können Wartungen, technische Störungen, Ausfälle eingesetzter Dienstleister und Funktionsänderungen auftreten. Eine ununterbrochene Verfügbarkeit, Fehlerfreiheit, Vollständigkeit oder Kompatibilität mit jedem Gerät wird nicht zugesichert, sofern dies nicht ausdrücklich vereinbart ist. Gesetzliche Rechte bleiben bestehen.
 
 Nutzer sollen wichtige eigene Unterlagen zusätzlich sichern. Wesentliche Einschränkungen oder eine Einstellung des Dienstes werden, soweit möglich und zumutbar, vorher angekündigt. Diese Regelung ist keine Erlaubnis zu willkürlichem Datenverlust oder zur Missachtung gesetzlicher Pflichten.
 
@@ -228,7 +228,7 @@ Geschützte Trip-Dokumente werden gemäss den dafür implementierten Zugriffsrec
 
 ## 4a. Automatische Inhaltsprüfung – vorbereitete Funktion
 
-**Status dieser Entwurfsfassung:** Die Funktion ist vorbereitet, aber ihre Aktivierung und der produktive Einsatz sind noch nicht bestätigt. Vor einer Aktivierung wird der Hinweis auf den tatsächlichen Zustand aktualisiert; Vertragspartner, Länder und erforderliche Garantien sind vorher zu ergänzen. Während die Funktion ausgeschaltet ist, werden über diese Funktion keine Inhalte an OpenAI übermittelt.
+**Status dieser Entwurfsfassung:** Die automatische Prüfung ist technisch implementiert und auf der Stage-API ausgerollt, derzeit aber deaktiviert; ein produktiver Einsatz ist noch nicht freigegeben. Vor einer Aktivierung wird der Hinweis auf den tatsächlichen Zustand aktualisiert; Vertragspartner, Länder und erforderliche Garantien sind vorher zu ergänzen. Während die Funktion ausgeschaltet ist, werden über diese Funktion keine Inhalte an OpenAI übermittelt.
 
 Bei Aktivierung prüft Fairwayd neu eingereichte oder geänderte Post- und Kommentartexte, bearbeitete Profiltexte und Destinationstipps sowie Texte neuer Kursvorschläge. Neue Postbilder, hochgeladene Profilbilder, Trip-Titelbilder und Bilder von Kursvorschlägen werden vor ihrer öffentlichen Speicherung geprüft. Zweck ist die Erkennung bestimmter schädlicher Inhaltskategorien, etwa sexueller Inhalte, Gewalt, Hass oder Selbstverletzungsaufforderungen. Die Prüfung ist keine verlässliche Erkennung sämtlicher verbotener Kategorien oder aller rechtswidrigen Inhalte.
 
@@ -366,3 +366,6 @@ Dieser Abschnitt ist redaktionell und wird nicht als Vertragstext veröffentlich
 **Aktivierungsstand:** Nur Textentwurf aktualisiert. Keine Änderung an Prod, keine Veröffentlichung der neuen Rechtstexte und keine Aktivierung der externen Moderation durch diese Überarbeitung. Die Vorabinformation zur Inhaltsprüfung muss vor dem ersten tatsächlichen Datentransfer bereitstehen.
 
 **Technische Nachweise der Prüfung:** `apps/api/src/moderation/moderation.service.ts`, `apps/api/docs/content-moderation.md`, `apps/api/src/users/users.service.ts` (`deleteAccount`), `apps/api/prisma/schema.prisma` (Löschbeziehungen), `apps/api/src/auth/auth.controller.ts` (Google-Scopes), `apps/api/src/auth/auth.service.ts` (Code-Gültigkeiten), `apps/api/src/fx/fx.service.ts`, `apps/web/src/components/CoursesMap.tsx`, `apps/web/src/pages/TripDetailPage.tsx`, `apps/web/src/onboarding/TermsGate.tsx`. Prüfbasis: Moderationscode aus PR 62 / Stage-Merge 1089d380a45afb4f93161e116b08098e7c83149c; keine Behauptung einer bereits vorhandenen Prod-Konfiguration.
+
+
+**Nutzerrückmeldung vom 29.10.2026:** Inhaltlich nach Durchlesen grundsätzlich als passend bestätigt; Rückfragen zum Umsetzungsstand und Freigabeablauf beantwortet. Verfügbarkeitsvorbehalt gilt ausdrücklich auch nach dem Pilot, unter Vorbehalt zwingender Pflichten und Haftung. Stage-Prüfung am 29.10.2026: API-Deployment d8d21dd577dd3612fbf64402cf2aa709cc0e982a erfolgreich; keine Variablen CONTENT_MODERATION_ENABLED oder OPENAI_MODERATION_API_KEY eingerichtet. Technisch implementiert ist nicht gleich aktiviert. Diese Kontrolle bestätigt keine rechtliche Endfreigabe oder automatische Zustimmung bestehender Nutzer.
