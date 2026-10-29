@@ -46,3 +46,36 @@ test('non-admin cannot load private reviews or previews',async({page})=>{
   });
   await page.goto('/admin/moderation');await expect(page.getByRole('alert')).toHaveText('Admin access required.');expect(previewRequested).toBe(false);
 });
+
+for (const isAdmin of [true, false]) {
+  test(`mobile menu exposes content review only for admins: ${isAdmin}`, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.addInitScript(() => localStorage.setItem('fairwayd_token', 'menu-user'));
+    await page.route('**/*', async route => {
+      const path = new URL(route.request().url()).pathname;
+      const json = (body: unknown) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+      if (path.endsWith('/users/me')) return json({ id: 'menu-user', handle: 'menu-user', name: 'Menu User', avatarUrl: '/logo.png', termsAcceptedAt: '2026-01-01' });
+      if (path.endsWith('/users/me/admin-status')) return json({ isAdmin });
+      if (path === '/api/safety/admin/pending-posts' || path === '/api/safety/admin/moderation') return json([]);
+      if (path === '/api/safety/admin/moderation/status') return json({ enabled: true, configured: true });
+      if (path.startsWith('/api/')) return json({ items: [], count: 0 });
+      return route.continue();
+    });
+    await page.goto('/privacy-security');
+    await page.getByRole('button', { name: 'Open main menu', exact: true }).click();
+    const admin = page.getByRole('button', { name: /^Admin/ });
+    if (!isAdmin) {
+      await expect(admin).toHaveCount(0);
+      await expect(page.getByRole('button', { name: /^Content Reports/ })).toHaveCount(0);
+      return;
+    }
+    await admin.click();
+    await page.getByRole('button', { name: /^Content Reports/ }).click();
+    await expect(page).toHaveURL(/\/admin\/reports$/);
+    await page.getByRole('link', { name: 'Automatic content checks', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Automatic content checks' })).toBeVisible();
+    await page.getByRole('button', { name: 'Open main menu', exact: true }).click();
+    await expect(page.getByRole('button', { name: /^Content Reports/ })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+}
