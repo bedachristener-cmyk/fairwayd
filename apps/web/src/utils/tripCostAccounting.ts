@@ -96,3 +96,12 @@ export function calculateTripCostShare(
     missingConversion: conversion.missingConversion,
   };
 }
+
+export function highPerPersonCostWarning(
+  cost: TripCostAccountingInput & { paymentMode?: string | null; participantCount: number },
+  baseCurrency: string,
+): boolean {
+  if (cost.paymentMode !== "EACH_PAYS_OWN" || cost.costMode !== "PER_PERSON" || cost.participantCount <= 1 || baseCurrency.trim().toUpperCase() !== "CHF") return false;
+  const converted = resolveTripCostConversion(cost, baseCurrency);
+  return !converted.missingConversion && converted.amount >= 1000;
+}

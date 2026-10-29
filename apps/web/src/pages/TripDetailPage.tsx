@@ -1,3 +1,4 @@
+import { directTripReimbursements } from "../utils/directTripReimbursements";
 import { useCourseCoverImages } from "../hooks/useCourseCoverImages";
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -53,6 +54,7 @@ import {
   calculateTripCostShare,
   resolveTripCostConversion,
   roundTripMoney,
+  highPerPersonCostWarning,
 } from "../utils/tripCostAccounting";
 import { t } from "../i18n/strings";
 import {
@@ -2628,7 +2630,7 @@ function organizerCostOwedRows(row: TripCostRow) {
 function organizerBalanceText(balance: number, currency: string) {
   if (balance > 0) return `should receive ${formatMoney(balance, currency)}`;
   if (balance < 0) return `still owes ${formatMoney(Math.abs(balance), currency)}`;
-  return "no money owed";
+  return "balanced overall";
 }
 
 function organizerSettlementPreviewRows(
@@ -2776,28 +2778,11 @@ function budgetDraftPreviewText(draft: BudgetCostDraft) {
 
 function budgetDraftCostModeWarning(draft: BudgetCostDraft, baseCurrency: string) {
   const { amount, participantCount } = budgetDraftSplitAmounts(draft);
-  if (
-    draft.paymentMode !== "EACH_PAYS_OWN" ||
-    draft.costMode !== "PER_PERSON" ||
-    participantCount <= 1 ||
-    amount === undefined ||
-    amount <= 0
-  ) return "";
-
-  // This heuristic is calibrated in CHF, never on the raw foreign-currency
-  // amount. A missing FX conversion must not produce a false alarm.
-  if (baseCurrency.trim().toUpperCase() !== "CHF") return "";
-  const converted = resolveTripCostConversion(
-    {
-      amount,
-      currency: draft.currency,
-      exchangeRate: optionalNumber(draft.exchangeRate),
-      baseAmount: optionalNumber(draft.baseAmount),
-    },
-    baseCurrency,
-  );
-  if (converted.missingConversion || converted.amount < 1000) return "";
-  return "High per-person amount (CHF equivalent). Did you mean total amount?";
+  return highPerPersonCostWarning({
+    amount, participantCount, currency: draft.currency,
+    exchangeRate: optionalNumber(draft.exchangeRate), baseAmount: optionalNumber(draft.baseAmount),
+    costMode: draft.costMode, paymentMode: draft.paymentMode,
+  }, baseCurrency) ? "High per-person amount (CHF equivalent). Did you mean total amount?" : "";
 }
 
 function tripCostShareSourceText(row: MyTripCostRow, baseCurrency: string) {
@@ -4340,6 +4325,7 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
   const myCostsTotalToPay = totalTripCostMemberAmounts(myCostsIOwe);
   const organizerCostsCurrency =
     organizerCostsData?.baseCurrency || trip?.baseCurrency?.trim() || "CHF";
+  const directReimbursements = directTripReimbursements(organizerCostsData?.costs ?? []);
   const organizerSettlementPreview = organizerSettlementPreviewRows(
     organizerCostsData?.summary.balancePreview ?? [],
   );
@@ -7905,17 +7891,13 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
                                       )}`
                                     : ` - ${shareSourceText}`
                                 }`}
-                            {row.paymentMode === "EACH_PAYS_OWN" &&
-                            row.costMode === "PER_PERSON" &&
-                            row.participantCount > 1
+                            {highPerPersonCostWarning(row, myCostsCurrency)
                               ? " - Check cost mode"
                               : ""}
                           </div>
                         </button>
 
-                        {row.paymentMode === "EACH_PAYS_OWN" &&
-                        row.costMode === "PER_PERSON" &&
-                        row.participantCount > 1 ? (
+                        {highPerPersonCostWarning(row, myCostsCurrency) ? (
                           <div
                             style={{
                               color: "var(--danger)",
@@ -7924,7 +7906,7 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
                               fontWeight: 850,
                             }}
                           >
-                            High per-person amount for a shared cost. Did you mean total amount?
+                            High per-person amount (CHF equivalent). Did you mean total amount?
                           </div>
                         ) : null}
 
@@ -8283,13 +8265,31 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
             </span>
           </div>
 
-          <div style={{ display: "grid", gap: 8 }}>
+          <section aria-label="Direct reimbursements" style={{ display: "grid", gap: 8 }}>
+            <h3 style={{ margin: 0, fontSize: 15 }}>Who owes whom — by expense</h3>
+            <p style={{ margin: 0, color: "var(--sub)", fontSize: 12 }}>Based on the recorded payer and participants. Expand a row to see why. Actual payments and reimbursements are not tracked; rounded amounts may differ by a cent.</p>
+            {directReimbursements.map(row => <details key={`${row.from.id}-${row.to.id}`} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 12, background: "var(--bg)" }}>
+              <summary style={{ cursor: "pointer", overflowWrap: "anywhere", fontSize: 13, fontWeight: 800 }}>
+                {tripCostMemberDisplayName(row.from)} → {tripCostMemberDisplayName(row.to)} · {formatMoney(row.amount, organizerCostsCurrency)}
+              </summary>
+              <ul style={{ paddingLeft: 18, margin: "12px 0 0", fontSize: 13 }}>
+                {row.costs.map(cost => <li key={cost.costId} style={{ padding: "5px 0" }}>
+                  <span>{cost.title} · {cost.label}{cost.date ? ` · ${new Date(cost.date).toLocaleDateString()}` : ""}</span>{" — "}<strong>{formatMoney(cost.amount, organizerCostsCurrency)}</strong>
+                </li>)}
+              </ul>
+            </details>)}
+            {!directReimbursements.length ? <p style={{ margin: 0, fontSize: 12, color: "var(--sub)" }}>No direct reimbursements in the recorded costs.</p> : null}
+          </section>
+
+          <details>
+            <summary style={{ cursor: "pointer", fontWeight: 850, fontSize: 13 }}>Optional group netting</summary>
+          <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
             <div style={{ display: "grid", gap: 2 }}>
               <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
-                Who owes what
+                Suggested group settlement
               </div>
               <div style={{ color: "var(--sub)", fontSize: 12, lineHeight: 1.35 }}>
-                Preview only. No payment tracking or invoices.
+                Optional netting across all group members. It can suggest transfers between people without a direct expense relationship. No payment tracking or invoices.
               </div>
             </div>
             {organizerSettlementPreview.length > 0 ? (
@@ -8340,6 +8340,7 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
             )}
           </div>
 
+          </details>
           <div style={{ display: "grid", gap: 8 }}>
             <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 950 }}>
               Member Cost Overview
@@ -8386,7 +8387,7 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
                   }}
                 >
                   {[
-                    { label: "Paid", value: formatMoney(row.paid, organizerCostsCurrency) },
+                    { label: "Allocated to pay", value: formatMoney(row.paid, organizerCostsCurrency) },
                     {
                       label: "Own trip cost",
                       value: formatMoney(row.expectedShare, organizerCostsCurrency),
