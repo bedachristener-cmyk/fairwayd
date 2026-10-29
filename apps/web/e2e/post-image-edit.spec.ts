@@ -30,13 +30,13 @@ for(const width of [390,1280])test(`owner edits images without losing the post a
  expect(mutations).toHaveLength(0);
  await actions().click();await page.getByRole('button',{name:'Edit post',exact:true}).click();
  await expect(page.locator('fieldset img')).toHaveCount(2);
- await page.getByRole('button',{name:'Remove image 2',exact:true}).click();await page.getByRole('button',{name:'Save',exact:true}).click();
+ await page.getByRole('button',{name:'Remove image 2',exact:true}).click();await page.locator('textarea').locator('..').getByRole('button',{name:'Save',exact:true}).click();
  await expect.poll(()=>mutations.length).toBe(1);expect(mutations[0].body.retainedImageIds).toEqual(['first']);
  await expect(page.locator('fieldset')).toHaveCount(0);
  await actions().click();await page.getByRole('button',{name:'Edit post',exact:true}).click();await expect(page.locator('fieldset img')).toHaveCount(1);
  await page.getByRole('button',{name:'Remove image 1',exact:true}).click();
  await page.locator('fieldset input[type=file]').setInputFiles({name:'replacement.png',mimeType:'image/png',buffer:png});
- await page.getByRole('button',{name:'Save',exact:true}).click();
+ await page.locator('textarea').locator('..').getByRole('button',{name:'Save',exact:true}).click();
  await expect.poll(()=>mutations.length).toBe(2);expect(mutations[1].type).toContain('multipart/form-data');expect(mutations[1].body).toContain('replacement.png');expect(mutations[1].body).toContain('retainedImageIds');
  await expect(page.locator('fieldset')).toHaveCount(0);await page.reload();
  await actions().click();await page.getByRole('button',{name:'Edit post',exact:true}).click();await expect(page.locator('fieldset img')).toHaveCount(1);

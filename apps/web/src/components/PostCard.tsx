@@ -137,7 +137,10 @@ export default function PostCard({
   const [retainedImageIds, setRetainedImageIds] = useState<string[]>((post.images ?? []).flatMap(image => image.id ? [image.id] : []));
   const [newImages, setNewImages] = useState<{ file: File; url: string }[]>([]);
   const editPreviewUrls = useRef(new Set<string>());
-  useEffect(() => () => { editPreviewUrls.current.forEach(url => URL.revokeObjectURL(url)); }, []);
+  useEffect(() => {
+    const urls = editPreviewUrls.current;
+    return () => { urls.forEach(url => URL.revokeObjectURL(url)); };
+  }, []);
   function clearNewImages() {
     editPreviewUrls.current.forEach(url => URL.revokeObjectURL(url));
     editPreviewUrls.current.clear(); setNewImages([]);
