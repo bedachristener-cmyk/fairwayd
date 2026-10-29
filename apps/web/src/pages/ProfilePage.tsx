@@ -197,6 +197,7 @@ function AvatarCircle({
     return (
       <img
         src={fileUrl(avatarUrl)}
+        className="fw-avatar-img"
         alt="avatar"
         style={{
           display: "block",
@@ -1883,6 +1884,7 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
               {profile?.avatarUrl ? (
                 <img
                   src={fileUrl(profile.avatarUrl)}
+                  className="fw-avatar-img"
                   alt="avatar"
                   style={{
                     width: "100%",
