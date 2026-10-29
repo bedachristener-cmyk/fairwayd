@@ -14,7 +14,7 @@ export default function LegalDocumentPage({ kind }: { kind: LegalKind }) {
   const [params, setParams] = useSearchParams();
   const requested = params.get("lang");
   const language = isLegalLanguage(requested) ? requested : defaultLegalLanguage();
-  const version = params.get("version") === "draft" ? "draft" : "current";
+  const version = params.get("version") === "v1" ? "current" : "draft";
   const copy = LEGAL_UI[language];
   const [loaded, setLoaded] = useState<{ language: LegalLanguage; documents: Documents } | null>(null);
   const [failure, setFailure] = useState<{ language: LegalLanguage; attempt: number } | null>(null);
@@ -53,10 +53,6 @@ export default function LegalDocumentPage({ kind }: { kind: LegalKind }) {
         </nav>
         <h1>{copy[kind]}</h1>
         <p className="fw-legal__date">{version === "draft" ? "v1.0-pilot-draft-2026-10-29" : "v1"} · {copy.version}: {date}</p>
-        <div className="fw-legal__versions" role="group" aria-label={copy.version}>
-          <button type="button" aria-pressed={version === "current"} onClick={() => changeParam("version", "v1")}>{copy.current}</button>
-          <button type="button" aria-pressed={version === "draft"} onClick={() => changeParam("version", "draft")}>{copy.draft}</button>
-        </div>
         <aside className="fw-legal__notice" aria-label={version === "draft" ? copy.draft : copy.current}>
           <p>{version === "draft" ? copy.draftNotice : copy.currentNotice}</p>
           {version === "draft" ? <p>{copy.translation}</p> : null}

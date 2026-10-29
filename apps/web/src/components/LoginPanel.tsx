@@ -705,7 +705,7 @@ export default function LoginPanel() {
             <span style={{ minWidth: 0 }}>
               {t("auth_accept_prefix")}{" "}
               <Link
-                to="/terms"
+                to="/terms?version=v1"
                 className="fw-auth-inline-link"
                 style={{ fontWeight: 900 }}
               >
@@ -713,7 +713,7 @@ export default function LoginPanel() {
               </Link>{" "}
               {t("auth_accept_and")}{" "}
               <Link
-                to="/privacy"
+                to="/privacy?version=v1"
                 className="fw-auth-inline-link"
                 style={{ fontWeight: 900 }}
               >
