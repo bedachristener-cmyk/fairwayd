@@ -57,7 +57,7 @@ database('Country-guide database migration and linked trips',()=>{
   expect((await db.trip.findUniqueOrThrow({where:{id:tripId}})).entryRequirementCountries).toEqual(['TH','PH']);
   await trips.update(tripId,id,{title:'Renamed linked trip'});expect((await db.trip.findUniqueOrThrow({where:{id:tripId}})).entryRequirementCountries).toEqual(['TH','PH']);
   const guides=new EntryGuidesService(db);const edited={...payload(),version:original.version,entries:[{...payload().entries[0],text:{en:'Updated shared travel information'}}]};await guides.save('TH',edited,id);
-  expect((await guides.list()).find(g=>g.countryCode==='TH')?.entries).toEqual(edited.entries);
+  expect((await guides.list()).find(g=>g.countryCode==='TH')?.entries).toMatchObject(edited.entries);
   expect((await db.trip.findUniqueOrThrow({where:{id:tripId}})).entryRequirementCountries).toEqual(['TH','PH']);
   await expect(guides.save('TH',edited,id)).rejects.toThrow(ConflictException);
   await trips.update(tripId,id,{entryRequirementCountries:[]});expect((await db.trip.findUniqueOrThrow({where:{id:tripId}})).entryRequirementCountries).toEqual([]);

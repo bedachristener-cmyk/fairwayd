@@ -1,4 +1,5 @@
-import guides from './fixtures/entry-guides.json';
+import { readFileSync } from 'node:fs';
+const guides = JSON.parse(readFileSync(new URL('./fixtures/entry-guides.json', import.meta.url), 'utf8'));
 import { test, expect } from '@playwright/test';
 
 for (const width of [390, 1280]) {

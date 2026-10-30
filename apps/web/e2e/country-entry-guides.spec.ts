@@ -1,5 +1,6 @@
 import {test,expect,type Page} from '@playwright/test';
-import seedGuides from './fixtures/entry-guides.json';
+import { readFileSync } from 'node:fs';
+const seedGuides = JSON.parse(readFileSync(new URL('./fixtures/entry-guides.json', import.meta.url), 'utf8'));
 async function setup(page:Page,admin=false){
  let guides=JSON.parse(JSON.stringify(seedGuides));const writes:any[]=[];let selected:string[]=[];
  await page.addInitScript(()=>{localStorage.setItem('fairwayd_token','test-token');localStorage.setItem('fairwayd_lang','en');});
