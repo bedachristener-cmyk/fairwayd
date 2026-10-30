@@ -1,3 +1,4 @@
+import DeviceAccessHelp from '../permissions/DeviceAccessHelp';
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { API_BASE } from "../api/base";
 import { useAuth } from "../auth/AuthContext";
@@ -483,6 +484,8 @@ export default function PrivacySecurityPage() {
         </p>
         {privacyMsg ? <p role="status" style={textStyle}>{privacyMsg}</p> : null}
       </section>
+
+      <DeviceAccessHelp />
 
       <section
         id="email-notifications"
