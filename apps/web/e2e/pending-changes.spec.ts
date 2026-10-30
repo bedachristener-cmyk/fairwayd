@@ -15,7 +15,7 @@ for (const width of [390,1280]) {
   });
   await page.goto('/onboarding/profile');
   await page.getByRole('button',{name:'Save & Continue',exact:true}).click();
-  await expect(page.getByRole('status').filter({hasText:'profile-review-reference'})).toContainText('applied automatically');
+  await expect(page.getByRole('status').filter({hasText:'profile-review-reference'})).toContainText('applies it automatically');
   await expect(page.getByRole('status').filter({hasText:'profile-review-reference'})).toContainText('do not need to submit it again');
   await expect(page).toHaveURL(/\/onboarding\/profile$/);
   expect(submissions).toBe(1);
