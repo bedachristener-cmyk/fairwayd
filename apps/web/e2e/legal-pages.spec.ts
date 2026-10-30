@@ -63,7 +63,7 @@ for (const width of [390, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     await page.addInitScript(() => localStorage.setItem("fairwayd_lang", "en"));
     await page.goto("/map");
-    await page.getByRole("dialog", { name: "Use your location?", exact: true }).getByRole("button", { name: "Not now", exact: true }).click();
+    await page.getByRole("dialog", { name: "May Fairwayd access your location?", exact: true }).getByRole("button", { name: "Not now", exact: true }).click();
     if (width === 390) await page.getByRole("button", { name: "Open main menu", exact: true }).click();
     await page.getByRole("button", { name: translations.en.terms, exact: true }).click();
     await expect(page).toHaveURL(/\/terms\?lang=en$/);
