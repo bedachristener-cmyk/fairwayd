@@ -385,6 +385,7 @@ export class PendingChangesService implements OnModuleInit, OnModuleDestroy {
         state: true,
         categories: true,
         createdAt: true,
+        decidedAt: true,
         expiresAt: true,
         user: { select: { name: true, handle: true } },
         images: { orderBy: { position: 'asc' }, select: { id: true } },

@@ -83,7 +83,7 @@ export class PendingPostsService implements OnModuleInit, OnModuleDestroy {
   }
 
   list() {
-    return this.prisma.pendingPost.findMany({ where: { expiresAt: { gt: new Date() } }, orderBy: { createdAt: 'desc' }, take: 100, select: { id: true, content: true, courseId: true, visibility: true, state: true, categories: true, createdAt: true, expiresAt: true, leaseUntil: true, postId: true, user: { select: { name: true, handle: true } }, images: { select: { id: true }, orderBy: { position: 'asc' } } } });
+    return this.prisma.pendingPost.findMany({ where: { expiresAt: { gt: new Date() } }, orderBy: { createdAt: 'desc' }, take: 100, select: { id: true, content: true, courseId: true, visibility: true, state: true, categories: true, createdAt: true, decidedAt: true, expiresAt: true, leaseUntil: true, postId: true, user: { select: { name: true, handle: true } }, images: { select: { id: true }, orderBy: { position: 'asc' } } } });
   }
   async preview(id: string, imageId: string) {
     const image = await this.prisma.pendingPostImage.findFirst({ where: { id: imageId, pendingPostId: id, pendingPost: { state: 'PENDING', expiresAt: { gt: new Date() } } }, select: { bytes: true, mimeType: true } });
