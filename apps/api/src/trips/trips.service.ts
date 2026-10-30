@@ -382,7 +382,18 @@ export class TripsService {
     return this.assertCanModifyTrip(tripId, userId);
   }
 
+  private async validateEntryCountries(value: unknown): Promise<string[]> {
+    if (!Array.isArray(value) || value.length > 8 || value.some(code => typeof code !== 'string' || !/^[A-Z]{2}$/.test(code)) || new Set(value).size !== value.length) throw new BadRequestException('Choose valid entry-information countries');
+    if (value.length) {
+      const countries = await this.prisma.destination.findMany({ where: { code: { in: value }, isActive: true }, select: { code: true } });
+      const guides = await this.prisma.countryEntryGuide.findMany({ where: { countryCode: { in: countries.map(c => c.code) }, published: true }, select: { countryCode: true } });
+      if (guides.length !== value.length) throw new BadRequestException('Entry information is not available for one of the selected countries');
+    }
+    return value;
+  }
+
   async create(userId: string, dto: CreateTripDto) {
+    const entryRequirementCountries = await this.validateEntryCountries(dto.entryRequirementCountries === undefined ? [] : dto.entryRequirementCountries);
     let requestedBaseCurrency: string | undefined;
     if (dto.baseCurrency !== undefined) {
       try {
@@ -405,6 +416,7 @@ export class TripsService {
     return this.prisma.trip.create({
       data: {
         title: dto.title.trim(),
+        entryRequirementCountries,
         destination: dto.destination?.trim() || null,
         description: dto.description?.trim() || null,
         baseCurrency,
@@ -677,6 +689,7 @@ export class TripsService {
   async update(tripId: string, userId: string, dto: UpdateTripDto, moderatedCover = false) {
     if (moderationEnabled() && dto.coverImageUrl && !moderatedCover) throw new BadRequestException('Use the image upload to change the cover.');
     const membership = await this.assertCanModifyTrip(tripId, userId);
+    const entryRequirementCountries = dto.entryRequirementCountries === undefined ? undefined : await this.validateEntryCountries(dto.entryRequirementCountries);
 
     const trip = await this.prisma.trip.update({
       where: {
@@ -684,6 +697,7 @@ export class TripsService {
       },
       data: {
         title: dto.title?.trim(),
+        entryRequirementCountries,
         destination:
           dto.destination === undefined
             ? undefined

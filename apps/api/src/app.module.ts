@@ -1,3 +1,4 @@
+import { EntryGuidesModule } from './entry-guides/entry-guides.module';
 import { ModerationModule } from './moderation/moderation.module';
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
@@ -36,6 +37,7 @@ import { SafetyModule } from './safety/safety.module';
     FollowsModule,
     FeedbackModule,
     DestinationsModule,
+    EntryGuidesModule,
     RatingsModule,
     CourseSubmissionsModule,
     TripsModule,

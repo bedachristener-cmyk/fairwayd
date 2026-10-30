@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+const guides = JSON.parse(readFileSync(new URL('./fixtures/entry-guides.json', import.meta.url), 'utf8'));
 import { test, expect } from '@playwright/test';
 
 for (const width of [390, 1280]) {
@@ -71,6 +73,7 @@ for (const width of [390, 1280]) {
         if (path.endsWith('/users/me')) return json({ id: 'owner', handle: 'owner', name: 'Owner', avatarUrl: '/logo.png', termsAcceptedAt: '2026-01-01' });
         if (path === '/api/trips/entry-test') return json({ id: 'entry-test', title: 'Golf holiday', destination: 'Hua Hin', viewerRole: 'OWNER', members: [{ id: 'owner-member', userId: 'owner', role: 'OWNER', user: { id: 'owner', name: 'Owner' } }], items: [{ id: 'golf', type: 'COURSE', title: 'Seapine', course: { id: 'seapine', name: 'Seapine', country: 'TH' } }], documents: [] });
         if (path === '/api/courses/seapine/cover-image') return json({ image: null });
+        if (path === '/api/entry-guides') return json(guides);
         if (path.endsWith('/my-costs')) return json({ baseCurrency: 'CHF', costs: [], summary: { totalPersonalShare: 0, totalPaidByMe: 0, balancePreview: 0, groupedByCategory: {}, missingConversionCount: 0 } });
         if (path.endsWith('/organizer-costs')) return json({ baseCurrency: 'CHF', costs: [], summary: { totalTripCost: 0, missingConversionCount: 0, paidBySummary: [], memberShareSummary: [], balancePreview: [] } });
         if (path.startsWith('/api/')) return json({ items: [], costs: [], count: 0 });
@@ -80,12 +83,12 @@ for (const width of [390, 1280]) {
       const entry = page.locator('[data-trip-entry-requirements]');
       await expect(entry).toBeVisible();
       await expect(entry.locator('article')).toHaveCount(2);
-      await expect(entry.locator('a').nth(0)).toHaveAttribute('href', 'https://tdac.immigration.go.th/');
-      await expect(entry.locator('a').nth(1)).toHaveAttribute('href', 'https://www.thaievisa.go.th/');
-      await expect(entry.locator('a').nth(0)).toHaveAttribute('rel', 'noopener noreferrer');
+      await expect(entry.locator('article').nth(0).locator('a').first()).toHaveAttribute('href', 'https://tdac.immigration.go.th/');
+      await expect(entry.locator('article').nth(1).locator('a').first()).toHaveAttribute('href', 'https://www.thaievisa.go.th/');
+      await expect(entry.locator('article').nth(0).locator('a').first()).toHaveAttribute('rel', 'noopener noreferrer');
       await expect(entry.locator('time')).toHaveAttribute('datetime', '2026-10-30');
-      await expect(entry).toContainText(language === 'de' ? 'Ankunft, nicht der Abflug' : 'arrival, not your departure');
-      await expect(entry).toContainText(language === 'de' ? 'kein Visum' : 'not a visa');
+      await expect(entry).toContainText(language === 'de' ? 'Ankunft, nicht der Abflug' : 'Arrival, not departure');
+      await expect(entry).toContainText(language === 'de' ? 'ersetzen kein Visum' : 'do not replace a visa');
       const checklist = page.getByRole('checkbox', { name: 'Visa / eVisa', exact: true });
       await checklist.check();
       await page.reload();

@@ -489,7 +489,18 @@ model Feedback {
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
 
+model CountryEntryGuide {
+  countryCode String @id
+  checkedOn String
+  published Boolean @default(false)
+  entries Json
+  version Int @default(1)
+  updatedAt DateTime @updatedAt
+  updatedById String?
+}
+
 model Trip {
+  entryRequirementCountries Json?
   id            String         @id @default(cuid())
   description   String?
   visibility    TripVisibility @default(PRIVATE)
