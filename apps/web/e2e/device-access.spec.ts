@@ -30,24 +30,25 @@ async function setup(page: Page, mode: 'allow' | 'deny' | 'timeout' | 'missing' 
 }
 const geoCalls = (page: Page) => page.evaluate(() => (window as any).__geoCalls);
 for (const width of [390, 1280]) {
-  test(`location is explicit, cancellable and not read by startup/sidebar at ${width}px`, async ({ page }) => {
+  test(`location asks on map entry, remembers confirmation and does not read on startup/sidebar at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 }); await setup(page, 'allow', width === 390);
     await page.goto('/feed'); await expect(page.locator('.fw-feed-composer-trigger')).toBeVisible(); expect(await geoCalls(page)).toBe(0);
     await page.goto('/map'); const locate = page.getByRole('button', { name: 'My location', exact: true }); await expect(locate).toBeVisible(); expect(await geoCalls(page)).toBe(0);
-    await locate.click(); const dialog = page.getByRole('dialog', { name: 'Use your location?', exact: true });
+    const dialog = page.getByRole('dialog', { name: 'Use your location?', exact: true });
     await expect(dialog).toContainText('coordinates and the search radius'); expect(await geoCalls(page)).toBe(0);
     await dialog.getByRole('button', { name: 'Not now', exact: true }).click(); expect(await geoCalls(page)).toBe(0); await expect(dialog).toHaveCount(0);
-    await expect(locate).toBeFocused();
     await locate.click(); await page.keyboard.press('Escape'); await expect(dialog).toHaveCount(0); expect(await geoCalls(page)).toBe(0);
     await locate.click(); await page.screenshot({ path: `/tmp/device-access-location-${width}.png`, fullPage: false });
     await dialog.getByRole('button', { name: 'Use location', exact: true }).click(); await expect.poll(() => geoCalls(page)).toBe(1);
     await expect(dialog).toHaveCount(0); expect(await page.evaluate(() => (window as any).__watchCalls)).toBe(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.reload(); await expect.poll(() => geoCalls(page)).toBe(1); await expect(page.getByRole('dialog')).toHaveCount(0);
+    await page.getByRole('button', { name: 'My location', exact: true }).click(); await expect.poll(() => geoCalls(page)).toBe(2);
   });
   test(`Near Me asks before using location and keeps its manual fallback at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 }); await setup(page, 'allow', width === 390);
     await page.goto('/golf-near-me'); expect(await geoCalls(page)).toBe(0);
-    await page.getByRole('button', { name: 'Use my location', exact: true }).click(); await expect(page.getByRole('dialog')).toBeVisible(); expect(await geoCalls(page)).toBe(0);
+    await expect(page.getByRole('dialog')).toBeVisible(); expect(await geoCalls(page)).toBe(0);
     await page.getByRole('button', { name: 'Not now', exact: true }).click(); await page.getByRole('button', { name: 'Basel pilot', exact: true }).click(); expect(await geoCalls(page)).toBe(0);
     await page.getByRole('button', { name: 'Use my location', exact: true }).click(); await page.getByRole('button', { name: 'Use location', exact: true }).click(); await expect.poll(() => geoCalls(page)).toBe(1);
   });
@@ -58,15 +59,20 @@ for (const width of [390, 1280]) {
     page.on('request', req => { if (new URL(req.url()).pathname === '/api/posts' && req.method() === 'POST') published++; });
     await page.goto('/feed'); await page.locator('.fw-feed-composer-trigger').click();
     const camera = page.getByRole('button', { name: /📸 Camera/ }); await camera.click();
-    const dialog = page.getByRole('dialog', { name: 'Take a photo?', exact: true }); await expect(dialog).toContainText('not general access to your photo library'); expect(fileChoosers).toBe(0);
+    const dialog = page.getByRole('dialog', { name: 'Use camera and photos?', exact: true }); await expect(dialog).toContainText('not general access to your photo library'); expect(fileChoosers).toBe(0);
     await dialog.getByRole('button', { name: 'Not now', exact: true }).click(); expect(fileChoosers).toBe(0);
     await camera.click(); await page.screenshot({ path: `/tmp/device-access-camera-${width}.png`, fullPage: false });
-    const next = page.waitForEvent('filechooser'); await dialog.getByRole('button', { name: 'Open camera', exact: true }).click(); const chooser = await next;
+    const next = page.waitForEvent('filechooser'); await dialog.getByRole('button', { name: 'Continue', exact: true }).click(); const chooser = await next;
     expect(await chooser.element().getAttribute('capture')).toBe('environment'); expect(chooser.isMultiple()).toBe(false);
     await chooser.setFiles([]); await expect(dialog).toHaveCount(0);
-    await camera.click(); const gallery = page.waitForEvent('filechooser'); await dialog.getByRole('button', { name: 'Choose an existing image', exact: true }).click(); const existing = await gallery;
+    const repeat = page.waitForEvent('filechooser'); await camera.click(); const repeated = await repeat;
+    expect(await repeated.element().getAttribute('capture')).toBe('environment'); await repeated.setFiles([]); await expect(dialog).toHaveCount(0);
+    await page.reload(); await page.locator('.fw-feed-composer-trigger').click();
+    const remembered = page.waitForEvent('filechooser'); await page.getByRole('button', { name: /📸 Camera/ }).click(); const afterReload = await remembered;
+    await afterReload.setFiles([]); await expect(dialog).toHaveCount(0);
+    const gallery = page.waitForEvent('filechooser'); await page.getByRole('button', { name: /🖼/ }).click(); const existing = await gallery;
     expect(existing.isMultiple()).toBe(true); expect(await existing.element().getAttribute('capture')).toBeNull();
-    await existing.setFiles({ name: 'golf.png', mimeType: 'image/png', buffer: png }); expect(fileChoosers).toBe(2); expect(published).toBe(0);
+    await existing.setFiles({ name: 'golf.png', mimeType: 'image/png', buffer: png }); expect(fileChoosers).toBe(4); expect(published).toBe(0);
     expect(await page.evaluate(() => (window as any).__streamCalls)).toBe(0); expect(await geoCalls(page)).toBe(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
@@ -74,7 +80,7 @@ for (const width of [390, 1280]) {
 for (const mode of ['deny', 'timeout', 'missing'] as const) {
   test(`location ${mode} leaves manual map search usable`, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 900 }); await setup(page, mode);
-    await page.goto('/map'); await page.getByRole('button', { name: 'My location', exact: true }).click();
+    await page.goto('/map');
     if (mode !== 'missing') await page.getByRole('button', { name: 'Use location', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText(mode === 'deny' ? 'blocked' : mode === 'timeout' ? 'timed out' : 'not supported');
     await page.getByPlaceholder('Search courses', { exact: true }).fill('Test'); await expect(page.getByText('Test Golf Course', { exact: true }).first()).toBeVisible();
@@ -85,4 +91,22 @@ test('device access help is available in privacy settings without reading sensor
   await setup(page); await page.goto('/privacy-security');
   await expect(page.getByRole('heading', { name: 'Location, camera and photos', exact: true })).toBeVisible();
   await expect(page.locator('#device-access')).toContainText('withdraw permissions'); expect(await geoCalls(page)).toBe(0);
+});
+
+test('declining automatic location does not nag on later visits; locator can still retry', async ({ page }) => {
+  await setup(page); await page.goto('/map');
+  await page.getByRole('button', { name: 'Not now', exact: true }).click();
+  await page.reload(); await expect(page.getByRole('button', { name: 'My location', exact: true })).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(0); expect(await geoCalls(page)).toBe(0);
+  await page.getByRole('button', { name: 'My location', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Use your location?', exact: true })).toBeVisible();
+});
+test('choosing existing photos acknowledges the shared camera/photos explanation', async ({ page }) => {
+  await setup(page); await page.goto('/feed'); await page.locator('.fw-feed-composer-trigger').click();
+  await page.getByRole('button', { name: /📸 Camera/ }).click();
+  const next = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Choose an existing image', exact: true }).click(); const chooser = await next;
+  expect(chooser.isMultiple()).toBe(true); expect(await chooser.element().getAttribute('capture')).toBeNull(); await chooser.setFiles([]);
+  const again = page.waitForEvent('filechooser'); await page.getByRole('button', { name: /📸 Camera/ }).click(); await (await again).setFiles([]);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
 });

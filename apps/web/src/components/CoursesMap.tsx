@@ -536,7 +536,7 @@ export default function CoursesMap() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [mapRef, setMapRef] = useState<L.Map | null>(null);
-  const { position: userPos, busy: locating, error: locationError, requestLocation, dialog: locationDialog } = useLocationAccess(pos => { mapRef?.setView([pos.lat, pos.lon], 13, { animate: true }); });
+  const { position: userPos, busy: locating, error: locationError, requestLocation, dialog: locationDialog } = useLocationAccess(pos => { mapRef?.setView([pos.lat, pos.lon], 13, { animate: true }); }, Boolean(mapRef));
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const selectedCourseRequestRef = useRef<string | null>(null);
   (window as any).__activeCourseId = activeCourseId ?? highlightedCourseId;

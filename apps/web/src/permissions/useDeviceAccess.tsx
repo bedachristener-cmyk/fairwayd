@@ -1,8 +1,23 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { deviceAccessCopy } from './copy';
 
-type AccessRequest = { kind: 'location' | 'camera'; confirm: () => void; alternative?: () => void };
+type AccessKind = 'location' | 'camera';
+type AccessRequest = { kind: AccessKind; confirm: () => void; alternative?: () => void };
+type AccessDecision = 'accepted' | 'dismissed';
+// Purpose acknowledgement only: never treat this as a browser/OS permission grant.
+const memoryDecisions: Partial<Record<AccessKind, AccessDecision>> = {};
+function accessDecision(kind: AccessKind): AccessDecision | null {
+  try {
+    const value = localStorage.getItem(`fairwayd_device_access_v1_${kind}`);
+    if (value === 'accepted' || value === 'dismissed') return value;
+  } catch { /* Restricted storage: keep the decision for this app session. */ }
+  return memoryDecisions[kind] ?? null;
+}
+function rememberDecision(kind: AccessKind, value: AccessDecision) {
+  memoryDecisions[kind] = value;
+  try { localStorage.setItem(`fairwayd_device_access_v1_${kind}`, value); } catch { /* Session fallback above. */ }
+}
 const button = { minHeight: 44, padding: '10px 18px', borderRadius: 999, border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--text)', fontWeight: 750, cursor: 'pointer' };
 function AccessDialog({ request, close }: { request: AccessRequest; close: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -30,22 +45,32 @@ function AccessDialog({ request, close }: { request: AccessRequest; close: () =>
 }
 export function useDeviceAccessPrompt() {
   const [request, setRequest] = useState<AccessRequest | null>(null);
-  return { ask: (value: AccessRequest) => setRequest(value), dialog: request ? <AccessDialog request={request} close={() => setRequest(null)} /> : null };
+  const ask = useCallback((value: AccessRequest) => {
+    if (accessDecision(value.kind) === 'accepted') { value.confirm(); return; }
+    const accepted = (action: () => void) => () => { rememberDecision(value.kind, 'accepted'); action(); };
+    setRequest({ ...value, confirm: accepted(value.confirm), alternative: value.alternative ? accepted(value.alternative) : undefined });
+  }, []);
+  const close = () => {
+    // Dismissing an automatic location explanation must not nag on the next map visit.
+    if (request?.kind === 'location' && accessDecision('location') !== 'accepted') rememberDecision('location', 'dismissed');
+    setRequest(null);
+  };
+  return { ask, dialog: request ? <AccessDialog request={request} close={close} /> : null };
 }
 
 export type DevicePosition = { lat: number; lon: number };
-export function useLocationAccess(onLocated?: (position: DevicePosition) => void) {
+export function useLocationAccess(onLocated?: (position: DevicePosition) => void, requestOnOpen = false) {
   const [position, setPosition] = useState<DevicePosition | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const active = useRef(true);
   const inFlight = useRef(false);
-  const acknowledged = useRef(false);
+  const requestedOnOpen = useRef(false);
   const onLocatedRef = useRef(onLocated);
   onLocatedRef.current = onLocated;
   const prompt = useDeviceAccessPrompt();
   useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
-  const locate = () => {
+  const locate = useCallback(() => {
     if (inFlight.current) return;
     const copy = deviceAccessCopy();
     if (!navigator.geolocation) { setError(copy.unsupported); return; }
@@ -62,13 +87,18 @@ export function useLocationAccess(onLocated?: (position: DevicePosition) => void
         setError(problem.code === 1 ? copy.denied : problem.code === 3 ? copy.timeout : copy.unavailable);
       }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 120000 });
     } catch { finish(); if (active.current) setError(copy.unavailable); }
-  };
-  const requestLocation = () => {
+  }, []);
+  const ask = prompt.ask;
+  const requestLocation = useCallback(() => {
     if (inFlight.current) return;
     setError('');
     if (!navigator.geolocation) { setError(deviceAccessCopy().unsupported); return; }
-    if (acknowledged.current) locate();
-    else prompt.ask({ kind: 'location', confirm: () => { acknowledged.current = true; locate(); } });
-  };
+    ask({ kind: 'location', confirm: locate });
+  }, [ask, locate]);
+  useEffect(() => {
+    if (!requestOnOpen || requestedOnOpen.current) return;
+    requestedOnOpen.current = true;
+    if (accessDecision('location') !== 'dismissed') requestLocation();
+  }, [requestOnOpen, requestLocation]);
   return { position, busy, error, clearError: () => setError(''), requestLocation, dialog: prompt.dialog };
 }
