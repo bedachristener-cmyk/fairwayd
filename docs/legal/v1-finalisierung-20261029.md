@@ -6,7 +6,7 @@ Die Texte sind ein überarbeiteter Entwurf. Dieser Vorschlag aktiviert keine neu
 
 ## Für Beda: Was wurde geändert?
 
-- Die automatische Inhaltsprüfung wird als **auf Stage aktiviert** beschrieben. Die frühere Aussage «deaktiviert» ist in den vier Leserentwürfen entfernt.
+- Die automatische Inhaltsprüfung wird in den vier Leserentwürfen umgebungsneutral beschrieben. Die tatsächliche Aktivierung auf Stage ist bestätigt; die Aktivierung und Konfiguration auf Prod bleiben eine gesonderte Voraussetzung vor Veröffentlichung.
 - Neue auffällige Posts warten vollständig mit Text, Bildern, Golfplatz und Sichtbarkeit geschützt auf die Entscheidung. **Freigeben veröffentlicht direkt**, Ablehnen veröffentlicht nichts. Auch nicht öffentliche Einreichungen werden geprüft.
 - Die erneute Einreichung innerhalb von 24 Stunden wird klar auf ältere Fälle und andere geprüfte Funktionen begrenzt. Sie ist nicht mehr mit der Freigabe eines vollständigen neuen Posts vermischt.
 - E-Mails zur Prüfung und die Einstellung **Content reviews** sind beschrieben. E-Mails enthalten keine eingereichten Bilder oder Beitragstexte; In-App-Hinweise und die Prüfung bleiben bei abgeschalteten E-Mails aktiv.
@@ -82,3 +82,13 @@ Für die Endfassung benötigt jede Kategorie eine begründete Dauer oder ein kon
 - Code: `apps/api/src/posts/pending-posts.service.ts`, `apps/api/src/moderation/moderation.service.ts`, `apps/api/src/notifications/notification-email.service.ts`, `apps/api/src/users/users.service.ts`, `apps/api/src/courses/courses.service.ts`.
 - Lesertexte: `apps/web/src/legal/content/{de,en,fr,it}.json`, jeweils nur `draft`.
 - Die bereits eingesetzte v1 und der bestehende Annahmeablauf werden durch diesen Vorbereitungsvorschlag nicht verändert.
+
+
+## Rückfragen des Betreibers vom 30. Oktober 2026
+
+- Lesertexte nennen keine interne Stage-/Prod-Bezeichnung mehr; daraus folgt keine technische Prod-Freigabe. Vor Veröffentlichung ist die Übereinstimmung der Prod-Datenflüsse mit den Texten zu prüfen.
+- «Wesentliche Änderungen» bezieht sich auf die Nutzungsbedingungen. Technische Updates/Fehlerbehebungen ohne wesentliche Änderung der vereinbarten Nutzung oder Datenbearbeitung erfordern nicht allein deshalb neue Zustimmung. Releases können gebündelt werden; Informationspflichten über neue Datenbearbeitungen bleiben bestehen.
+- Die 24-Stunden-Neueinreichung besteht im Stage-Code weiterhin für einzelne Prüffälle ausserhalb vollständiger neuer Posts (`ModerationService.decide/enforce`). Neue vollständige Posts werden nach Freigabe unmittelbar veröffentlicht (`PendingPostsService.decide`). Die 24-Stunden-Metadatenaufbewahrung ist davon getrennt. Keine Entfernung einer implementierten Frist nur durch redaktionelle Streichung.
+- Sieben Tage gelten ab Einreichung für wartende neue Posts und einzelne offene/gesperrte Prüffälle. Ohne Entscheidung wird der Beitrag nicht veröffentlicht; eine erneute Einreichung startet eine neue Prüfung. Veröffentlichte Beiträge sind nicht von dieser Frist betroffen. Die physische Bereinigung und andere Speicherorte sind getrennt beschrieben.
+- Standort/Kamera: Browser-/Betriebssystemberechtigungen sind von AGB-Annahme getrennt. Standort nur nach erklärter Nutzeraktion anfordern; Ablehnung zulassen und manuelle Suche ermöglichen. In Stage `CoursesMap.useGeolocation` und `MapView` lösen Standortanfragen derzeit beim Mount aus; `GolfNearMePage.useMyLocation` ist bereits aktionsgebunden, `ContextSidebar` liest nur bei vorhandener Freigabe. Diese Pfade vor einer Zusage in den Rechtstexten vereinheitlichen und testen. Kamera in FeedPage nutzt den System-Datei-/Kameraauswahldialog (`input capture`), keinen eigenen `getUserMedia`-Stream. Kein pauschaler Zugriff auf alle Fotos daraus ableiten. Noch keine Codeänderung an Berechtigungsabläufen in diesem Dokumentationsschritt.
+- Store-Updates: bestehende Capacitor-Konfiguration nutzt `webDir: dist` ohne Live-Server-URL. API/Daten können kompatibel serverseitig aktualisiert werden; Änderungen an gebündelter Web-Oberfläche oder nativen Teilen benötigen regulär ein neues Store-Paket. Kein ungeprüftes Live-Update-System zugesagt.

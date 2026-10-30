@@ -42,7 +42,7 @@ for (const width of [390, 1280]) {
         it: "5. Controllo automatico dei contenuti",
       }[language as keyof typeof translations];
       const checkSection = page.locator("article section").filter({ has: page.getByRole("heading", { name: checkHeading, exact: true }) });
-      await expect(checkSection).toContainText("Stage");
+      await expect(page.locator("article")).not.toContainText("Stage");
       await expect(checkSection).toContainText("24");
       await expect(checkSection).toContainText("Resend");
       await expect(page.locator("article")).toContainText("Content reviews");
