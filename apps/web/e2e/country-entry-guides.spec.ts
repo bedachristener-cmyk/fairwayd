@@ -30,7 +30,7 @@ for(const width of [390,1280]){
   await page.getByRole('checkbox',{name:'Include entry requirements?',exact:true}).check();
   await expect(page.getByRole('checkbox',{name:'Malaysia',exact:true})).toHaveCount(0);
   await page.getByRole('checkbox',{name:'Thailand',exact:true}).check();await page.getByRole('checkbox',{name:'Philippines',exact:true}).check();
-  await page.getByRole('button',{name:'Create',exact:true}).click();await expect(page).toHaveURL(/\/trips\/country-trip$/);
+  await page.getByRole('main').getByRole('button',{name:'Create',exact:true}).click();await expect(page).toHaveURL(/\/trips\/country-trip$/);
   await expect(page.locator('[data-trip-entry-requirements]')).toHaveCount(2);expect(api.selection()).toEqual(['TH','PH']);
   await page.reload();await expect(page.locator('[data-trip-entry-requirements]')).toHaveCount(2);
   api.updateGuide();await page.reload();await expect(page.getByText('Updated centrally in Explore',{exact:true})).toBeVisible();
@@ -45,7 +45,7 @@ for(const width of [390,1280]){
  test(`admin maintains shared country information in Explore at ${width}px`,async({page})=>{
   await page.setViewportSize({width,height:900});const api=await setup(page,true);
   await page.goto('/destinations/thailand');const panel=page.locator('#entry-requirements');await expect(panel).toContainText('TDAC');
-  await panel.getByRole('button',{name:'Edit entry information',exact:true}).click();await panel.getByLabel('Text',{exact:true}).first().fill('Updated official travel information');
+  await panel.getByRole('button',{name:'Edit entry information',exact:true}).click();await panel.getByRole('textbox',{name:'Text',exact:true}).first().fill('Updated official travel information');
   await panel.getByRole('button',{name:'Save',exact:true}).click();await expect(panel.getByText('Updated official travel information',{exact:true})).toBeVisible();
   expect(api.writes[0]).toMatchObject({version:1,published:true,checkedOn:'2026-10-30'});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
