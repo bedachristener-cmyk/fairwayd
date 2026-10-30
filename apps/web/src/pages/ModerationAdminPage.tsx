@@ -68,7 +68,7 @@ export default function ModerationAdminPage() {
     const timer = window.setInterval(refresh, 30000);
     window.addEventListener('focus', refresh);
     return () => { window.clearInterval(timer); window.removeEventListener('focus', refresh); };
-  }, [load]);
+  }, [load, hash]);
   useEffect(() => {
     if (!hash || focusedHash.current === hash) return;
     let id: string;

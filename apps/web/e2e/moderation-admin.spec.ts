@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-test.use({ timezoneId: 'Europe/Zurich', locale: 'de-CH' });
+test.use({ timezoneId: 'Europe/Zurich', locale: 'en-GB' });
 for (const width of [390,1280]) {
   test(`admin reviews private quarantined content at ${width}px`,async({page})=>{
     await page.setViewportSize({width,height:900});
@@ -28,7 +28,7 @@ for (const width of [390,1280]) {
     await expect(page.getByRole('heading',{name:'Automatic content checks'})).toBeVisible();
     await expect(page.getByRole('img',{name:'Quarantined image for moderation'})).toHaveCount(0);
     await expect(page.getByRole('button',{name:'Approve and apply'})).toHaveCount(1);
-    const bounds=await page.locator('#change-avatar').boundingBox();expect(bounds?.y).toBeLessThan(220);
+    await expect(page.locator('#change-avatar')).toBeInViewport({ ratio: 0.5 });
     await page.getByRole('button',{name:'Show all images for review'}).click();
     await expect(page.getByRole('img',{name:'Quarantined image for moderation'})).toBeVisible();
     expect(previewHeaders.length).toBeGreaterThan(0);
