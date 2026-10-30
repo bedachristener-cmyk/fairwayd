@@ -34,7 +34,7 @@ for (const width of [390, 1280]) {
     await page.setViewportSize({ width, height: 900 }); await setup(page, 'allow', width === 390);
     await page.goto('/feed'); await expect(page.locator('.fw-feed-composer-trigger')).toBeVisible(); expect(await geoCalls(page)).toBe(0);
     await page.goto('/map'); const locate = page.getByRole('button', { name: 'My location', exact: true }); await expect(locate).toBeVisible(); expect(await geoCalls(page)).toBe(0);
-    const dialog = page.getByRole('dialog', { name: 'Use your location?', exact: true });
+    const dialog = page.getByRole('dialog', { name: 'May Fairwayd access your location?', exact: true });
     await expect(dialog).toContainText('coordinates and the search radius'); expect(await geoCalls(page)).toBe(0);
     await dialog.getByRole('button', { name: 'Not now', exact: true }).click(); expect(await geoCalls(page)).toBe(0); await expect(dialog).toHaveCount(0);
     await locate.click(); await page.keyboard.press('Escape'); await expect(dialog).toHaveCount(0); expect(await geoCalls(page)).toBe(0);
@@ -59,7 +59,7 @@ for (const width of [390, 1280]) {
     page.on('request', req => { if (new URL(req.url()).pathname === '/api/posts' && req.method() === 'POST') published++; });
     await page.goto('/feed'); await page.locator('.fw-feed-composer-trigger').click();
     const camera = page.getByRole('button', { name: /📸 Camera/ }); await camera.click();
-    const dialog = page.getByRole('dialog', { name: 'Use camera and photos?', exact: true }); await expect(dialog).toContainText('not general access to your photo library'); expect(fileChoosers).toBe(0);
+    const dialog = page.getByRole('dialog', { name: 'May Fairwayd use your camera and photos?', exact: true }); await expect(dialog).toContainText('only the photos you accept or select'); expect(fileChoosers).toBe(0);
     await dialog.getByRole('button', { name: 'Not now', exact: true }).click(); expect(fileChoosers).toBe(0);
     await camera.click(); await page.screenshot({ path: `/tmp/device-access-camera-${width}.png`, fullPage: false });
     const next = page.waitForEvent('filechooser'); await dialog.getByRole('button', { name: 'Continue', exact: true }).click(); const chooser = await next;
@@ -99,7 +99,7 @@ test('declining automatic location does not nag on later visits; locator can sti
   await page.reload(); await expect(page.getByRole('button', { name: 'My location', exact: true })).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCount(0); expect(await geoCalls(page)).toBe(0);
   await page.getByRole('button', { name: 'My location', exact: true }).click();
-  await expect(page.getByRole('dialog', { name: 'Use your location?', exact: true })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'May Fairwayd access your location?', exact: true })).toBeVisible();
 });
 test('choosing existing photos acknowledges the shared camera/photos explanation', async ({ page }) => {
   await setup(page); await page.goto('/feed'); await page.locator('.fw-feed-composer-trigger').click();
