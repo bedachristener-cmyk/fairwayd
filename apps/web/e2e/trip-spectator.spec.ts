@@ -71,6 +71,8 @@ for (const width of [390, 1280]) {
         if (path.endsWith('/users/me')) return json({ id: 'owner', handle: 'owner', name: 'Owner', avatarUrl: '/logo.png', termsAcceptedAt: '2026-01-01' });
         if (path === '/api/trips/entry-test') return json({ id: 'entry-test', title: 'Golf holiday', destination: 'Hua Hin', viewerRole: 'OWNER', members: [{ id: 'owner-member', userId: 'owner', role: 'OWNER', user: { id: 'owner', name: 'Owner' } }], items: [{ id: 'golf', type: 'COURSE', title: 'Seapine', course: { id: 'seapine', name: 'Seapine', country: 'TH' } }], documents: [] });
         if (path === '/api/courses/seapine/cover-image') return json({ image: null });
+        if (path.endsWith('/my-costs')) return json({ baseCurrency: 'CHF', costs: [], summary: { totalPersonalShare: 0, totalPaidByMe: 0, balancePreview: 0, groupedByCategory: {}, missingConversionCount: 0 } });
+        if (path.endsWith('/organizer-costs')) return json({ baseCurrency: 'CHF', costs: [], summary: { totalTripCost: 0, missingConversionCount: 0, paidBySummary: [], memberShareSummary: [], balancePreview: [] } });
         if (path.startsWith('/api/')) return json({ items: [], costs: [], count: 0 });
         return route.continue();
       });
@@ -103,6 +105,8 @@ test('Thailand requirements are not shown for another destination', async ({ pag
     const json = (body: unknown) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
     if (path.endsWith('/users/me')) return json({ id: 'owner', handle: 'owner', name: 'Owner', avatarUrl: '/logo.png', termsAcceptedAt: '2026-01-01' });
     if (path === '/api/trips/entry-other') return json({ id: 'entry-other', title: 'Golf holiday', destination: 'France', viewerRole: 'OWNER', members: [{ id: 'owner-member', userId: 'owner', role: 'OWNER', user: { id: 'owner', name: 'Owner' } }], items: [], documents: [] });
+    if (path.endsWith('/my-costs')) return json({ baseCurrency: 'CHF', costs: [], summary: { totalPersonalShare: 0, totalPaidByMe: 0, balancePreview: 0, groupedByCategory: {}, missingConversionCount: 0 } });
+    if (path.endsWith('/organizer-costs')) return json({ baseCurrency: 'CHF', costs: [], summary: { totalTripCost: 0, missingConversionCount: 0, paidBySummary: [], memberShareSummary: [], balancePreview: [] } });
     if (path.startsWith('/api/')) return json({ items: [], costs: [], count: 0 });
     return route.continue();
   });
