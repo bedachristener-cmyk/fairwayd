@@ -64,6 +64,7 @@ for (const width of [390, 1280]) {
       if (path.endsWith('/users/me')) return json({ id: 'admin', handle: 'admin', avatarUrl: '/logo.png', termsAcceptedAt: '2026-01-01' });
       if (path === '/api/safety/admin/moderation/status') return json({ enabled: true, configured: true });
       if (path === '/api/safety/admin/moderation') return json([]);
+      if (path === '/api/safety/admin/pending-changes') return json([]);
       if (path === '/api/safety/admin/pending-posts') return json([{ id: 'draft', state, content: state === 'PENDING' ? 'Complete private post' : '', courseId: 'course', visibility: 'PRIVATE', categories: ['violence'], expiresAt: '2026-12-01', user: { name: 'Test Author' }, images: state === 'PENDING' ? [{ id: 'first' }, { id: 'second' }] : [] }]);
       if (path.includes('/pending-posts/draft/images/')) { auth.push(req.headers().authorization); return route.fulfill({ status: 200, contentType: 'image/png', body: png }); }
       if (path === '/api/safety/admin/pending-posts/draft' && req.method() === 'PATCH') { decisions.push(req.postDataJSON()); state = 'APPROVED'; return json({ ok: true, postId: 'published' }); }

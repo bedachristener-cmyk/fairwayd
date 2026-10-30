@@ -7,6 +7,7 @@ datasource db {
 }
 
 model User {
+  pendingChanges PendingChange[]
   id                             String                  @id @default(cuid())
   email                          String?                 @unique
   password                       String?
@@ -1073,4 +1074,37 @@ model PendingPostImage {
   bytes Bytes
   pendingPost PendingPost @relation(fields: [pendingPostId], references: [id], onDelete: Cascade)
   @@unique([pendingPostId, position])
+}
+
+
+model PendingChange {
+  id String @id @default(cuid())
+  userId String
+  action String
+  targetId String
+  payload Json
+  snapshot Json
+  state String @default("PENDING")
+  dedupKey String? @unique
+  reviewCaseIds String[]
+  categories String[]
+  reviewerId String?
+  createdAt DateTime @default(now())
+  decidedAt DateTime?
+  expiresAt DateTime
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  images PendingChangeImage[]
+  @@index([state, createdAt])
+  @@index([expiresAt])
+}
+model PendingChangeImage {
+  id String @id @default(cuid())
+  pendingChangeId String
+  position Int
+  mimeType String
+  originalName String
+  fieldName String
+  bytes Bytes
+  pendingChange PendingChange @relation(fields: [pendingChangeId], references: [id], onDelete: Cascade)
+  @@unique([pendingChangeId, position])
 }

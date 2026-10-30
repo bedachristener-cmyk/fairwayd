@@ -9,26 +9,27 @@ for (const width of [390,1280]) {
       const json=(body:unknown)=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});
       if(path.endsWith('/users/me'))return json({id:'admin',handle:'admin',name:'Admin',avatarUrl:'/logo.png',termsAcceptedAt:'2026-01-01'});
       if(path==='/api/safety/admin/pending-posts')return json([]);
+      if(path==='/api/safety/admin/pending-changes')return json([{id:'change-avatar',action:'AVATAR',targetId:'user',payload:{},state:status,categories:['violence'],expiresAt:'2026-11-01',user:{name:'Golfer'},images:status==='PENDING'?[{id:'picture'}]:[]}]);
       if(path==='/api/safety/admin/moderation/status')return json({enabled:true,configured:true});
-      if(path==='/api/safety/admin/moderation')return json([{id:'case-image',userId:'user',scope:'POST_IMAGE',status,categories:['violence'],mimeType:'image/png',expiresAt:'2026-11-01'},{id:'case-blocked',userId:'user',scope:'POST_IMAGE',status:'BLOCKED',categories:['sexual/minors'],expiresAt:'2026-11-01'}]);
-      if(path==='/api/safety/admin/moderation/case-image/image'){
+      if(path==='/api/safety/admin/moderation')return json([{id:'case-blocked',userId:'user',scope:'POST_IMAGE',status:'BLOCKED',categories:['sexual/minors'],expiresAt:'2026-11-01'}]);
+      if(path==='/api/safety/admin/pending-changes/change-avatar/images/picture'){
         previewHeaders.push(route.request().headers().authorization);
         return route.fulfill({status:200,contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1sAAAAASUVORK5CYII=','base64')});
       }
-      if(path==='/api/safety/admin/moderation/case-image'&&route.request().method()==='PATCH'){decisions.push(route.request().postDataJSON());status='APPROVED';return json({ok:true});}
+      if(path==='/api/safety/admin/pending-changes/change-avatar'&&route.request().method()==='PATCH'){decisions.push(route.request().postDataJSON());status='APPROVED';return json({ok:true});}
       if(path.startsWith('/api/'))return json({items:[],count:0});return route.continue();
     });
     await page.goto('/admin/moderation');
     await expect(page.getByRole('heading',{name:'Automatic content checks'})).toBeVisible();
     await expect(page.getByRole('img',{name:'Quarantined image for moderation'})).toHaveCount(0);
-    await expect(page.getByRole('button',{name:'Approve unchanged resubmission'})).toHaveCount(1);
-    await page.getByRole('button',{name:'Show potentially disturbing image'}).click();
+    await expect(page.getByRole('button',{name:'Approve and apply'})).toHaveCount(1);
+    await page.getByRole('button',{name:'Show all images for review'}).click();
     await expect(page.getByRole('img',{name:'Quarantined image for moderation'})).toBeVisible();
     expect(previewHeaders.length).toBeGreaterThan(0);
     expect(previewHeaders.every(value => value === 'Bearer test-admin')).toBe(true);
-    await page.getByRole('button',{name:'Approve unchanged resubmission'}).click();
+    await page.getByRole('button',{name:'Approve and apply'}).click();
     await expect.poll(()=>decisions).toEqual([{decision:'APPROVED'}]);
-    await expect(page.getByRole('button',{name:'Approve unchanged resubmission'})).toHaveCount(0);
+    await expect(page.getByRole('button',{name:'Approve and apply'})).toHaveCount(0);
     await expect(page.getByRole('img',{name:'Quarantined image for moderation'})).toHaveCount(0);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
     await page.screenshot({path:`/tmp/moderation-admin-${width}.png`,fullPage:true});
@@ -56,7 +57,7 @@ for (const isAdmin of [true, false]) {
       const json = (body: unknown) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
       if (path.endsWith('/users/me')) return json({ id: 'menu-user', handle: 'menu-user', name: 'Menu User', avatarUrl: '/logo.png', termsAcceptedAt: '2026-01-01' });
       if (path.endsWith('/users/me/admin-status')) return json({ isAdmin });
-      if (path === '/api/safety/admin/pending-posts' || path === '/api/safety/admin/moderation') return json([]);
+      if (path === '/api/safety/admin/pending-changes' || path === '/api/safety/admin/pending-posts' || path === '/api/safety/admin/moderation') return json([]);
       if (path === '/api/safety/admin/moderation/status') return json({ enabled: true, configured: true });
       if (path.startsWith('/api/')) return json({ items: [], count: 0 });
       return route.continue();

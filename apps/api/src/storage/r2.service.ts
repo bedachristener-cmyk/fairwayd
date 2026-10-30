@@ -1,3 +1,4 @@
+import { reviewStorage } from '../moderation/review-context';
 import {
   DeleteObjectCommand,
   GetObjectCommand,
@@ -47,7 +48,7 @@ async function writeLocalUpload(key: string, buffer: Buffer) {
   return publicPath;
 }
 
-export async function uploadToR2(
+async function uploadToR2Unchecked(
   key: string,
   buffer: Buffer,
   contentType: string,
@@ -221,6 +222,8 @@ export async function deletePrivateUpload(fileUrl: string) {
 }
 
 export async function deleteStoredUpload(fileUrl: string) {
+  const review = reviewStorage.getStore();
+  if (review) { review.deletions.push(fileUrl); return true; }
   if (!fileUrl?.trim()) return false;
   if (await deletePrivateUpload(fileUrl)) return true;
 
@@ -362,4 +365,11 @@ export async function readStoredUpload(fileUrl: string) {
     throw new Error(`Stored upload could not be read (${response.status})`);
   }
   return Buffer.from(await response.arrayBuffer());
+}
+
+
+export async function uploadToR2(key: string, buffer: Buffer, contentType: string) {
+  const url = await uploadToR2Unchecked(key, buffer, contentType);
+  reviewStorage.getStore()?.uploads.push(url);
+  return url;
 }

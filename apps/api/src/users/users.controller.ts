@@ -1,3 +1,4 @@
+import { Reviewable } from '../moderation/review-action';
 import { Optional } from '@nestjs/common';
 import { ModerationService, requireImageCheck, requireTextCheck } from '../moderation/moderation.service';
 import {
@@ -74,6 +75,7 @@ export class UsersController {
   // ---------------------------------------------------------
   @UseGuards(AuthGuard('jwt'))
   @Post('me/profile')
+  @Reviewable('PROFILE')
   async updateProfile(
     @Req() req: any,
     @Body()
@@ -170,6 +172,7 @@ export class UsersController {
       },
     }),
   )
+  @Reviewable('AVATAR')
   async uploadMyAvatar(
     @Req() req: any,
     @UploadedFile() file?: Express.Multer.File,

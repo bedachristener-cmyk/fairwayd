@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, HttpException, Injectable, NotFoundException, OnModuleDestroy, OnModuleInit, ServiceUnavailableException, UnprocessableEntityException } from '@nestjs/common';
 import { createHash } from 'crypto';
+import { approvedReview, reviewDigest } from './review-context';
 import { PrismaService } from '../prisma/prisma.service';
 
 export type ModerationScope = 'POST_TEXT' | 'COMMENT_TEXT' | 'PROFILE_TEXT' | 'POST_IMAGE' | 'AVATAR' | 'TRIP_COVER' | 'COURSE_IMAGE' | 'DESTINATION_TEXT';
@@ -48,10 +49,11 @@ export class ModerationService implements OnModuleInit, OnModuleDestroy {
     }
   }
   private pending(id: string) {
-    return new UnprocessableEntityException({ code: 'CONTENT_REVIEW_REQUIRED', reviewId: id, message: `This content was not published and needs an admin review. Reference: ${id}. If approved, submit the unchanged content again.` });
+    return new UnprocessableEntityException({ code: 'CONTENT_REVIEW_REQUIRED', reviewId: id, message: `This content was not published and needs an admin review. Reference: ${id}. If approved, it will be applied automatically; you do not need to submit it again.` });
   }
   private async assess(userId: string, scope: ModerationScope, bytes: Buffer, input: unknown[], retained: { text?: string; bytes?: Buffer; mimeType?: string }) {
     if (!userId) throw new BadRequestException('Missing user id');
+    if (approvedReview.getStore()?.has(reviewDigest(userId, scope, bytes))) return;
     if (this.rates.size > 10000) for (const [id, rate] of this.rates) if (rate.until < Date.now()) this.rates.delete(id);
     const rate = this.rates.get(userId);
     if (rate && rate.until > Date.now() && rate.count >= 30) throw new ServiceUnavailableException('Too many content checks. Please try again in a minute.');
@@ -60,12 +62,11 @@ export class ModerationService implements OnModuleInit, OnModuleDestroy {
     if (await this.prisma.contentModerationCase.findFirst({ where: { blockedFingerprint: fingerprint }, select: { id: true } })) throw new UnprocessableEntityException('This content cannot be published. Contact support if you believe this is an error.');
     const digest = createHash('sha256').update(scope).update('\0').update(bytes).digest('hex');
     const existing = await this.prisma.contentModerationCase.findUnique({ where: { userId_scope_digest: { userId, scope, digest } }, select: { id: true, status: true, expiresAt: true } });
-    if (existing && existing.status !== 'REVIEWED' && existing.expiresAt > new Date()) {
-      if (existing.status === 'APPROVED') return;
+    if (existing && !['REVIEWED', 'APPROVED'].includes(existing.status) && existing.expiresAt > new Date()) {
       if (existing.status === 'PENDING') throw this.pending(existing.id);
       throw new UnprocessableEntityException({ code: 'CONTENT_REJECTED', message: 'This content cannot be published. Please change it or contact support.' });
     }
-    if (existing) await this.prisma.contentModerationCase.deleteMany({ where: { id: existing.id, OR: [{ status: 'REVIEWED' }, { expiresAt: { lte: new Date() } }] } });
+    if (existing) await this.prisma.contentModerationCase.deleteMany({ where: { id: existing.id, OR: [{ status: { in: ['REVIEWED', 'APPROVED'] } }, { expiresAt: { lte: new Date() } }] } });
     const key = process.env.OPENAI_MODERATION_API_KEY?.trim();
     if (!key) throw new ServiceUnavailableException('Content checks are temporarily unavailable. Nothing has been published; please try again later.');
     let result: { flagged: boolean; categories: Record<string, boolean> };
@@ -95,7 +96,8 @@ export class ModerationService implements OnModuleInit, OnModuleDestroy {
   }
   async list() {
     const drafts = await this.prisma.pendingPost.findMany({ where: { expiresAt: { gt: new Date() } }, select: { reviewCaseIds: true } });
-    const linked = drafts.flatMap(d => d.reviewCaseIds);
+    const changes = await this.prisma.pendingChange.findMany({ where: { expiresAt: { gt: new Date() } }, select: { reviewCaseIds: true } });
+    const linked = [...drafts, ...changes].flatMap(d => d.reviewCaseIds);
     return this.prisma.contentModerationCase.findMany({ where: { expiresAt: { gt: new Date() }, id: { notIn: linked } }, take: 100, orderBy: { createdAt: 'desc' }, select: { id: true, userId: true, scope: true, status: true, categories: true, text: true, mimeType: true, createdAt: true, expiresAt: true, decidedAt: true } });
   }
   async preview(id: string) {
@@ -105,13 +107,15 @@ export class ModerationService implements OnModuleInit, OnModuleDestroy {
   }
   async decide(id: string, reviewerId: string, decision: unknown) {
     if (decision !== 'APPROVED' && decision !== 'REJECTED') throw new BadRequestException('Choose APPROVED or REJECTED');
+    if (decision === 'APPROVED') throw new ConflictException('This older case has no complete submission to apply. Review the complete content submission instead.');
+    if (await this.prisma.pendingChange.findFirst({ where: { reviewCaseIds: { has: id }, state: 'PENDING', expiresAt: { gt: new Date() } } })) throw new ConflictException('Review the complete content submission instead.');
     if (await this.prisma.pendingPost.findFirst({ where: { reviewCaseIds: { has: id }, state: { in: ['PENDING', 'PUBLISHING'] }, expiresAt: { gt: new Date() } }, select: { id: true } })) throw new ConflictException('Review the complete pending post instead.');
     const row = await this.prisma.contentModerationCase.findUnique({ where: { id }, select: { userId: true } });
     if (!row) throw new NotFoundException('Review not found');
     await this.prisma.$transaction(async tx => {
       const result = await tx.contentModerationCase.updateMany({ where: { id, status: 'PENDING', expiresAt: { gt: new Date() } }, data: { status: decision, reviewerId, decidedAt: new Date(), bytes: null, text: null, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) } });
       if (!result.count) throw new ConflictException('This review is no longer pending. Refresh the list.');
-      await tx.notification.create({ data: { userId: row.userId, actorUserId: reviewerId, type: 'content_moderation_decided', title: 'Content review complete', body: decision === 'APPROVED' ? `Your content (${id}) was approved. Submit the unchanged content again within 24 hours to publish it.` : `Your content (${id}) was not approved and has not been published. Contact support if you believe this is an error.`, emailPending: true, link: '/notifications' } });
+      await tx.notification.create({ data: { userId: row.userId, actorUserId: reviewerId, type: 'content_moderation_decided', title: 'Content review complete', body: `Your content (${id}) was not approved and has not been published. Contact support if you believe this is an error.`, emailPending: true, link: '/notifications' } });
     });
     return { ok: true };
   }

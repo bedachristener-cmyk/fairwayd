@@ -1,3 +1,4 @@
+import { requireAppliedContent } from "../utils/contentReview";
 import { useEffect, useRef, useState } from "react";
 import { fileUrl } from "../api/fileUrl";
 import { API_BASE } from "../api/base";
@@ -472,6 +473,7 @@ export default function PostCard({
     try {
       setEditCoursesLoading(true);
       const res = await fetch(`${API_BASE}/courses`);
+      await requireAppliedContent(res);
       if (!res.ok) throw new Error(`Failed to load courses: ${res.status}`);
       const data = await res.json();
       const courses = Array.isArray(data) ? data : data?.items;
@@ -543,6 +545,7 @@ export default function PostCard({
         body,
       });
 
+      await requireAppliedContent(res);
       if (!res.ok) {
         const problem = await res.json().catch(() => null);
         throw new Error(typeof problem?.message === "string" ? problem.message : t("save_changes_failed"));
@@ -598,6 +601,7 @@ export default function PostCard({
         },
       });
 
+      await requireAppliedContent(res);
       if (!res.ok) {
         throw new Error(`Failed to delete post: ${res.status}`);
       }

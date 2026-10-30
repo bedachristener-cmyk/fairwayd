@@ -1,3 +1,4 @@
+import { requireAppliedContent } from "../utils/contentReview";
 import { EntryCountryPicker } from "../entry-guides/EntryCountryPicker";
 import { selectedEntryCountries } from "../entry-guides/api";
 import { TripEntryRequirements } from "../components/TripEntryRequirements";
@@ -5412,6 +5413,7 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
         },
       );
 
+      await requireAppliedContent(res);
       if (!res.ok) {
         const text = await res.text().catch(() => "");
         throw new Error(

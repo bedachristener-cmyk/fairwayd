@@ -1,3 +1,4 @@
+import { requireAppliedContent } from "./utils/contentReview";
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
 // Primary storage key (we standardize on this)
@@ -49,6 +50,7 @@ export async function apiGet<T>(path: string): Promise<T> {
     headers: authHeaders(token),
   });
 
+  await requireAppliedContent(res);
   if (!res.ok) await throwNiceError(res);
   return res.json();
 }
@@ -66,6 +68,7 @@ export async function apiPostJson<T>(path: string, body: any): Promise<T> {
     body: JSON.stringify(body ?? {}),
   });
 
+  await requireAppliedContent(res);
   if (!res.ok) await throwNiceError(res);
   return res.json();
 }
@@ -78,6 +81,7 @@ export async function apiPostForm<T>(path: string, form: FormData): Promise<T> {
     body: form,
   });
 
+  await requireAppliedContent(res);
   if (!res.ok) await throwNiceError(res);
   return res.json();
 }

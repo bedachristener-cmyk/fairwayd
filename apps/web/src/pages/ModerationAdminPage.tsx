@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { API_BASE } from '../api/base';
 import { useAuth } from '../auth/AuthContext';
 
+type PendingChange = { id: string; action: string; targetId: string; payload: Record<string, unknown>; state: string; categories: string[]; expiresAt: string; user: { name?: string; handle?: string }; images: { id: string }[] };
 type Review = { id: string; userId: string; scope: string; status: string; categories: string[]; text?: string; mimeType?: string; createdAt: string; expiresAt: string };
 type PendingPost = { id: string; content: string; courseId: string; visibility: string; state: string; categories: string[]; expiresAt: string; leaseUntil?: string; user: { name?: string; handle?: string }; images: { id: string }[] };
 function Preview({ id, token, path }: { id: string; token: string; path?: string }) {
@@ -23,6 +24,7 @@ export default function ModerationAdminPage() {
   const { token } = useAuth();
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [items, setItems] = useState<Review[]>([]);
+  const [changes, setChanges] = useState<PendingChange[]>([]);
   const [posts, setPosts] = useState<PendingPost[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
@@ -38,20 +40,24 @@ export default function ModerationAdminPage() {
       if (!postsResponse.ok) throw Error('Could not load pending posts.');
       const pendingPosts = await postsResponse.json();
       if (!Array.isArray(reviews) || !Array.isArray(pendingPosts)) throw Error('Could not load moderation reviews.');
-      setItems(reviews); setPosts(pendingPosts);
+      const changesResponse = await fetch(`${API_BASE}/safety/admin/pending-changes`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+      if (!changesResponse.ok) throw Error('Could not load content changes.');
+      const pendingChanges = await changesResponse.json();
+      if (!Array.isArray(pendingChanges)) throw Error('Could not load content changes.');
+      setChanges(pendingChanges); setItems(reviews); setPosts(pendingPosts);
       const statusResponse = await fetch(`${API_BASE}/safety/admin/moderation/status`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
       if (!statusResponse.ok) throw Error('Could not verify content-check status.');
       const status = await statusResponse.json();
       setEnabled(status.enabled === true && status.configured === true);
-    } catch (e) { setItems([]); setPosts([]); setError(e instanceof Error ? e.message : 'Request failed.'); }
+    } catch (e) { setItems([]); setPosts([]); setChanges([]); setError(e instanceof Error ? e.message : 'Request failed.'); }
   }, [token]);
   useEffect(() => { void load(); }, [load]);
-  async function decide(id: string, decision: string, completePost = false) {
+  async function decide(id: string, decision: string, completePost: boolean | "change" = false) {
     if (!token || busy) return;
     setBusy(id); setError('');
     try {
-      const response = await fetch(`${API_BASE}/safety/admin/${completePost ? "pending-posts" : "moderation"}/${encodeURIComponent(id)}`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ decision }) });
-      if (!response.ok) throw Error('Review changed or request failed. Refresh and try again.');
+      const response = await fetch(`${API_BASE}/safety/admin/${completePost === "change" ? "pending-changes" : completePost ? "pending-posts" : "moderation"}/${encodeURIComponent(id)}`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ decision }) });
+      if (!response.ok) { const problem = await response.json().catch(() => null); throw Error(typeof problem?.message === 'string' ? problem.message : 'Review changed or request failed. Refresh and try again.'); }
       setPreview(''); await load();
     } catch (e) { setError(e instanceof Error ? e.message : 'Request failed.'); }
     finally { setBusy(''); }
@@ -60,10 +66,10 @@ export default function ModerationAdminPage() {
     <Link to="/admin/reports">Back to content reports</Link>
     <h1>Automatic content checks</h1>
     {enabled === false ? <p role="status">Automatic checks are not active. Server configuration and privacy disclosures must be completed before activation.</p> : enabled === true ? <p role="status">Automatic checks are active.</p> : null}
-    <p>New posts wait here with their full text, images and chosen audience. Approve publishes the complete post automatically; reject keeps it unpublished. The author is notified in Fairwayd and by email if enabled. Previews can contain disturbing material. Blocked child-safety cases have no preview or approval option.</p>
+    <p>New posts and content changes wait here with their complete submission. Approval publishes or applies the submission automatically; rejection keeps existing content unchanged. The author is notified in Fairwayd and by email if enabled. Previews can contain disturbing material. Blocked child-safety cases have no preview or approval option.</p>
     <button className="fw-button-secondary" type="button" onClick={() => void load()}>Refresh</button>
     {error ? <p role="alert">{error}</p> : null}
-    {!error && !items.length && !posts.length ? <p>No current reviews.</p> : null}
+    {!error && !items.length && !posts.length && !changes.length ? <p>No current reviews.</p> : null}
     {posts.map(post => <article key={post.id} id={post.id} style={{ border: '1px solid var(--border)', background: 'var(--card)', borderRadius: 16, padding: 16, overflowWrap: 'anywhere', scrollMarginTop: 100 }}>
       <h2 style={{ fontSize: 18 }}>Post · {post.state}</h2>
       <p>{post.user.name || post.user.handle || 'Golfer'} · Audience: {post.visibility}</p>
@@ -78,7 +84,17 @@ export default function ModerationAdminPage() {
         </div>
       </> : null}
     </article>)}
-    {items.length > 0 && <p>Other content and older cases: approval allows unchanged resubmission within 24 hours. It does not publish those items automatically.</p>}
+    {changes.map(change => <article key={change.id} id={change.id} style={{ border: '1px solid var(--border)', background: 'var(--card)', borderRadius: 16, padding: 16, overflowWrap: 'anywhere', scrollMarginTop: 100 }}>
+      <h2 style={{ fontSize: 18 }}>{({ AVATAR: 'Profile picture', PROFILE: 'Profile details', POST_EDIT: 'Post changes', COMMENT_CREATE: 'New comment or reply', COMMENT_EDIT: 'Comment changes', TRIP_COVER: 'Trip picture', TIP_CREATE: 'Community tip', COURSE_CREATE: 'Course suggestion' } as Record<string, string>)[change.action] || 'Content'} · {change.state}</h2>
+      <p>{change.user.name || change.user.handle || 'Golfer'} · Reference: {change.id}</p>
+      <p>Detected categories: {change.categories.join(', ')} · Expires: {new Date(change.expiresAt).toLocaleString()}</p>
+      {Object.entries(change.payload).filter(([key]) => !['retainedImageIds', 'expectedUpdatedAt'].includes(key)).map(([key, value]) => <p key={key} style={{ whiteSpace: 'pre-wrap' }}><strong>{key}: </strong>{String(value ?? '')}</p>)}
+      {change.state === 'PENDING' && <>
+        {change.images.length > 0 && token && <><button type="button" className="fw-button-secondary" onClick={() => setPreview(preview === change.id ? '' : change.id)}>{preview === change.id ? 'Hide preview' : 'Show all images for review'}</button>{preview === change.id && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 12 }}>{change.images.map(image => <Preview key={image.id} id={image.id} token={token} path={`/safety/admin/pending-changes/${encodeURIComponent(change.id)}/images/${encodeURIComponent(image.id)}`} />)}</div>}</>}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 16 }}><button type="button" className="fw-button-secondary" disabled={Boolean(busy)} onClick={() => void decide(change.id, 'APPROVED', 'change')}>Approve and apply</button><button type="button" className="fw-button-secondary" disabled={Boolean(busy)} onClick={() => void decide(change.id, 'REJECTED', 'change')}>Reject change</button></div>
+      </>}
+    </article>)}
+    {items.length > 0 && <p>Individual signals and older incomplete cases cannot be approved here. Complete submissions are reviewed above; blocked child-safety cases have no ordinary approval.</p>}
     {items.map(item => <article key={item.id} style={{ border: '1px solid var(--border)', background: 'var(--card)', borderRadius: 16, padding: 16, overflowWrap: 'anywhere' }}>
       <h2 style={{ fontSize: 18 }}>{item.scope} · {item.status}</h2>
       <p>Reference: {item.id} · User: {item.userId}</p>
@@ -88,7 +104,6 @@ export default function ModerationAdminPage() {
       {item.status === 'PENDING' ? <>
         {item.mimeType && token ? <><button className="fw-button-secondary" type="button" onClick={() => setPreview(preview === item.id ? '' : item.id)}>{preview === item.id ? 'Hide preview' : 'Show potentially disturbing image'}</button>{preview === item.id ? <Preview id={item.id} token={token} /> : null}</> : null}
         <div style={{ display: 'flex', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
-          <button className="fw-button-secondary" type="button" disabled={Boolean(busy)} onClick={() => void decide(item.id, 'APPROVED')}>Approve unchanged resubmission</button>
           <button className="fw-button-secondary" type="button" disabled={Boolean(busy)} onClick={() => void decide(item.id, 'REJECTED')}>Reject</button>
         </div>
       </> : null}

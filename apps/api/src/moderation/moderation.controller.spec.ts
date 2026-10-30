@@ -1,3 +1,4 @@
+import { PendingChangesService } from './pending-changes.service';
 import { Test } from '@nestjs/testing';
 import { AuthGuard } from '@nestjs/passport';
 import request from 'supertest';
@@ -11,6 +12,7 @@ describe('Private moderation admin routes', () => {
   beforeAll(async () => {
     const module = await Test.createTestingModule({ imports:[ModerationModule] })
       .overrideProvider(PrismaService).useValue({user:{findUnique:jest.fn(async ({where})=>({id:where.id,adminRole:where.id==='admin'?'ADMIN':'USER'}))}})
+      .overrideProvider(PendingChangesService).useValue({list:jest.fn().mockResolvedValue([]),preview:jest.fn().mockResolvedValue({bytes:Buffer.from('change'),mimeType:'image/png'}),decide:jest.fn().mockResolvedValue({ok:true})})
       .overrideProvider(ModerationService).useValue(moderation)
       .overrideGuard(AuthGuard('jwt')).useValue({canActivate:(context:any)=>{const req=context.switchToHttp().getRequest();if(!req.headers['x-test-user'])return false;req.user={id:req.headers['x-test-user']};return true;}})
       .compile(); app=module.createNestApplication(); await app.init();
@@ -22,6 +24,9 @@ describe('Private moderation admin routes', () => {
     await request(app.getHttpServer()).get('/safety/admin/moderation').set(headers).expect(403);
     await request(app.getHttpServer()).get('/safety/admin/moderation/case/image').set(headers).expect(403);
     await request(app.getHttpServer()).patch('/safety/admin/moderation/case').set(headers).send({decision:'APPROVED'}).expect(403);
+    await request(app.getHttpServer()).get('/safety/admin/pending-changes').set(headers).expect(403);
+    await request(app.getHttpServer()).get('/safety/admin/pending-changes/change/images/picture').set(headers).expect(403);
+    await request(app.getHttpServer()).patch('/safety/admin/pending-changes/change').set(headers).send({decision:'APPROVED'}).expect(403);
     expect(moderation.list).not.toHaveBeenCalled();expect(moderation.preview).not.toHaveBeenCalled();expect(moderation.decide).not.toHaveBeenCalled();
   });
   it('returns private no-store images only to an admin',async()=>{

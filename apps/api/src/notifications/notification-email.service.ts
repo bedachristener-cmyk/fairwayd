@@ -84,7 +84,7 @@ export class NotificationEmailService implements OnModuleInit, OnModuleDestroy {
               emailModerationNotifications: true, adminRole: true, id: true,
             },
           });
-          const moderationType = ['post_review_requested', 'post_review_approved', 'post_review_rejected', 'content_moderation_decided'].includes(row.type);
+          const moderationType = ['post_review_requested', 'post_review_approved', 'post_review_rejected', 'content_moderation_decided', 'content_review_requested', 'content_review_approved', 'content_review_rejected'].includes(row.type);
           const enabled = moderationType ? recipient?.emailModerationNotifications :
             ['trip_member_added', 'trip_member_removed'].includes(row.type)
               ? recipient?.emailTripNotifications
@@ -139,9 +139,10 @@ export class NotificationEmailService implements OnModuleInit, OnModuleDestroy {
           } else if (row.type === 'trip_member_removed') {
             link = '/trips';
           } else if (moderationType) {
-            if (row.type === 'post_review_requested') {
+            if (row.type === 'post_review_requested' || row.type === 'content_review_requested') {
               const draftId = row.link?.match(/^\/admin\/moderation#([^/?#]+)$/)?.[1];
-              const draft = draftId ? await this.prisma.pendingPost.findFirst({ where: { id: draftId, state: 'PENDING', expiresAt: { gt: new Date() } }, select: { id: true } }) : null;
+              const query = { where: { id: draftId ?? '', state: 'PENDING', expiresAt: { gt: new Date() } }, select: { id: true as const } };
+              const draft = !draftId ? null : row.type === 'content_review_requested' ? await this.prisma.pendingChange.findFirst(query) : await this.prisma.pendingPost.findFirst(query);
               if (!recipient || !(recipient.adminRole === 'ADMIN' || (recipient.adminRole === null && isLegacyAdmin(recipient))) || !draft) {
                 await this.prisma.notification.update({ where: { id: row.id }, data: { emailPending: false } });
                 continue;

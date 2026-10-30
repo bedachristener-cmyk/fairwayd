@@ -6,7 +6,7 @@ const png = Buffer.from([137,80,78,71,13,10,26,10,0,0,0,0]);
 function setup() {
   const table = { findUnique: jest.fn().mockResolvedValue(null), count: jest.fn().mockResolvedValue(0), upsert: jest.fn().mockResolvedValue({ id: 'case-1' }), findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn(), updateMany: jest.fn().mockResolvedValue({ count: 1 }), deleteMany: jest.fn() };
   const notifications = { create: jest.fn() };
-  const prisma = { pendingPost: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn().mockResolvedValue(null) }, contentModerationCase: table, $transaction: jest.fn(async (fn: any) => fn({ contentModerationCase: table, notification: notifications })) };
+  const prisma = { pendingChange: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn().mockResolvedValue(null) }, pendingPost: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn().mockResolvedValue(null) }, contentModerationCase: table, $transaction: jest.fn(async (fn: any) => fn({ contentModerationCase: table, notification: notifications })) };
   return { table, prisma, service: new ModerationService(prisma as any) };
 }
 const originalFetch = global.fetch;
@@ -54,10 +54,10 @@ describe('Content checks', () => {
     delete process.env.OPENAI_MODERATION_API_KEY;
     await expect(service.assertText('u', 'POST_TEXT', 'golf')).rejects.toThrow(ServiceUnavailableException);
   });
-  it('only reuses approval for an exact user/scope/content fingerprint and valid expiry', async () => {
+  it('does not reuse a previous approval as a publication bypass', async () => {
     const { service, table } = setup(); table.findUnique.mockResolvedValue({ status: 'APPROVED', expiresAt: new Date(Date.now()+10000) });
     await service.assertText('u', 'POST_TEXT', 'Approved text');
-    expect(global.fetch).not.toHaveBeenCalled();
+    expect(global.fetch).toHaveBeenCalled();
     const first = table.findUnique.mock.calls[0][0].where.userId_scope_digest;
     expect(first).toMatchObject({ userId: 'u', scope: 'POST_TEXT' });
     await service.assertText('other', 'POST_TEXT', 'Changed text');
@@ -79,8 +79,8 @@ describe('Content checks', () => {
     await expect(service.assertText('u','POST_TEXT','x'.repeat(20001))).rejects.toThrow(BadRequestException); expect(global.fetch).not.toHaveBeenCalled();
   });
   it('removes sensitive payloads on an atomic decision and disallows stale decisions', async () => {
-    const { service, table } = setup(); table.findUnique.mockResolvedValue({userId:'u'}); await service.decide('case','admin','APPROVED');
-    expect(table.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ status:'PENDING' }), data: expect.objectContaining({ status:'APPROVED',reviewerId:'admin',bytes:null,text:null }) }));
+    const { service, table } = setup(); table.findUnique.mockResolvedValue({userId:'u'}); await expect(service.decide('case','admin','APPROVED')).rejects.toThrow(ConflictException); await service.decide('case','admin','REJECTED');
+    expect(table.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ status:'PENDING' }), data: expect.objectContaining({ status:'REJECTED',reviewerId:'admin',bytes:null,text:null }) }));
     table.updateMany.mockResolvedValue({ count:0 }); await expect(service.decide('case','admin','APPROVED')).rejects.toThrow(ConflictException);
   });
   it('never returns bytes with the admin list and only previews pending non-expired items', async () => {
