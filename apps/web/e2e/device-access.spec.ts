@@ -110,3 +110,35 @@ test('choosing existing photos acknowledges the shared camera/photos explanation
   const again = page.waitForEvent('filechooser'); await page.getByRole('button', { name: /📸 Camera/ }).click(); await (await again).setFiles([]);
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
+
+// Keep the document and JS module alive: a reset must clear session memory as well as storage.
+async function navigateWithinApp(page: Page, path: string) {
+  await page.evaluate(path => { history.pushState({}, '', path); window.dispatchEvent(new PopStateEvent('popstate')); }, path);
+  await expect(page).toHaveURL(new RegExp(`${path}$`));
+}
+for (const width of [390, 1280]) {
+  test(`privacy settings can replay accepted explanations without clearing account data at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 }); await setup(page, 'allow', width === 390);
+    await page.goto('/map'); await page.getByRole('button', { name: 'Use location', exact: true }).click();
+    await expect.poll(() => geoCalls(page)).toBe(1);
+    await navigateWithinApp(page, '/feed'); await page.locator('.fw-feed-composer-trigger').click();
+    await page.getByRole('button', { name: /📸 Camera/ }).click();
+    const picker = page.waitForEvent('filechooser'); await page.getByRole('button', { name: 'Continue', exact: true }).click(); await (await picker).setFiles([]);
+    await navigateWithinApp(page, '/privacy-security');
+    await page.evaluate(() => localStorage.setItem('device-reset-untouched', 'keep'));
+    const section = page.locator('#device-access');
+    await expect(section).toContainText('permissions remain unchanged');
+    await section.getByRole('button', { name: 'Show explanations again', exact: true }).click();
+    await expect(section.getByRole('status')).toContainText('next time you open the map or camera');
+    expect(await page.evaluate(() => ['location', 'camera'].map(kind => localStorage.getItem(`fairwayd_device_access_v1_${kind}`)))).toEqual([null, null]);
+    expect(await page.evaluate(() => [localStorage.getItem('fairwayd_token'), localStorage.getItem('fairwayd_lang'), localStorage.getItem('device-reset-untouched')])).toEqual(['device-test', 'en', 'keep']);
+    expect(await geoCalls(page)).toBe(1);
+    await navigateWithinApp(page, '/map');
+    await expect(page.getByRole('dialog', { name: 'May Fairwayd access your location?', exact: true })).toBeVisible();
+    expect(await geoCalls(page)).toBe(1); await page.getByRole('button', { name: 'Not now', exact: true }).click();
+    await navigateWithinApp(page, '/feed'); await page.locator('.fw-feed-composer-trigger').click();
+    await page.getByRole('button', { name: /📸 Camera/ }).click();
+    await expect(page.getByRole('dialog', { name: 'May Fairwayd use your camera and photos?', exact: true })).toBeVisible();
+    expect(await page.evaluate(() => (window as any).__streamCalls)).toBe(0);
+  });
+}
