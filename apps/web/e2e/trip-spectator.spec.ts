@@ -91,7 +91,7 @@ for (const width of [390, 1280]) {
       await expect(entry.locator('article')).toHaveCount(2);
       expect(mutations).toEqual([]);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-      await entry.screenshot({ path: `/tmp/trip-entry-${language}-${width}.png` });
+      await entry.screenshot({ path: `/tmp/trip-spectator-entry-${language}-${width}.png` });
     });
   }
 }
