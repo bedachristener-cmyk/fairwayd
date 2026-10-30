@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+test.use({ timezoneId: 'Europe/Zurich', locale: 'de-CH' });
 for (const width of [390,1280]) {
   test(`admin reviews private quarantined content at ${width}px`,async({page})=>{
     await page.setViewportSize({width,height:900});
@@ -8,8 +9,8 @@ for (const width of [390,1280]) {
       const path=new URL(route.request().url()).pathname;
       const json=(body:unknown)=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});
       if(path.endsWith('/users/me'))return json({id:'admin',handle:'admin',name:'Admin',avatarUrl:'/logo.png',termsAcceptedAt:'2026-01-01'});
-      if(path==='/api/safety/admin/pending-posts')return json([]);
-      if(path==='/api/safety/admin/pending-changes')return json([{id:'change-avatar',action:'AVATAR',targetId:'user',payload:{},state:status,categories:['violence'],expiresAt:'2026-11-01',user:{name:'Golfer'},images:status==='PENDING'?[{id:'picture'}]:[]}]);
+      if(path==='/api/safety/admin/pending-posts')return json([{id:'yesterday',state:'APPROVED',content:'',courseId:'course',visibility:'PRIVATE',categories:[],createdAt:'2026-10-29T18:18:48Z',decidedAt:'2026-10-29T18:30:55Z',expiresAt:'2026-10-30T18:30:55Z',user:{name:'Old author'},images:[]}]);
+      if(path==='/api/safety/admin/pending-changes')return json([{id:'change-avatar',action:'AVATAR',targetId:'user',payload:{},state:status,categories:['violence'],createdAt:'2026-10-30T14:17:55Z',expiresAt:'2026-11-01',user:{name:'Golfer'},images:status==='PENDING'?[{id:'picture'}]:[]}]);
       if(path==='/api/safety/admin/moderation/status')return json({enabled:true,configured:true});
       if(path==='/api/safety/admin/moderation')return json([{id:'case-blocked',userId:'user',scope:'POST_IMAGE',status:'BLOCKED',categories:['sexual/minors'],expiresAt:'2026-11-01'}]);
       if(path==='/api/safety/admin/pending-changes/change-avatar/images/picture'){
@@ -19,10 +20,15 @@ for (const width of [390,1280]) {
       if(path==='/api/safety/admin/pending-changes/change-avatar'&&route.request().method()==='PATCH'){decisions.push(route.request().postDataJSON());status='APPROVED';return json({ok:true});}
       if(path.startsWith('/api/'))return json({items:[],count:0});return route.continue();
     });
-    await page.goto('/admin/moderation');
+    await page.goto('/admin/moderation#change-avatar');
+    await expect(page.locator('#change-avatar')).toBeVisible();
+    await expect(page.locator('#change-avatar')).toContainText('Submitted:');
+    await expect(page.locator('#change-avatar')).toContainText('15:17');
+    await expect(page.locator('#yesterday')).not.toBeVisible();
     await expect(page.getByRole('heading',{name:'Automatic content checks'})).toBeVisible();
     await expect(page.getByRole('img',{name:'Quarantined image for moderation'})).toHaveCount(0);
     await expect(page.getByRole('button',{name:'Approve and apply'})).toHaveCount(1);
+    const bounds=await page.locator('#change-avatar').boundingBox();expect(bounds?.y).toBeLessThan(220);
     await page.getByRole('button',{name:'Show all images for review'}).click();
     await expect(page.getByRole('img',{name:'Quarantined image for moderation'})).toBeVisible();
     expect(previewHeaders.length).toBeGreaterThan(0);
