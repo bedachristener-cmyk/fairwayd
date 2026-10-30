@@ -21,6 +21,7 @@ integration('Complete content changes against isolated PostgreSQL', () => {
   const author = `review-author-${randomUUID()}`,
     admin = `review-admin-${randomUUID()}`,
     course = `review-course-${randomUUID()}`;
+  const destination = `review-destination-${randomUUID()}`;
   const originalFetch = global.fetch;
   let postId: string, tripId: string, commentId: string;
   const image = (suffix = '') =>
@@ -55,6 +56,7 @@ integration('Complete content changes against isolated PostgreSQL', () => {
         lon: 8,
       },
     });
+    await db.destination.create({ data: { id: destination, code: 'ZZ', name: 'Isolated review destination', slug: destination, isActive: true } });
     moderation = new ModerationService(db);
     changes = new PendingChangesService(db, moderation);
     process.env.CONTENT_MODERATION_ENABLED = 'true';
@@ -116,6 +118,7 @@ integration('Complete content changes against isolated PostgreSQL', () => {
     if (db) {
       await db.user.deleteMany({ where: { id: { in: [author, admin] } } });
       await db.course.delete({ where: { id: course } });
+      await db.destination.delete({ where: { id: destination } });
       await db.$disconnect();
     }
   });
@@ -148,7 +151,7 @@ integration('Complete content changes against isolated PostgreSQL', () => {
     async (action) => {
       const user = await db.user.findUniqueOrThrow({ where: { id: author } });
       const dest = await db.destination.findFirstOrThrow({
-        where: { code: 'TH' },
+        where: { id: destination },
       });
       const target =
         action === 'POST_EDIT' || action === 'COMMENT_CREATE'
