@@ -18,6 +18,15 @@ function rememberDecision(kind: AccessKind, value: AccessDecision) {
   memoryDecisions[kind] = value;
   try { localStorage.setItem(`fairwayd_device_access_v1_${kind}`, value); } catch { /* Session fallback above. */ }
 }
+export function resetDeviceAccessExplanations(): boolean {
+  // Reset only Fairwayd's explanations, never account data or platform permissions.
+  let saved = true;
+  for (const kind of ['location', 'camera'] as const) {
+    delete memoryDecisions[kind];
+    try { localStorage.removeItem(`fairwayd_device_access_v1_${kind}`); } catch { saved = false; }
+  }
+  return saved;
+}
 const button = { minHeight: 44, padding: '10px 18px', borderRadius: 999, border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--text)', fontWeight: 750, cursor: 'pointer' };
 function AccessDialog({ request, close }: { request: AccessRequest; close: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
