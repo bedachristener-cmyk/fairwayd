@@ -169,7 +169,7 @@ export default function MapView() {
     Record<string, boolean>
   >({});
 
-  const { position, requestLocation, error: locationError, dialog: locationDialog } = useLocationAccess(pos => setCenter([pos.lat, pos.lon]));
+  const { position, requestLocation, error: locationError, dialog: locationDialog } = useLocationAccess(pos => setCenter([pos.lat, pos.lon]), true);
 
   const status = useMemo(() => loadStatus, [loadStatus]);
 

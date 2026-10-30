@@ -329,7 +329,7 @@ export default function GolfNearMePage() {
   const [category, setCategory] = useState<NearMeCategory>("");
   const [status, setStatus] = useState<SearchStatus>("idle");
   const [error, setError] = useState("");
-  const { busy: locating, error: locationError, clearError: clearLocationError, requestLocation: useMyLocation, dialog: locationDialog } = useLocationAccess(pos => { invalidateResults(); setOrigin({ ...pos, label: t("your_location") }); });
+  const { busy: locating, error: locationError, clearError: clearLocationError, requestLocation: useMyLocation, dialog: locationDialog } = useLocationAccess(pos => { invalidateResults(); setOrigin({ ...pos, label: t("your_location") }); }, true);
   const [items, setItems] = useState<GolfServiceVenue[]>([]);
   const [courseItems, setCourseItems] = useState<NearbyCourse[]>([]);
   const [courseServices, setCourseServices] = useState<GolfCourseServices[]>([]);
