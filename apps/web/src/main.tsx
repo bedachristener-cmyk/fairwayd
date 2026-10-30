@@ -5,6 +5,7 @@ import "leaflet/dist/leaflet.css";
 import "./index.css";
 import "./leafletIconFix";
 import App from "./App";
+import ContentReviewNotice from "./components/ContentReviewNotice";
 import { recoverMissingFeedStyles } from "./styleRecovery";
 import {
   applyShape,
@@ -42,5 +43,6 @@ const updateSW = registerSW({
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />
+    <ContentReviewNotice />
   </StrictMode>,
 );

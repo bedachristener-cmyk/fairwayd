@@ -1,3 +1,4 @@
+import { Reviewable } from '../moderation/review-action';
 import { PendingPostsService } from './pending-posts.service';
 import { Res } from '@nestjs/common';
 import type { Response } from 'express';
@@ -125,6 +126,7 @@ export class PostsController {
 
   @UseGuards(AuthGuard('jwt'))
   @Post(':id/comments')
+  @Reviewable('COMMENT_CREATE')
   async createComment(
     @Param('id') id: string,
     @Req() req: any,
@@ -148,6 +150,7 @@ export class PostsController {
 
   @UseGuards(AuthGuard('jwt'))
   @Patch('comments/:id')
+  @Reviewable('COMMENT_EDIT')
   async updateComment(
     @Param('id') id: string,
     @Req() req: any,
@@ -163,6 +166,7 @@ export class PostsController {
     storage: memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 5 },
     fileFilter: (_req, file, cb) => { if (!safeImageExt(file.originalname, file.mimetype)) return cb(new BadRequestException('Only jpg/jpeg/png/webp allowed') as any, false); cb(null, true); },
   }))
+  @Reviewable('POST_EDIT')
   async updatePost(
     @Param('id') id: string,
     @Req() req: any,

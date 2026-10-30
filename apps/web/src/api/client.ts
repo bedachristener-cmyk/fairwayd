@@ -1,3 +1,4 @@
+import { requireAppliedContent } from "../utils/contentReview";
 // web/src/api/client.ts
 import { API_BASE } from "./base";
 
@@ -102,6 +103,7 @@ export async function apiRequest<T>(
     );
   });
 
+  await requireAppliedContent(res);
   if (!res.ok) {
     const data = await parseJsonSafe(res);
     let msg = `${method} ${path} failed (${res.status})`;

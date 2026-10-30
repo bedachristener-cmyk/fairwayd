@@ -35,6 +35,17 @@ for (const width of [390, 1280]) {
       await expect(page.locator("article section")).toHaveCount(10);
       await expect(page.locator("article")).toContainText("Porkbun");
       await expect(page.locator("article")).toContainText("OpenAI");
+      const checkHeading = {
+        de: "5. Automatische Inhaltsprüfung",
+        en: "5. Automatic content checks",
+        fr: "5. Contrôle automatique des contenus",
+        it: "5. Controllo automatico dei contenuti",
+      }[language as keyof typeof translations];
+      const checkSection = page.locator("article section").filter({ has: page.getByRole("heading", { name: checkHeading, exact: true }) });
+      await expect(page.locator("article")).not.toContainText("Stage");
+      await expect(checkSection).toContainText("24");
+      await expect(checkSection).toContainText("Resend");
+      await expect(page.locator("article")).toContainText("Content reviews");
       await expect(page.getByRole("combobox", { name: copy.language })).toHaveValue(language);
       await page.reload();
       await expect(page.locator("article section")).toHaveCount(10);

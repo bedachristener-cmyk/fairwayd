@@ -42,6 +42,7 @@ function setup(type = 'trip_member_added') {
         ),
       update: jest.fn().mockResolvedValue({}),
     },
+    pendingChange: { findFirst: jest.fn().mockResolvedValue({ id: 'change' }) },
     pendingPost: { findFirst: jest.fn().mockResolvedValue({ id: 'draft' }) },
     trip: {
       findUnique: jest
@@ -161,7 +162,7 @@ describe('Notification emails', () => {
     expect(trip.mail.sendActivityNotification).not.toHaveBeenCalled();
   });
 
-  it.each(['post_review_approved', 'post_review_rejected', 'content_moderation_decided'])('delivers %s under the moderation preference, even for a self-review', async type => {
+  it.each(['post_review_approved', 'post_review_rejected', 'content_moderation_decided', 'content_review_approved', 'content_review_rejected'])('delivers %s under the moderation preference, even for a self-review', async type => {
     const { service, mail, row, prisma } = setup(type);
     row.actorUserId = row.userId;
     row.body = 'Review complete. No uploaded content in this email.';
@@ -177,6 +178,11 @@ describe('Notification emails', () => {
     await b.service.deliverPending(); expect(b.mail.sendActivityNotification).not.toHaveBeenCalled();
     const c = setup('post_review_requested'); c.row.link = '/admin/moderation#draft'; c.prisma.pendingPost.findFirst.mockResolvedValue(null);
     await c.service.deliverPending(); expect(c.mail.sendActivityNotification).not.toHaveBeenCalled();
+  });
+  it('delivers complete-change review requests only while pending and to a current opted-in admin', async () => {
+    const a=setup('content_review_requested');a.row.link='/admin/moderation#change';await a.service.deliverPending();expect(a.mail.sendActivityNotification).toHaveBeenCalled();
+    const b=setup('content_review_requested');b.row.link='/admin/moderation#change';b.prisma.pendingChange.findFirst.mockResolvedValue(null);await b.service.deliverPending();expect(b.mail.sendActivityNotification).not.toHaveBeenCalled();
+    const c=setup('content_review_requested');c.row.link='/admin/moderation#change';c.recipient.adminRole='USER';await c.service.deliverPending();expect(c.mail.sendActivityNotification).not.toHaveBeenCalled();
   });
   it('emails current admins a protected review link without content or image attachments', async () => {
     const { service, mail, row } = setup('post_review_requested'); row.link = '/admin/moderation#draft';

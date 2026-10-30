@@ -1,3 +1,4 @@
+import { Reviewable } from '../moderation/review-action';
 import { Optional } from '@nestjs/common';
 import { ModerationService, moderationEnabled, requireImageCheck, requireTextCheck } from '../moderation/moderation.service';
 import {
@@ -58,6 +59,7 @@ export class CourseSubmissionsController {
       },
     }),
   )
+  @Reviewable('COURSE_CREATE')
   async create(
     @Body() body: any,
     @Req() req: any,

@@ -1,3 +1,4 @@
+import { ReviewPendingError } from "../utils/contentReview";
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { apiPostForm, apiPostJson } from "../api";
@@ -43,6 +44,7 @@ async function resizeImage(file: File): Promise<File> {
 }
 
 function toFriendlyProfileError(e: any): string {
+  if (e instanceof ReviewPendingError) return e.message;
   const raw =
     (typeof e === "string" ? e : e?.message) ??
     (e?.responseText as string | undefined) ??
@@ -481,6 +483,7 @@ export default function ProfileSetup({
 
       await onDone();
     } catch (e: any) {
+      if (e instanceof ReviewPendingError) { setMsg(""); return; }
       console.error("PROFILE SAVE FAILED", e);
       console.error("PROFILE SAVE FAILED MESSAGE", e?.message);
       console.error("PROFILE SAVE FAILED RAW", JSON.stringify(e, null, 2));

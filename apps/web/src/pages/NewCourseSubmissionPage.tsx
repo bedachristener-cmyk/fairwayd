@@ -1,3 +1,4 @@
+import { requireAppliedContent, ReviewPendingError } from "../utils/contentReview";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../api/base";
@@ -142,6 +143,7 @@ export default function NewCourseSubmissionPage() {
         body,
       });
 
+      await requireAppliedContent(res);
       if (!res.ok) {
         const body = await res.text();
         throw new Error(`Submission failed ${res.status} ${body}`);
@@ -153,7 +155,7 @@ export default function NewCourseSubmissionPage() {
       setDone(true);
     } catch (error) {
       console.error("Course submission failed", error);
-      setErr(t("course_submission_failed"));
+      setErr(error instanceof ReviewPendingError ? error.message : t("course_submission_failed"));
     } finally {
       setSending(false);
     }

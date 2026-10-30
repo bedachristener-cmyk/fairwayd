@@ -1,3 +1,4 @@
+import { Reviewable } from '../moderation/review-action';
 import { Optional } from '@nestjs/common';
 import { ModerationService, requireImageCheck, requireTextCheck } from '../moderation/moderation.service';
 import {
@@ -299,6 +300,7 @@ export class TripsController {
       },
     }),
   )
+  @Reviewable('TRIP_COVER')
   async uploadCover(
     @Param('id') id: string,
     @Req() req: any,

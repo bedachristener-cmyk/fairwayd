@@ -1,3 +1,4 @@
+import { requireAppliedContent, ReviewPendingError } from "../utils/contentReview";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
@@ -210,6 +211,7 @@ export default function CommentModal({
         },
       });
 
+      await requireAppliedContent(res);
       if (!res.ok) {
         throw new Error(`Failed to load comments: ${res.status}`);
       }
@@ -255,6 +257,7 @@ export default function CommentModal({
         }),
       });
 
+      await requireAppliedContent(res);
       if (!res.ok) {
         throw new Error(`Failed to post comment: ${res.status}`);
       }
@@ -287,6 +290,7 @@ export default function CommentModal({
         }),
       });
 
+      await requireAppliedContent(res);
       if (!res.ok) {
         throw new Error(`Failed to post reply: ${res.status}`);
       }
@@ -313,6 +317,7 @@ export default function CommentModal({
         },
       });
 
+      await requireAppliedContent(res);
       if (!res.ok) {
         throw new Error(`Failed to toggle comment like: ${res.status}`);
       }
@@ -378,6 +383,7 @@ export default function CommentModal({
         },
         body: JSON.stringify({ content }),
       });
+      await requireAppliedContent(res);
       if (!res.ok) throw new Error(`Failed to update comment: ${res.status}`);
 
       const updateTree = (items: CommentItem[]): CommentItem[] =>
@@ -390,7 +396,7 @@ export default function CommentModal({
       cancelCommentEdit();
     } catch (err) {
       console.error("Comment update failed", err);
-      setEditCommentError("Could not save comment.");
+      setEditCommentError(err instanceof ReviewPendingError ? err.message : "Could not save comment.");
     } finally {
       setEditCommentBusy(false);
     }

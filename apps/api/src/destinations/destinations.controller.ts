@@ -1,3 +1,4 @@
+import { Reviewable } from '../moderation/review-action';
 import {
   Body,
   Controller,
@@ -43,6 +44,7 @@ export class DestinationsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a community tip for a destination' })
   @Post(':slug/tips')
+  @Reviewable('TIP_CREATE')
   createTip(
     @Param('slug') slug: string,
     @Req() req: any,

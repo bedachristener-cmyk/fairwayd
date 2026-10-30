@@ -1,3 +1,4 @@
+import { requireAppliedContent } from "../utils/contentReview";
 import { DestinationEntryGuides } from "../entry-guides/DestinationEntryGuides";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
@@ -772,6 +773,7 @@ export default function DestinationPage() {
         throw new Error("Unauthorized");
       }
 
+      await requireAppliedContent(res);
       if (!res.ok) {
         const message = await res.text().catch(() => "");
         throw new Error(message || `Failed to create tip: ${res.status}`);
