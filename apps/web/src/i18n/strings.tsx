@@ -429,7 +429,7 @@ export const STRINGS = {
     post_visibility_filter: "Meine Posts nach Sichtbarkeit filtern",
     no_posts_match_filter: "Keine Posts entsprechen diesem Filter.",
 
-    back: "Zurueck",
+    back: "Zurück",
     edit: "Bearbeiten",
     my_profile: "Mein Profil",
     posts: "Posts",
