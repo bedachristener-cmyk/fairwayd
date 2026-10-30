@@ -1,3 +1,5 @@
+import { EntryCountryPicker } from "../entry-guides/EntryCountryPicker";
+import { selectedEntryCountries } from "../entry-guides/api";
 import { TripEntryRequirements } from "../components/TripEntryRequirements";
 import { directTripReimbursements } from "../utils/directTripReimbursements";
 import { useCourseCoverImages } from "../hooks/useCourseCoverImages";
@@ -124,6 +126,7 @@ type TripItem = {
 };
 
 type Trip = {
+  entryRequirementCountries?: string[] | null;
   id: string;
   title: string;
   destination?: string | null;
@@ -209,6 +212,7 @@ type UserSearchResult = {
 };
 
 type TripEditDraft = {
+  entryRequirementCountries: string[];
   title: string;
   destination: string;
   description: string;
@@ -5128,6 +5132,7 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
     setEditingTrip(true);
     setTripDraft({
       title: trip.title || "",
+      entryRequirementCountries: selectedEntryCountries(trip),
       destination: trip.destination || "",
       description: trip.description || "",
     });
@@ -5324,6 +5329,7 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
         },
         body: JSON.stringify({
           title: tripDraft.title.trim(),
+          entryRequirementCountries: tripDraft.entryRequirementCountries,
           destination: optionalText(tripDraft.destination),
           description: optionalText(tripDraft.description),
         }),
@@ -6991,6 +6997,7 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
                   placeholder="Destination"
                   style={editFieldStyle}
                 />
+                <EntryCountryPicker value={tripDraft.entryRequirementCountries} onChange={(codes) => setTripDraft({ ...tripDraft, entryRequirementCountries: codes })} disabled={savingTrip} />
                 <textarea
                   value={tripDraft.description}
                   onChange={(e) =>
@@ -8748,7 +8755,7 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
           </div>
         </div>
 
-        <TripEntryRequirements destinations={[trip?.destination, trip?.title, ...(trip?.items ?? []).map(item => item.course?.country)]} />
+        <TripEntryRequirements countryCodes={selectedEntryCountries(trip)} />
 
         <div
           style={{

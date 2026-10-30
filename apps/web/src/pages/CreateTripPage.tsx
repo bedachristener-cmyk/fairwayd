@@ -1,3 +1,4 @@
+import { EntryCountryPicker } from "../entry-guides/EntryCountryPicker";
 import { useEffect, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
@@ -33,6 +34,7 @@ export default function CreateTripPage() {
   const nav = useNavigate();
   const { token, user } = useAuth();
 
+  const [entryRequirementCountries, setEntryRequirementCountries] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [destination, setDestination] = useState("");
   const [description, setDescription] = useState("");
@@ -72,6 +74,7 @@ export default function CreateTripPage() {
           destination: optionalText(destination),
           description: optionalText(description),
           baseCurrency,
+          entryRequirementCountries,
         }),
       });
 
@@ -174,6 +177,8 @@ export default function CreateTripPage() {
             ))}
           </select>
         </label>
+
+        <EntryCountryPicker value={entryRequirementCountries} onChange={setEntryRequirementCountries} disabled={saving} />
 
         <div style={{ display: "flex", gap: 10 }}>
           <button

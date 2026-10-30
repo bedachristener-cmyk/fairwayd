@@ -1,3 +1,4 @@
+import { DestinationEntryGuides } from "../entry-guides/DestinationEntryGuides";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
@@ -2226,6 +2227,8 @@ export default function DestinationPage() {
                 </div>
               </div>
             ) : null}
+
+            <DestinationEntryGuides key={data.destination?.code || data.country} countryCode={data.destination?.code || data.country} />
 
             {info?.travelTips?.length ? (
               <div
