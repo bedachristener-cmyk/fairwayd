@@ -32,6 +32,7 @@ for (const width of [390, 1280]) {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     };
     await assertReadOnly();
+    await expect(page.locator('[data-trip-entry-requirements]')).toHaveCount(0);
     await page.screenshot({ path: `/tmp/trip-spectator-${width}.png`, fullPage: true });
     await page.getByRole('button', { name: /Timeline/ }).click();
     await expect(page.getByText('Seapine Golf', { exact: true }).first()).toBeVisible();
@@ -56,3 +57,60 @@ for (const width of [390, 1280]) {
     await assertReadOnly();
   });
 }
+
+for (const width of [390, 1280]) {
+  for (const language of ['en', 'de']) {
+    test(`Thailand entry links and checklist remain separate at ${width}px in ${language}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.addInitScript(lang => { localStorage.setItem('fairwayd_token', 'test-token'); localStorage.setItem('fairwayd_lang', lang); }, language);
+      const mutations: string[] = [];
+      await page.route('**/*', async route => {
+        const request = route.request(); const path = new URL(request.url()).pathname;
+        const json = (body: unknown) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+        if (path.startsWith('/api/') && !['GET', 'OPTIONS'].includes(request.method())) mutations.push(path);
+        if (path.endsWith('/users/me')) return json({ id: 'owner', handle: 'owner', name: 'Owner', avatarUrl: '/logo.png', termsAcceptedAt: '2026-01-01' });
+        if (path === '/api/trips/entry-test') return json({ id: 'entry-test', title: 'Golf holiday', destination: 'Hua Hin', viewerRole: 'OWNER', members: [{ id: 'owner-member', userId: 'owner', role: 'OWNER', user: { id: 'owner', name: 'Owner' } }], items: [{ id: 'golf', type: 'COURSE', title: 'Seapine', course: { id: 'seapine', name: 'Seapine', country: 'TH' } }], documents: [] });
+        if (path === '/api/courses/seapine/cover-image') return json({ image: null });
+        if (path.endsWith('/my-costs')) return json({ baseCurrency: 'CHF', costs: [], summary: { totalPersonalShare: 0, totalPaidByMe: 0, balancePreview: 0, groupedByCategory: {}, missingConversionCount: 0 } });
+        if (path.endsWith('/organizer-costs')) return json({ baseCurrency: 'CHF', costs: [], summary: { totalTripCost: 0, missingConversionCount: 0, paidBySummary: [], memberShareSummary: [], balancePreview: [] } });
+        if (path.startsWith('/api/')) return json({ items: [], costs: [], count: 0 });
+        return route.continue();
+      });
+      await page.goto('/trips/entry-test');
+      const entry = page.locator('[data-trip-entry-requirements]');
+      await expect(entry).toBeVisible();
+      await expect(entry.locator('article')).toHaveCount(2);
+      await expect(entry.locator('a').nth(0)).toHaveAttribute('href', 'https://tdac.immigration.go.th/');
+      await expect(entry.locator('a').nth(1)).toHaveAttribute('href', 'https://www.thaievisa.go.th/');
+      await expect(entry.locator('a').nth(0)).toHaveAttribute('rel', 'noopener noreferrer');
+      await expect(entry.locator('time')).toHaveAttribute('datetime', '2026-10-30');
+      await expect(entry).toContainText(language === 'de' ? 'Ankunft, nicht der Abflug' : 'arrival, not your departure');
+      await expect(entry).toContainText(language === 'de' ? 'kein Visum' : 'not a visa');
+      const checklist = page.getByRole('checkbox', { name: 'Visa / eVisa', exact: true });
+      await checklist.check();
+      await page.reload();
+      await expect(checklist).toBeChecked();
+      await expect(entry.locator('article')).toHaveCount(2);
+      expect(mutations).toEqual([]);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await entry.screenshot({ path: `/tmp/trip-spectator-entry-${language}-${width}.png` });
+    });
+  }
+}
+
+test('Thailand requirements are not shown for another destination', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('fairwayd_token', 'test-token'));
+  await page.route('**/*', route => {
+    const path = new URL(route.request().url()).pathname;
+    const json = (body: unknown) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+    if (path.endsWith('/users/me')) return json({ id: 'owner', handle: 'owner', name: 'Owner', avatarUrl: '/logo.png', termsAcceptedAt: '2026-01-01' });
+    if (path === '/api/trips/entry-other') return json({ id: 'entry-other', title: 'Golf holiday', destination: 'France', viewerRole: 'OWNER', members: [{ id: 'owner-member', userId: 'owner', role: 'OWNER', user: { id: 'owner', name: 'Owner' } }], items: [], documents: [] });
+    if (path.endsWith('/my-costs')) return json({ baseCurrency: 'CHF', costs: [], summary: { totalPersonalShare: 0, totalPaidByMe: 0, balancePreview: 0, groupedByCategory: {}, missingConversionCount: 0 } });
+    if (path.endsWith('/organizer-costs')) return json({ baseCurrency: 'CHF', costs: [], summary: { totalTripCost: 0, missingConversionCount: 0, paidBySummary: [], memberShareSummary: [], balancePreview: [] } });
+    if (path.startsWith('/api/')) return json({ items: [], costs: [], count: 0 });
+    return route.continue();
+  });
+  await page.goto('/trips/entry-other');
+  await expect(page.getByText('Before you go', { exact: true })).toBeVisible();
+  await expect(page.locator('[data-trip-entry-requirements]')).toHaveCount(0);
+});

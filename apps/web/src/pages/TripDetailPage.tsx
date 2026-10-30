@@ -1,3 +1,4 @@
+import { TripEntryRequirements } from "../components/TripEntryRequirements";
 import { directTripReimbursements } from "../utils/directTripReimbursements";
 import { useCourseCoverImages } from "../hooks/useCourseCoverImages";
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
@@ -108,6 +109,7 @@ type TripItem = {
   visibilityMembers?: TripItemVisibilityMember[];
   documentLinks?: TripItemDocumentLink[];
   course?: {
+    country?: string | null;
     id: string;
     name?: string | null;
     website?: string | null;
@@ -8745,6 +8747,8 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
             {checklistReadyCount}/{checklistTotal} ready
           </div>
         </div>
+
+        <TripEntryRequirements destinations={[trip?.destination, trip?.title, ...(trip?.items ?? []).map(item => item.course?.country)]} />
 
         <div
           style={{
