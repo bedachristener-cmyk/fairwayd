@@ -34,12 +34,12 @@ for(const width of [390,1280]){
   await expect(page.locator('[data-trip-entry-requirements]')).toHaveCount(2);expect(api.selection()).toEqual(['TH','PH']);
   await page.reload();await expect(page.locator('[data-trip-entry-requirements]')).toHaveCount(2);
   api.updateGuide();await page.reload();await expect(page.getByText('Updated centrally in Explore',{exact:true})).toBeVisible();
-  await page.getByRole('button',{name:'Edit Trip',exact:true}).click();await page.getByRole('checkbox',{name:'Philippines',exact:true}).uncheck();await page.getByRole('checkbox',{name:'Vietnam',exact:true}).check();
+  await page.getByRole('button',{name:/^Edit trip$/i}).click();await page.getByRole('checkbox',{name:'Philippines',exact:true}).uncheck();await page.getByRole('checkbox',{name:'Vietnam',exact:true}).check();
   await page.getByRole('button',{name:'Save',exact:true}).click();await expect(page.locator('[data-trip-entry-requirements]')).toHaveCount(2);expect(api.selection()).toEqual(['TH','VN']);
   await expect(page.getByText('Pre-Arrival Information · Pilot',{exact:true})).toBeVisible();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await page.locator('#before-you-go').screenshot({path:`/tmp/trip-spectator-country-selection-${width}.png`});
-  await page.getByRole('button',{name:'Edit Trip',exact:true}).click();await page.getByRole('checkbox',{name:'Include entry requirements?',exact:true}).uncheck();await page.getByRole('button',{name:'Save',exact:true}).click();
+  await page.getByRole('button',{name:/^Edit trip$/i}).click();await page.getByRole('checkbox',{name:'Include entry requirements?',exact:true}).uncheck();await page.getByRole('button',{name:'Save',exact:true}).click();
   await expect(page.locator('[data-trip-entry-requirements]')).toHaveCount(0);await page.reload();await expect(page.locator('[data-trip-entry-requirements]')).toHaveCount(0);expect(api.selection()).toEqual([]);
  });
  test(`admin maintains shared country information in Explore at ${width}px`,async({page})=>{
