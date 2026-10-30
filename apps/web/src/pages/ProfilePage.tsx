@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { API_BASE } from "../api/base";
 import { fileUrl } from "../api/fileUrl";
 import { useAuth } from "../auth/AuthContext";
@@ -1805,7 +1806,10 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
               onClick={() => nav(backTo)}
               type="button"
               style={{
-                minHeight: 38,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                minHeight: 44,
                 border:
                   "1px solid color-mix(in srgb, var(--border) 52%, transparent)",
                 background: "color-mix(in srgb, var(--card) 70%, transparent)",
@@ -1819,7 +1823,8 @@ export default function ProfilePage({ mode }: { mode: "me" | "handle" }) {
                 boxShadow: "0 8px 22px rgba(0,0,0,0.08)",
               }}
             >
-              ? {t("back")}
+              <ArrowLeft size={16} strokeWidth={2.2} aria-hidden="true" />
+              {t("back")}
             </button>
 
             <button
