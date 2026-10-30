@@ -229,40 +229,6 @@ function readLastMapView(): MapView | null {
   }
 }
 
-function useGrantedGeolocation() {
-  const [position, setPosition] = useState<MapView | null>(null);
-
-  useEffect(() => {
-    if (!navigator.geolocation || !navigator.permissions?.query) return;
-    let cancelled = false;
-
-    navigator.permissions
-      .query({ name: "geolocation" as PermissionName })
-      .then((status) => {
-        if (cancelled || status.state !== "granted") return;
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            if (!cancelled) {
-              setPosition({
-                lat: pos.coords.latitude,
-                lon: pos.coords.longitude,
-                zoom: 11,
-              });
-            }
-          },
-          () => {},
-          { enableHighAccuracy: true },
-        );
-      })
-      .catch(() => {});
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  return position;
-}
 
 function Card({
   title,
@@ -676,7 +642,6 @@ export default function ContextSidebar() {
   const nav = useNavigate();
   const { token } = useAuth();
   const { selectedCourse, setSelectedCourse } = useSelectedCourse();
-  const browserPosition = useGrantedGeolocation();
 
   const [destinationData, setDestinationData] =
     useState<DestinationData | null>(null);
@@ -979,7 +944,7 @@ export default function ContextSidebar() {
     : null;
   const destinationCourses = destinationData?.items ?? [];
   const lastMapView = typeof window === "undefined" ? null : readLastMapView();
-  const fallbackCenter = browserPosition ?? lastMapView ?? DEFAULT_CENTER;
+  const fallbackCenter = lastMapView ?? DEFAULT_CENTER;
   const mapCourses =
     destinationCourses.length > 0
       ? destinationCourses

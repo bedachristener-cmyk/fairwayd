@@ -1,3 +1,4 @@
+import { useLocationAccess } from '../permissions/useDeviceAccess';
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   MapContainer,
@@ -143,6 +144,11 @@ function CoursesByBoundsLoader({
   return null;
 }
 
+function CentreAfterLocation({ position }: { position: { lat: number; lon: number } | null }) {
+  const map = useMap();
+  useEffect(() => { if (position) map.setView([position.lat, position.lon], 11); }, [map, position]);
+  return null;
+}
 export default function MapView() {
   const { setSelectedCourse } = useSelectedCourse();
 
@@ -163,12 +169,7 @@ export default function MapView() {
     Record<string, boolean>
   >({});
 
-  useEffect(() => {
-    navigator.geolocation?.getCurrentPosition(
-      (pos) => setCenter([pos.coords.latitude, pos.coords.longitude]),
-      () => {},
-    );
-  }, []);
+  const { position, requestLocation, error: locationError, dialog: locationDialog } = useLocationAccess(pos => setCenter([pos.lat, pos.lon]));
 
   const status = useMemo(() => loadStatus, [loadStatus]);
 
@@ -234,16 +235,20 @@ export default function MapView() {
 
   return (
     <div style={{ height: "100vh" }}>
+      {locationDialog}
+      <button type="button" onClick={requestLocation} style={{ minHeight: 44 }}>{t("my_location")}</button>
+      {locationError && <p role="alert">{locationError}</p>}
       <div style={{ padding: 8, color: "var(--text)" }}>{status}</div>
 
       <MapContainer center={center} zoom={11} style={{ height: "100%" }}>
+        <CentreAfterLocation position={position} />
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
         <Circle center={center} radius={radiusM} />
 
-        <Marker position={center} icon={meIcon}>
+        {position && <Marker position={center} icon={meIcon}>
           <Popup>{t("you_are_here")}</Popup>
-        </Marker>
+        </Marker>}
 
         <CoursesByBoundsLoader onStatus={setLoadStatus} onItems={setCourses} />
 

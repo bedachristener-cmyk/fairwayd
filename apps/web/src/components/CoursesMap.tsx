@@ -1,3 +1,4 @@
+import { useLocationAccess } from '../permissions/useDeviceAccess';
 import { useCourseCoverImages } from "../hooks/useCourseCoverImages";
 import { fileUrl } from "../api/fileUrl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -140,22 +141,6 @@ function normalizeWebsite(url?: string | null) {
   }
 
   return `https://${trimmed}`;
-}
-
-function useGeolocation() {
-  const [pos, setPos] = useState<Geo | null>(null);
-
-  useEffect(() => {
-    if (!navigator.geolocation) return;
-
-    navigator.geolocation.getCurrentPosition(
-      (p) => setPos({ lat: p.coords.latitude, lon: p.coords.longitude }),
-      () => {},
-      { enableHighAccuracy: true },
-    );
-  }, []);
-
-  return pos;
 }
 
 function FixLeafletSize() {
@@ -527,7 +512,6 @@ export default function CoursesMap() {
     localStorage.removeItem("fairwayd-map-view");
   }, []);
 
-  const userPos = useGeolocation();
   const nav = useNavigate();
   const location = useLocation();
 
@@ -552,6 +536,7 @@ export default function CoursesMap() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [mapRef, setMapRef] = useState<L.Map | null>(null);
+  const { position: userPos, busy: locating, error: locationError, requestLocation, dialog: locationDialog } = useLocationAccess(pos => { mapRef?.setView([pos.lat, pos.lon], 13, { animate: true }); });
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const selectedCourseRequestRef = useRef<string | null>(null);
   (window as any).__activeCourseId = activeCourseId ?? highlightedCourseId;
@@ -732,6 +717,8 @@ export default function CoursesMap() {
 
   return (
     <div style={{ height: "100%", position: "relative" }}>
+      {locationDialog}
+      {locationError && <div role="alert" style={{ position: "absolute", bottom: 24, left: 16, right: 16, zIndex: 1300, padding: 16, borderRadius: 16, background: "var(--card)", border: "1px solid var(--border)", lineHeight: 1.6 }}>{locationError}</div>}
       <LoggedInBadge isLoggedIn={isAuthenticated} />
 
       <div
@@ -1339,22 +1326,20 @@ export default function CoursesMap() {
           })()}
       </MapContainer>
 
-      {hasValidUserPos && (
-        <button
+      <button
           type="button"
           title={t("my_location")}
           aria-label={t("my_location")}
-          onClick={() => {
-            if (!mapRef || userLat === null || userLon === null) return;
-            mapRef.setView([userLat, userLon], 13, { animate: true });
-          }}
+          onClick={requestLocation}
+          disabled={locating}
+          aria-busy={locating}
           style={{
             position: "absolute",
             top: isMobile ? 126 : 132,
             left: isMobile ? 12 : 12,
             zIndex: 1000,
-            width: 38,
-            height: 38,
+            width: 44,
+            height: 44,
             borderRadius: 999,
             border: "1px solid var(--border)",
             background: "var(--card)",
@@ -1370,9 +1355,8 @@ export default function CoursesMap() {
             userSelect: "none",
           }}
         >
-          ⌖
+          {locating ? "…" : "⌖"}
         </button>
-      )}
     </div>
   );
 }

@@ -38,7 +38,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: |
-          npx playwright test e2e/country-entry-guides.spec.ts e2e/email-notifications.spec.ts e2e/trip-spectator.spec.ts e2e/trip-document-visibility.spec.ts e2e/moderation-admin.spec.ts e2e/pending-posts.spec.ts e2e/pending-changes.spec.ts e2e/legal-pages.spec.ts e2e/post-image-edit.spec.ts e2e/direct-reimbursements.spec.ts --project=chromium
+          npx playwright test e2e/device-access.spec.ts e2e/country-entry-guides.spec.ts e2e/email-notifications.spec.ts e2e/trip-spectator.spec.ts e2e/trip-document-visibility.spec.ts e2e/moderation-admin.spec.ts e2e/pending-posts.spec.ts e2e/pending-changes.spec.ts e2e/legal-pages.spec.ts e2e/post-image-edit.spec.ts e2e/direct-reimbursements.spec.ts --project=chromium
           npx playwright test e2e/landing-page-v2.spec.ts --grep "login panel" --project=chromium
         env:
           CI: 'true'
@@ -53,6 +53,7 @@ jobs:
             /tmp/trip-spectator-*.png
             /tmp/moderation-admin-*.png
             /tmp/pending-*.png
+            /tmp/device-access-*.png
             /tmp/legal-*.png
             /tmp/post-images-*.png
             /tmp/direct-costs-*.png

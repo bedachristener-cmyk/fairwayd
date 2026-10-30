@@ -1,3 +1,4 @@
+import { useDeviceAccessPrompt } from '../permissions/useDeviceAccess';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import ReactCrop, { type Crop, type PixelCrop } from "react-image-crop";
@@ -355,6 +356,7 @@ function NewUserFeedWelcomeCard({
 }
 
 export default function FeedPage() {
+  const cameraAccess = useDeviceAccessPrompt();
   const isMobile = window.innerWidth <= 980;
   const location = useLocation();
   const { selectedCourse, setSelectedCourse, clearSelectedCourse } =
@@ -1109,7 +1111,7 @@ export default function FeedPage() {
   const openCameraPicker = () => {
     if (posting) return;
     setComposerHint(null);
-    cameraInputRef.current?.click();
+    cameraAccess.ask({ kind: "camera", confirm: () => cameraInputRef.current?.click(), alternative: () => galleryInputRef.current?.click() });
   };
 
   const handleToggleCourseFollow = useCallback(
@@ -1479,6 +1481,7 @@ export default function FeedPage() {
 
   return (
     <>
+      {cameraAccess.dialog}
       <div
         className="fw-page"
         style={{

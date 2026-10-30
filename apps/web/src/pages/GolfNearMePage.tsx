@@ -1,3 +1,4 @@
+import { useLocationAccess } from '../permissions/useDeviceAccess';
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { CircleMarker, MapContainer, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
@@ -328,7 +329,7 @@ export default function GolfNearMePage() {
   const [category, setCategory] = useState<NearMeCategory>("");
   const [status, setStatus] = useState<SearchStatus>("idle");
   const [error, setError] = useState("");
-  const [locationError, setLocationError] = useState("");
+  const { busy: locating, error: locationError, clearError: clearLocationError, requestLocation: useMyLocation, dialog: locationDialog } = useLocationAccess(pos => { invalidateResults(); setOrigin({ ...pos, label: t("your_location") }); });
   const [items, setItems] = useState<GolfServiceVenue[]>([]);
   const [courseItems, setCourseItems] = useState<NearbyCourse[]>([]);
   const [courseServices, setCourseServices] = useState<GolfCourseServices[]>([]);
@@ -337,7 +338,6 @@ export default function GolfNearMePage() {
   const [view, setView] = useState<"list" | "map">("list");
   const [testCoordinate, setTestCoordinate] = useState<{ lat: number; lon: number } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [locating, setLocating] = useState(false);
   const currentRequest = useRef<AbortController | null>(null);
   // Only map-to-list navigation scrolls/focuses; ordinary list toggles stay in place.
   const pendingMapVenueId = useRef<string | null>(null);
@@ -374,28 +374,6 @@ export default function GolfNearMePage() {
     setError("");
   }
 
-  function useMyLocation() {
-    if (!navigator.geolocation) {
-      setLocationError(t("golf_near_me_geo_unsupported"));
-      return;
-    }
-    setLocating(true);
-    setLocationError("");
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        invalidateResults();
-        setLocationError("");
-        setOrigin({ lat: coords.latitude, lon: coords.longitude, label: t("your_location") });
-        setLocating(false);
-      },
-      () => {
-        setLocationError(t("golf_near_me_geo_denied"));
-        setLocating(false);
-      },
-      { enableHighAccuracy: false, timeout: 12000, maximumAge: 120000 },
-    );
-  }
-
   async function previewBaselDraft() {
     // Display-only fixture for the local Vite dev server.
     // This code path must never be available in preview/production builds.
@@ -415,7 +393,7 @@ export default function GolfNearMePage() {
     setStatus("preview");
     setView("list");
     setError("");
-    setLocationError("");
+    clearLocationError();
   }
 
   async function searchNearby() {
@@ -513,6 +491,7 @@ export default function GolfNearMePage() {
 
   return (
     <div className="fw-page" style={{ color: "var(--text)" }}>
+      {locationDialog}
       <div className="fw-page-shell" style={{
         width: "100%", maxWidth: 1100, margin: "0 auto",
         padding: "16px 14px 110px", display: "grid", gap: 18,
@@ -546,7 +525,7 @@ export default function GolfNearMePage() {
                 <LocateFixed size={15} style={{ verticalAlign: "middle" }} />
                 {" "}{locating ? t("golf_near_me_locating") : t("golf_near_me_my_location")}
               </button>
-              <button type="button" style={chip} onClick={() => { invalidateResults(); setLocationError(""); setOrigin(BASEL); }}>
+              <button type="button" style={chip} onClick={() => { invalidateResults(); clearLocationError(); setOrigin(BASEL); }}>
                 {t("golf_near_me_basel_pilot")}
               </button>
             </div>
