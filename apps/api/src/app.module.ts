@@ -21,6 +21,7 @@ import { FxModule } from './fx/fx.module';
 import { PostCollectionsModule } from './post-collections/post-collections.module';
 import { GolfServicesModule } from './golf-services/golf-services.module';
 import { SafetyModule } from './safety/safety.module';
+import { ReadinessService } from './runtime/readiness.service';
 
 @Module({
   imports: [
@@ -49,6 +50,6 @@ import { SafetyModule } from './safety/safety.module';
     ModerationModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, ReadinessService],
 })
 export class AppModule {}

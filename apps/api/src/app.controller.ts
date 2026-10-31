@@ -1,9 +1,10 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Header, ServiceUnavailableException } from '@nestjs/common';
 import { AppService } from './app.service';
+import { ReadinessService } from './runtime/readiness.service';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(private readonly appService: AppService, private readonly readiness: ReadinessService) {}
 
   @Get()
   getHello(): string {
@@ -13,5 +14,18 @@ export class AppController {
   @Get('health')
   getHealth() {
     return { status: 'ok' };
+  }
+
+  @Get('ready')
+  @Header('Cache-Control', 'no-store')
+  async getReady() {
+    if (!await this.readiness.isReady()) {
+      throw new ServiceUnavailableException({ status: 'unavailable' });
+    }
+    return {
+      status: 'ok',
+      // A non-secret release identifier lets deployment probes verify a real cutover.
+      ...(process.env.RAILWAY_DEPLOYMENT_ID ? { deployment: process.env.RAILWAY_DEPLOYMENT_ID } : {}),
+    };
   }
 }
