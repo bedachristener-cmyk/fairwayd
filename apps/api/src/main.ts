@@ -7,6 +7,8 @@ import * as express from 'express';
 import type { Request, Response } from 'express';
 import { join } from 'path';
 import { isCorsOriginAllowed, shouldEnableSwagger } from './cors';
+import { ReadinessService } from './runtime/readiness.service';
+import { installGracefulShutdown } from './runtime/graceful-shutdown';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -70,6 +72,7 @@ async function bootstrap() {
 
   const port = process.env.PORT ? Number(process.env.PORT) : 3000;
   await app.listen(port, '0.0.0.0');
+  installGracefulShutdown(app, app.get(ReadinessService));
 
   console.log(`Fairwayd API listening on http://0.0.0.0:${port}`);
 }

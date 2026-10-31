@@ -35,7 +35,9 @@ jobs:
       - run: npm run build
         env:
           NEON_DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
-      - run: npm test -- --runInBand pending-changes.spec.ts entry-guides.spec.ts pending-posts.spec.ts notification-email.service.spec.ts moderation.service.spec.ts moderation.controller.spec.ts upload-gate.spec.ts post-images.spec.ts posts.service.spec.ts budget-v3.spec.ts users.service.spec.ts trips.controller.spec.ts
+      - run: npm test -- --runInBand app.controller.spec.ts readiness.service.spec.ts pending-changes.spec.ts entry-guides.spec.ts pending-posts.spec.ts notification-email.service.spec.ts moderation.service.spec.ts moderation.controller.spec.ts upload-gate.spec.ts post-images.spec.ts posts.service.spec.ts budget-v3.spec.ts users.service.spec.ts trips.controller.spec.ts
+      - name: Verify real HTTP drain and Stage database identity guard
+        run: node --test scripts/graceful-shutdown.test.cjs scripts/assert-stage-golf-database.test.mjs
       - name: Verify additive migration and publication against isolated PostgreSQL
         env:
           NEON_DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/pending_posts_test?schema=public
