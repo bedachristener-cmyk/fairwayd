@@ -56,7 +56,7 @@ node scripts/probe-stage-rollout.mjs --seconds=600 --out=/tmp/stage-rollout.json
 ```
 
 The probe is fixed to the Stage origin and requests liveness, readiness and a
-bounded database-backed course search once per second. It stores timestamps,
+bounded database-backed course search, starting at most one round per second without piling up slow requests. Each external request has a 12-second client timeout; actual latency is recorded. It stores timestamps,
 status codes, latency and deployment IDs, never course bodies or user tokens.
 Verify both old/new deployment IDs and successful requests before and after
 cutover, then inspect bounded shutdown logs for the previous process. Record

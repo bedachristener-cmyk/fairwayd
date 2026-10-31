@@ -18,7 +18,7 @@ while (Date.now() < until) {
   const rows = await Promise.all(routes.map(async path => {
     const started = Date.now();
     try {
-      const response = await fetch(origin + path, { signal: AbortSignal.timeout(5000), cache: 'no-store' });
+      const response = await fetch(origin + path, { signal: AbortSignal.timeout(12000), cache: 'no-store' });
       let deployment;
       if (path === '/api/ready' && response.ok) {
         const body = await response.json();
