@@ -17,6 +17,7 @@ const allowedExactOrigins = new Set([
   'https://fairwayd-git-stage-bedachristener-cmyks-projects.vercel.app',
   'https://www.fairwayd.golf',
   'https://fairwayd.golf',
+  'https://fairwayd-prod.vercel.app',
 ]);
 
 export function isCorsOriginAllowed(origin: string | undefined) {
