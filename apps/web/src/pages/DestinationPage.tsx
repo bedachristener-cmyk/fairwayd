@@ -23,6 +23,7 @@ import {
   MapPin,
   Plane,
   ThumbsUp,
+  MoreHorizontal,
   UtensilsCrossed,
   Users,
   type LucideIcon,
@@ -600,6 +601,9 @@ export default function DestinationPage() {
   const [tipsLoading, setTipsLoading] = useState(false);
   const [tipText, setTipText] = useState("");
   const [tipSubmitting, setTipSubmitting] = useState(false);
+  const [tipEditingId, setTipEditingId] = useState<string | null>(null);
+  const [tipEditText, setTipEditText] = useState("");
+  const [tipBusyId, setTipBusyId] = useState<string | null>(null);
   const [tipError, setTipError] = useState<string | null>(null);
   const [helpfulBusyTipId, setHelpfulBusyTipId] = useState<string | null>(null);
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(
@@ -825,6 +829,46 @@ export default function DestinationPage() {
     user?.id,
     user?.name,
   ]);
+
+  const handleSaveTip = async (tipId: string) => {
+    if (!slug || !token || tipBusyId || !tipEditText.trim()) return;
+    setTipBusyId(tipId);
+    setTipError(null);
+    try {
+      const res = await fetch(`${API_BASE}/destinations/${slug}/tips/${tipId}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ text: tipEditText.trim() }),
+      });
+      if (!res.ok) throw new Error(`Update failed: ${res.status}`);
+      setTipEditingId(null);
+      await loadDestinationTips();
+    } catch (err) {
+      console.error(err);
+      setTipError("Could not update this tip.");
+    } finally {
+      setTipBusyId(null);
+    }
+  };
+
+  const handleDeleteTip = async (tipId: string) => {
+    if (!slug || !token || tipBusyId || !window.confirm("Delete this community tip?")) return;
+    setTipBusyId(tipId);
+    setTipError(null);
+    try {
+      const res = await fetch(`${API_BASE}/destinations/${slug}/tips/${tipId}`, {
+        method: "DELETE", headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
+      if (tipEditingId === tipId) setTipEditingId(null);
+      await loadDestinationTips();
+    } catch (err) {
+      console.error(err);
+      setTipError("Could not delete this tip.");
+    } finally {
+      setTipBusyId(null);
+    }
+  };
 
   const handleToggleTipHelpful = useCallback(
     async (tip: DestinationTip) => {
@@ -2739,6 +2783,28 @@ export default function DestinationPage() {
                           </div>
                         </div>
 
+                        {token && (tip.user?.id === user?.id || user?.isAdmin) ? (
+                          <details style={{ justifySelf: "end", position: "relative" }}>
+                            <summary aria-label="Tip actions" style={{ cursor: "pointer", listStyle: "none", display: "flex" }}>
+                              <MoreHorizontal size={20} />
+                            </summary>
+                            <div style={{ display: "flex", gap: 8, paddingTop: 8 }}>
+                              {tip.user?.id === user?.id ? (
+                                <button type="button" onClick={() => { setTipEditingId(tip.id); setTipEditText(tip.text); }}>Edit</button>
+                              ) : null}
+                              <button type="button" disabled={tipBusyId === tip.id} onClick={() => handleDeleteTip(tip.id)}>Delete</button>
+                            </div>
+                          </details>
+                        ) : null}
+                        {tipEditingId === tip.id ? (
+                          <div style={{ display: "grid", gap: 8 }}>
+                            <textarea value={tipEditText} maxLength={500} onChange={(e) => setTipEditText(e.target.value)} rows={3} style={{ width: "100%", boxSizing: "border-box" }} />
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <button type="button" disabled={tipBusyId === tip.id || !tipEditText.trim()} onClick={() => handleSaveTip(tip.id)}>Save</button>
+                              <button type="button" onClick={() => setTipEditingId(null)}>Cancel</button>
+                            </div>
+                          </div>
+                        ) : (
                         <div
                           style={{
                             color:
@@ -2751,6 +2817,7 @@ export default function DestinationPage() {
                         >
                           {tip.text}
                         </div>
+                        )}
 
                         <div
                           style={{
