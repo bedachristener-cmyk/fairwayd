@@ -6,23 +6,24 @@ describe('Destination community tip permissions', () => {
   const updateMany = jest.fn();
   const deleteMany = jest.fn();
   const findUser = jest.fn();
-  const checkText = jest.fn();
+  const assertText = jest.fn();
   const prisma = {
     destinationTip: { findFirst: findTip, updateMany, deleteMany },
     user: { findUnique: findUser },
   } as any;
-  const moderation = { checkText } as any;
+  const moderation = { assertText } as any;
   let service: DestinationsService;
 
   beforeEach(() => {
     jest.clearAllMocks();
     delete process.env.FAIRWAYD_ADMIN_HANDLES;
     delete process.env.FAIRWAYD_ADMIN_USER_IDS;
-    service = new DestinationsService(prisma);
+    service = new DestinationsService(prisma, moderation);
     findTip.mockResolvedValue({ id: 'tip-1', userId: 'author-1' });
     updateMany.mockResolvedValue({ count: 1 });
     deleteMany.mockResolvedValue({ count: 1 });
     findUser.mockResolvedValue({ id: 'viewer-1', handle: 'viewer', adminRole: null });
+    assertText.mockResolvedValue(undefined);
   });
 
   it('lets the author update their tip', async () => {
@@ -52,6 +53,19 @@ describe('Destination community tip permissions', () => {
     findTip.mockResolvedValue(null);
     await expect(service.updateTip('thailand', 'tip-1', 'author-1', 'Changed'))
       .rejects.toThrow(NotFoundException);
+  });
+
+  it('checks edited text with destination moderation before saving', async () => {
+    await service.updateTip('thailand', 'tip-1', 'author-1', ' Updated ');
+    expect(assertText).toHaveBeenCalledWith('author-1', 'DESTINATION_TEXT', 'Updated');
+    expect(assertText.mock.invocationCallOrder[0]).toBeLessThan(updateMany.mock.invocationCallOrder[0]);
+  });
+
+  it('does not save an edit rejected by moderation', async () => {
+    assertText.mockRejectedValue(new ForbiddenException('Content rejected'));
+    await expect(service.updateTip('thailand', 'tip-1', 'author-1', 'Rejected text'))
+      .rejects.toThrow(ForbiddenException);
+    expect(updateMany).not.toHaveBeenCalled();
   });
 
   it('lets the author delete their tip', async () => {
