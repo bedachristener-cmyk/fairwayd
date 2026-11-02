@@ -602,6 +602,7 @@ export default function DestinationPage() {
   const [tipText, setTipText] = useState("");
   const [tipSubmitting, setTipSubmitting] = useState(false);
   const [tipEditingId, setTipEditingId] = useState<string | null>(null);
+  const [tipViewerIsAdmin, setTipViewerIsAdmin] = useState(false);
   const [tipEditText, setTipEditText] = useState("");
   const [tipBusyId, setTipBusyId] = useState<string | null>(null);
   const [tipError, setTipError] = useState<string | null>(null);
@@ -829,6 +830,18 @@ export default function DestinationPage() {
     user?.id,
     user?.name,
   ]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setTipViewerIsAdmin(false);
+    if (!token) return;
+    fetch(`${API_BASE}/users/me/admin-status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).then((res) => res.ok ? res.json() : null)
+      .then((data) => { if (!cancelled) setTipViewerIsAdmin(data?.isAdmin === true); })
+      .catch(() => { if (!cancelled) setTipViewerIsAdmin(false); });
+    return () => { cancelled = true; };
+  }, [token]);
 
   const handleSaveTip = async (tipId: string) => {
     if (!slug || !token || tipBusyId || !tipEditText.trim()) return;
@@ -2783,7 +2796,7 @@ export default function DestinationPage() {
                           </div>
                         </div>
 
-                        {token && (tip.user?.id === user?.id || user?.isAdmin) ? (
+                        {token && (tip.user?.id === user?.id || tipViewerIsAdmin) ? (
                           <details style={{ justifySelf: "end", position: "relative" }}>
                             <summary aria-label="Tip actions" style={{ cursor: "pointer", listStyle: "none", display: "flex" }}>
                               <MoreHorizontal size={20} />
