@@ -5,6 +5,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Req,
   UnauthorizedException,
@@ -57,6 +58,24 @@ export class DestinationsController {
     }
 
     return this.destinationsService.createTip(slug, userId, body?.text ?? '');
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @Patch(':slug/tips/:tipId')
+  updateTip(@Param('slug') slug: string, @Param('tipId') tipId: string, @Req() req: any, @Body() body: { text?: string }) {
+    const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
+    if (!userId) throw new UnauthorizedException('Unauthorized');
+    return this.destinationsService.updateTip(slug, tipId, userId, body?.text);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @Delete(':slug/tips/:tipId')
+  deleteTip(@Param('slug') slug: string, @Param('tipId') tipId: string, @Req() req: any) {
+    const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
+    if (!userId) throw new UnauthorizedException('Unauthorized');
+    return this.destinationsService.deleteTip(slug, tipId, userId);
   }
 
   @UseGuards(AuthGuard('jwt'))
