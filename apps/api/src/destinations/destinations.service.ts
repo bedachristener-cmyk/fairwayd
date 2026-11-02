@@ -1,4 +1,5 @@
-import { Optional } from '@nestjs/common';
+import { Optional, ForbiddenException } from '@nestjs/common';
+import { isLegacyAdmin } from '../auth/admin.guard';
 import { ModerationService, requireTextCheck } from '../moderation/moderation.service';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
@@ -374,6 +375,49 @@ export class DestinationsService {
       helpfulCount: tip._count.helpfulMarks,
       viewerHasMarkedHelpful: false,
     };
+  }
+
+  async updateTip(slug: string, tipId: string, userId: string, text?: string) {
+    const uid = userId?.trim();
+    if (!uid) throw new BadRequestException('Missing userId');
+    if (typeof text !== 'string' || !text.trim()) throw new BadRequestException('Missing text');
+    const cleanText = text.trim();
+    if (cleanText.length > 500) throw new BadRequestException('Tip text must be 500 characters or less');
+    const tip = await this.prisma.destinationTip.findFirst({
+      where: { id: tipId, destination: { slug, isActive: true } },
+      select: { id: true, userId: true },
+    });
+    if (!tip) throw new NotFoundException('Destination tip not found');
+    if (tip.userId !== uid) throw new ForbiddenException('Only the author may edit this tip');
+    await requireTextCheck(this.moderation, uid, 'DESTINATION_TEXT', cleanText);
+    const changed = await this.prisma.destinationTip.updateMany({
+      where: { id: tip.id, userId: uid },
+      data: { text: cleanText },
+    });
+    if (!changed.count) throw new NotFoundException('Destination tip not found');
+    return { ok: true, id: tip.id, text: cleanText };
+  }
+
+  async deleteTip(slug: string, tipId: string, userId: string) {
+    const uid = userId?.trim();
+    if (!uid) throw new BadRequestException('Missing userId');
+    const tip = await this.prisma.destinationTip.findFirst({
+      where: { id: tipId, destination: { slug, isActive: true } },
+      select: { id: true, userId: true },
+    });
+    if (!tip) throw new NotFoundException('Destination tip not found');
+    if (tip.userId !== uid) {
+      const admin = await this.prisma.user.findUnique({
+        where: { id: uid }, select: { id: true, handle: true, adminRole: true },
+      });
+      if (!admin || !(admin.adminRole === 'ADMIN' ||
+        (admin.adminRole === null && isLegacyAdmin(admin)))) {
+        throw new ForbiddenException('Only the author or an admin may delete this tip');
+      }
+    }
+    const removed = await this.prisma.destinationTip.deleteMany({ where: { id: tip.id } });
+    if (!removed.count) throw new NotFoundException('Destination tip not found');
+    return { ok: true };
   }
 
   private async findTipForDestination(slug: string, tipId: string) {
