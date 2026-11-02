@@ -18,41 +18,60 @@ function contextForUser(user: unknown) {
 }
 
 describe('AdminGuard', () => {
+  const findUnique = jest.fn();
+  const prisma = { user: { findUnique } } as any;
+
   beforeEach(() => {
     resetEnv();
+    findUnique.mockReset();
   });
 
   afterEach(() => {
     resetEnv();
   });
 
-  it('denies authenticated normal users by default', () => {
-    const guard = new AdminGuard();
-
-    expect(() =>
-      guard.canActivate(
-        contextForUser({ userId: 'user-1', handle: 'normal' }),
-      ),
-    ).toThrow(ForbiddenException);
+  it('denies authenticated normal users by default', async () => {
+    findUnique.mockResolvedValue({ id: 'user-1', handle: 'normal', adminRole: null });
+    const guard = new AdminGuard(prisma);
+    await expect(guard.canActivate(contextForUser({ userId: 'user-1' })))
+      .rejects.toThrow(ForbiddenException);
   });
 
-  it('allows users whose id is configured as admin', () => {
+  it('allows users with the ADMIN database role', async () => {
+    findUnique.mockResolvedValue({ id: 'admin-1', handle: 'normal', adminRole: 'ADMIN' });
+    const guard = new AdminGuard(prisma);
+    await expect(guard.canActivate(contextForUser({ userId: 'admin-1' })))
+      .resolves.toBe(true);
+  });
+
+  it('allows legacy admin ids when the database role is null', async () => {
     process.env.FAIRWAYD_ADMIN_USER_IDS = 'admin-user-1';
-    const guard = new AdminGuard();
-
-    expect(
-      guard.canActivate(
-        contextForUser({ userId: 'admin-user-1', handle: 'normal' }),
-      ),
-    ).toBe(true);
+    findUnique.mockResolvedValue({ id: 'admin-user-1', handle: 'normal', adminRole: null });
+    const guard = new AdminGuard(prisma);
+    await expect(guard.canActivate(contextForUser({ userId: 'admin-user-1' })))
+      .resolves.toBe(true);
   });
 
-  it('allows users whose handle is configured as admin', () => {
+  it('allows legacy admin handles when the database role is null', async () => {
     process.env.FAIRWAYD_ADMIN_HANDLES = 'beda';
-    const guard = new AdminGuard();
+    findUnique.mockResolvedValue({ id: 'user-1', handle: 'Beda', adminRole: null });
+    const guard = new AdminGuard(prisma);
+    await expect(guard.canActivate(contextForUser({ userId: 'user-1' })))
+      .resolves.toBe(true);
+  });
 
-    expect(
-      guard.canActivate(contextForUser({ userId: 'user-1', handle: 'Beda' })),
-    ).toBe(true);
+  it('does not let a legacy allowlist override an explicit non-admin role', async () => {
+    process.env.FAIRWAYD_ADMIN_HANDLES = 'beda';
+    findUnique.mockResolvedValue({ id: 'user-1', handle: 'beda', adminRole: 'USER' });
+    const guard = new AdminGuard(prisma);
+    await expect(guard.canActivate(contextForUser({ userId: 'user-1' })))
+      .rejects.toThrow(ForbiddenException);
+  });
+
+  it('denies unknown users', async () => {
+    findUnique.mockResolvedValue(null);
+    const guard = new AdminGuard(prisma);
+    await expect(guard.canActivate(contextForUser({ userId: 'missing' })))
+      .rejects.toThrow(ForbiddenException);
   });
 });
