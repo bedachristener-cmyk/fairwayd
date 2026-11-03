@@ -1750,7 +1750,7 @@ export default function AddTripItemPage() {
             <input
               ref={documentInputRef}
               type="file"
-              accept="application/pdf,image/jpeg,image/png,image/webp"
+              accept="application/pdf,image/jpeg,image/png,image/webp,.xlsx,.xls"
               onChange={(event) => {
                 setDocumentUploadFile(event.target.files?.[0] ?? null);
                 setDocumentUploadState("idle");
