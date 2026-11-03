@@ -59,6 +59,9 @@ function safeDocumentExt(original: string, mimeType?: string) {
     return ext;
   }
 
+  if (ext === '.xlsx' && mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') return ext;
+  if (ext === '.xls' && mimeType === 'application/vnd.ms-excel') return ext;
+
   if (mimeType === 'application/pdf') return '.pdf';
   if (mimeType === 'image/jpeg') return '.jpg';
   if (mimeType === 'image/png') return '.png';
@@ -134,7 +137,7 @@ export class TripsController {
         if (!ext) {
           cb(
             new BadRequestException(
-              'Only PDF and image uploads are allowed',
+              'Only PDF, image, and Excel uploads are allowed',
             ) as any,
             false,
           );
@@ -160,7 +163,14 @@ export class TripsController {
     if (!file) throw new BadRequestException("Missing file field 'file'");
     await this.tripsService.assertCanManageDocuments(tripId, req.user.id);
 
-    const ext = safeDocumentExt(file.originalname, file.mimetype) || '.bin';
+    const ext = safeDocumentExt(file.originalname, file.mimetype);
+    if (!ext) throw new BadRequestException('Unsupported document type');
+    if (ext === '.xlsx' && !file.buffer.subarray(0, 4).equals(Buffer.from([0x50, 0x4b, 0x03, 0x04]))) {
+      throw new BadRequestException('Invalid Excel XLSX file');
+    }
+    if (ext === '.xls' && !file.buffer.subarray(0, 8).equals(Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]))) {
+      throw new BadRequestException('Invalid Excel XLS file');
+    }
     const key = `private-trip-documents/trips/${tripId}/documents/${randomBytes(24).toString('base64url')}${ext}`;
     const fileUrl = await uploadPrivateToR2(
       key,
@@ -217,7 +227,7 @@ export class TripsController {
     response.setHeader('Content-Length', String(contents.length));
     response.setHeader(
       'Content-Disposition',
-      `inline; filename="${safeFileName}"`,
+      `${/\.(xlsx|xls)$/i.test(safeFileName) ? "attachment" : "inline"}; filename="${safeFileName}"`,
     );
     response.setHeader('Cache-Control', 'private, no-store');
     response.send(contents);

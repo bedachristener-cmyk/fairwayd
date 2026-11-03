@@ -19,6 +19,30 @@ describe('TripsController document downloads', () => {
     jest.clearAllMocks();
   });
 
+  it('uploads a valid XLSX as a private trip document', async () => {
+    const tripsService = {
+      assertCanManageDocuments: jest.fn().mockResolvedValue(undefined),
+      createDocument: jest.fn().mockResolvedValue({ id: 'doc-1' }),
+    };
+    const controller = new TripsController(tripsService as any);
+    (uploadPrivateToR2 as jest.Mock).mockResolvedValue('r2://private-trip-documents/trips/trip-1/documents/sheet.xlsx');
+    const result = await controller.createDocument('trip-1', { user: { id: 'user-1' } }, {},
+      { originalname: 'budget.xlsx', mimetype: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        buffer: Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00]), size: 5 } as Express.Multer.File);
+    expect(result).toEqual({ id: 'doc-1' });
+    expect(tripsService.createDocument).toHaveBeenCalledWith('trip-1', 'user-1',
+      expect.objectContaining({ fileName: 'budget.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+  });
+
+  it('rejects invalid XLSX content before writing to storage', async () => {
+    const tripsService = { assertCanManageDocuments: jest.fn().mockResolvedValue(undefined) };
+    const controller = new TripsController(tripsService as any);
+    await expect(controller.createDocument('trip-1', { user: { id: 'user-1' } }, {},
+      { originalname: 'fake.xlsx', mimetype: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        buffer: Buffer.from('not an xlsx'), size: 11 } as Express.Multer.File)).rejects.toThrow('Invalid Excel XLSX file');
+    expect(uploadPrivateToR2).not.toHaveBeenCalled();
+  });
+
   it('cleans up the private object when document creation fails', async () => {
     const createError = new Error('Database write failed');
     const fileUrl =
