@@ -10324,7 +10324,7 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
                               </div>
                               <input
                                 type="file"
-                                accept="application/pdf,image/jpeg,image/png,image/webp"
+                                accept="application/pdf,image/jpeg,image/png,image/webp,.xlsx,.xls"
                                 onChange={(event) => {
                                   setItemDocumentUploadFile(event.target.files?.[0] ?? null);
                                   setItemDocumentUploadState("idle");
@@ -11115,7 +11115,7 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
                 <input
                   ref={documentInputRef}
                   type="file"
-                  accept="application/pdf,image/jpeg,image/png,image/webp"
+                  accept="application/pdf,image/jpeg,image/png,image/webp,.xlsx,.xls"
                   onChange={(event) =>
                     setDocumentDraft((current) => ({
                       ...current,
