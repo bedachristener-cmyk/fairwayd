@@ -221,6 +221,7 @@ type TripEditDraft = {
 
 type EditDraft = {
   type: string;
+  departureFromHotelTime: string;
   title: string;
   date: string;
   endDate: string;
@@ -4759,6 +4760,7 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
       endDate: endDateInputValue(item),
       startTime: item.startTime || "",
       endTime: item.endTime || "",
+      departureFromHotelTime: item.departureFromHotelTime || "",
       provider: item.provider || "",
       notes: item.notes || "",
       locationName: item.locationName || "",
@@ -5889,6 +5891,7 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
             endDate: isGolfEdit ? undefined : optionalText(normalizedEndDate),
             startTime: editDraft.type === "hotel" ? "" : optionalText(editDraft.startTime),
             endTime: editDraft.type === "hotel" ? "" : optionalText(editDraft.endTime),
+            departureFromHotelTime: isGolfEdit ? editDraft.departureFromHotelTime.trim() : undefined,
             provider: optionalText(editDraft.provider),
             bookingRef: isFlightEdit ? optionalText(editDraft.bookingRef) : undefined,
             notes: optionalText(editDraft.notes),
@@ -10154,6 +10157,30 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
                                   />
                                 </label>
                               </div>
+                            ) : null}
+                            {editIsGolf ? (
+                              <label
+                                style={{
+                                  display: "grid",
+                                  gap: 6,
+                                  color: "var(--text)",
+                                  fontSize: 12,
+                                  fontWeight: 900,
+                                }}
+                              >
+                                Pickup time / departure from hotel
+                                <input
+                                  type="time"
+                                  value={editDraft.departureFromHotelTime}
+                                  onChange={(e) =>
+                                    setEditDraft({
+                                      ...editDraft,
+                                      departureFromHotelTime: e.target.value,
+                                    })
+                                  }
+                                  style={editFieldStyle}
+                                />
+                              </label>
                             ) : null}
                             {editIsFlight || editIsHotel ? (
                               <div
