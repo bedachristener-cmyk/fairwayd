@@ -204,6 +204,8 @@ export default function UserSearchPage() {
         padding: "12px 14px calc(96px + env(safe-area-inset-bottom, 0px))",
         display: "grid",
         gap: 14,
+        alignContent: "start",
+        gridAutoRows: "max-content",
         width: "100%",
         maxWidth: "100%",
         boxSizing: "border-box",
@@ -214,6 +216,7 @@ export default function UserSearchPage() {
         style={{
           position: "relative",
           overflow: "hidden",
+          alignSelf: "start",
           borderRadius: 26,
           border: "1px solid color-mix(in srgb, var(--border) 46%, transparent)",
           background:
