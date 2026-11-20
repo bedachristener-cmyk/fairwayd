@@ -4247,6 +4247,21 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
   const [deleteTripTitleInput, setDeleteTripTitleInput] = useState("");
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [detailsItemId, setDetailsItemId] = useState<string | null>(null);
+  const detailsDialogRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!detailsItemId) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const frame = requestAnimationFrame(() => detailsDialogRef.current?.focus());
+    return () => {
+      cancelAnimationFrame(frame);
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
+    };
+  }, [detailsItemId]);
+
+
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
   const [budgetEditingItemId, setBudgetEditingItemId] = useState<string | null>(null);
   const [budgetDrafts, setBudgetDrafts] = useState<BudgetCostDraft[]>([]);
@@ -12481,6 +12496,23 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
 
       {detailsItem ? createPortal(
         <div
+          ref={detailsDialogRef}
+          tabIndex={-1}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") { event.stopPropagation(); setDetailsItemId(null); return; }
+            if (event.key !== "Tab") return;
+            const focusable = Array.from(detailsDialogRef.current?.querySelectorAll<HTMLElement>(
+              'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            ) ?? []).filter((element) => element.getClientRects().length > 0);
+            if (!focusable.length) { event.preventDefault(); return; }
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (event.shiftKey && (document.activeElement === first || document.activeElement === detailsDialogRef.current)) {
+              event.preventDefault(); last.focus();
+            } else if (!event.shiftKey && (document.activeElement === last || document.activeElement === detailsDialogRef.current)) {
+              event.preventDefault(); first.focus();
+            }
+          }}
           role="dialog"
           aria-modal="true"
           aria-labelledby="trip-item-details-title"
