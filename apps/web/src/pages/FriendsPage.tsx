@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, UserPlus, Users } from "lucide-react";
 import { API_BASE } from "../api/base";
@@ -122,6 +122,11 @@ export default function FriendsPage() {
   const auth = useAuth() as any;
 
   const [tab, setTab] = useState<FriendsTab>("following");
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const selectTab = (next: FriendsTab) => {
+    setTab(next);
+    requestAnimationFrame(() => tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  };
   const [following, setFollowing] = useState<UserItem[]>([]);
   const [followers, setFollowers] = useState<UserItem[]>([]);
   const [sentRequestIds, setSentRequestIds] = useState<Set<string>>(new Set());
@@ -303,9 +308,11 @@ export default function FriendsPage() {
 
       <div
         className="fw-connect-tabs"
+        ref={tabsRef}
         style={{
           display: "flex",
           gap: 6,
+          scrollMarginTop: 90,
           background: "var(--bg)",
           padding: 4,
           borderRadius: 12,
@@ -315,7 +322,7 @@ export default function FriendsPage() {
         <button
           type="button"
           aria-pressed={tab === "following"}
-          onClick={() => setTab("following")}
+          onClick={() => selectTab("following")}
           style={{
             flex: 1,
             height: 36,
@@ -333,7 +340,7 @@ export default function FriendsPage() {
         <button
           type="button"
           aria-pressed={tab === "followers"}
-          onClick={() => setTab("followers")}
+          onClick={() => selectTab("followers")}
           style={{
             flex: 1,
             height: 36,
