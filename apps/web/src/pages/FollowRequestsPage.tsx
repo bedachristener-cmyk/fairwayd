@@ -231,7 +231,7 @@ export default function FollowRequestsPage() {
         width: "100%",
         maxWidth: "100%",
         boxSizing: "border-box",
-        padding: "12px 14px 20px",
+        padding: "12px 14px calc(120px + env(safe-area-inset-bottom, 0px))",
         display: "grid",
         gap: 12,
         overflowX: "hidden",
