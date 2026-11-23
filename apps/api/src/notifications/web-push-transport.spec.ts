@@ -1,7 +1,7 @@
 import {
   createECDH, createHmac, createVerify, randomBytes,
 } from 'node:crypto';
-import { createVapidToken, encryptPushPayload } from './web-push-transport';
+import { createVapidToken, encryptPushPayload, validatePushEndpoint } from './web-push-transport';
 
 function extract(salt: Buffer, key: Buffer) {
   return createHmac('sha256', salt).update(key).digest();
@@ -12,6 +12,15 @@ function expand(prk: Buffer, info: Buffer, size: number) {
 }
 
 describe('Web Push crypto', () => {
+  it('rejects unsafe endpoint URLs', () => {
+    expect(validatePushEndpoint('https://fcm.googleapis.com/fcm/send/abc')).toBe(true);
+    expect(validatePushEndpoint('https://web.push.apple.com/q/abc')).toBe(true);
+    for (const url of ['http://fcm.googleapis.com/a', 'https://127.0.0.1/a',
+      'https://localhost/a', 'https://server.internal/a',
+      'https://user:password@push.example.com/a', 'https://[::1]/a']) {
+      expect(validatePushEndpoint(url)).toBe(false);
+    }
+  });
   it('creates a verifiable VAPID ES256 token with the endpoint origin as audience', () => {
     const vapid = createECDH('prime256v1');
     const pub = vapid.generateKeys();
