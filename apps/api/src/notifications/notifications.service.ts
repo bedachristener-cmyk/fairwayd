@@ -100,7 +100,7 @@ export class NotificationsService {
     const p256dh = keyValues.p256dh;
     const auth = keyValues.auth;
     if (typeof endpoint !== 'string' || endpoint.length > 2048 ||
-      !endpoint.startsWith('https://') ||
+      !validatePushEndpoint(endpoint) ||
       typeof p256dh !== 'string' || !/^[A-Za-z0-9_-]{60,150}={0,2}$/.test(p256dh) ||
       typeof auth !== 'string' || !/^[A-Za-z0-9_-]{12,50}={0,2}$/.test(auth)) {
       throw new BadRequestException('Invalid push subscription fields');
