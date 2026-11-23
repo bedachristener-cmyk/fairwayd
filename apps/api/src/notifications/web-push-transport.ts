@@ -1,3 +1,4 @@
+import { isIP } from 'node:net';
 import {
   createECDH,
   createHmac,
@@ -115,13 +116,25 @@ export function createVapidToken(
   return signingInput + '.' + b64url(signature);
 }
 
+export function validatePushEndpoint(endpoint: string): boolean {
+  try {
+    const url = new URL(endpoint);
+    const host = url.hostname.toLowerCase().replace(/\\.$/, '');
+    return url.protocol === 'https:' && !url.username && !url.password &&
+      !isIP(host) && host !== 'localhost' && !host.endsWith('.localhost') &&
+      !host.endsWith('.local') && !host.endsWith('.internal') &&
+      host.includes('.') && url.port === '';
+  } catch {
+    return false;
+  }
+}
+
 export async function sendWebPush(
   device: PushDevice,
   payload: string,
   config: { publicKey: string; privateKey: string; subject: string },
 ): Promise<void> {
-  const url = new URL(device.endpoint);
-  if (url.protocol !== 'https:' || url.username || url.password) {
+  if (!validatePushEndpoint(device.endpoint)) {
     throw new Error('Invalid push endpoint');
   }
   const encrypted = encryptPushPayload(device, payload);
