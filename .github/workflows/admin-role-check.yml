@@ -65,6 +65,11 @@ jobs:
           if ! grep -q '^model PendingChange {' /tmp/before-pending.prisma; then
             npx prisma db execute --file prisma/migrations/20261030143000_pending_content_changes/migration.sql
           fi
+          # This PR adds a User column used by Prisma in all integration tests.
+          # The CI database is isolated and disposable; never use a live URL.
+          if ! grep -q 'pushTripNotifications' /tmp/before-pending.prisma; then
+            npx prisma db execute --file prisma/migrations/20261123010000_trip_push_subscriptions/migration.sql
+          fi
           npm test -- --runInBand pending-changes.integration.spec.ts entry-guides.spec.ts pending-posts.integration.spec.ts
   web-build:
     runs-on: ubuntu-latest
