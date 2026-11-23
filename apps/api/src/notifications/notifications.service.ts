@@ -274,7 +274,8 @@ export class NotificationsService {
 
     // Push delivery is an optional side effect; it must never block or fail
     // the original notification or the trip mutation.
-    if (type.startsWith('trip_item_') && link?.startsWith('/trips/')) {
+    if ((type.startsWith('trip_item_') || type.startsWith('trip_document_')) &&
+      link?.startsWith('/trips/')) {
       const tripId = link.slice('/trips/'.length).split('/')[0];
       if (tripId) {
         void this.tripPushDelivery.deliverToUser(
