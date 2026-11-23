@@ -1,16 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
-// Optional at runtime until explicitly enabled. The dependency is installed
-// as part of the push feature release, not loaded in the disabled path.
-type WebPushClient = {
-  setVapidDetails(subject: string, publicKey: string, privateKey: string): void;
-  sendNotification(
-    subscription: { endpoint: string; keys: { p256dh: string; auth: string } },
-    payload: string,
-    options?: { TTL?: number },
-  ): Promise<unknown>;
-};
+import { sendWebPush } from './web-push-transport';
 
 @Injectable()
 export class TripPushDeliveryService {
@@ -37,11 +28,6 @@ export class TripPushDeliveryService {
     });
     if (!subscriptions.length) return;
 
-    // Use a lazy require so a disabled rollout cannot affect normal API startup.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const webPush = require('web-push') as WebPushClient;
-    webPush.setVapidDetails(subject, publicKey, privateKey);
-
     const payload = JSON.stringify({
       title,
       path: `/trips/${encodeURIComponent(tripId)}`,
@@ -49,10 +35,11 @@ export class TripPushDeliveryService {
     });
     await Promise.all(subscriptions.map(async subscription => {
       try {
-        await webPush.sendNotification({
+        await sendWebPush({
           endpoint: subscription.endpoint,
-          keys: { p256dh: subscription.p256dh, auth: subscription.auth },
-        }, payload, { TTL: 300 });
+          p256dh: subscription.p256dh,
+          auth: subscription.auth,
+        }, payload, { publicKey, privateKey, subject });
       } catch (error) {
         const status = (error as { statusCode?: number })?.statusCode;
         if (status === 404 || status === 410) {
