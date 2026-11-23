@@ -1432,12 +1432,59 @@ export class TripsService {
     return this.filterTripItemDocumentsForUser(item, userId, membership.id);
   }
 
+  private async notifyDeletedTripItem(
+    tripId: string,
+    actorUserId: string,
+    recipientUserIds: readonly string[],
+  ) {
+    if (process.env.TRIP_PUSH_EVENTS_ENABLED !== 'true') return;
+    try {
+      for (const recipientUserId of recipientUserIds) {
+        await this.notifications.createNotification({
+          userId: recipientUserId,
+          actorUserId,
+          type: 'trip_item_deleted',
+          title: 'Trip item removed',
+          body: 'A trip you belong to has changed.',
+          link: `/trips/${encodeURIComponent(tripId)}`,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to create trip deletion notifications', error);
+    }
+  }
+
   async deleteItem(tripId: string, itemId: string, userId: string) {
     const item = await this.findManageableTripItemOrThrow(
       tripId,
       itemId,
       userId,
     );
+
+    // Snapshot authorized recipients before deleting visibility selections.
+    // Never include the deleted item's title or content in notifications.
+    let deletionRecipients: string[] = [];
+    if (process.env.TRIP_PUSH_EVENTS_ENABLED === 'true') {
+      const [members, selected] = await Promise.all([
+        this.prisma.tripMember.findMany({
+          where: { tripId },
+          select: { id: true, userId: true, role: true, isGuest: true },
+        }),
+        this.prisma.tripItemVisibilityMember.findMany({
+          where: { tripItemId: itemId },
+          select: { tripMemberId: true },
+        }),
+      ]);
+      deletionRecipients = eligibleItemNotificationUserIds(
+        members,
+        {
+          visibility: item.visibility,
+          createdByUserId: item.createdByUserId,
+          visibleToMemberIds: selected.map(member => member.tripMemberId),
+        },
+        userId,
+      );
+    }
 
     await this.prisma.tripItem.delete({
       where: {
@@ -1455,6 +1502,7 @@ export class TripsService {
       );
     }
 
+    void this.notifyDeletedTripItem(tripId, userId, deletionRecipients);
     return { ok: true };
   }
 
