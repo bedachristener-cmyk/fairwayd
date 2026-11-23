@@ -8,6 +8,7 @@ import React, {
 import { App } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { API_BASE } from "../api/base";
+import { detachTripPushDevice } from "../api/tripPush";
 
 type Me = {
   id: string;
@@ -58,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState<boolean>(!!token);
 
   const logout = () => {
+    void detachTripPushDevice(token).catch(() => undefined);
     setToken(null);
     setUser(null);
     setLoading(false);
@@ -103,6 +105,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = (newToken: string, rememberMe = true) => {
     const t = (newToken ?? "").trim();
     if (!t) return;
+    if (token && token !== t) {
+      void detachTripPushDevice(token).catch(() => undefined);
+    }
 
     // state zuerst
     setToken(t);
