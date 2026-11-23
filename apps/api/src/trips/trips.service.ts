@@ -1732,7 +1732,7 @@ export class TripsService {
           const newValue = format(after[field]);
           if (oldValue !== newValue) changes.push(`${label}: ${oldValue} → ${newValue}`);
         }
-        if (JSON.stringify(before.costs) !== JSON.stringify(after.costs)) {
+        if (JSON.stringify((before.costs ?? []).map((x: any) => ({ amount: x.amount, currency: x.currency, costType: x.costType, tripMemberId: x.tripMemberId, type: x.type })).sort((a: any, b: any) => JSON.stringify(a).localeCompare(JSON.stringify(b)))) !== JSON.stringify((after.costs ?? []).map((x: any) => ({ amount: x.amount, currency: x.currency, costType: x.costType, tripMemberId: x.tripMemberId, type: x.type })).sort((a: any, b: any) => JSON.stringify(a).localeCompare(JSON.stringify(b))))) {
           changes.push('Cost allocation updated');
         }
       }
@@ -1747,7 +1747,7 @@ export class TripsService {
           type: action === 'created' ? 'trip_item_created' : 'trip_item_updated',
           title,
           body,
-          link: `/trips/${encodeURIComponent(tripId)}`,
+          link: `/trips/${encodeURIComponent(tripId)}#item=${encodeURIComponent(item.id)}`,
         });
       }
     } catch (error) {
