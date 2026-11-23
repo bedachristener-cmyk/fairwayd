@@ -1,5 +1,5 @@
 /* Fairwayd push events loaded by the existing Workbox-generated service worker.
- * Payloads intentionally contain no private trip item details.
+ * Notification details are only included for authorized recipients by the API.
  */
 /* global self */
 self.addEventListener('push', function (event) {
@@ -16,7 +16,8 @@ self.addEventListener('push', function (event) {
   var path = /^\/trips(?:\/|$)/.test(rawPath) && !rawPath.startsWith('//')
     ? rawPath : '/trips';
   event.waitUntil(self.registration.showNotification(title, {
-    body: 'There is an update to one of your trips.',
+    body: typeof payload.body === 'string' && payload.body.length > 0
+      ? payload.body.slice(0, 300) : 'There is an update to one of your trips.',
     icon: '/pwa-192x192.png',
     badge: '/pwa-192x192.png',
     tag: typeof payload.tag === 'string' ? payload.tag.slice(0, 100) : 'fairwayd-trip',
