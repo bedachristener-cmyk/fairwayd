@@ -89,7 +89,9 @@ export function createVapidToken(
   nowSeconds = Math.floor(Date.now() / 1000),
 ): string {
   const audience = new URL(endpoint).origin;
-  if (!/^(?:mailto:[^\\s@]+@[^\\s@]+|https:\/\/[^\\s]+)$/.test(subject)) {
+  if (subject.trim() !== subject || subject.includes(' ') ||
+      !(subject.startsWith('mailto:') && subject.slice(7).includes('@') ||
+        subject.startsWith('https://'))) {
     throw new Error('VAPID subject must be mailto: or https:');
   }
   const publicBytes = Buffer.from(publicKey, 'base64url');
