@@ -9,7 +9,7 @@ export class TripPushDeliveryService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async deliverToUser(userId: string, tripId: string, title: string): Promise<void> {
+  async deliverToUser(userId: string, tripId: string, title: string, body?: string | null): Promise<void> {
     if (process.env.TRIP_PUSH_DELIVERY_ENABLED !== 'true') return;
     const publicKey = process.env.WEB_PUSH_PUBLIC_KEY;
     const privateKey = process.env.WEB_PUSH_PRIVATE_KEY;
@@ -38,6 +38,7 @@ export class TripPushDeliveryService {
 
     const payload = JSON.stringify({
       title,
+      body: body || 'A trip item was updated.',
       path: `/trips/${encodeURIComponent(tripId)}`,
       tag: `fairwayd-trip-${tripId}`,
     });
