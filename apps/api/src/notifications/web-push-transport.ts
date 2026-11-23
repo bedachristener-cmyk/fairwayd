@@ -143,6 +143,7 @@ export async function sendWebPush(
   );
   const response = await fetch(device.endpoint, {
     method: 'POST',
+    redirect: 'error',
     headers: {
       'Content-Type': 'application/octet-stream',
       'Content-Encoding': 'aes128gcm',
