@@ -21,6 +21,7 @@ import {
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { eligibleItemNotificationUserIds } from './trip-push-recipients';
 import { AddTripMemberDto } from './dto/add-trip-member.dto';
 import { CreateTripItemDto } from './dto/create-trip-item.dto';
 import { CreateTripDto } from './dto/create-trip.dto';
@@ -1241,6 +1242,7 @@ export class TripsService {
       );
     }
 
+    void this.notifyTripItemChange(tripId, userId, item.id, 'created');
     return this.filterTripItemDocumentsForUser(item, userId, membership.id);
   }
 
@@ -1539,6 +1541,58 @@ export class TripsService {
       userId,
       membership.id,
     );
+  }
+
+  /**
+   * Pilot event hook. Disabled unless explicitly enabled by server configuration.
+   * Reuses existing in-app notifications; actual device push delivery is separate.
+   */
+  private async notifyTripItemChange(
+    tripId: string,
+    actorUserId: string,
+    itemId: string,
+    action: 'created' | 'updated',
+  ) {
+    if (process.env.TRIP_PUSH_EVENTS_ENABLED !== 'true') return;
+    try {
+      const [members, item] = await Promise.all([
+        this.prisma.tripMember.findMany({
+          where: { tripId },
+          select: { id: true, userId: true, role: true, isGuest: true },
+        }),
+        this.prisma.tripItem.findFirst({
+          where: { id: itemId, tripId },
+          select: {
+            id: true, title: true, visibility: true, createdByUserId: true,
+            visibilityMembers: { select: { tripMemberId: true } },
+          },
+        }),
+      ]);
+      if (!item) return;
+      const recipients = eligibleItemNotificationUserIds(
+        members,
+        {
+          visibility: item.visibility,
+          createdByUserId: item.createdByUserId,
+          visibleToMemberIds: item.visibilityMembers.map(m => m.tripMemberId),
+        },
+        actorUserId,
+      );
+      for (const recipientUserId of recipients) {
+        await this.notifications.createNotification({
+          userId: recipientUserId,
+          actorUserId,
+          type: action === 'created' ? 'trip_item_created' : 'trip_item_updated',
+          title: action === 'created' ? 'Trip item added' : 'Trip item updated',
+          // Keep the body generic. Access may change before delivery.
+          body: 'A trip you belong to has an item update.',
+          link: `/trips/${encodeURIComponent(tripId)}`,
+        });
+      }
+    } catch (error) {
+      // A notification failure must never roll back a successful trip mutation.
+      console.error('Failed to create trip item notifications', error);
+    }
   }
 
   private async createTripActivity(
