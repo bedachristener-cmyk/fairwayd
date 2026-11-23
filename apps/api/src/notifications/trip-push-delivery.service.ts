@@ -22,6 +22,14 @@ export class TripPushDeliveryService {
     });
     if (!user?.pushTripNotifications) return;
 
+    // Recheck current trip membership immediately before delivery. A queued
+    // notification must not be sent to someone removed from the trip.
+    const currentMembership = await this.prisma.tripMember.findFirst({
+      where: { tripId, userId, isGuest: false },
+      select: { id: true },
+    });
+    if (!currentMembership) return;
+
     const subscriptions = await this.prisma.pushSubscription.findMany({
       where: { userId },
       select: { id: true, endpoint: true, p256dh: true, auth: true },
