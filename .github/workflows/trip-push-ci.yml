@@ -33,6 +33,7 @@ jobs:
       - run: npm ci
       - run: npx prisma generate
       - run: npm test -- --runInBand trip-push-recipients.spec.ts web-push-transport.spec.ts trip-push-delivery.service.spec.ts
+      - run: npm test -- --runInBand
       - run: npm run build
 
   web:
