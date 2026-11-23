@@ -16,7 +16,12 @@ describe('trip item push recipient selection', () => {
   it('notifies all authenticated participating members except actor for GROUP', () => {
     expect(eligibleItemNotificationUserIds(members, {
       visibility: 'GROUP', createdByUserId: 'owner', visibleToMemberIds: [],
-    }, 'owner')).toEqual(['a', 'b']);
+    }, 'owner')).toEqual(['a', 'b', 'spectator']);
+  });
+  it('notifies GROUP spectators but never exposes restricted items to them', () => {
+    expect(eligibleItemNotificationUserIds(members, {
+      visibility: 'SELECTED', createdByUserId: 'owner', visibleToMemberIds: ['m5'],
+    }, 'owner')).toEqual([]);
   });
   it('notifies only selected members and creator for SELECTED', () => {
     expect(eligibleItemNotificationUserIds(members, {
