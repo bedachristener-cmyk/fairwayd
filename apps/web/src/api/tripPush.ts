@@ -65,3 +65,24 @@ export async function disableTripPush(token: string) {
     await subscription.unsubscribe();
   }
 }
+
+/**
+ * Detach the browser's device subscription on logout/account switch.
+ * Unlike disableTripPush, this leaves the user's preference on other devices intact.
+ * Always unsubscribe locally even when the old session has expired.
+ */
+export async function detachTripPushDevice(token: string | null) {
+  if (!tripPushSupported()) return;
+  const registration = await navigator.serviceWorker.getRegistration();
+  const subscription = await registration?.pushManager.getSubscription();
+  if (!subscription) return;
+  try {
+    if (token) {
+      await apiDelete<{ ok: true }>("/notifications/push-subscriptions", {
+        token, body: { endpoint: subscription.endpoint },
+      });
+    }
+  } finally {
+    await subscription.unsubscribe();
+  }
+}
