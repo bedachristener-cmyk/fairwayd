@@ -1449,7 +1449,7 @@ export class TripsService {
       );
     }
 
-    await this.notifyTripItemChange(tripId, userId, item.id, 'updated');
+    await this.notifyTripItemChange(tripId, userId, item.id, 'updated', existingItem, item);
     return this.filterTripItemDocumentsForUser(item, userId, membership.id);
   }
 
@@ -1676,6 +1676,8 @@ export class TripsService {
     actorUserId: string,
     itemId: string,
     action: 'created' | 'updated',
+    before?: Record<string, any>,
+    after?: Record<string, any>,
   ) {
     if (process.env.TRIP_PUSH_EVENTS_ENABLED !== 'true') return;
     try {
@@ -1702,14 +1704,49 @@ export class TripsService {
         },
         actorUserId,
       );
+      const [trip, actor] = await Promise.all([
+        this.prisma.trip.findUnique({ where: { id: tripId }, select: { title: true } }),
+        this.prisma.user.findUnique({ where: { id: actorUserId }, select: { handle: true, name: true } }),
+      ]);
+      const actorName = actor?.name?.trim() || actor?.handle || 'A member';
+      const tripName = trip?.title?.trim() || 'Trip';
+      const itemName = item.title?.trim() || 'Untitled item';
+      const changes: string[] = [];
+      if (action === 'updated' && before && after) {
+        const fields: Array<[string, string]> = [
+          ['title', 'Name'], ['date', 'Date'], ['endDate', 'End date'],
+          ['startTime', 'Start time'], ['endTime', 'End time'],
+          ['locationName', 'Location'], ['provider', 'Provider'],
+          ['greenFee', 'Green fee'], ['caddyFee', 'Caddy fee'],
+          ['cartFee', 'Cart fee'], ['directPrice', 'Price'],
+          ['providerPrice', 'Provider price'], ['amount', 'Amount'],
+          ['currency', 'Currency'],
+        ];
+        const format = (value: unknown) => {
+          if (value == null || value === '') return '—';
+          if (value instanceof Date) return value.toISOString().slice(0, 10);
+          return String(value);
+        };
+        for (const [field, label] of fields) {
+          const oldValue = format(before[field]);
+          const newValue = format(after[field]);
+          if (oldValue !== newValue) changes.push(`${label}: ${oldValue} → ${newValue}`);
+        }
+        if (JSON.stringify(before.costs) !== JSON.stringify(after.costs)) {
+          changes.push('Cost allocation updated');
+        }
+      }
+      const title = `${itemName} – ${action === 'created' ? 'added' : 'updated'}`;
+      const detail = action === 'created' ? 'added this item' :
+        changes.length ? changes.slice(0, 3).join('; ') + (changes.length > 3 ? `; +${changes.length - 3} more` : '') : 'updated this item';
+      const body = `${actorName} · ${tripName}: ${detail}`;
       for (const recipientUserId of recipients) {
         await this.notifications.createNotification({
           userId: recipientUserId,
           actorUserId,
           type: action === 'created' ? 'trip_item_created' : 'trip_item_updated',
-          title: action === 'created' ? 'Trip item added' : 'Trip item updated',
-          // Keep the body generic. Access may change before delivery.
-          body: 'A trip you belong to has an item update.',
+          title,
+          body,
           link: `/trips/${encodeURIComponent(tripId)}`,
         });
       }
