@@ -50,6 +50,76 @@ export class NotificationsService {
     });
   }
 
+  async pushPreferences(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: this.requireUserId(userId) },
+      select: { pushTripNotifications: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    return {
+      ...user,
+      available: process.env.TRIP_PUSH_DELIVERY_ENABLED === 'true' &&
+        Boolean(process.env.WEB_PUSH_PUBLIC_KEY && process.env.WEB_PUSH_PRIVATE_KEY),
+      publicKey: process.env.WEB_PUSH_PUBLIC_KEY || null,
+    };
+  }
+
+  async updatePushPreferences(userId: string, input: unknown) {
+    if (!input || typeof input !== 'object' || Array.isArray(input) ||
+      Object.keys(input).length !== 1 ||
+      typeof (input as Record<string, unknown>).pushTripNotifications !== 'boolean') {
+      throw new BadRequestException('pushTripNotifications must be a boolean');
+    }
+    return this.prisma.user.update({
+      where: { id: this.requireUserId(userId) },
+      data: { pushTripNotifications: (input as { pushTripNotifications: boolean }).pushTripNotifications },
+      select: { pushTripNotifications: true },
+    });
+  }
+
+  async subscribePush(userId: string, input: unknown) {
+    if (process.env.TRIP_PUSH_DELIVERY_ENABLED !== 'true') {
+      throw new BadRequestException('Push notifications are not available');
+    }
+    if (!input || typeof input !== 'object' || Array.isArray(input)) {
+      throw new BadRequestException('Invalid push subscription');
+    }
+    const value = input as Record<string, unknown>;
+    const keys = value.keys;
+    if (!keys || typeof keys !== 'object' || Array.isArray(keys)) {
+      throw new BadRequestException('Invalid push keys');
+    }
+    const keyValues = keys as Record<string, unknown>;
+    const endpoint = value.endpoint;
+    const p256dh = keyValues.p256dh;
+    const auth = keyValues.auth;
+    if (typeof endpoint !== 'string' || endpoint.length > 2048 ||
+      !endpoint.startsWith('https://') ||
+      typeof p256dh !== 'string' || !/^[A-Za-z0-9_-]{60,150}={0,2}$/.test(p256dh) ||
+      typeof auth !== 'string' || !/^[A-Za-z0-9_-]{12,50}={0,2}$/.test(auth)) {
+      throw new BadRequestException('Invalid push subscription fields');
+    }
+    // An endpoint may migrate between accounts on a shared device.
+    await this.prisma.pushSubscription.upsert({
+      where: { endpoint },
+      create: { endpoint, p256dh, auth, userId: this.requireUserId(userId) },
+      update: { p256dh, auth, userId: this.requireUserId(userId) },
+    });
+    return { ok: true };
+  }
+
+  async unsubscribePush(userId: string, input: unknown) {
+    const endpoint = input && typeof input === 'object' && !Array.isArray(input)
+      ? (input as Record<string, unknown>).endpoint : null;
+    if (typeof endpoint !== 'string' || !endpoint.startsWith('https://') || endpoint.length > 2048) {
+      throw new BadRequestException('Invalid push endpoint');
+    }
+    await this.prisma.pushSubscription.deleteMany({
+      where: { userId: this.requireUserId(userId), endpoint },
+    });
+    return { ok: true };
+  }
+
   async listForUser(userId: string, take = 50) {
     const uid = this.requireUserId(userId);
     const safeTake = Math.max(1, Math.min(Number(take) || 50, 50));
