@@ -15,6 +15,7 @@ export default function TripPushSettings({ token }: { token: string }) {
   useEffect(() => {
     let active = true;
     setSettings(null);
+    setError(null);
     getTripPushPreferences(token)
       .then(value => { if (active) setSettings(value); })
       .catch(() => { if (active) setError("Push settings could not be loaded."); });
