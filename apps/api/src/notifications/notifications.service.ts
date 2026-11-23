@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TripPushDeliveryService } from './trip-push-delivery.service';
@@ -20,7 +21,7 @@ type CreateNotificationInput = {
 export class NotificationsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tripPushDelivery: TripPushDeliveryService,
+    @Optional() private readonly tripPushDelivery?: TripPushDeliveryService,
   ) {}
 
   async emailPreferences(userId: string) {
@@ -276,7 +277,8 @@ export class NotificationsService {
 
     // Push delivery is an optional side effect; it must never block or fail
     // the original notification or the trip mutation.
-    if ((type.startsWith('trip_item_') || type.startsWith('trip_document_')) &&
+    if (this.tripPushDelivery &&
+      (type.startsWith('trip_item_') || type.startsWith('trip_document_')) &&
       link?.startsWith('/trips/')) {
       const tripId = link.slice('/trips/'.length).split('/')[0];
       if (tripId) {
