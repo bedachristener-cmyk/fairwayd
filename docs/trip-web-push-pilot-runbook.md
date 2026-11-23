@@ -29,6 +29,8 @@ Status: **implementation branch only**. Do not merge, deploy, or run migration o
 - Repeat for SELECTED, PRIVATE, update, delete, document upload/visibility/delete.
 - Confirm tapping notification opens the trip, permissions persist after app restart, and disabling stops delivery.
 - Test permission denial, offline delivery, expired subscription, sign-out and switching accounts on a shared device.
+- Sign-out and account switch now detach the local subscription without disabling the preference on other devices. Confirm the old account receives no further push after switching; failed API removal must still unsubscribe the browser locally.
+- Do not assume a green CI proves actual browser push delivery; a real device and isolated HTTPS API/database are mandatory for pilot acceptance.
 
 ## Release
 - Keep PR draft until all gates are met.
