@@ -14,6 +14,7 @@ export default defineConfig({
         'pwa-192x192.png',
         'pwa-512x512.png',
         'pwa-maskable-512x512.png',
+        'push-handler.js',
       ],
       manifest: {
         name: 'Fairwayd',
@@ -45,6 +46,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        importScripts: ['/push-handler.js'],
         clientsClaim: true,
         skipWaiting: true,
         cleanupOutdatedCaches: true,
