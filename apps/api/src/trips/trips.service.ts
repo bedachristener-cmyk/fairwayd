@@ -859,7 +859,7 @@ export class TripsService {
       );
     }
 
-    void this.notifyTripDocumentChange(tripId, userId, document.id, 'created');
+    await this.notifyTripDocumentChange(tripId, userId, document.id, 'created');
     return this.publicTripDocument(document);
   }
 
@@ -913,7 +913,7 @@ export class TripsService {
       include: tripDocumentInclude,
     });
 
-    void this.notifyTripDocumentChange(tripId, userId, document.id, 'updated');
+    await this.notifyTripDocumentChange(tripId, userId, document.id, 'updated');
     return this.publicTripDocument(document);
   }
 
@@ -979,7 +979,7 @@ export class TripsService {
     }
 
     if (deletedAccess) {
-      void this.notifyTripDocumentChange(tripId, userId, documentId, 'deleted', deletedAccess);
+      await this.notifyTripDocumentChange(tripId, userId, documentId, 'deleted', deletedAccess);
     }
     return { ok: true, deletedFileUrl: document.fileUrl };
   }
@@ -1262,7 +1262,7 @@ export class TripsService {
       );
     }
 
-    void this.notifyTripItemChange(tripId, userId, item.id, 'created');
+    await this.notifyTripItemChange(tripId, userId, item.id, 'created');
     return this.filterTripItemDocumentsForUser(item, userId, membership.id);
   }
 
@@ -1449,7 +1449,7 @@ export class TripsService {
       );
     }
 
-    void this.notifyTripItemChange(tripId, userId, item.id, 'updated');
+    await this.notifyTripItemChange(tripId, userId, item.id, 'updated');
     return this.filterTripItemDocumentsForUser(item, userId, membership.id);
   }
 
@@ -1578,7 +1578,7 @@ export class TripsService {
       );
     }
 
-    void this.notifyDeletedTripItem(tripId, userId, deletionRecipients);
+    await this.notifyDeletedTripItem(tripId, userId, deletionRecipients);
     return { ok: true };
   }
 
