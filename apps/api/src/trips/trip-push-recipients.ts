@@ -23,8 +23,9 @@ export function eligibleItemNotificationUserIds(
   const seen = new Set<string>();
   for (const member of members) {
     if (!member.userId || member.isGuest || member.userId === actorUserId) continue;
-    // Spectators have a separate, restricted trip projection.
-    if (member.role === 'VIEWER') continue;
+    // Spectators can see GROUP items in their restricted trip projection.
+    // They must never receive SELECTED or PRIVATE item notifications.
+    if (member.role === 'VIEWER' && item.visibility !== 'GROUP') continue;
     const canSee =
       item.visibility === 'GROUP' ||
       member.userId === item.createdByUserId ||
