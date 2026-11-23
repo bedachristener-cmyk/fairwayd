@@ -122,10 +122,15 @@ export function validatePushEndpoint(endpoint: string): boolean {
   try {
     const url = new URL(endpoint);
     const host = url.hostname.toLowerCase().replace(/[.]$/, '');
+    // Browser subscriptions use a small set of trusted push-service hosts.
+    // A generic public hostname could resolve to an internal address (SSRF).
+    const trustedService = host === 'fcm.googleapis.com' ||
+      host === 'updates.push.services.mozilla.com' ||
+      host === 'web.push.apple.com' ||
+      (host.endsWith('.push.apple.com') && host !== 'push.apple.com');
     return url.protocol === 'https:' && !url.username && !url.password &&
-      !isIP(host) && host !== 'localhost' && !host.endsWith('.localhost') &&
-      !host.endsWith('.local') && !host.endsWith('.internal') &&
-      host.includes('.') && url.port === '';
+      !isIP(host) && trustedService && url.port === '' &&
+      !url.hash && !url.search;
   } catch {
     return false;
   }
