@@ -119,7 +119,7 @@ export function createVapidToken(
 export function validatePushEndpoint(endpoint: string): boolean {
   try {
     const url = new URL(endpoint);
-    const host = url.hostname.toLowerCase().replace(/\\.$/, '');
+    const host = url.hostname.toLowerCase().replace(/[.]$/, '');
     return url.protocol === 'https:' && !url.username && !url.password &&
       !isIP(host) && host !== 'localhost' && !host.endsWith('.localhost') &&
       !host.endsWith('.local') && !host.endsWith('.internal') &&
