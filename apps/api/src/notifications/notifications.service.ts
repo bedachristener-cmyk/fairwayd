@@ -283,7 +283,7 @@ export class NotificationsService {
       const tripId = link.slice('/trips/'.length).split('/')[0];
       if (tripId) {
         try {
-          await this.tripPushDelivery.deliverToUser(userId, tripId, title);
+          await this.tripPushDelivery.deliverToUser(userId, tripId, title, body);
         } catch {
           // Delivery failure must not prevent the in-app notification.
         }
