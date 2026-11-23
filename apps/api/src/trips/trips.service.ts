@@ -1449,6 +1449,7 @@ export class TripsService {
       );
     }
 
+    void this.notifyTripItemChange(tripId, userId, item.id, 'updated');
     return this.filterTripItemDocumentsForUser(item, userId, membership.id);
   }
 
