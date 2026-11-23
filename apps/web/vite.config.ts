@@ -46,7 +46,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        importScripts: ['/push-handler.js'],
+        importScripts: ['/push-handler.js?v=20261123-2'],
         clientsClaim: true,
         skipWaiting: true,
         cleanupOutdatedCaches: true,
