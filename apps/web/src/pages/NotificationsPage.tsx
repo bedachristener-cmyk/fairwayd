@@ -10,6 +10,7 @@ import {
   type NotificationItem,
 } from "../api/notifications";
 import MobilePageHeader from "../components/MobilePageHeader";
+import TripPushSettings from "../components/TripPushSettings";
 import { EmptyState, NotificationRowsSkeleton } from "../components/PolishStates";
 
 type NotificationEntry = {
@@ -668,6 +669,8 @@ export default function NotificationsPage() {
           </div>
         </section>
       ) : null}
+
+      {auth?.token ? <TripPushSettings token={auth.token} /> : null}
 
       {!hasRealNotifications ? (
         <section style={sectionStyle}>
