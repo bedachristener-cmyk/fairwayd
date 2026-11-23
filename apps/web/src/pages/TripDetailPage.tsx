@@ -4825,6 +4825,19 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
     }, 0);
   }
 
+  // Open the exact item when arriving from an in-app or Android push notification.
+  useEffect(() => {
+    if (!trip?.items?.length || !window.location.hash.startsWith('#item=')) return;
+    const itemId = decodeURIComponent(window.location.hash.slice('#item='.length));
+    const item = trip.items.find(candidate => candidate.id === itemId);
+    if (!item) return; // Do not reveal items the current user cannot access.
+    setDetailsItemId(item.id);
+    setActiveView('timeline');
+    window.setTimeout(() => {
+      document.getElementById(tripItemDomId(item.id))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+  }, [trip?.items]);
+
   function defaultBudgetParticipantIds(item: TripItem) {
     if (item.participants && item.participants.length > 0) {
       return item.participants.map((participant) => participant.tripMemberId);
