@@ -1,6 +1,9 @@
 name: Trip Push feature validation
 
 on:
+  push:
+    branches:
+      - feature/trip-web-push-20261123
   pull_request:
     paths:
       - 'apps/api/**'
