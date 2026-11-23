@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TripPushDeliveryService } from './trip-push-delivery.service';
+import { validatePushEndpoint } from './web-push-transport';
 
 type CreateNotificationInput = {
   userId: string;
