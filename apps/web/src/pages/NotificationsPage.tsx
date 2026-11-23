@@ -313,7 +313,7 @@ export default function NotificationsPage() {
         width: "100%",
         maxWidth: "100%",
         boxSizing: "border-box",
-        padding: "16px 14px 24px",
+        padding: "16px 14px calc(var(--fw-bottom-tabs-height, 72px) + 40px)",
         display: "grid",
         gap: 16,
         overflowX: "hidden",
