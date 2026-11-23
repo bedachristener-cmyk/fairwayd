@@ -63,7 +63,7 @@ export class NotificationsService {
     return {
       ...user,
       available: process.env.TRIP_PUSH_DELIVERY_ENABLED === 'true' &&
-        Boolean(process.env.WEB_PUSH_PUBLIC_KEY && process.env.WEB_PUSH_PRIVATE_KEY),
+        Boolean(process.env.WEB_PUSH_PUBLIC_KEY && process.env.WEB_PUSH_PRIVATE_KEY && process.env.WEB_PUSH_SUBJECT),
       publicKey: process.env.WEB_PUSH_PUBLIC_KEY || null,
     };
   }
@@ -83,7 +83,8 @@ export class NotificationsService {
 
   async subscribePush(userId: string, input: unknown) {
     if (process.env.TRIP_PUSH_DELIVERY_ENABLED !== 'true' ||
-      !process.env.WEB_PUSH_PUBLIC_KEY || !process.env.WEB_PUSH_PRIVATE_KEY) {
+      !process.env.WEB_PUSH_PUBLIC_KEY || !process.env.WEB_PUSH_PRIVATE_KEY ||
+      !process.env.WEB_PUSH_SUBJECT) {
       throw new BadRequestException('Push notifications are not available');
     }
     if (!input || typeof input !== 'object' || Array.isArray(input)) {
