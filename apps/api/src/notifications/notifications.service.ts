@@ -280,7 +280,7 @@ export class NotificationsService {
     if (this.tripPushDelivery &&
       (type.startsWith('trip_item_') || type.startsWith('trip_document_')) &&
       link?.startsWith('/trips/')) {
-      const tripId = link.slice('/trips/'.length).split('/')[0];
+      const tripId = link.slice('/trips/'.length).split(/[\/#?]/)[0];
       if (tripId) {
         try {
           await this.tripPushDelivery.deliverToUser(userId, tripId, title, body, link);
