@@ -9,6 +9,7 @@ Status: **implementation branch only**. Do not merge, deploy, or run migration o
 - `WEB_PUSH_PRIVATE_KEY`: matching base64url 32-byte private key. Backend secret only.
 - `WEB_PUSH_SUBJECT`: a `mailto:` contact URL (for example `mailto:admin@yourdomain`).
 - Use separate VAPID keys for Stage and Prod, and never commit the private key.
+- Delivery permits only Google FCM, Mozilla Autopush, and Apple Web Push HTTPS hosts. Confirm the actual endpoint host on each pilot browser; extend this allowlist only after a security review.
 - A feature flag does not substitute for schema migration. Apply the additive migration on a disposable test DB first.
 
 ## Pre-pilot gates
@@ -18,7 +19,7 @@ Status: **implementation branch only**. Do not merge, deploy, or run migration o
 4. Confirm disabled flags do not create new trip notifications or send any requests.
 5. Verify GROUP, SELECTED and PRIVATE recipient sets, including VIEWER and guests.
 6. Verify access revocation, deletion snapshots and no private title/notes/document names in payload.
-7. Review push endpoint SSRF protection and multi-account device behavior before production.
+7. Confirm push endpoint host allowlist and multi-account device behavior before production. Shared devices must not remain subscribed to a previous account; sign-out/device-switch behavior requires an explicit test.
 8. Validate on a non-production HTTPS deployment with isolated data and opt-in test accounts.
 
 ## Device pilot
