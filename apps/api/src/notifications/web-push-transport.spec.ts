@@ -15,9 +15,12 @@ describe('Web Push crypto', () => {
   it('rejects unsafe endpoint URLs', () => {
     expect(validatePushEndpoint('https://fcm.googleapis.com/fcm/send/abc')).toBe(true);
     expect(validatePushEndpoint('https://web.push.apple.com/q/abc')).toBe(true);
+    expect(validatePushEndpoint('https://updates.push.services.mozilla.com/wpush/v2/abc')).toBe(true);
     for (const url of ['http://fcm.googleapis.com/a', 'https://127.0.0.1/a',
       'https://localhost/a', 'https://server.internal/a',
-      'https://user:password@push.example.com/a', 'https://[::1]/a']) {
+      'https://user:password@push.example.com/a', 'https://[::1]/a',
+      'https://attacker.example.com/a', 'https://fcm.googleapis.com.evil.test/a',
+      'https://fcm.googleapis.com:444/a', 'https://fcm.googleapis.com/a?redirect=1']) {
       expect(validatePushEndpoint(url)).toBe(false);
     }
   });
