@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { TripPushDeliveryService } from './trip-push-delivery.service';
 
 type CreateNotificationInput = {
   userId: string;
@@ -16,7 +17,10 @@ type CreateNotificationInput = {
 
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tripPushDelivery: TripPushDeliveryService,
+  ) {}
 
   async emailPreferences(userId: string) {
     const user = await this.prisma.user.findUnique({
@@ -256,7 +260,7 @@ export class NotificationsService {
       recipient[emailCategory],
     );
 
-    return this.prisma.notification.create({
+    const created = await this.prisma.notification.create({
       data: {
         userId,
         actorUserId: input.actorUserId,
@@ -267,6 +271,18 @@ export class NotificationsService {
         link,
       },
     });
+
+    // Push delivery is an optional side effect; it must never block or fail
+    // the original notification or the trip mutation.
+    if (type.startsWith('trip_item_') && link?.startsWith('/trips/')) {
+      const tripId = link.slice('/trips/'.length).split('/')[0];
+      if (tripId) {
+        void this.tripPushDelivery.deliverToUser(
+          userId, tripId, title,
+        ).catch(() => undefined);
+      }
+    }
+    return created;
   }
 
   private requireUserId(userId: string | null | undefined) {
