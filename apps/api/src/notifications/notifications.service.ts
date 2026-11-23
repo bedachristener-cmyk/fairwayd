@@ -78,7 +78,8 @@ export class NotificationsService {
   }
 
   async subscribePush(userId: string, input: unknown) {
-    if (process.env.TRIP_PUSH_DELIVERY_ENABLED !== 'true') {
+    if (process.env.TRIP_PUSH_DELIVERY_ENABLED !== 'true' ||
+      !process.env.WEB_PUSH_PUBLIC_KEY || !process.env.WEB_PUSH_PRIVATE_KEY) {
       throw new BadRequestException('Push notifications are not available');
     }
     if (!input || typeof input !== 'object' || Array.isArray(input)) {
@@ -99,11 +100,19 @@ export class NotificationsService {
       typeof auth !== 'string' || !/^[A-Za-z0-9_-]{12,50}={0,2}$/.test(auth)) {
       throw new BadRequestException('Invalid push subscription fields');
     }
-    // An endpoint may migrate between accounts on a shared device.
+    const uid = this.requireUserId(userId);
+    // Never allow one account to silently take over another user's endpoint.
+    const existing = await this.prisma.pushSubscription.findUnique({
+      where: { endpoint },
+      select: { userId: true },
+    });
+    if (existing && existing.userId !== uid) {
+      throw new BadRequestException('This device is already registered to another account');
+    }
     await this.prisma.pushSubscription.upsert({
       where: { endpoint },
-      create: { endpoint, p256dh, auth, userId: this.requireUserId(userId) },
-      update: { p256dh, auth, userId: this.requireUserId(userId) },
+      create: { endpoint, p256dh, auth, userId: uid },
+      update: { p256dh, auth },
     });
     return { ok: true };
   }
