@@ -859,6 +859,7 @@ export class TripsService {
       );
     }
 
+    void this.notifyTripDocumentChange(tripId, userId, document.id, 'created');
     return this.publicTripDocument(document);
   }
 
@@ -912,6 +913,7 @@ export class TripsService {
       include: tripDocumentInclude,
     });
 
+    void this.notifyTripDocumentChange(tripId, userId, document.id, 'updated');
     return this.publicTripDocument(document);
   }
 
@@ -945,6 +947,21 @@ export class TripsService {
       throw new ForbiddenException('Insufficient trip document permissions');
     }
 
+    let deletedAccess:
+      | { visibility: TripDocumentVisibility; uploadedByUserId: string; visibleToMemberIds: string[] }
+      | undefined;
+    if (process.env.TRIP_PUSH_EVENTS_ENABLED === 'true') {
+      const selected = await this.prisma.tripDocumentVisibilityMember.findMany({
+        where: { tripDocumentId: documentId },
+        select: { tripMemberId: true },
+      });
+      deletedAccess = {
+        visibility: document.visibility,
+        uploadedByUserId: document.uploadedByUserId,
+        visibleToMemberIds: selected.map(member => member.tripMemberId),
+      };
+    }
+
     await this.prisma.tripDocument.delete({
       where: {
         id: documentId,
@@ -961,6 +978,9 @@ export class TripsService {
       );
     }
 
+    if (deletedAccess) {
+      void this.notifyTripDocumentChange(tripId, userId, documentId, 'deleted', deletedAccess);
+    }
     return { ok: true, deletedFileUrl: document.fileUrl };
   }
 
@@ -1430,6 +1450,61 @@ export class TripsService {
     }
 
     return this.filterTripItemDocumentsForUser(item, userId, membership.id);
+  }
+
+  private async notifyTripDocumentChange(
+    tripId: string,
+    actorUserId: string,
+    documentId: string,
+    action: 'created' | 'updated' | 'deleted',
+    deletedAccess?: {
+      visibility: TripDocumentVisibility;
+      uploadedByUserId: string;
+      visibleToMemberIds: string[];
+    },
+  ) {
+    if (process.env.TRIP_PUSH_EVENTS_ENABLED !== 'true') return;
+    try {
+      const [members, document] = await Promise.all([
+        this.prisma.tripMember.findMany({
+          where: { tripId },
+          select: { id: true, userId: true, role: true, isGuest: true },
+        }),
+        deletedAccess ? Promise.resolve(null) : this.prisma.tripDocument.findFirst({
+          where: { id: documentId, tripId },
+          select: {
+            visibility: true,
+            uploadedByUserId: true,
+            visibilityMembers: { select: { tripMemberId: true } },
+          },
+        }),
+      ]);
+      const access = deletedAccess ?? (document ? {
+        visibility: document.visibility,
+        uploadedByUserId: document.uploadedByUserId,
+        visibleToMemberIds: document.visibilityMembers.map(m => m.tripMemberId),
+      } : null);
+      if (!access) return;
+      const recipients = eligibleItemNotificationUserIds(members, {
+        visibility: access.visibility === TripDocumentVisibility.SHARED
+          ? 'GROUP' : access.visibility,
+        createdByUserId: access.uploadedByUserId,
+        visibleToMemberIds: access.visibleToMemberIds,
+      }, actorUserId);
+      for (const recipientUserId of recipients) {
+        await this.notifications.createNotification({
+          userId: recipientUserId,
+          actorUserId,
+          type: `trip_document_${action}`,
+          title: action === 'created' ? 'Trip document added'
+            : action === 'deleted' ? 'Trip document removed' : 'Trip document updated',
+          body: 'A trip you belong to has a document update.',
+          link: `/trips/${encodeURIComponent(tripId)}`,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to create trip document notifications', error);
+    }
   }
 
   private async notifyDeletedTripItem(
