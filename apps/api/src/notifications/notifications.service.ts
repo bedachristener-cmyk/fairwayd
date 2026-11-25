@@ -2,8 +2,11 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { TripPushDeliveryService } from './trip-push-delivery.service';
+import { validatePushEndpoint } from './web-push-transport';
 
 type CreateNotificationInput = {
   userId: string;
@@ -16,7 +19,10 @@ type CreateNotificationInput = {
 
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly tripPushDelivery?: TripPushDeliveryService,
+  ) {}
 
   async emailPreferences(userId: string) {
     const user = await this.prisma.user.findUnique({
@@ -48,6 +54,86 @@ export class NotificationsService {
       data: Object.fromEntries(entries),
       select: { emailTripNotifications: true, emailFollowNotifications: true, emailModerationNotifications: true },
     });
+  }
+
+  async pushPreferences(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: this.requireUserId(userId) },
+      select: { pushTripNotifications: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    return {
+      ...user,
+      available: process.env.TRIP_PUSH_DELIVERY_ENABLED === 'true' &&
+        Boolean(process.env.WEB_PUSH_PUBLIC_KEY && process.env.WEB_PUSH_PRIVATE_KEY && process.env.WEB_PUSH_SUBJECT),
+      publicKey: process.env.WEB_PUSH_PUBLIC_KEY || null,
+    };
+  }
+
+  async updatePushPreferences(userId: string, input: unknown) {
+    if (!input || typeof input !== 'object' || Array.isArray(input) ||
+      Object.keys(input).length !== 1 ||
+      typeof (input as Record<string, unknown>).pushTripNotifications !== 'boolean') {
+      throw new BadRequestException('pushTripNotifications must be a boolean');
+    }
+    return this.prisma.user.update({
+      where: { id: this.requireUserId(userId) },
+      data: { pushTripNotifications: (input as { pushTripNotifications: boolean }).pushTripNotifications },
+      select: { pushTripNotifications: true },
+    });
+  }
+
+  async subscribePush(userId: string, input: unknown) {
+    if (process.env.TRIP_PUSH_DELIVERY_ENABLED !== 'true' ||
+      !process.env.WEB_PUSH_PUBLIC_KEY || !process.env.WEB_PUSH_PRIVATE_KEY ||
+      !process.env.WEB_PUSH_SUBJECT) {
+      throw new BadRequestException('Push notifications are not available');
+    }
+    if (!input || typeof input !== 'object' || Array.isArray(input)) {
+      throw new BadRequestException('Invalid push subscription');
+    }
+    const value = input as Record<string, unknown>;
+    const keys = value.keys;
+    if (!keys || typeof keys !== 'object' || Array.isArray(keys)) {
+      throw new BadRequestException('Invalid push keys');
+    }
+    const keyValues = keys as Record<string, unknown>;
+    const endpoint = value.endpoint;
+    const p256dh = keyValues.p256dh;
+    const auth = keyValues.auth;
+    if (typeof endpoint !== 'string' || endpoint.length > 2048 ||
+      !validatePushEndpoint(endpoint) ||
+      typeof p256dh !== 'string' || !/^[A-Za-z0-9_-]{60,150}={0,2}$/.test(p256dh) ||
+      typeof auth !== 'string' || !/^[A-Za-z0-9_-]{12,50}={0,2}$/.test(auth)) {
+      throw new BadRequestException('Invalid push subscription fields');
+    }
+    const uid = this.requireUserId(userId);
+    // Never allow one account to silently take over another user's endpoint.
+    const existing = await this.prisma.pushSubscription.findUnique({
+      where: { endpoint },
+      select: { userId: true },
+    });
+    if (existing && existing.userId !== uid) {
+      throw new BadRequestException('This device is already registered to another account');
+    }
+    await this.prisma.pushSubscription.upsert({
+      where: { endpoint },
+      create: { endpoint, p256dh, auth, userId: uid },
+      update: { p256dh, auth },
+    });
+    return { ok: true };
+  }
+
+  async unsubscribePush(userId: string, input: unknown) {
+    const endpoint = input && typeof input === 'object' && !Array.isArray(input)
+      ? (input as Record<string, unknown>).endpoint : null;
+    if (typeof endpoint !== 'string' || !endpoint.startsWith('https://') || endpoint.length > 2048) {
+      throw new BadRequestException('Invalid push endpoint');
+    }
+    await this.prisma.pushSubscription.deleteMany({
+      where: { userId: this.requireUserId(userId), endpoint },
+    });
+    return { ok: true };
   }
 
   async listForUser(userId: string, take = 50) {
@@ -177,7 +263,7 @@ export class NotificationsService {
       recipient[emailCategory],
     );
 
-    return this.prisma.notification.create({
+    const created = await this.prisma.notification.create({
       data: {
         userId,
         actorUserId: input.actorUserId,
@@ -188,6 +274,22 @@ export class NotificationsService {
         link,
       },
     });
+
+    // Push delivery is an optional side effect; it must never block or fail
+    // the original notification or the trip mutation.
+    if (this.tripPushDelivery &&
+      (type.startsWith('trip_item_') || type.startsWith('trip_document_')) &&
+      link?.startsWith('/trips/')) {
+      const tripId = link.slice('/trips/'.length).split(/[\/#?]/)[0];
+      if (tripId) {
+        try {
+          await this.tripPushDelivery.deliverToUser(userId, tripId, title, body, link);
+        } catch {
+          // Delivery failure must not prevent the in-app notification.
+        }
+      }
+    }
+    return created;
   }
 
   private requireUserId(userId: string | null | undefined) {

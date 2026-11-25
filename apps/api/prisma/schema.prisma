@@ -34,6 +34,8 @@ model User {
   golfSloganPrivacy              FieldPrivacy            @default(PUBLIC)
   favoriteGolfDestinationPrivacy FieldPrivacy            @default(PUBLIC)
   emailTripNotifications         Boolean                 @default(true)
+  pushTripNotifications          Boolean                 @default(false)
+  pushSubscriptions              PushSubscription[]
   emailFollowNotifications       Boolean                 @default(true)
   emailModerationNotifications   Boolean                 @default(true)
   pendingPosts                   PendingPost[]
@@ -214,6 +216,19 @@ model DestinationTipHelpful {
 
   @@unique([tipId, userId])
   @@index([tipId])
+  @@index([userId])
+}
+
+model PushSubscription {
+  id          String   @id @default(cuid())
+  userId      String
+  endpoint    String   @unique
+  p256dh      String
+  auth        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }
 

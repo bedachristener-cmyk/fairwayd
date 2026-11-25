@@ -4,6 +4,8 @@ import {
   Get,
   Param,
   Patch,
+  Post,
+  Delete,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -30,6 +32,26 @@ export class NotificationsController {
       getRequestUserId(req),
       body,
     );
+  }
+
+  @Get('push-preferences')
+  pushPreferences(@Req() req: any) {
+    return this.notifications.pushPreferences(getRequestUserId(req));
+  }
+
+  @Patch('push-preferences')
+  updatePushPreferences(@Req() req: any, @Body() body: unknown) {
+    return this.notifications.updatePushPreferences(getRequestUserId(req), body);
+  }
+
+  @Post('push-subscriptions')
+  subscribePush(@Req() req: any, @Body() body: unknown) {
+    return this.notifications.subscribePush(getRequestUserId(req), body);
+  }
+
+  @Delete('push-subscriptions')
+  unsubscribePush(@Req() req: any, @Body() body: unknown) {
+    return this.notifications.unsubscribePush(getRequestUserId(req), body);
   }
 
   @Get()
