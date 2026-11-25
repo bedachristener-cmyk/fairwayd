@@ -76,6 +76,8 @@ type TripItem = {
   endDate?: string | null;
   startsAt?: string | null;
   startTime?: string | null;
+  meetingTime?: string | null;
+  navigationAddress?: string | null;
   endTime?: string | null;
   departureFromHotelTime?: string | null;
   roundDurationMinutes?: number | null;
@@ -226,6 +228,8 @@ type EditDraft = {
   date: string;
   endDate: string;
   startTime: string;
+  meetingTime: string;
+  navigationAddress: string;
   endTime: string;
   provider: string;
   notes: string;
@@ -2312,7 +2316,7 @@ function mapUrlForItem(item: TripItem) {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lon}`)}`;
   }
 
-  const query = [item.locationName, item.address].filter(Boolean).join(" ");
+  const query = item.navigationAddress?.trim() || [item.locationName, item.address].filter(Boolean).join(" ");
   if (!query.trim()) return null;
 
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
@@ -2421,6 +2425,9 @@ function timelineDetails(item: TripItem) {
   const details: TimelineDetail[] = [];
   const isFlight = isFlightItem(item);
   const isGolf = isGolfItem(item);
+
+  if (item.meetingTime?.trim()) details.push({ label: "Meeting time", value: item.meetingTime.trim() });
+  if (item.navigationAddress?.trim()) details.push({ label: "Navigation", value: item.navigationAddress.trim() });
 
   if (isGolf) {
     if (item.departureFromHotelTime?.trim()) {
@@ -4774,6 +4781,8 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
       date: dateInputValue(item),
       endDate: endDateInputValue(item),
       startTime: item.startTime || "",
+      meetingTime: item.meetingTime || "",
+      navigationAddress: item.navigationAddress || "",
       endTime: item.endTime || "",
       departureFromHotelTime: item.departureFromHotelTime || "",
       provider: item.provider || "",
@@ -5923,6 +5932,8 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
             provider: optionalText(editDraft.provider),
             bookingRef: isFlightEdit ? optionalText(editDraft.bookingRef) : undefined,
             notes: optionalText(editDraft.notes),
+            meetingTime: optionalText(editDraft.meetingTime),
+            navigationAddress: optionalText(editDraft.navigationAddress),
             locationName: optionalText(editDraft.locationName),
             address: optionalText(editDraft.address),
             visibility: editDraft.visibility,
@@ -10073,6 +10084,18 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
                                 />
                               </label>
                             </div>
+                            {!editIsTransferLike ? (
+                              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8, marginTop: 10 }}>
+                                <label style={{ display: "grid", gap: 6, color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
+                                  Meeting time
+                                  <input type="time" value={editDraft.meetingTime} onChange={(e) => setEditDraft({ ...editDraft, meetingTime: e.target.value })} style={editFieldStyle} />
+                                </label>
+                                <label style={{ display: "grid", gap: 6, color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
+                                  Navigation / Address
+                                  <input value={editDraft.navigationAddress} onChange={(e) => setEditDraft({ ...editDraft, navigationAddress: e.target.value })} placeholder="Address or place for Google Maps" style={editFieldStyle} />
+                                </label>
+                              </div>
+                            ) : null}
                           ) : null}
 
                           <div
