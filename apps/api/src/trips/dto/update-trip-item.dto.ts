@@ -47,6 +47,14 @@ export class UpdateTripItemDto {
 
   @IsOptional()
   @IsString()
+  meetingTime?: string;
+
+  @IsOptional()
+  @IsString()
+  navigationAddress?: string;
+
+  @IsOptional()
+  @IsString()
   endTime?: string;
 
   @IsOptional()
