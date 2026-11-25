@@ -1193,6 +1193,8 @@ export class TripsService {
         date: dateFromDto(dto.date),
         endDate: dateFromDto(dto.endDate),
         startTime: dto.startTime?.trim() || null,
+        meetingTime: dto.meetingTime?.trim() || null,
+        navigationAddress: dto.navigationAddress?.trim() || null,
         endTime: dto.endTime?.trim() || null,
         departureFromHotelTime: dto.departureFromHotelTime?.trim() || null,
         roundDurationMinutes: dto.roundDurationMinutes ?? null,
@@ -1353,6 +1355,8 @@ export class TripsService {
           dto.startTime === undefined
             ? undefined
             : dto.startTime.trim() || null,
+        meetingTime: dto.meetingTime === undefined ? undefined : dto.meetingTime.trim() || null,
+        navigationAddress: dto.navigationAddress === undefined ? undefined : dto.navigationAddress.trim() || null,
         endTime:
           dto.endTime === undefined ? undefined : dto.endTime.trim() || null,
         departureFromHotelTime:
@@ -1716,7 +1720,9 @@ export class TripsService {
         const fields: Array<[string, string]> = [
           ['title', 'Name'], ['date', 'Date'], ['endDate', 'End date'],
           ['startTime', 'Start time'], ['endTime', 'End time'],
-          ['locationName', 'Location'], ['provider', 'Provider'],
+          ['meetingTime', 'Meeting time'], ['locationName', 'Location / meeting point'],
+          ['navigationAddress', 'Navigation address'],
+          ['provider', 'Provider'],
           ['greenFee', 'Green fee'], ['caddyFee', 'Caddy fee'],
           ['cartFee', 'Cart fee'], ['directPrice', 'Price'],
           ['providerPrice', 'Provider price'], ['amount', 'Amount'],
