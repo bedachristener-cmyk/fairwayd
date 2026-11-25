@@ -61,12 +61,13 @@ describe('TripPushDeliveryService', () => {
     expect(mockedSend).not.toHaveBeenCalled();
   });
 
-  it('sends only generic trip information', async () => {
+  it('includes the notification body in the push payload', async () => {
     await service.deliverToUser('u1', 'trip1', 'Trip item updated');
     expect(mockedSend).toHaveBeenCalledTimes(1);
     const payload = JSON.parse(mockedSend.mock.calls[0][1]);
     expect(payload).toEqual({
       title: 'Trip item updated',
+      body: 'A trip item was updated.',
       path: '/trips/trip1',
       tag: 'fairwayd-trip-trip1',
     });
