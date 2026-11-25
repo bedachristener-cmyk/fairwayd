@@ -2382,6 +2382,7 @@ function tripItemMapActions(item: TripItem): TripItemMapAction[] {
 }
 
 function directionsUrlForItem(item: TripItem) {
+  if (item.navigationAddress?.trim()) return directionsUrlForPlace(item.navigationAddress);
   const lat = toFiniteNumber(item.course?.lat ?? item.lat ?? item.latitude);
   const lon = toFiniteNumber(item.course?.lon ?? item.lon ?? item.longitude);
 
