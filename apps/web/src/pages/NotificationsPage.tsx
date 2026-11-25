@@ -341,6 +341,8 @@ export default function NotificationsPage() {
         }
       />
 
+      {auth?.token ? <TripPushSettings token={auth.token} /> : null}
+
       <section style={sectionStyle}>
         <div style={sectionHeaderStyle}>
           <h2 style={sectionTitleStyle}>Follow requests</h2>
@@ -670,7 +672,6 @@ export default function NotificationsPage() {
         </section>
       ) : null}
 
-      {auth?.token ? <TripPushSettings token={auth.token} /> : null}
 
       {!hasRealNotifications ? (
         <section style={sectionStyle}>
