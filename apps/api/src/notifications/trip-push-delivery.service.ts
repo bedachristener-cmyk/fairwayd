@@ -9,7 +9,7 @@ export class TripPushDeliveryService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async deliverToUser(userId: string, tripId: string, title: string, body?: string | null, itemPath?: string | null): Promise<void> {
+  async deliverToUser(userId: string, tripId: string, title: string, body?: string | null, itemPath?: string | null, notificationId?: string, unreadCount?: number): Promise<void> {
     if (process.env.TRIP_PUSH_DELIVERY_ENABLED !== 'true') return;
     const publicKey = process.env.WEB_PUSH_PUBLIC_KEY;
     const privateKey = process.env.WEB_PUSH_PRIVATE_KEY;
@@ -40,7 +40,8 @@ export class TripPushDeliveryService {
       title,
       body: body || 'A trip item was updated.',
       path: itemPath && /^\/trips\/[^/#]+#item=[a-zA-Z0-9_-]+$/.test(itemPath) ? itemPath : `/trips/${encodeURIComponent(tripId)}`,
-      tag: `fairwayd-trip-${tripId}`,
+      tag: notificationId ? `fairwayd-notification-${notificationId}` : `fairwayd-trip-${tripId}-${Date.now()}`,
+      unreadCount: typeof unreadCount === 'number' ? unreadCount : undefined,
     });
     await Promise.all(subscriptions.map(async subscription => {
       try {
