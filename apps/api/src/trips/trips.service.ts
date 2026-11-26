@@ -1716,7 +1716,7 @@ export class TripsService {
         const fields: Array<[string, string]> = [
           ['title', 'Name'], ['date', 'Date'], ['endDate', 'End date'],
           ['startTime', 'Start time'], ['endTime', 'End time'],
-          ['address', 'Meeting point'], ['departureFromHotelTime', 'Departure from hotel'],
+          ['address', 'Meeting point'], ['departureFromHotelTime', String(after?.type ?? before?.type ?? '').toLowerCase() === 'restaurant' ? 'Meeting time' : 'Departure from hotel'],
           ['locationName', 'Location'], ['provider', 'Provider'],
           ['greenFee', 'Green fee'], ['caddyFee', 'Caddy fee'],
           ['cartFee', 'Cart fee'], ['directPrice', 'Price'],
