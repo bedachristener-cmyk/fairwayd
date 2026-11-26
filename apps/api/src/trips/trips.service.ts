@@ -1738,10 +1738,19 @@ export class TripsService {
           changes.push('Cost allocation updated');
         }
       }
-      const title = `${itemName} – ${action === 'created' ? 'added' : 'updated'}`;
+      // Put the first concrete change in the notification title so it remains
+      // useful on Android lock screens, where the body may be collapsed.
+      const primaryChange = changes[0] || null;
+      const title = action === 'created'
+        ? `${itemName} – added`
+        : primaryChange
+          ? `${itemName} – ${primaryChange.split(':')[0]} changed`
+          : `${itemName} – updated`;
       const detail = action === 'created' ? 'added this item' :
         changes.length ? changes.slice(0, 3).join('; ') + (changes.length > 3 ? `; +${changes.length - 3} more` : '') : 'updated this item';
-      const body = `${actorName} · ${tripName}: ${detail}`;
+      const body = action === 'updated' && primaryChange
+        ? `${primaryChange}\n${actorName} · ${tripName}${changes.length > 1 ? ` · +${changes.length - 1} more changes` : ''}`
+        : `${actorName} · ${tripName}: ${detail}`;
       for (const recipientUserId of recipients) {
         await this.notifications.createNotification({
           userId: recipientUserId,
