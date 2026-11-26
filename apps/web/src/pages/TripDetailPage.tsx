@@ -10071,6 +10071,17 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
                                   }
                                   style={editFieldStyle}
                                 />
+                                {!editIsTransferLike && editDraft.address.trim() ? (
+                                  <a
+                                    href={directionsUrlForPlace(editDraft.address) ?? "#"}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(event) => event.stopPropagation()}
+                                    style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12 }}
+                                  >
+                                    <MapPin size={14} /> Navigate to meeting point
+                                  </a>
+                                ) : null}
                               </label>
                             </div>
                           ) : null}
