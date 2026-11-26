@@ -1086,7 +1086,7 @@ export default function AddTripItemPage() {
         endDate: isGolfRound ? undefined : optionalText(normalizedEndDate),
         startTime: isHotel ? undefined : optionalText(startTime),
         endTime: isHotel ? undefined : optionalText(endTime),
-        departureFromHotelTime: isGolfRound
+        departureFromHotelTime: isGolfRound || type === "restaurant"
           ? optionalText(departureFromHotelTime)
           : undefined,
         roundDurationMinutes: isGolfRound
@@ -1394,8 +1394,14 @@ export default function AddTripItemPage() {
 
   const renderNonGolfTimeFields = !isHotel ? (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+      {type === "restaurant" ? (
+        <label style={{ ...labelStyle, flex: "1 1 150px", minWidth: 0 }}>
+          Meeting time
+          <input type="time" value={departureFromHotelTime} onChange={(e) => setDepartureFromHotelTime(e.target.value)} style={fieldStyle} />
+        </label>
+      ) : null}
       <label style={{ ...labelStyle, flex: "1 1 150px", minWidth: 0 }}>
-        {isFlight ? "Departure time" : "Start time"}
+        {isFlight ? "Departure time" : type === "restaurant" ? "Reservation time" : "Start time"}
         <input
           type="time"
           value={startTime}
@@ -2471,7 +2477,7 @@ export default function AddTripItemPage() {
                               isTransferLike
                                 ? "Areca Lodge"
                                 : type === "restaurant"
-                                  ? "Meet 19:00 at hotel"
+                                  ? "Hotel lobby / assembly place"
                                   : "Optional"
                             }
                             style={fieldStyle}
