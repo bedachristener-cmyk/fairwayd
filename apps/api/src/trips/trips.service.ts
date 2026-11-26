@@ -1703,6 +1703,7 @@ export class TripsService {
           visibleToMemberIds: item.visibilityMembers.map(m => m.tripMemberId),
         },
         actorUserId,
+        action === 'updated',
       );
       const [trip, actor] = await Promise.all([
         this.prisma.trip.findUnique({ where: { id: tripId }, select: { title: true } }),
