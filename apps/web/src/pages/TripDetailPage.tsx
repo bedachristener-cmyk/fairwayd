@@ -10059,10 +10059,17 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
                                     })
                                   }
                                   placeholder={
-                                    editIsTransferLike ? "BKK Airport" : "Location"
+                                    editIsTransferLike ? "BKK Airport" : editIsRestaurant ? "Restaurant name (optional if title is the name)" : "Location"
                                   }
                                   style={editFieldStyle}
                                 />
+                                {editIsRestaurant && (editDraft.locationName.trim() || editDraft.title.trim()) ? (
+                                  <a href={directionsUrlForPlace(editDraft.locationName.trim() || editDraft.title.trim()) ?? "#"}
+                                    target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()}
+                                    style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                                    <MapPin size={14} /> Navigate to restaurant
+                                  </a>
+                                ) : null}
                               </label>
                               <label
                                 style={{
