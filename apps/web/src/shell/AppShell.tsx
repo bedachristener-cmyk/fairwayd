@@ -6,6 +6,7 @@ import DesktopShell from "./DesktopShell";
 import InstallAppPrompt from "../pwa/InstallAppPrompt";
 import { useStandaloneMode } from "../pwa/useStandaloneMode";
 import NotificationPermissionPrompt from "../components/NotificationPermissionPrompt";
+import AppBadgeSync from "../components/AppBadgeSync";
 
 export default function AppShell() {
   const location = useLocation();
@@ -26,11 +27,12 @@ export default function AppShell() {
   }, []);
 
   if (!isMobile) {
-    return <DesktopShell />;
+    return <><AppBadgeSync /><DesktopShell /></>;
   }
 
   return (
     <div className="fw-shell">
+      <AppBadgeSync />
       <TopRail />
       {isMobile && !isStandalone ? <InstallAppPrompt /> : null}
       <NotificationPermissionPrompt />
