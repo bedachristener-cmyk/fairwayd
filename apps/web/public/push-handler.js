@@ -34,6 +34,7 @@ self.addEventListener('push', function (event) {
     icon: '/pwa-192x192.png',
     badge: '/pwa-192x192.png',
     tag: typeof payload.tag === 'string' ? payload.tag.slice(0, 100) : 'fairwayd-trip',
+    silent: false, // Use the operating system's notification channel, sound and DND preferences.
     data: { path: path },
   });
   })());
