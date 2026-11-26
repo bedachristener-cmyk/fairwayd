@@ -15,14 +15,28 @@ self.addEventListener('push', function (event) {
   // Navigation is same-origin and restricted to trip routes.
   var path = /^\/trips(?:\/|$)/.test(rawPath) && !rawPath.startsWith('//')
     ? rawPath : '/trips';
-  event.waitUntil(self.registration.showNotification(title, {
+  event.waitUntil((async function () {
+    // The Badging API is optional; a missing implementation must never block push.
+    if (typeof payload.unreadCount === 'number' && Number.isFinite(payload.unreadCount)) {
+      try {
+        if (payload.unreadCount > 0 && self.navigator && typeof self.navigator.setAppBadge === 'function') {
+          await self.navigator.setAppBadge(payload.unreadCount);
+        } else if (payload.unreadCount === 0 && self.navigator && typeof self.navigator.clearAppBadge === 'function') {
+          await self.navigator.clearAppBadge();
+        }
+      } catch (_badgeError) {
+        // Continue showing the notification.
+      }
+    }
+    await self.registration.showNotification(title, {
     body: typeof payload.body === 'string' && payload.body.length > 0
       ? payload.body.slice(0, 300) : 'There is an update to one of your trips.',
     icon: '/pwa-192x192.png',
     badge: '/pwa-192x192.png',
     tag: typeof payload.tag === 'string' ? payload.tag.slice(0, 100) : 'fairwayd-trip',
     data: { path: path },
-  }));
+  });
+  })());
 });
 
 self.addEventListener('notificationclick', function (event) {
