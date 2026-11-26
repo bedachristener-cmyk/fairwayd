@@ -10071,7 +10071,7 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
                                   }
                                   style={editFieldStyle}
                                 />
-                                {!editIsTransferLike && editDraft.address.trim() ? (
+                                {!editIsTransferLike && editDraft.address.trim() && !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(editDraft.address.trim()) ? (
                                   <a
                                     href={directionsUrlForPlace(editDraft.address) ?? "#"}
                                     target="_blank"
