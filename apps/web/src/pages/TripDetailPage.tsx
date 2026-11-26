@@ -2312,7 +2312,9 @@ function mapUrlForItem(item: TripItem) {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lon}`)}`;
   }
 
-  const query = [item.locationName, item.address].filter(Boolean).join(" ");
+  const query = String(item.type ?? "").toLowerCase() === "restaurant"
+    ? [item.locationName || item.title].filter(Boolean).join(" ")
+    : [item.locationName, item.address].filter(Boolean).join(" ");
   if (!query.trim()) return null;
 
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
@@ -2347,6 +2349,12 @@ function tripItemMapActions(item: TripItem): TripItemMapAction[] {
         ? { label: "Map Arrival", href: mapUrlForPlace(item.address) as string }
         : null,
     ].filter((action): action is TripItemMapAction => Boolean(action));
+  }
+
+  if (String(item.type ?? "").toLowerCase() === "restaurant") {
+    const restaurant = item.locationName?.trim() || item.title?.trim();
+    const href = directionsUrlForPlace(restaurant);
+    return href ? [{ label: "Navigate to restaurant", href }] : [];
   }
 
   if (isTransportItem(item)) {
@@ -2394,7 +2402,7 @@ function directionsUrlForItem(item: TripItem) {
 
   const query = [
     item.locationName,
-    item.address,
+    String(item.type ?? "").toLowerCase() === "restaurant" ? null : item.address,
     item.course?.name,
     item.title,
   ]
@@ -2453,6 +2461,13 @@ function timelineDetails(item: TripItem) {
     }
   }
 
+  if (String(item.type ?? "").toLowerCase() === "restaurant") {
+    const oldTime = /^([01]\\d|2[0-3]):[0-5]\\d$/.test(item.address?.trim() || "") ? item.address?.trim() : "";
+    const meetingTime = item.departureFromHotelTime?.trim() || oldTime;
+    if (meetingTime) details.push({ label: "Meeting time", value: meetingTime });
+    if (item.startTime?.trim()) details.push({ label: "Reservation time", value: item.startTime.trim() });
+  }
+
   if (item.provider?.trim()) {
     details.push({
       label: isFlight ? "Airline" : "Provider",
@@ -2462,14 +2477,14 @@ function timelineDetails(item: TripItem) {
 
   if (item.locationName?.trim()) {
     details.push({
-      label: isFlight ? "From" : "Location",
+      label: isFlight ? "From" : String(item.type ?? "").toLowerCase() === "restaurant" ? "Restaurant" : "Location",
       value: item.locationName.trim(),
     });
   }
 
   if (item.address?.trim()) {
     details.push({
-      label: isFlight ? "To" : "Address",
+      label: isFlight ? "To" : String(item.type ?? "").toLowerCase() === "restaurant" ? "Meeting point" : "Address",
       value: item.address.trim(),
     });
   }
@@ -4775,11 +4790,11 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
       endDate: endDateInputValue(item),
       startTime: item.startTime || "",
       endTime: item.endTime || "",
-      departureFromHotelTime: item.departureFromHotelTime || "",
+      departureFromHotelTime: item.departureFromHotelTime || (String(item.type ?? "").toLowerCase() === "restaurant" && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(item.address?.trim() || "") ? item.address!.trim() : ""),
       provider: item.provider || "",
       notes: item.notes || "",
       locationName: item.locationName || "",
-      address: item.address || "",
+      address: String(item.type ?? "").toLowerCase() === "restaurant" && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(item.address?.trim() || "") ? "" : item.address || "",
       bookingRef: item.bookingRef || "",
       visibility: editableVisibility,
       visibleToMemberIds,
@@ -5919,7 +5934,7 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
             endDate: isGolfEdit ? undefined : optionalText(normalizedEndDate),
             startTime: editDraft.type === "hotel" ? "" : optionalText(editDraft.startTime),
             endTime: editDraft.type === "hotel" ? "" : optionalText(editDraft.endTime),
-            departureFromHotelTime: isGolfEdit ? editDraft.departureFromHotelTime.trim() : undefined,
+            departureFromHotelTime: isGolfEdit || editDraft.type === "restaurant" ? editDraft.departureFromHotelTime.trim() : undefined,
             provider: optionalText(editDraft.provider),
             bookingRef: isFlightEdit ? optionalText(editDraft.bookingRef) : undefined,
             notes: optionalText(editDraft.notes),
@@ -9629,6 +9644,7 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
                   editDraft?.type === "golf_round" ||
                   editDraft?.type === "course";
                 const editIsHotel = editDraft?.type === "hotel";
+                const editIsRestaurant = editDraft?.type === "restaurant";
                 const editIsFlight = editDraft?.type === "flight";
                 const editIsTransferLike = isTransferType(editDraft?.type);
                 const editIsNote = editDraft?.type === "note";
@@ -10033,7 +10049,7 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
                                   fontWeight: 900,
                                 }}
                               >
-                                {editIsTransferLike ? "Pickup / From" : "Location"}
+                                {editIsTransferLike ? "Pickup / From" : editIsRestaurant ? "Restaurant name / Maps search" : "Location"}
                                 <input
                                   value={editDraft.locationName}
                                   onChange={(e) =>
@@ -10057,7 +10073,7 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
                                   fontWeight: 900,
                                 }}
                               >
-                                {editIsTransferLike ? "Destination / To" : "Meeting point"}
+                                {editIsTransferLike ? "Destination / To" : "Meeting point / Assembly location"}
                                 <input
                                   value={editDraft.address}
                                   onChange={(e) =>
@@ -10071,7 +10087,7 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
                                   }
                                   style={editFieldStyle}
                                 />
-                                {!editIsTransferLike && editDraft.address.trim() && !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(editDraft.address.trim()) ? (
+                                {!editIsTransferLike && !editIsRestaurant && editDraft.address.trim() && !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(editDraft.address.trim()) ? (
                                   <a
                                     href={directionsUrlForPlace(editDraft.address) ?? "#"}
                                     target="_blank"
@@ -10151,6 +10167,14 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
                                   gap: 8,
                                 }}
                               >
+                                {editIsRestaurant ? (
+                                  <label style={{ display: "grid", gap: 6, color: "var(--text)", fontSize: 12, fontWeight: 900 }}>
+                                    Meeting time
+                                    <input type="time" value={editDraft.departureFromHotelTime}
+                                      onChange={(e) => setEditDraft({ ...editDraft, departureFromHotelTime: e.target.value })}
+                                      style={editFieldStyle} />
+                                  </label>
+                                ) : null}
                                 <label
                                   style={{
                                     display: "grid",
@@ -10160,7 +10184,7 @@ export default function TripDetailPage({ spectatorMode = false }: { spectatorMod
                                     fontWeight: 900,
                                   }}
                                 >
-                                  {editIsFlight ? "Departure time" : "Start time"}
+                                  {editIsFlight ? "Departure time" : editIsRestaurant ? "Reservation time" : "Start time"}
                                   <input
                                     type="time"
                                     value={editDraft.startTime}
